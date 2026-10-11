@@ -159,10 +159,14 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 
   .row { grid-template-columns: 22px minmax(0, 1fr); }
   .row .r { grid-column: 2; }
 }
+.newlist { display: flex; gap: 6px; padding: 4px 0; }
+.newlist input { flex: 1; min-width: 0; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+.nav-i.addl { color: var(--accent); font-weight: 600; }
+.listtag { background: var(--sunken); padding: 0 6px; border-radius: 4px; }
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); z-index: 30; }
 </style>
 
-<div class="mock-bar"><strong>Mockup</strong> · fake data, "today" is Mon Oct 12, 2026. Deal steps come from the same fake deals as the pipeline mockup. Try the quick add box.
+<div class="mock-bar"><span><strong>Mockup</strong> · fake data, "today" is Mon Oct 12, 2026. Try quick add, or type #listname to put a task in a list.</span>
   <span class="seg" role="group" aria-label="Viewing as" style="margin-left:12px"><button id="as-lp" aria-pressed="true">Viewing as Luke</button><button id="as-as" aria-pressed="false">Viewing as assistant</button></span></div>
 
 <header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html">Deals</a><a href="tasks.html" class="on">Tasks</a><a href="messages.html">Messages</a><a href="admin.html">Admin</a></nav></header>
@@ -189,13 +193,13 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 const PEOPLE = { LP: "Luke", AS: "Alyssa (assistant)" };
 // Links a task can point to. Deals match the pipeline mockup.
 const LINKS = {
-  calloway: { kind: "deal", label: "Calloway", full: "Jordan & Priya Calloway · Buyer, Under Contract" },
-  engel: { kind: "deal", label: "Engel", full: "Ruth & Sam Engel · Buyer, Under Contract" },
-  raman: { kind: "deal", label: "Raman", full: "Dev Raman · Buyer, Under Contract" },
-  halvorsen: { kind: "deal", label: "Halvorsen", full: "Wes Halvorsen · Seller, Under Contract" },
-  okafor: { kind: "deal", label: "Okafor", full: "Ben & Hana Okafor · Buyer, Lead" },
-  thorsen: { kind: "deal", label: "Thorsen", full: "Grace Thorsen · Buyer, Consult" },
-  fisk: { kind: "deal", label: "Fisk", full: "Carol & Dean Fisk · Seller, Prep" },
+  calloway: { kind: "deal", label: "Jordan & Priya Calloway", full: "Jordan & Priya Calloway · Buyer, Under Contract" },
+  engel: { kind: "deal", label: "Ruth & Sam Engel", full: "Ruth & Sam Engel · Buyer, Under Contract" },
+  raman: { kind: "deal", label: "Dev Raman", full: "Dev Raman · Buyer, Under Contract" },
+  halvorsen: { kind: "deal", label: "Wes Halvorsen", full: "Wes Halvorsen · Seller, Under Contract" },
+  okafor: { kind: "deal", label: "Ben & Hana Okafor", full: "Ben & Hana Okafor · Buyer, Lead" },
+  thorsen: { kind: "deal", label: "Grace Thorsen", full: "Grace Thorsen · Buyer, Consult" },
+  fisk: { kind: "deal", label: "Carol Fisk & Dean Moreno", full: "Carol Fisk & Dean Moreno · Seller, Prep" },
   murphy: { kind: "person", label: "Kate Murphy", full: "Kate Murphy · 90 Day Sphere" },
   dana: { kind: "person", label: "Dana Kim", full: "Dana Kim · Lender, Northfield Lending" },
 };
@@ -243,6 +247,7 @@ const touches = [
 ];
 
 let view = "today", filter = "all", sel = null, me = "LP", whoF = "everyone";
+let LISTS = [], newListOpen = false;
 const el = id => document.getElementById(id);
 
 const VIEWS = [
@@ -255,6 +260,7 @@ function inView(t, v) {
   if (v === "tomorrow") return n === 1;
   if (v === "overdue") return n < 0;
   if (v === "recurring") return !!t.repeat;
+  if (v.startsWith("list:")) return t.list === v.slice(5);
   return false;
 }
 const visible = v => tasks.filter(t => !t.done || t.justDone).filter(t => whoF === "everyone" || t.who === me).filter(t => inView(t, v));
@@ -270,7 +276,9 @@ function renderSide() {
   const od = cnt("overdue");
   el("side").innerHTML = `
     <div><h4>Views</h4><ul>${VIEWS.map(([k, l]) => `<li><button class="nav-i" data-view="${k}" aria-current="${view === k}"><span>${l}</span><span class="c ${k === "overdue" && od ? "bad" : ""}">${cnt(k) || ""}</span></button></li>`).join("")}</ul></div>
-    <div><h4>List</h4><ul><li><button class="nav-i" data-view="recurring" aria-current="${view === "recurring"}"><span>Recurring</span><span class="c">${cnt("recurring") || ""}</span></button></li></ul></div>`;
+    <div><h4>Lists</h4><ul><li><button class="nav-i" data-view="recurring" aria-current="${view === "recurring"}"><span>Recurring</span><span class="c">${cnt("recurring") || ""}</span></button></li>
+      ${LISTS.map(l => `<li><button class="nav-i" data-view="list:${esc(l)}" aria-current="${view === "list:" + l}"><span>${esc(l)}</span><span class="c">${cnt("list:" + l) || ""}</span></button></li>`).join("")}
+      <li>${newListOpen ? `<div class="newlist"><input id="nl-name" placeholder="List name" aria-label="New list name"><button class="btn primary" data-nlsave="1">Add</button></div>` : `<button class="nav-i addl" data-newlist="1"><span>+ New list</span></button>`}</li></ul></div>`;
 }
 
 function rowHtml(t) {
@@ -280,6 +288,7 @@ function rowHtml(t) {
   if (L) meta.push(`<span class="link ${L.kind}">${esc(L.label)}</span>`);
   if (t.subs) meta.push(`<span>☐ ${t.subs.filter(s => s[1]).length}/${t.subs.length}</span>`);
   if (t.repeat) meta.push(`<span>↻ ${t.repeat}</span>`);
+  if (t.list && !view.startsWith("list:")) meta.push(`<span class="listtag">${esc(t.list)}</span>`);
   const dueTxt = (n === 0 ? "Today" : n === 1 ? "Tomorrow" : n < 0 ? short(d(t.due)) : fmt(d(t.due))) + (t.time ? " " + t.time : "");
   return `<div class="row ${t.done ? "done" : ""} ${sel === t.id ? "sel" : ""}">
     <button class="check p${t.p}" data-done="${t.id}" aria-label="Complete: ${esc(t.t)}">${t.done ? '<svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ""}</button>
@@ -291,11 +300,15 @@ function rowHtml(t) {
 function groupsFor(list) {
   if (view === "today") return [["Overdue", list.filter(t => diff(d(t.due), TODAY) < 0), true], ["Today", list.filter(t => diff(d(t.due), TODAY) === 0)]];
   if (view === "recurring") return [[null, list]];
+  if (view.startsWith("list:")) {
+    const b = n => list.filter(t => { const x = diff(d(t.due), TODAY); return n === "o" ? x < 0 : n === "t" ? x === 0 : n === "m" ? x === 1 : x > 1; });
+    return [["Overdue", b("o"), true], ["Today", b("t")], ["Tomorrow", b("m")], ["Later", b("l")]];
+  }
   return [[null, list]];
 }
 
 function renderMain() {
-  const title = view === "recurring" ? "Recurring" : VIEWS.find(v => v[0] === view)[1];
+  const title = view === "recurring" ? "Recurring" : view.startsWith("list:") ? view.slice(5) : VIEWS.find(v => v[0] === view)[1];
   if (view === "touch") {
     el("main").innerHTML = `<div class="main-h"><div><h1>Due for a touch</h1><div class="sub">People past their follow-up frequency</div></div></div>
       <div class="list">${touches.map((p, i) => `<div class="row"><span></span><span class="body"><span class="t">${p.n}</span><span class="meta"><span>Every ${p.f}</span><span>Last touch ${p.last}</span></span></span><span class="r"><button class="touch-btn" data-touch="${i}">Log touch</button></span></div>`).join("") || ""}</div>
@@ -307,7 +320,7 @@ function renderMain() {
   const groups = groupsFor(list).filter(g => g[1].length);
   el("main").innerHTML = `
     <div class="main-h">
-      <div><h1>${title}</h1><div class="sub">${view === "recurring" ? "Each one shows up in Today when it's due, then schedules the next" : open + " open" + (view === "today" ? " · " + fmt(TODAY) : "")}</div></div>
+      <div><h1>${title}</h1><div class="sub">${view === "recurring" ? "Each one shows up in Today when it's due, then schedules the next" : view.startsWith("list:") ? open + " open · these also show in Today, Tomorrow and Overdue when they're due" : open + " open" + (view === "today" ? " · " + fmt(TODAY) : "")}</div></div>
       <span class="tools"><span class="filters" role="group" aria-label="Whose tasks">
         <button data-who="mine" aria-pressed="${whoF === "mine"}">Mine</button>
         <button data-who="everyone" aria-pressed="${whoF === "everyone"}">Everyone</button>
@@ -352,6 +365,7 @@ function renderDetail() {
       <label for="d-due">Due</label><input type="date" id="d-due" value="${t.due}">
       <label for="d-time">Time</label><input id="d-time" value="${t.time || ""}" placeholder="None">
       <label for="d-repeat">Repeat</label><select id="d-repeat">${["", "Daily", "Weekly", "Monthly", "Yearly"].map(r => `<option value="${r}" ${t.repeat === r || (!t.repeat && !r) ? "selected" : ""}>${r || "Never"}</option>`).join("")}</select>
+      <label for="d-list">List</label><select id="d-list"><option value="">None</option>${LISTS.map(l => `<option ${t.list === l ? "selected" : ""}>${esc(l)}</option>`).join("")}<option value="__new">+ New list…</option></select>
       <label for="d-p">Priority</label><select id="d-p">${["None", "Low", "Medium", "High"].map((p, i) => `<option value="${i}" ${t.p === i ? "selected" : ""}>${p}</option>`).join("")}</select>
       <label for="d-who">Assignee</label><select id="d-who">${Object.entries(PEOPLE).map(([k, v]) => `<option value="${k}" ${t.who === k ? "selected" : ""}>${v}</option>`).join("")}</select>
       <label>Linked to</label><span>${L ? `<a class="link ${L.kind}" href="deals.html#contact-${CID[t.link]}" style="text-decoration:none">${esc(L.full)}</a>` : `<span style="color:var(--muted)">Nothing (general task)</span>`}</span>
@@ -383,6 +397,7 @@ function parse(text) {
     out.due = iso(add(TODAY, n));
   }
   if ((m = take(/\s!(high|h|3|med|medium|m|2|low|l|1)\s/i))) out.p = { high: 3, h: 3, 3: 3, med: 2, medium: 2, m: 2, 2: 2, low: 1, l: 1, 1: 1 }[m[1].toLowerCase()];
+  if ((m = take(/\s#([\w-]+)\s/))) { const l = LISTS.find(x => x.toLowerCase() === m[1].toLowerCase()); out.list = l || m[1][0].toUpperCase() + m[1].slice(1); out.newList = !l; }
   if ((m = take(/\s@(assistant|alyssa|luke|me)\s/i))) out.who = /luke|me/i.test(m[1]) ? "LP" : "AS";
   if ((m = s.match(/\s(?:re|for|with)\s+([a-z]+)/i))) {
     const word = m[1].toLowerCase();
@@ -398,19 +413,32 @@ function showParsed(p) {
   if (p.time) chips.push(p.time);
   if (p.link) chips.push((LINKS[p.link].kind === "deal" ? "Deal: " : "Person: ") + LINKS[p.link].label);
   if (p.who) chips.push("Assignee: " + PEOPLE[p.who]);
+  if (p.list) chips.push((p.newList ? "New list: " : "List: ") + p.list);
   if (p.p) chips.push(["", "Low", "Medium", "High"][p.p] + " priority");
   if (p.repeat) chips.push("↻ " + p.repeat);
   el("parsed").innerHTML = chips.map(c => `<span class="pchip">${esc(c)}</span>`).join("");
 }
 function addTask(text) {
   const p = parse(text); if (!p.t) return;
-  const t = { id: nextId++, t: p.t, due: p.due || iso(TODAY), time: p.time, who: p.who || me, link: p.link, p: p.p || 0, repeat: p.repeat, kind: "task", done: false };
+  if (p.list && !LISTS.includes(p.list)) LISTS.push(p.list);
+  const list = p.list || (view.startsWith("list:") ? view.slice(5) : undefined);
+  const t = { id: nextId++, t: p.t, due: p.due || iso(TODAY), time: p.time, who: p.who || me, link: p.link, list, p: p.p || 0, repeat: p.repeat, kind: "task", done: false };
   tasks.push(t);
   toast(`Added "${t.t}" for ${fmt(d(t.due))}${inView(t, view) ? "" : ". It's in a different view."}`);
   render();
   const i = el("qa-input"); if (i) i.focus();
 }
 
+function saveNewList() {
+  const i = el("nl-name"), n = i && i.value.trim();
+  newListOpen = false;
+  if (n && !LISTS.includes(n)) { LISTS.push(n); view = "list:" + n; toast(`Created "${n}". Add tasks here or type #${n.replace(/\s+/g, "")} in quick add.`); }
+  render();
+}
+document.addEventListener("keydown", e => {
+  if (e.target.id === "nl-name" && e.key === "Enter") { e.preventDefault(); saveNewList(); }
+  if (e.target.id === "nl-name" && e.key === "Escape") { newListOpen = false; renderSide(); }
+});
 /* ---------- Events ---------- */
 let tt;
 function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2800); }
@@ -418,6 +446,8 @@ function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; 
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.view) { view = b.dataset.view; sel = null; render(); return; }
+  if (b.dataset.newlist) { newListOpen = true; renderSide(); el("nl-name").focus(); return; }
+  if (b.dataset.nlsave) { saveNewList(); return; }
   if (b.dataset.filter) { filter = b.dataset.filter; render(); return; }
   if (b.dataset.who) { whoF = b.dataset.who; render(); return; }
   if (b.id === "as-lp" || b.id === "as-as") {
@@ -448,6 +478,7 @@ document.addEventListener("change", e => {
   if (id === "d-repeat") t.repeat = v || undefined;
   if (id === "d-p") t.p = +v;
   if (id === "d-who") t.who = v;
+  if (id === "d-list") { if (v === "__new") { const n = "New list " + (LISTS.length + 1); LISTS.push(n); t.list = n; toast(`Created "${n}". Rename it from the sidebar later.`); } else t.list = v || undefined; }
   if (id === "d-list") t.list = v || undefined;
   if (id === "d-title") t.t = v;
   render();

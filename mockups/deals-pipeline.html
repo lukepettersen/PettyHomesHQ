@@ -92,6 +92,7 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 .card .price { font-size: 12px; color: var(--fg); white-space: nowrap; }
 .card .next { font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 3px; margin-top: 2px; display: flex; justify-content: space-between; gap: 6px; }
 .card .next.overdue { color: var(--bad); }
+.card .next .date { white-space: nowrap; }
 .card .next span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; }
 .dot.g { background: var(--ok); } .dot.y { background: var(--warn); } .dot.r { background: var(--bad); }
@@ -288,6 +289,7 @@ function diff(a, b) { return Math.round((a - b) / 86400000); }
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const fmt = x => DOW[x.getDay()] + " " + MON[x.getMonth()] + " " + x.getDate();
 const short = x => MON[x.getMonth()] + " " + x.getDate();
+const kprice = n => "$" + (n / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 }) + "k";
 const money = n => "$" + n.toLocaleString("en-US", Number.isInteger(n) ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -401,7 +403,7 @@ const deals = [
   { id: 21, side: "seller", stage: "Lead", name: "Patricia Wendt", line: "Source: Sphere", since: "2026-10-07" },
   { id: 22, side: "seller", stage: "Lead", name: "Joel Amundsen", line: "Source: Website", since: "2026-10-11" },
   { id: 23, side: "seller", stage: "Consult", name: "Erik & Tove Brekke", line: "Consult Fri Oct 16", since: "2026-10-09" },
-  { id: 24, side: "seller", stage: "Listing Signed / Prep", name: "Carol & Dean Fisk", line: "3318 47th Ave S, Minneapolis", price: 365000, since: "2026-10-08" },
+  { id: 24, side: "seller", stage: "Listing Signed / Prep", name: "Carol Fisk & Dean Moreno", line: "3318 47th Ave S, Minneapolis", price: 365000, since: "2026-10-08" },
   { id: 25, side: "seller", stage: "Listing Signed / Prep", name: "Ana Ruiz-Hall", line: "1207 Chatsworth St N, Roseville", price: 299000, since: "2026-10-01" },
   { id: 26, side: "seller", stage: "Coming Soon", name: "Hugo Bergstrom", line: "709 Lincoln Ave, St. Paul", price: 625000, since: "2026-10-10" },
   { id: 27, side: "seller", stage: "Active", name: "Margaret Ostby", line: "4540 Drew Ave S, Edina", price: 749000, since: "2026-09-30" },
@@ -510,7 +512,7 @@ function cardHtml(dl) {
   const prog = dl.stage === "Under Contract" ? (() => { const done = dl.tasks.filter(t => eff(dl, t) !== "open").length; return `<div class="mini" title="${done} of ${dl.tasks.length} steps"><i style="width:${Math.round(done / dl.tasks.length * 100)}%"></i></div><div class="addr">Closing ${short(d(dl.ms.close))}</div>`; })() : "";
   return `<button class="card" data-deal="${dl.id}">
     <span class="who"><span>${esc(dl.name)}</span>${dl.stage !== "Closed" ? `<span class="dot ${health(dl)}" title="${{ g: "On track", y: "Something overdue", r: "Behind" }[health(dl)]}"></span>` : ""}</span>
-    <span class="addr"><span>${esc(dl.line)}</span>${dl.price ? `<span class="price num">${money(dl.price / 1000)}k</span>` : ""}</span>
+    <span class="addr"><span>${esc(dl.line)}</span>${dl.price ? `<span class="price num">${kprice(dl.price)}</span>` : ""}</span>
     ${prog}${next}
   </button>`;
 }
@@ -630,7 +632,7 @@ function renderContact() {
           <h3>Deals <span class="muted">${myDeals.length}</span></h3>
           ${myDeals.map(dl => `<button class="deal-li" data-ctab="${isActive(dl) ? "deal-" + dl.id : "timeline"}">
             <span><span class="sidechip ${dl.side}">${dl.side === "buyer" ? "Buyer" : "Seller"}</span> ${esc(shortAddr(dl))}</span>
-            <span class="muted sm">${esc(label(dl.side, dl.stage))}${dl.stage === "Closed" ? " · " + short(d(dl.closed)) : ""}${dl.price ? " · " + money(dl.price / 1000) + "k" : ""}</span>
+            <span class="muted sm">${esc(label(dl.side, dl.stage))}${dl.stage === "Closed" ? " · " + short(d(dl.closed)) : ""}${dl.price ? " · " + kprice(dl.price) : ""}</span>
           </button>`).join("") || `<p class="muted sm">No deals yet.</p>`}
           <div class="row-btns"><button class="btn" data-toast="Opens the buyer form: buyer rep dates and BAC, then a purchase agreement when they go under contract">+ Add Buyer</button><button class="btn" data-toast="Opens the seller form: listing agreement dates, list price and commission">+ Add Seller</button></div>
         </div>
@@ -702,7 +704,7 @@ function datesHtml(dl) {
   const keys = Object.keys(dl.ms);
   let html = `<div class="dates">${keys.map(k => {
     const st = dl.msStatus[k], n = diff(d(dl.ms[k]), TODAY);
-    const txt = st === "met" ? "✓ Met" : st === "waived" ? "Waived" : st === "extended" ? "Extended" : n === 0 ? "Today" : n > 0 ? `In ${n} days` : "Past due";
+    const txt = st === "met" ? "✓ Met" : st === "waived" ? "Waived" : st === "extended" ? "Extended" : n === 0 ? "Today" : n > 0 ? `In ${n} day${n === 1 ? "" : "s"}` : "Past due";
     const cls = st !== "pending" ? st : n <= 3 ? "soon" : "";
     return `<button class="dt" data-dl="${dl.id}" data-ms="${k}" aria-expanded="${editing === dl.id + ":" + k}"><span class="l">${MS_NAMES[k]}</span><span class="v date">${fmt(d(dl.ms[k]))}</span><span class="s ${cls}">${txt}</span></button>`;
   }).join("")}</div>`;
