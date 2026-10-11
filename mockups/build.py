@@ -80,7 +80,7 @@ def main(out):
                    '  if (m) { openContact = m[1]; tlFilter = "all"; editCard = null; draft = null; render(); window.scrollTo(0, 0); } } };')
         js.append(f"INIT.{key} = function (document) {{\n{script}{api}\n}};")
 
-    page = f"""<title>Petty Homes HQ Mockups</title>
+    page = f"""<title>PettyHomes HQ Mockup</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
