@@ -123,19 +123,12 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 let convs = [
   { id: 1, name: "Priya Calloway", cid: "calloway", phone: "(612) 555-0193", unread: true, stage: "Under Contract", deal: "Buyer · 4127 Upton Ave S #3", next: "Review inspection report · Today 4pm", tags: ["Buyer", "Seller", "A Lead"],
     m: [["out", "Inspector is wrapping up, we'll go over the report Monday at 4.", "3:12 PM", "Sat Oct 10"], ["in", "Perfect. Can you send the report before so we can read it?", "3:20 PM", "Sat Oct 10"], ["out", "Yep, it'll come straight from the inspector tonight.", "3:22 PM", "Sat Oct 10"], ["in", "Got it, thanks! Is the water heater thing a big deal?", "8:41 AM", "Today"]] },
-  { id: 2, name: "(763) 555-0110", cid: null, phone: "(763) 555-0110", unread: true, m: [["missed", "Missed call · no voicemail", "9:02 AM", "Today"], ["in", "Hi, saw your sign on Lincoln Ave. Is it still available? Could we see it this week?", "9:05 AM", "Today"]] },
   { id: 3, name: "Owen Pryce", cid: "d11", phone: "(612) 555-0111", unread: false, stage: "Lead", deal: "Buyer · Offer Out", next: "Follow up with listing agent · Today", tags: ["Buyer", "B Lead"],
     m: [["out", "Offer is in on Hillside Ave. Response deadline is tomorrow at 5pm.", "6:15 PM", "Sun Oct 11"], ["in", "Fingers crossed 🤞", "6:20 PM", "Sun Oct 11"]] },
-  { id: 4, name: "Kate Murphy", cid: "murphy", phone: "(651) 555-0172", unread: false, stage: "90 Day Sphere", deal: "", next: "Call Kate about spring listing timing · Today", tags: ["Past Client", "Mailers"],
+  { id: 4, name: "Kate Murphy", cid: "murphy", phone: "(651) 555-0172", unread: false, stage: "Past Client", deal: "", next: "Call Kate about spring listing timing · Today", tags: ["Past Client", "Mailers"],
     m: [["missed", "Missed call · 0:42 voicemail", "5:48 PM", "Fri Oct 9"]] },
-  { id: 5, name: "Marcus Holt", cid: null, phone: "(612) 555-0177", unread: false, known: "Listing agent on Calloway deal",
-    m: [["in", "Sellers are open to a credit on the water heater. Send over the amendment when ready.", "11:30 AM", "Today"]] },
-  { id: 6, name: "Dev Raman", cid: "d15", phone: "(612) 555-0115", unread: false, stage: "Under Contract", deal: "Buyer · 1530 Hague Ave", next: "Final walkthrough scheduling text · Wed", tags: ["Buyer"],
-    m: [["in", "Lender says we're clear to close!", "4:02 PM", "Thu Oct 8"], ["out", "Huge! 🎉 Closing is still Oct 23 at Lakeview Title.", "4:10 PM", "Thu Oct 8"]] },
-  { id: 7, name: "Hugo Bergstrom", cid: "d26", phone: "(612) 555-0126", unread: false, stage: "Lead", deal: "Seller · Coming Soon", next: "Sign install · Tue", tags: ["Seller"],
-    m: [["out", "Photos are in! Sending the link now.", "1:15 PM", "Fri Oct 9"], ["in", "These look amazing", "1:40 PM", "Fri Oct 9"]] },
-  { id: 8, name: "Rita Okonkwo", cid: "x2", phone: "(612) 555-0182", unread: false, stage: "7 Day Sphere", deal: "", next: "", tags: ["A Lead"],
-    m: [["in", "Any new condos near the lakes this week?", "7:55 PM", "Thu Oct 8"]] },
+  { id: 9, name: "Carol Fisk", cid: "d24", phone: "(612) 555-0124", unread: false, stage: "Lead", deal: "Seller · 3318 47th Ave S", next: "Schedule listing photos · Thu", tags: ["Seller", "A Lead"],
+    m: [["out", "Photographer can do Thursday at 10. Does that work?", "2:05 PM", "Fri Oct 9"], ["in", "Thursday works. Dean will be home to let them in.", "2:31 PM", "Fri Oct 9"]] },
 ];
 const TEMPLATES = [
   ["", "Insert template…"],
@@ -159,11 +152,11 @@ function ts(m) {
 }
 const nowKey = () => 100000 + (++clock);
 const INCOMING = [
-  [8, "Actually, could we see the one on Lake Harriet Pkwy Saturday?"],
-  [7, "Sign looks great! Any showings booked yet?"],
+  [3, "Any word from the listing agent yet?"],
+  [9, "Quick question, should we be out of the house for the photos?"],
   [null, "Hi Luke, got your name from Kara Voss. We're thinking about selling next spring.", "(952) 555-0144"],
   [4, "Sorry I missed you! Free after 4 today if you want to call."],
-  [3, "Listing agent says they'll have an answer by noon tomorrow."],
+  [1, "Also, can we move the final walkthrough to the morning?"],
 ];
 let nextIn = 0;
 
@@ -195,6 +188,10 @@ function renderThread() {
 }
 function renderInfo() {
   const c = convs.find(x => x.id === cur);
+  if (!c.cid && c.created) {
+    el("info").innerHTML = `<h3>${esc(c.name)}</h3><dl class="kv"><dt>Stage</dt><dd>${esc(c.stage)}</dd><dt>Next up</dt><dd>${esc(c.next)}</dd><dt>Phone</dt><dd class="num">${c.phone}</dd></dl><p class="muted sm" style="margin:0">Added to People just now.</p>`;
+    return;
+  }
   if (!c.cid) {
     el("info").innerHTML = `<h3>${c.known ? "Not in People yet" : "New number"}</h3>
       <p class="muted sm" style="margin:0">${c.known ? esc(c.known) + "." : "Not linked to anyone. Add them as a lead or link to an existing person."}</p>
@@ -232,7 +229,7 @@ document.addEventListener("click", e => {
   }
   if (b.dataset.create) {
     const c = convs.find(x => x.id === cur), n = el("nc-name").value.trim(); if (!n) { toast("Add a name first."); return; }
-    Object.assign(c, { name: n, cid: "x2", stage: el("nc-stage").value, deal: "", next: "Follow up on new lead · Today", tags: [] });
+    Object.assign(c, { name: n, created: true, stage: el("nc-stage").value, deal: "", next: "Follow up on new lead · Today", tags: [] });
     toast(`Created ${n}. A follow-up task was added.`); render(); return;
   }
   if (b.dataset.toast) { toast(b.dataset.toast); return; }

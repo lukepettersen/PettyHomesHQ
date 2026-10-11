@@ -117,6 +117,8 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 .member { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; border-top: 1px solid var(--line); }
 .member:first-of-type { border-top: 0; padding-top: 0; }
 .member-n { font-weight: 700; font-size: 13px; }
+.apply { display: flex; gap: 6px; flex-wrap: wrap; }
+.apply select { flex: 1; min-width: 0; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
 .linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; text-decoration: underline; font-size: inherit; }
 .sm { font-size: 12.5px; }
 .od { color: var(--bad); font-size: 12.5px; } .td { color: var(--accent); font-size: 12.5px; }
@@ -379,43 +381,15 @@ const MS_NAMES = { fa: "Final Acceptance", insp: "Inspection", hoa: "HOA Resciss
 
 const deals = [
   // Buyers
-  { id: 1, side: "buyer", stage: "Lead", name: "Ethan Moreau", line: "Source: Website", since: "2026-10-09" },
-  { id: 2, side: "buyer", stage: "Lead", name: "Sofia Lindqvist", line: "Source: Sphere Referral", since: "2026-10-11" },
-  { id: 3, side: "buyer", stage: "Lead", name: "Ben & Hana Okafor", line: "Source: Zillow Preferred", since: "2026-10-05" },
-  { id: 4, side: "buyer", stage: "Consult", name: "Grace Thorsen", line: "Consult Wed Oct 14", since: "2026-10-10" },
-  { id: 5, side: "buyer", stage: "Consult", name: "Mateo Ruiz", line: "Consult Thu Oct 15", since: "2026-10-12" },
-  { id: 6, side: "buyer", stage: "Consult", name: "Avery Kline", line: "Consult done Oct 8", since: "2026-10-05" },
-  { id: 7, side: "buyer", stage: "Rep Signed / Searching", name: "Nora Feld", line: "SW Minneapolis · $350–400k", since: "2026-09-20" },
-  { id: 8, side: "buyer", stage: "Rep Signed / Searching", name: "Theo & June Park", line: "Edina / Richfield · to $520k", since: "2026-10-01" },
-  { id: 9, side: "buyer", stage: "Rep Signed / Searching", name: "Isaac Brandt", line: "St. Paul · condo", since: "2026-10-08" },
-  { id: 10, side: "buyer", stage: "Rep Signed / Searching", name: "Leah Sandoval", line: "Roseville / Shoreview", since: "2026-09-28" },
   { id: 11, side: "buyer", stage: "Offer Out", name: "Owen Pryce", line: "2215 Hillside Ave, Golden Valley", price: 389000, since: "2026-10-11" },
-  { id: 12, side: "buyer", stage: "Offer Out", name: "Mia Castellano", line: "845 Osceola Ave, St. Paul", price: 455000, since: "2026-10-12" },
   { id: 13, side: "buyer", stage: "Under Contract", name: "Jordan & Priya Calloway", cid: "calloway", line: "4127 Upton Ave S #3, Minneapolis", price: 412500, em: 8000, sc: 5000, bac: "2.5%", comm: 10312.5, fin: "Conventional",
     ms: { fa: "2026-10-02", insp: "2026-10-14", hoa: "2026-10-13", ws: "2026-10-23", close: "2026-10-30" }, msOrig: { insp: "2026-10-09" }, msStatus: { insp: "extended" },
     openPast: ["Earnest money receipt saved to file", "Insurance referral"], doneEarly: ["Confirm appraisal ordered"],
     people: [["Jordan Calloway", "Buyer"], ["Priya Calloway", "Buyer"], ["Dana Kim · Northfield Lending", "Lender"], ["Lakeview Title", "Title"], ["Marcus Holt · Bluewater Realty", "Listing agent"]] },
-  { id: 14, side: "buyer", stage: "Under Contract", name: "Ruth & Sam Engel", line: "6012 Xerxes Ave S, Edina", price: 598000, em: 12000, sc: 0, bac: "2.7%", comm: 16146, fin: "Conventional",
-    ms: { fa: "2026-10-09", insp: "2026-10-19", ws: "2026-10-30", close: "2026-11-06" } },
-  { id: 15, side: "buyer", stage: "Under Contract", name: "Dev Raman", line: "1530 Hague Ave, St. Paul", price: 329900, em: 5000, sc: 4000, bac: "2.5%", comm: 8247.5, fin: "FHA",
-    ms: { fa: "2026-09-19", insp: "2026-09-29", ws: "2026-10-09", close: "2026-10-23" } },
   { id: 16, side: "buyer", stage: "Closed", name: "Kara Voss", line: "3816 Grand Ave S, Minneapolis", price: 376000, closed: "2026-09-29" },
-  { id: 17, side: "buyer", stage: "Closed", name: "Liam Torres", line: "5521 Abbott Ave S, Edina", price: 510000, closed: "2026-09-22" },
-  { id: 18, side: "buyer", stage: "Closed", name: "Hollis Family", line: "2440 Cleveland Ave N, Roseville", price: 289500, closed: "2026-09-18" },
   // Sellers
-  { id: 21, side: "seller", stage: "Lead", name: "Patricia Wendt", line: "Source: Sphere", since: "2026-10-07" },
-  { id: 22, side: "seller", stage: "Lead", name: "Joel Amundsen", line: "Source: Website", since: "2026-10-11" },
-  { id: 23, side: "seller", stage: "Consult", name: "Erik & Tove Brekke", line: "Consult Fri Oct 16", since: "2026-10-09" },
   { id: 24, side: "seller", stage: "Listing Signed / Prep", name: "Carol Fisk & Dean Moreno", line: "3318 47th Ave S, Minneapolis", price: 365000, since: "2026-10-08" },
-  { id: 25, side: "seller", stage: "Listing Signed / Prep", name: "Ana Ruiz-Hall", line: "1207 Chatsworth St N, Roseville", price: 299000, since: "2026-10-01" },
-  { id: 26, side: "seller", stage: "Coming Soon", name: "Hugo Bergstrom", line: "709 Lincoln Ave, St. Paul", price: 625000, since: "2026-10-10" },
-  { id: 27, side: "seller", stage: "Active", name: "Margaret Ostby", line: "4540 Drew Ave S, Edina", price: 749000, since: "2026-09-30" },
-  { id: 28, side: "seller", stage: "Active", name: "Greg & Lin Tam", line: "2810 Fremont Ave N, Minneapolis", price: 315000, since: "2026-09-12" },
   { id: 32, side: "seller", stage: "Active", name: "Jordan & Priya Calloway", cid: "calloway", line: "2201 Lyndale Ave S #407, Minneapolis", price: 289000, since: "2026-10-05" },
-  { id: 29, side: "seller", stage: "Under Contract", name: "Wes Halvorsen", line: "1904 Stinson Pkwy NE, Minneapolis", price: 442000, em: 7500, sc: 3000, bac: "2.5%", comm: 11050, fin: "Conventional",
-    ms: { fa: "2026-10-07", insp: "2026-10-17", ws: "2026-10-28", close: "2026-11-13" } },
-  { id: 30, side: "seller", stage: "Closed", name: "Irene Dahl", line: "6125 Morgan Ave S, Richfield", price: 398000, closed: "2026-10-02" },
-  { id: 31, side: "seller", stage: "Closed", name: "Paul Nyberg", line: "880 Ashland Ave, St. Paul", price: 265000, closed: "2026-09-25" },
 ];
 
 // Build each deal's checklist once.
@@ -543,7 +517,7 @@ const CONTACTS = {
     ],
   },
   murphy: {
-    name: "Kate Murphy", stage: "90 Day Sphere", follow: 90, source: "Sphere", referred: "", mailing: "Kate Murphy",
+    name: "Kate Murphy", stage: "Past Client", follow: 90, source: "Sphere", referred: "", mailing: "Kate Murphy",
     tags: ["Past Client", "Mailers", "Christmas Cards", "Email Newsletter", "2026 RE Health Check Needed"],
     phones: [["Mobile", "(651) 555-0172"]], emails: [["", "kate.murphy@example.com"]], address: "1789 Juliet Ave, St. Paul, MN 55105",
     birthdays: [["Kate", "Jan 22"]], homeiversary: "Jun 18, 2021",
@@ -560,18 +534,7 @@ const CONTACTS = {
 };
 const cidOf = dl => dl.cid || "d" + dl.id;
 // People without deals (matches the People mockup): [name, stage, follow, source, tags, phone, days since last touch]
-const EXTRA = {
-  x1: ["Marcus & Elle Brandvold", "90 Day Sphere", 90, "Sphere", ["Past Client", "Christmas Cards", "Mailers"], "(952) 555-0181", 98],
-  x2: ["Rita Okonkwo", "7 Day Sphere", 7, "Sphere Referral", ["A Lead"], "(612) 555-0182", 9],
-  x3: ["Tom Lindgren", "180 Day Sphere", 180, "Sphere", ["Past Client", "Email Newsletter"], "(763) 555-0183", 40],
-  x4: ["Sarah Beckett", "Realtor", null, "Industry", ["Realtors"], "(612) 555-0184", 120],
-  x5: ["Dana Kim", "Industry Partners", null, "Sphere", ["Lender"], "(612) 555-0185", 3],
-  x6: ["Jake & Mara Holm", "30 Day Sphere", 30, "Website", ["Past Client", "Mailers"], "(651) 555-0186", 35],
-  x7: ["Lucy Tran", "Lead", null, "Website", ["Buyer", "Email Newsletter"], "(612) 555-0187", 2],
-  x8: ["Gary Pfeiffer", "Passive Marketing", null, "Zillow Preferred", ["Email Newsletter"], "(952) 555-0188", 210],
-  x9: ["Nina Sorensen", "60 Day Sphere", 60, "Sphere", ["Past Client", "Christmas Cards"], "(612) 555-0189", 61],
-  x10: ["Chris Albrecht", "90 Day Sphere", 90, "Sphere Referral", ["Investor"], "(651) 555-0190", 45],
-};
+const EXTRA = {};
 function contact(cid) {
   if (CONTACTS[cid]) return CONTACTS[cid];
   if (EXTRA[cid]) {
@@ -585,7 +548,7 @@ function contact(cid) {
   const closed = dl.stage === "Closed";
   const pair = memberNames(dl.name);
   const c = {
-    name: dl.name, stage: closed ? "30 Day Sphere" : "Lead", follow: closed ? 30 : null, source: dl.line.startsWith("Source: ") ? dl.line.slice(8) : "Sphere",
+    name: dl.name, stage: closed ? "Past Client" : "Lead", follow: closed ? 30 : null, source: dl.line.startsWith("Source: ") ? dl.line.slice(8) : "Sphere",
     referred: "", mailing: dl.name, tags: [dl.side === "buyer" ? "Buyer" : "Seller"].concat(closed ? ["Past Client", "Email Newsletter", "Mailers"] : ["Email Newsletter"]),
     phones: pair ? pair.map((n, i) => [n.split(" ")[0], "(612) 555-01" + String(dl.id + i * 40).padStart(2, "0")]) : [["Mobile", "(612) 555-01" + String(dl.id).padStart(2, "0")]],
     emails: pair ? pair.map(n => [n.split(" ")[0], n.toLowerCase().replace(" ", ".") + "@example.com"]) : [["", `${first}.${last}@example.com`]],
@@ -600,7 +563,7 @@ function contact(cid) {
   };
   CONTACTS[cid] = c; return c;
 }
-let openContact = null, ctab = {}, tlFilter = "all", composer = "note";
+let openContact = null, ctab = {}, tlFilter = "all", composer = "note", applyOpen = false;
 const isActive = dl => dl.stage !== "Closed";
 const WHO = { LP: "Luke", AS: "Alyssa" };
 
@@ -610,7 +573,7 @@ function renderContact() {
   const active = myDeals.filter(isActive);
   if (!ctab[openContact]) ctab[openContact] = active.length ? "deal-" + active[0].id : "timeline";
   const tab = ctab[openContact];
-  const stage = active.some(x => x.stage === "Under Contract") ? "Under Contract" : c.stage;
+  const stage = c.stage;
   const lastTouch = c.history.filter(h => ["note", "text", "call", "email"].includes(h[1])).map(h => d(h[0])).sort((a, b) => b - a)[0];
   const ago = lastTouch ? diff(TODAY, lastTouch) : null;
   const touchDue = c.follow && ago !== null && ago >= c.follow;
@@ -632,6 +595,8 @@ function renderContact() {
         <div class="card-s">
           <h3>Tasks <span class="muted">${c.tasks.filter(t => t.s === "open").length}</span><button class="plus" data-toast="Quick add, already linked to ${esc(c.name)}" aria-label="Add task">+</button></h3>
           ${c.tasks.length ? c.tasks.map((t, i) => ptaskHtml(t, i)).join("") : `<p class="muted sm">No tasks outside their deals.</p>`}
+          ${applyOpen ? `<div class="apply"><select id="apply-tpl" aria-label="Template">${(typeof HQ !== "undefined" ? HQ.templates : []).slice().sort((a, b) => !!a.trigger - !!b.trigger).map(t => `<option value="${t.id}">${esc(t.name)}${t.trigger ? "" : " (by hand)"}</option>`).join("")}</select><button class="btn primary" data-applytpl="1">Apply</button><button class="btn" data-applycancel="1">Cancel</button></div>`
+            : `<button class="btn" data-applyopen="1">Apply template</button>`}
         </div>
         <div class="card-s">
           <h3>Deals <span class="muted">${myDeals.length}</span></h3>
@@ -675,6 +640,7 @@ function factsInline(dl) {
 }
 
 function ptaskHtml(t, i) {
+  if (!t.due) return `<div class="ptask ${t.s === "done" ? "done" : ""}"><button class="check" data-ptask="${i}" aria-label="Mark done: ${esc(t.t)}">${t.s === "done" ? CHECK : ""}</button><div><div class="title">${esc(t.t)}</div><div class="sm muted">No due date · ${WHO[t.who]}</div></div></div>`;
   const n = diff(d(t.due), TODAY), done = t.s === "done";
   return `<div class="ptask ${done ? "done" : ""}">
     <button class="check" data-ptask="${i}" aria-label="Mark ${done ? "not done" : "done"}: ${esc(t.t)}">${done ? CHECK : ""}</button>
@@ -763,7 +729,7 @@ function rowHtml(dl, t) {
 /* ---------- Editable left column ---------- */
 let editCard = null, draft = null, tagAdding = false;
 const OPTS = {
-  stage: ["Lead", "Realtor", "Industry Partners", "FSBO", "Passive Marketing", "Archive/No Direct Contact", "Petty Homes Admin", "180 Day Sphere", "90 Day Sphere", "60 Day Sphere", "30 Day Sphere", "7 Day Sphere", "Closed", "Trash"],
+  stage: ["Sphere", "Past Client", "Lead", "Industry Partners", "Passive Marketing", "Archive", "Trash"],
   follow: ["Not set", "Every 7 days", "Every 30 days", "Every 60 days", "Every 90 days", "Every 180 days"],
   source: ["Sphere", "Sphere Referral", "Website", "AJ Gimme Lead", "Stacie Rihl", "Zillow Preferred"],
   assigned: ["Luke Pettersen", "Alyssa Chakiton"],
@@ -826,12 +792,11 @@ function detailsCard(c, stage, touchDue) {
       <label>Source${pick("source", draft.source)}</label>
       <label>Referred by<input data-f="referred" value="${esc(draft.referred)}" placeholder="Search people"></label>
       <label>Mailing name<input data-f="mailing" value="${esc(draft.mailing)}"></label>
-      <p class="muted sm">Stage shows "Under Contract" automatically while a deal is under contract.</p>
       ${foot("details")}</div>`;
   }
   return `<div class="card-s">${head("Details", "details")}
     <dl class="kv">
-      <dt>Stage</dt><dd>${esc(stage)}${stage === "Under Contract" ? ` <span class="muted sm">(from deal)</span>` : ""}</dd>
+      <dt>Stage</dt><dd>${esc(stage)}</dd>
       <dt>Follow up</dt><dd>${c.follow ? `${followTxt(c.follow)}${touchDue ? ` <span class="due-chip">Due now</span>` : ""}` : `<span class="muted">Not set</span>`}</dd>
       <dt>Assigned to</dt><dd>${esc(c.assigned || "Luke Pettersen")}</dd>
       <dt>Source</dt><dd>${esc(c.source)}</dd>
@@ -929,6 +894,15 @@ document.addEventListener("click", e => {
     return;
   }
   if (b.dataset.deal) { openCard(+b.dataset.deal); return; }
+  if (b.dataset.applyopen) { applyOpen = true; render(); return; }
+  if (b.dataset.applycancel) { applyOpen = false; render(); return; }
+  if (b.dataset.applytpl) {
+    const tpl = HQ.templates.find(x => x.id === el("apply-tpl").value), c = contact(openContact);
+    const made = HQ.expand(tpl, TODAY).map(x => ({ t: x.t, due: x.due ? iso(x.due) : null, who: x.who === "Alyssa" ? "AS" : "LP", s: "open" }));
+    c.tasks.push(...made);
+    HQ.newTasks.push(...made.map(x => Object.assign({ cid: openContact, name: c.name }, x)));
+    applyOpen = false; render(); toast(`Added ${made.length} tasks from "${tpl.name}". They're on the Tasks page too.`); return;
+  }
   if (b.dataset.editcard) { const c = contact(openContact); editCard = b.dataset.editcard; draft = JSON.parse(JSON.stringify(c)); draft.assigned = draft.assigned || "Luke Pettersen"; draft.newMode = {}; render(); return; }
   if (b.dataset.cancelcard) { editCard = null; draft = null; render(); return; }
   if (b.dataset.savecard) { saveCard(b.dataset.savecard); return; }

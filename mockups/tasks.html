@@ -194,57 +194,31 @@ const PEOPLE = { LP: "Luke", AS: "Alyssa (assistant)" };
 // Links a task can point to. Deals match the pipeline mockup.
 const LINKS = {
   calloway: { kind: "deal", label: "Jordan & Priya Calloway", full: "Jordan & Priya Calloway · Buyer, Under Contract" },
-  engel: { kind: "deal", label: "Ruth & Sam Engel", full: "Ruth & Sam Engel · Buyer, Under Contract" },
-  raman: { kind: "deal", label: "Dev Raman", full: "Dev Raman · Buyer, Under Contract" },
-  halvorsen: { kind: "deal", label: "Wes Halvorsen", full: "Wes Halvorsen · Seller, Under Contract" },
-  okafor: { kind: "deal", label: "Ben & Hana Okafor", full: "Ben & Hana Okafor · Buyer, Lead" },
-  thorsen: { kind: "deal", label: "Grace Thorsen", full: "Grace Thorsen · Buyer, Consult" },
+  pryce: { kind: "deal", label: "Owen Pryce", full: "Owen Pryce · Buyer, Offer Out" },
   fisk: { kind: "deal", label: "Carol Fisk & Dean Moreno", full: "Carol Fisk & Dean Moreno · Seller, Prep" },
-  murphy: { kind: "person", label: "Kate Murphy", full: "Kate Murphy · 90 Day Sphere" },
-  dana: { kind: "person", label: "Dana Kim", full: "Dana Kim · Lender, Northfield Lending" },
+  murphy: { kind: "person", label: "Kate Murphy", full: "Kate Murphy · Past Client" },
+  voss: { kind: "person", label: "Kara Voss", full: "Kara Voss · Past Client" },
 };
 
 // Contact page each link opens in the pipeline mockup.
-const CID = { calloway: "calloway", engel: "d14", raman: "d15", halvorsen: "d29", okafor: "d3", thorsen: "d4", fisk: "d24", murphy: "murphy", dana: "calloway" };
+const CID = { calloway: "calloway", pryce: "d11", fisk: "d24", murphy: "murphy", voss: "d16" };
 // p: priority 0 none, 1 low, 2 med, 3 high. step: deal checklist info.
 let tasks = [
   { t: "Earnest money receipt saved to file", due: "2026-10-07", who: "AS", link: "calloway", step: { phase: "Under Contract", rule: "Final Acceptance + 5d" } },
   { t: "Insurance referral", due: "2026-10-07", who: "AS", link: "calloway", kind: "email", step: { phase: "Financing", rule: "Final Acceptance + 5d" } },
-  { t: "Schedule consult", due: "2026-10-07", who: "LP", link: "okafor", step: { phase: "Lead", rule: "Lead + 2d" } },
-  { t: "Replace furnace filter, Lake St duplex", due: "2026-10-10", who: "LP", p: 1 },
   { t: "Review inspection report with clients", due: "2026-10-12", time: "4:00pm", who: "LP", link: "calloway", p: 3, step: { phase: "Inspection", rule: "Inspection − 2d" } },
-  { t: "Check October rent payments", due: "2026-10-12", who: "LP", repeat: "Monthly" },
+  { t: "Follow up with listing agent", due: "2026-10-12", who: "LP", link: "pryce", p: 2, step: { phase: "Offer Out", rule: "Start date + 1d" } },
   { t: "Call Kate about spring listing timing", due: "2026-10-12", time: "11:00am", who: "LP", link: "murphy", p: 2 },
   { t: "Draft inspection amendment", due: "2026-10-13", who: "LP", link: "calloway", p: 3, step: { phase: "Inspection", rule: "Inspection − 1d" } },
-  { t: "Order fall trifold mailers", due: "2026-10-13", who: "AS", repeat: "Yearly", subs: [["Pull mailing list", true], ["Approve proof", false], ["Submit print order", false]] },
+  { t: "Send school district info for Upton Ave", due: "2026-10-13", who: "LP", link: "calloway" },
   { t: "Signed amendment to lender + title", due: "2026-10-14", who: "AS", link: "calloway", kind: "email", step: { phase: "Inspection", rule: "Inspection day of" } },
-  { t: "Final walkthrough scheduling text", due: "2026-10-14", who: "AS", link: "raman", kind: "text", step: { phase: "Closing", rule: "Closing − 9d" } },
-  { t: "Day-of-inspection text", due: "2026-10-14", who: "AS", link: "halvorsen", kind: "text", step: { phase: "Inspection", rule: "Inspection − 3d" } },
-  { t: "Hold consult", due: "2026-10-14", time: "6:30pm", who: "LP", link: "thorsen", step: { phase: "Consult", rule: "Consult + 3d" } },
-  { t: "Dentist", due: "2026-10-14", time: "2:00pm", who: "LP" },
-  { t: "Record podcast ep. 38 with lender guest", due: "2026-10-15", who: "LP", p: 2, subs: [["Confirm guest", true], ["Outline questions", false], ["Book studio", false]] },
-  { t: "Schedule listing photos", due: "2026-10-15", who: "AS", link: "fisk", step: { phase: "Listing Signed / Prep", rule: "Prep + 1d" } },
-  { t: "Confirm cash to close", due: "2026-10-16", who: "AS", link: "raman", step: { phase: "Closing", rule: "Closing − 7d" } },
-  { t: "Day-of-inspection text", due: "2026-10-16", who: "AS", link: "engel", kind: "text", step: { phase: "Inspection", rule: "Inspection − 3d" } },
-  { t: "Review buyer's inspection requests", due: "2026-10-17", who: "LP", link: "halvorsen", step: { phase: "Inspection", rule: "Inspection day of" } },
-  { t: "Weekly task report email", due: "2026-10-18", who: "AS", repeat: "Weekly" },
-  { t: "Plan next week's social posts", due: "2026-10-16", who: "AS", repeat: "Weekly" },
-  { t: "Send New Year's postcard", due: "2026-12-28", who: "AS", repeat: "Yearly" },
-  { t: "Send spring postcard", due: "2027-03-15", who: "AS", repeat: "Yearly" },
-  { t: "Quarterly market update email", due: "2027-01-05", who: "LP", repeat: "Quarterly" },
-  { t: "Review settlement statement", due: "2026-10-19", who: "LP", link: "raman", step: { phase: "Closing", rule: "Closing − 4d" } },
-  { t: "Finish MN license CE credits", due: "2026-10-30", who: "LP", p: 3 },
-  { t: "Get appraisal date from lender", due: "2026-10-13", who: "AS", link: "calloway" },
+  { t: "Schedule listing photos", due: "2026-10-15", who: "AS", link: "fisk", step: { phase: "Prep", rule: "Start date + 1d" } },
+  { t: "Send home value update", due: "2026-10-27", who: "AS", link: "voss", repeat: "Yearly" },
 ];
 tasks.forEach((t, i) => { t.id = i; t.done = false; t.p = t.p || 0; t.kind = t.kind || "task"; });
 let nextId = tasks.length;
 
-const touches = [
-  { n: "Kara Voss", f: "30 days", last: "Sep 9" },
-  { n: "Marcus & Elle Brandvold", f: "90 days", last: "Jul 6" },
-  { n: "Hollis Family", f: "30 days", last: "Sep 10" },
-  { n: "Rita Okonkwo", f: "7 days", last: "Oct 3" },
-];
+const touches = [];
 
 let view = "today", filter = "all", sel = null, me = "LP", whoF = "everyone";
 let LISTS = [], newListOpen = false;
@@ -484,5 +458,17 @@ document.addEventListener("change", e => {
   render();
 });
 
+// Tasks created elsewhere (e.g. a template applied on a contact page).
+function drain() {
+  if (typeof HQ === "undefined" || !HQ.newTasks.length) return 0;
+  const n = HQ.newTasks.length;
+  HQ.newTasks.splice(0).forEach(x => {
+    const key = "c_" + x.cid;
+    if (!LINKS[key]) { LINKS[key] = { kind: "person", label: x.name, full: x.name }; CID[key] = x.cid; }
+    tasks.push({ id: nextId++, t: x.t, due: x.due || iso(TODAY), who: x.who, link: key, p: 0, kind: "task", done: false });
+  });
+  return n;
+}
+drain();
 render();
 </script>

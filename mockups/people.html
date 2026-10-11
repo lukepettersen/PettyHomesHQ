@@ -132,38 +132,11 @@ td a.name:hover { color: var(--accent); }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 // [cid, name, stage, followDays, lastTouchDaysAgo, source, tags, deal, phone]
 let people = [
-  ["calloway", "Jordan & Priya Calloway", "Under Contract", 30, 1, "Sphere Referral", ["Buyer", "Seller", "A Lead"], "Buyer · Under Contract, Seller · Active", "(612) 555-0148"],
-  ["murphy", "Kate Murphy", "90 Day Sphere", 90, 12, "Sphere", ["Past Client", "Mailers", "Christmas Cards"], "", "(651) 555-0172"],
-  ["d14", "Ruth & Sam Engel", "Under Contract", null, 3, "Sphere", ["Buyer"], "Buyer · Under Contract", "(612) 555-0114"],
-  ["d15", "Dev Raman", "Under Contract", null, 2, "Website", ["Buyer"], "Buyer · Under Contract", "(612) 555-0115"],
-  ["d29", "Wes Halvorsen", "Under Contract", null, 4, "Sphere", ["Seller"], "Seller · Under Contract", "(612) 555-0129"],
+  ["calloway", "Jordan & Priya Calloway", "Lead", 30, 1, "Sphere Referral", ["Buyer", "Seller", "A Lead"], "Buyer · Under Contract, Seller · Active", "(612) 555-0148"],
+  ["murphy", "Kate Murphy", "Past Client", 90, 12, "Sphere", ["Past Client", "Mailers", "Christmas Cards"], "", "(651) 555-0172"],
   ["d11", "Owen Pryce", "Lead", null, 1, "Website", ["Buyer", "B Lead"], "Buyer · Offer Out", "(612) 555-0111"],
-  ["d12", "Mia Castellano", "Lead", null, 0, "Zillow Preferred", ["Buyer", "A Lead"], "Buyer · Offer Out", "(612) 555-0112"],
-  ["d7", "Nora Feld", "Lead", null, 6, "Sphere Referral", ["Buyer"], "Buyer · Searching", "(612) 555-0107"],
-  ["d8", "Theo & June Park", "Lead", null, 11, "Sphere", ["Buyer", "C Lead"], "Buyer · Searching", "(612) 555-0108"],
-  ["d9", "Isaac Brandt", "Lead", null, 4, "Website", ["Buyer"], "Buyer · Searching", "(612) 555-0109"],
-  ["d10", "Leah Sandoval", "Lead", null, 15, "Sphere", ["Buyer", "D Lead"], "Buyer · Searching", "(612) 555-0110"],
-  ["d1", "Ethan Moreau", "Lead", null, 3, "Website", [], "Buyer · Lead", "(612) 555-0101"],
-  ["d3", "Ben & Hana Okafor", "Lead", null, 7, "Zillow Preferred", [], "Buyer · Lead", "(612) 555-0103"],
-  ["d4", "Grace Thorsen", "Lead", null, 2, "Sphere", ["Buyer"], "Buyer · Consult", "(612) 555-0104"],
   ["d24", "Carol Fisk & Dean Moreno", "Lead", null, 4, "Sphere Referral", ["Seller", "A Lead"], "Seller · Prep", "(612) 555-0124"],
-  ["d26", "Hugo Bergstrom", "Lead", null, 2, "Sphere", ["Seller"], "Seller · Coming Soon", "(612) 555-0126"],
-  ["d27", "Margaret Ostby", "Lead", null, 5, "Website", ["Seller"], "Seller · Active", "(612) 555-0127"],
-  ["d28", "Greg & Lin Tam", "Lead", null, 8, "Sphere", ["Seller"], "Seller · Active", "(612) 555-0128"],
-  ["d16", "Kara Voss", "30 Day Sphere", 30, 13, "Sphere", ["Past Client", "Email Newsletter"], "", "(612) 555-0116"],
-  ["d17", "Liam Torres", "30 Day Sphere", 30, 20, "Website", ["Past Client"], "", "(612) 555-0117"],
-  ["d18", "Hollis Family", "30 Day Sphere", 30, 47, "Sphere", ["Past Client", "Mailers"], "", "(612) 555-0118"],
-  ["d30", "Irene Dahl", "30 Day Sphere", 30, 10, "Sphere Referral", ["Past Client"], "", "(612) 555-0130"],
-  ["x1", "Marcus & Elle Brandvold", "90 Day Sphere", 90, 98, "Sphere", ["Past Client", "Christmas Cards", "Mailers"], "", "(952) 555-0181"],
-  ["x2", "Rita Okonkwo", "7 Day Sphere", 7, 9, "Sphere Referral", ["A Lead"], "", "(612) 555-0182"],
-  ["x3", "Tom Lindgren", "180 Day Sphere", 180, 40, "Sphere", ["Past Client", "Email Newsletter"], "", "(763) 555-0183"],
-  ["x4", "Sarah Beckett", "Realtor", null, 120, "Industry", ["Realtors"], "", "(612) 555-0184"],
-  ["x5", "Dana Kim", "Industry Partners", null, 3, "Sphere", ["Lender"], "", "(612) 555-0185"],
-  ["x6", "Jake & Mara Holm", "30 Day Sphere", 30, 35, "Website", ["Past Client", "Mailers"], "", "(651) 555-0186"],
-  ["x7", "Lucy Tran", "Lead", null, 2, "Website", ["Buyer", "Email Newsletter"], "", "(612) 555-0187"],
-  ["x8", "Gary Pfeiffer", "Passive Marketing", null, 210, "Zillow Preferred", ["Email Newsletter"], "", "(952) 555-0188"],
-  ["x9", "Nina Sorensen", "60 Day Sphere", 60, 61, "Sphere", ["Past Client", "Christmas Cards"], "", "(612) 555-0189"],
-  ["x10", "Chris Albrecht", "90 Day Sphere", 90, 45, "Sphere Referral", ["Investor"], "", "(651) 555-0190"],
+  ["d16", "Kara Voss", "Past Client", 30, 34, "Sphere", ["Past Client", "Email Newsletter"], "", "(612) 555-0116"],
 ].map(([cid, name, stage, follow, last, source, tags, deal, phone]) => ({ cid, name, stage, follow, last, source, tags, deal, phone }));
 // Extra fields for filtering.
 people.forEach((p, i) => {
@@ -172,9 +145,10 @@ people.forEach((p, i) => {
 });
 
 /* ---------- Filters ---------- */
+const STAGES = ["Sphere", "Past Client", "Lead", "Industry Partners", "Passive Marketing", "Archive", "Trash"];
 const uniq = a => [...new Set(a)].sort();
 const FIELDS = {
-  stage: { label: "Stage", ops: ["is", "is not"], values: () => uniq(people.map(p => p.stage)) },
+  stage: { label: "Stage", ops: ["is", "is not"], values: () => STAGES },
   tag: { label: "Tag", ops: ["has", "doesn't have"], values: () => uniq(people.flatMap(p => p.tags)) },
   source: { label: "Source", ops: ["is", "is not"], values: () => uniq(people.map(p => p.source)) },
   deal: { label: "Deal", ops: ["is", "is not"], values: () => ["Under contract", "Active buyer", "Active seller", "No active deal"] },
@@ -203,10 +177,10 @@ let nid = 100;
 const L = (name, filters) => ({ id: "l" + (++nid), name, filters });
 let collections = [
   { id: "c1", name: "Clear Daily", open: false, lists: [L("Buyers under contract", [{ f: "deal", op: "is", v: "Under contract" }, { f: "tag", op: "has", v: "Buyer" }]), L("Sellers under contract", [{ f: "deal", op: "is", v: "Under contract" }, { f: "tag", op: "has", v: "Seller" }]), L("A leads", [{ f: "tag", op: "has", v: "A Lead" }])] },
-  { id: "c2", name: "Sphere", open: true, lists: [L("Past clients", [{ f: "tag", op: "has", v: "Past Client" }]), L("Due for a touch", [{ f: "due", op: "is", v: "Yes" }]), L("30 day sphere", [{ f: "follow", op: "is", v: "Every 30 days" }]), L("90 day sphere", [{ f: "follow", op: "is", v: "Every 90 days" }]), L("180 day sphere", [{ f: "follow", op: "is", v: "Every 180 days" }])] },
+  { id: "c2", name: "Sphere", open: true, lists: [L("Past clients", [{ f: "stage", op: "is", v: "Past Client" }]), L("Sphere", [{ f: "stage", op: "is", v: "Sphere" }]), L("Due for a touch", [{ f: "due", op: "is", v: "Yes" }]), L("30 day sphere", [{ f: "follow", op: "is", v: "Every 30 days" }]), L("90 day sphere", [{ f: "follow", op: "is", v: "Every 90 days" }]), L("180 day sphere", [{ f: "follow", op: "is", v: "Every 180 days" }])] },
   { id: "c3", name: "Leads", open: false, lists: [L("Buyers not under contract", [{ f: "deal", op: "is", v: "Active buyer" }]), L("Sellers not under contract", [{ f: "deal", op: "is", v: "Active seller" }]), L("Website leads", [{ f: "source", op: "is", v: "Website" }]), L("Zillow leads", [{ f: "source", op: "is", v: "Zillow Preferred" }]), L("Gone quiet (60+ days)", [{ f: "stage", op: "is", v: "Lead" }, { f: "last", op: "more than", v: "60" }])] },
-  { id: "c4", name: "Mailing Lists", open: false, lists: [L("Past client mailers", [{ f: "tag", op: "has", v: "Past Client" }, { f: "tag", op: "has", v: "Mailers" }]), L("Christmas cards", [{ f: "tag", op: "has", v: "Christmas Cards" }]), L("Email newsletter", [{ f: "tag", op: "has", v: "Email Newsletter" }])] },
-  { id: "c5", name: "Partners", open: false, lists: [L("Agents", [{ f: "stage", op: "is", v: "Realtor" }]), L("Lenders & industry", [{ f: "stage", op: "is", v: "Industry Partners" }])] },
+  { id: "c4", name: "Mailing Lists", open: false, lists: [L("Past client mailers", [{ f: "stage", op: "is", v: "Past Client" }, { f: "tag", op: "has", v: "Mailers" }]), L("Christmas cards", [{ f: "tag", op: "has", v: "Christmas Cards" }]), L("Email newsletter", [{ f: "tag", op: "has", v: "Email Newsletter" }])] },
+  { id: "c5", name: "Partners", open: false, lists: [L("Industry partners", [{ f: "stage", op: "is", v: "Industry Partners" }])] },
 ];
 let cur = null;           // current list id, null = All people
 let working = [];         // filters being shown (may differ from the saved list)
@@ -321,7 +295,7 @@ function personModal() {
     </div>
     <button type="button" class="btn" id="p2-toggle" data-p2="1">+ Add a second person (spouse, partner, co-buyer)</button>
     <p id="p-preview"></p>
-    <div class="two"><label>Stage<select class="input" id="f-stage">${["Lead", "7 Day Sphere", "30 Day Sphere", "90 Day Sphere", "180 Day Sphere", "Realtor", "Industry Partners"].map(s => `<option>${s}</option>`).join("")}</select></label>
+    <div class="two"><label>Stage<select class="input" id="f-stage">${STAGES.map(s => `<option>${s}</option>`).join("")}</select></label>
     <label>Source<select class="input" id="f-source">${["Sphere", "Sphere Referral", "Website", "Zillow Preferred", "AJ Gimme Lead", "Stacie Rihl"].map(s => `<option>${s}</option>`).join("")}</select></label></div>
     <div class="foot"><button type="button" class="btn" data-close="1">Cancel</button><button class="btn primary" type="submit">Add</button></div>
   </form></div>`;

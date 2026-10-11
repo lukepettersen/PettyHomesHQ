@@ -120,6 +120,9 @@ def main(out):
             api = ('\nreturn { open(h) { try { history.replaceState(null, "", h); } catch (_) {}\n'
                    '  const m = (h || "").match(/^#contact-([\\w-]+)$/);\n'
                    '  if (m) { openContact = m[1]; tlFilter = "all"; editCard = null; draft = null; render(); window.scrollTo(0, 0); } } };')
+        if key == "tasks":
+            api = ('\nreturn { onShow() { const n = drain(); if (n) { render(); '
+                   'toast(`${n} new task${n === 1 ? "" : "s"} from a template.`); } } };')
         js.append(f"INIT.{key} = function (document) {{\n{script}{api}\n}};")
 
     ids = ", ".join(f"#pg-{k}" for k, _ in PAGES)
@@ -140,6 +143,7 @@ body {{ background: var(--bg); }}
 </style>
 {chr(10).join(html)}
 <script>
+{(HERE / "shared.js").read_text()}
 const INIT = {{}}, API = {{}};
 {chr(10).join(js)}
 function scopedDoc(root) {{
@@ -155,6 +159,7 @@ function show(key, hash) {{
   document.querySelectorAll(".pg").forEach(p => p.hidden = p.id !== "pg-" + key);
   if (!API[key]) API[key] = INIT[key](scopedDoc(document.getElementById("pg-" + key))) || {{}};
   if (hash && API[key].open) API[key].open(hash);
+  if (API[key].onShow) API[key].onShow();
   window.scrollTo(0, 0);
 }}
 document.addEventListener("click", e => {{

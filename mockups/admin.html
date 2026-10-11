@@ -98,6 +98,22 @@ td input.n { width: 60px; min-width: 60px; }
 .tpl-ed textarea { min-height: 160px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); resize: vertical; }
 .merge { display: flex; flex-wrap: wrap; gap: 4px; }
 .merge button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; font-size: 11.5px; padding: 2px 8px; font-family: var(--font-data); }
+.tgrid { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 980px) { .tgrid { grid-template-columns: minmax(0, 1fr); } }
+.tlist { display: flex; flex-direction: column; padding-bottom: 8px; position: sticky; top: env(safe-area-inset-top, 0px); }
+.tl-top { padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.tl-h { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; padding: 10px 12px 4px; }
+.tli { border: 0; background: none; text-align: left; padding: 7px 12px; display: flex; flex-direction: column; gap: 1px; font-size: 13px; }
+.tli:hover { background: var(--sunken); }
+.tli[aria-current="true"] { background: var(--accent-soft); }
+.tli small { color: var(--muted); font-size: 11.5px; }
+.ed-head { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.tname { font-family: var(--font-display); font-weight: 800; font-size: 20px; border: 1px solid transparent; background: none; padding: 2px 6px; margin-left: -6px; border-radius: 6px; width: 100%; }
+.tname:hover, .tname:focus { border-color: var(--line); background: var(--bg); }
+.lbl { display: flex; flex-direction: column; gap: 2px; font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.lbl select { padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-size: 13px; color: var(--fg); font-weight: 400; max-width: 320px; }
+.ed-head .toolbar { align-items: flex-end; }
+.prev .prow { display: flex; justify-content: space-between; gap: 10px; padding: 6px 14px; border-top: 1px solid var(--line); font-size: 13px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .schip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 12px; font-size: 13px; }
 .schip span { color: var(--muted); font-size: 12px; margin-left: 4px; }
@@ -139,9 +155,9 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 const el = id => document.getElementById(id);
 const SECTIONS = [
   ["Team", [["users", "Users & roles"]]],
-  ["Deals", [["pipelines", "Pipelines & stages"], ["checklists", "Checklist templates"]]],
+  ["Deals", [["pipelines", "Pipelines & stages"], ["checklists", "Task templates"]]],
   ["People", [["fields", "Custom fields"], ["tags", "Tags"], ["lists", "Stages, sources & follow-up"]]],
-  ["Messaging", [["templates", "Text & email templates"]]],
+  ["Messaging", [["texttpl", "Text templates"], ["emailtpl", "Email templates"]]],
   ["Connections", [["integrations", "Integrations"]]],
 ];
 let sec = "checklists";
@@ -151,29 +167,10 @@ const state = {
   roles: ["Admin", "Assistant"],
   perms: [["See commissions", true, false], ["Delete people and deals", true, false], ["Manage users and roles", true, false], ["Edit checklist templates", true, true], ["Edit text and email templates", true, true], ["Export data", true, false], ["Send texts", true, true]],
   pipes: { Buyer: ["Lead", "Consult", "Rep Signed / Searching", "Offer Out", "Under Contract", "Closed"], Seller: ["Lead", "Consult", "Listing Signed / Prep", "Coming Soon", "Active", "Under Contract", "Closed"] },
-  ckPipe: "Buyer", ckStage: "Under Contract", ckApply: true, ckPending: null,
-  ck: (() => {
-    const s = (name, anchor, days, dir, who, type, extra = {}) => Object.assign({ name, anchor, days, dir, who, type, tpl: "", cond: "Always", advance: "" }, extra);
-    return {
-      "Buyer · Lead": { phases: [{ name: "First contact", steps: [s("Call new lead", "Stage start", 0, "on", "Luke", "Call"), s("Intro email", "Stage start", 0, "on", "Alyssa", "Email", { tpl: "Website sign-up welcome" }), s("Schedule consult", "Stage start", 2, "after", "Luke", "Task", { advance: "Consult" })] }] },
-      "Buyer · Consult": { phases: [{ name: "Before the consult", steps: [s("Agency disclosure + more info email", "Stage start", 0, "on", "Alyssa", "Email"), s("Consult confirmation text", "Consult date", 1, "before", "Luke", "Text")] }, { name: "After the consult", steps: [s("Intro + Homespotter + legal name text", "Consult date", 0, "on", "Alyssa", "Text", { tpl: "Intro + Homespotter + legal name" }), s("Connect with lender?", "Consult date", 1, "after", "Luke", "Task")] }] },
-      "Buyer · Rep Signed / Searching": { phases: [{ name: "Buyer rep", steps: [s("Send buyer rep to sign", "Stage start", 0, "on", "Alyssa", "Task"), s("Buyer rep breakdown email", "Stage start", 0, "on", "Alyssa", "Email", { tpl: "Buyer rep breakdown" }), s("Buyer rep signed + saved", "Stage start", 1, "after", "Alyssa", "Task")] }, { name: "Searching", steps: [s("Set up home search", "Buyer rep signed", 1, "after", "Luke", "Task"), s("Check in on showings", "Buyer rep signed", 14, "after", "Luke", "Call"), s("Buyer rep expiring soon", "Buyer rep expiration", 14, "before", "Luke", "Task")] }] },
-      "Buyer · Under Contract": { phases: [
-        { name: "Under Contract", steps: [s("Purchase agreement accepted email", "Final Acceptance", 0, "on", "Alyssa", "Email", { tpl: "Purchase agreement accepted" }), s("Lender intro email", "Final Acceptance", 0, "on", "Luke", "Email"), s("Request earnest money", "Final Acceptance", 1, "after", "Alyssa", "Text", { tpl: "Earnest money" }), s("Lead-paint pamphlet email", "Final Acceptance", 1, "after", "Alyssa", "Email", { cond: "Built before 1978" })] },
-        { name: "Inspection", steps: [s("Schedule inspection", "Final Acceptance", 1, "after", "Luke", "Task"), s("Day-of-inspection text", "Inspection", 3, "before", "Alyssa", "Text", { tpl: "Day-of-inspection" }), s("Review inspection report with clients", "Inspection", 2, "before", "Luke", "Task"), s("Signed amendment to lender + title", "Inspection", 0, "on", "Alyssa", "Email")] },
-        { name: "Financing", steps: [s("Remind lender about written statement", "Written Statement", 2, "before", "Alyssa", "Email")] },
-        { name: "HOA", steps: [s("Send HOA docs to clients", "Final Acceptance", 4, "after", "Alyssa", "Email", { cond: "HOA property" }), s("Confirm rescission period ended", "HOA Rescission", 0, "on", "Alyssa", "Task", { cond: "HOA property" })] },
-        { name: "Closing", steps: [s("Order closing gift", "Closing", 14, "before", "Luke", "Task"), s("Final walkthrough", "Closing", 1, "before", "Luke", "Task"), s("Closing day", "Closing", 0, "on", "Luke", "Task", { advance: "Closed" })] },
-      ] },
-      "Buyer · Closed": { phases: [{ name: "Post-close", steps: [s("\"How was the move?\" text", "Stage start", 1, "after", "Luke", "Text"), s("Thank-you card", "Stage start", 3, "after", "Luke", "Task"), s("Zillow review request", "Stage start", 5, "after", "Alyssa", "Text"), s("Google review request", "Stage start", 21, "after", "Alyssa", "Email")] }] },
-      "Seller · Listing Signed / Prep": { phases: [{ name: "Prep", steps: [s("Withhold listing in MLS", "Stage start", 0, "on", "Alyssa", "Task"), s("Schedule photos", "Stage start", 1, "after", "Alyssa", "Task"), s("Drop off lockbox", "Stage start", 2, "after", "Luke", "Task"), s("Disclosures + lead paint", "Stage start", 3, "after", "Alyssa", "Task", { cond: "Built before 1978" })] }, { name: "Media", steps: [s("Photos to clients", "Photos taken", 1, "after", "Alyssa", "Email"), s("Upload to MLS", "Photos taken", 2, "after", "Alyssa", "Task", { advance: "Coming Soon" })] }] },
-      "Seller · Coming Soon": { phases: [{ name: "Launch", steps: [s("Showing instructions", "Stage start", 0, "on", "Alyssa", "Task"), s("Coming-soon email", "Stage start", 0, "on", "Alyssa", "Email"), s("Sign install", "Active date", 3, "before", "Luke", "Task"), s("Go active in MLS", "Active date", 0, "on", "Alyssa", "Task", { advance: "Active" })] }] },
-      "Seller · Under Contract": { phases: [{ name: "Under Contract", steps: [s("Mark contingent in MLS", "Final Acceptance", 0, "on", "Alyssa", "Task"), s("Purchase agreement accepted email", "Final Acceptance", 0, "on", "Alyssa", "Email", { tpl: "Purchase agreement accepted" })] }, { name: "Closing", steps: [s("Closing reminder email", "Closing", 14, "before", "Alyssa", "Email"), s("Closing day", "Closing", 0, "on", "Luke", "Task", { advance: "Closed" })] }] },
-    };
-  })(),
+  tplId: "t4", ckApply: true, ckPending: null,
   fields: [["Mailing name", "Text", "People"], ["Referred by", "Person", "People"], ["Homeiversary", "Date", "People"], ["Preferred contact time", "Dropdown", "People"], ["Pre-approval amount", "Number", "Deals"], ["Lender", "Person", "Deals"], ["New construction", "Checkbox", "Deals"]],
-  tags: [["Past Client", 218], ["Email Newsletter", 436], ["Petty Homes Event List", 284], ["Mailers", 260], ["Christmas Cards", 216], ["Real Estate Health Check", 200], ["Timberwolves Tickets 2026-2027 NOT RESPONDED", 178], ["2026 RE Health Check Needed", 160], ["Google Review Sent", 84], ["Buyer", 58], ["Bounced", 54], ["A Lead", 29], ["B Lead", 8], ["C Lead", 21], ["D Lead", 19], ["Seller", 22], ["Investor", 5]],
-  stages: ["Lead", "Realtor", "Industry Partners", "FSBO", "Passive Marketing", "Archive/No Direct Contact", "Petty Homes Admin", "Closed", "Trash"],
+  tags: [["Past Client", 2], ["Buyer", 2], ["Seller", 2], ["A Lead", 2], ["B Lead", 1], ["Mailers", 1], ["Christmas Cards", 1], ["Email Newsletter", 1]],
+  stages: ["Sphere", "Past Client", "Lead", "Industry Partners", "Passive Marketing", "Archive", "Trash"],
   sources: ["Sphere", "Sphere Referral", "Website", "AJ Gimme Lead", "Stacie Rihl", "Zillow Preferred"],
   follow: ["7", "30", "60", "90", "180"],
   templates: [
@@ -188,13 +185,33 @@ const state = {
   ],
   tplSel: 2, tplFilter: "All",
 };
-const ANCHORS = ["Stage start", "Consult date", "Buyer rep signed", "Buyer rep expiration", "Listing agreement signed", "Listing expiration", "Photos taken", "Active date", "Final Acceptance", "Inspection", "Written Statement", "HOA Rescission", "Closing"];
-const ckKey = (p, st) => `${p} · ${st}`;
-const ckOf = (p, st) => state.ck[ckKey(p, st)] || (state.ck[ckKey(p, st)] = { phases: [] });
-const curCk = () => ckOf(state.ckPipe, state.ckStage);
-const blankStep = () => ({ name: "New step", anchor: "Stage start", days: 1, dir: "after", who: "Alyssa", type: "Task", tpl: "", cond: "Always", advance: "" });
-const applied = () => { if (state.ckApply) toast(`Open deals in ${state.ckPipe} · ${state.ckStage} get this change too.`); };
+const ANCHORS = ["Start date", "Consult date", "Buyer rep signed", "Buyer rep expiration", "Listing agreement signed", "Listing expiration", "Photos taken", "Active date", "Final Acceptance", "Inspection", "Written Statement", "HOA Rescission", "Closing"];
+const TODAY_A = new Date(2026, 9, 12);
+const TPLS = () => HQ.templates;
+const curCk = () => TPLS().find(x => x.id === state.tplId) || TPLS()[0];
+const stepCount = x => x.phases.reduce((n, ph) => n + ph.steps.length, 0);
+const trigOptions = () => Object.entries(state.pipes).flatMap(([p, st]) => st.map(x => `${p} · ${x}`));
+const blankStep = () => ({ name: "New step", anchor: "Start date", days: 1, dir: "after", who: "Alyssa", type: "Task", tpl: "", cond: "Always", advance: "" });
+const applied = () => { const x = curCk(); if (state.ckApply && x.trigger) toast(`Open deals in ${x.trigger} get this change too.`); };
+let tplN = 100;
 const CONDS = ["Always", "HOA property", "No HOA", "New construction", "Built before 1978", "Condo / townhome", "FHA / VA loan", "Cash purchase", "Well / septic", "Referral partner", "Out of town client"];
+
+function msgTpl(type) {
+  const folders = ["BPC", "BUC", "SPC", "SUC", "Leads", "Past clients"];
+  const list = state.templates.map((t, i) => [t, i]).filter(([t]) => t[0] === type && (state.tplFilter === "All" || t[1] === state.tplFilter));
+  if (!state.templates[state.tplSel] || state.templates[state.tplSel][0] !== type) state.tplSel = (list[0] || [null, -1])[1];
+  const t = state.templates[state.tplSel];
+  const used = t ? HQ.templates.filter(x => x.phases.some(ph => ph.steps.some(st => st.tpl === t[2]))).map(x => x.name) : [];
+  return `<h1>${type} templates</h1><p>${type === "Text" ? "Used in Messages and by text steps in task templates." : "Used by email steps in task templates. Drafts open ready to review, then send from Gmail."} Merge fields fill in from the person and deal.</p>
+    <div class="toolbar"><select id="tpl-filter" aria-label="Folder">${["All", ...folders].map(f => `<option value="${f}" ${f === state.tplFilter ? "selected" : ""}>${f === "All" ? "All folders" : f}</option>`).join("")}</select><button class="btn primary" data-newtpl="${type}">+ New ${type.toLowerCase()} template</button></div>
+    <div class="box tpl"><div class="tpl-list">${list.map(([x, i]) => `<button class="tpl-i" data-tsel="${i}" aria-current="${i === state.tplSel}">${esc(x[2])}<small>${x[1]}</small></button>`).join("") || `<p class="muted sm" style="padding:10px 12px">None in this folder.</p>`}</div>
+      ${t ? `<div class="tpl-ed"><div style="display:flex;gap:8px;flex-wrap:wrap"><label style="flex:1;min-width:180px">Name<input class="input" data-tf="2" value="${esc(t[2])}"></label><label>Folder<select class="input" data-tf="1">${folders.map(x => `<option ${x === t[1] ? "selected" : ""}>${x}</option>`).join("")}</select></label></div>
+        ${type === "Email" ? `<label>Subject<input class="input" data-tf="4" value="${esc(t[4] || "")}" placeholder="e.g. Your key dates for {address}"></label>` : ""}
+        <label>Message<textarea id="tpl-body" data-tf="3" ${type === "Text" ? 'style="min-height:110px"' : ""}>${esc(t[3])}</textarea></label>
+        ${type === "Text" ? `<span class="muted sm">${t[3].length} characters${t[3].length > 160 ? " · sends as " + Math.ceil(t[3].length / 153) + " texts" : ""}</span>` : `<button class="btn" style="align-self:flex-start" data-toast="Attach a file that goes out with every draft from this template">+ Attach file</button>`}
+        <div class="merge">${["{first}", "{address}", "{inspection_date}", "{closing_date}", "{earnest_money}", "{em_due}", "{lender}", "{link}"].map(m => `<button data-merge="${m}">${m}</button>`).join("")}</div>
+        <div style="display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;align-items:center"><span class="muted sm">${used.length ? "Used in: " + esc(used.join(", ")) : "Not used in any task template yet"}</span><span style="display:flex;gap:6px"><button class="btn" data-deltpl="1">Delete</button><button class="btn primary" data-toast="Saved">Save</button></span></div></div>` : `<div class="tpl-ed muted">Create a ${type.toLowerCase()} template to get started.</div>`}</div>`;
+}
 
 function side() {
   el("side").innerHTML = SECTIONS.map(([g, items]) => `<div><h4>${g}</h4><ul>${items.map(([k, l]) => `<li><button class="nav-i" data-sec="${k}" aria-current="${sec === k}"><span>${l}</span></button></li>`).join("")}</ul></div>`).join("");
@@ -212,14 +229,18 @@ const V = {
   pipelines() {
     return `<h1>Pipelines &amp; stages</h1><p>The columns on the Deals board. You can also edit these from the board with "Edit stages". Under Contract and Closed can be renamed but not removed.</p>
     <div class="cards">${Object.entries(state.pipes).map(([p, st]) => `<div class="box"><h2>${p} pipeline</h2><div class="tbl-wrap"><table><tbody>
-      ${st.map((s, i) => `<tr><td class="muted" style="width:28px">${i + 1}</td><td><input data-stage="${p}:${i}" value="${esc(s)}"></td><td style="white-space:nowrap"><button class="linkbtn" data-gock="${p}|${esc(s)}">${(() => { const n = ckOf(p, s).phases.reduce((m, ph) => m + ph.steps.length, 0); return n ? n + " steps" : "No steps"; })()} · Edit checklist</button></td><td style="width:90px;white-space:nowrap"><button class="rm" data-up="${p}:${i}" aria-label="Move up">↑</button><button class="rm" data-down="${p}:${i}" aria-label="Move down">↓</button>${["Under Contract", "Closed"].includes(s) ? "" : `<button class="rm" data-rmstage="${p}:${i}" aria-label="Remove">×</button>`}</td></tr>`).join("")}
+      ${st.map((s, i) => `<tr><td class="muted" style="width:28px">${i + 1}</td><td><input data-stage="${p}:${i}" value="${esc(s)}"></td><td style="white-space:nowrap">${(() => { const ts = TPLS().filter(x => x.trigger === p + " · " + s); return ts.length ? ts.map(x => `<button class="linkbtn" data-tplid="${x.id}" data-gosec="1">${esc(x.name)} (${stepCount(x)})</button>`).join(", ") : `<button class="linkbtn" data-gock="${p}|${esc(s)}">+ Add template</button>`; })()}</td><td style="width:90px;white-space:nowrap"><button class="rm" data-up="${p}:${i}" aria-label="Move up">↑</button><button class="rm" data-down="${p}:${i}" aria-label="Move down">↓</button>${["Under Contract", "Closed"].includes(s) ? "" : `<button class="rm" data-rmstage="${p}:${i}" aria-label="Remove">×</button>`}</td></tr>`).join("")}
     </tbody></table></div><div class="addrow"><button class="btn" data-addstage="${p}">+ Add stage</button></div></div>`).join("")}</div>`;
   },
   checklists() {
-    const P = state.ckPipe, stages = state.pipes[P], k = ckKey(P, state.ckStage), ck = ckOf(P, state.ckStage);
-    const steps = ck.phases.reduce((n, ph) => n + ph.steps.length, 0);
-    const others = Object.entries(state.ck).filter(([kk, v]) => kk !== k && v.phases.some(ph => ph.steps.length));
-    const tplOpts = type => state.templates.filter(t => t[0] === type).map(t => t[2]);
+    const t = curCk(), steps = stepCount(t);
+    const [trigPipe, trigStage] = t.trigger ? t.trigger.split(" · ") : [null, null];
+    const stages = trigPipe ? state.pipes[trigPipe] || [] : [];
+    const tplOpts = type => state.templates.filter(x => x[0] === type).map(x => x[2]);
+    const twins = t.trigger ? TPLS().filter(x => x !== t && x.trigger === t.trigger) : [];
+    const li = x => `<button class="tli" data-tplid="${x.id}" aria-current="${x.id === t.id}"><b>${esc(x.name)}</b><small>${x.trigger ? "Starts at " + esc(x.trigger) : "Apply by hand"} · ${stepCount(x)} step${stepCount(x) === 1 ? "" : "s"}</small></button>`;
+    const order = trigOptions();
+    const auto = TPLS().filter(x => x.trigger).sort((a, b) => order.indexOf(a.trigger) - order.indexOf(b.trigger)), manual = TPLS().filter(x => !x.trigger);
     const row = (st, pi, si, n) => {
       const id = `${pi}:${si}`, noDue = st.dir === "none";
       return `<div class="step">
@@ -228,7 +249,7 @@ const V = {
           <input class="st-name" data-s="${id}:name" value="${esc(st.name)}" aria-label="Step name">
           <label>Assignee<select data-s="${id}:who">${["Luke", "Alyssa", "Deal owner"].map(a => `<option ${a === st.who ? "selected" : ""}>${a}</option>`).join("")}</select></label>
           <label>Type<select data-s="${id}:type">${["Task", "Call", "Email", "Text"].map(a => `<option ${a === st.type ? "selected" : ""}>${a}</option>`).join("")}</select></label>
-          ${st.type === "Email" || st.type === "Text" ? `<label>Template<select data-s="${id}:tpl"><option value="">No template</option>${tplOpts(st.type).map(t => `<option ${t === st.tpl ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></label>` : ""}
+          ${st.type === "Email" || st.type === "Text" ? `<label>Message template<select data-s="${id}:tpl"><option value="">None</option>${tplOpts(st.type).map(x => `<option ${x === st.tpl ? "selected" : ""}>${esc(x)}</option>`).join("")}</select></label>` : ""}
           <span class="mv end"><button class="rm" data-sdup="${id}" aria-label="Duplicate step" title="Duplicate">⧉</button><button class="rm" data-sdel="${id}" aria-label="Delete step" title="Delete">×</button></span>
         </div>
         <div class="st-l2">
@@ -237,29 +258,43 @@ const V = {
             <select data-s="${id}:dir" aria-label="When">${[["before", "days before"], ["after", "days after"], ["on", "on the day of"], ["none", "no due date"]].map(([v, l]) => `<option value="${v}" ${v === st.dir ? "selected" : ""}>${l}</option>`).join("")}</select>
             <select data-s="${id}:anchor" aria-label="Date it's counted from" ${noDue ? "disabled" : ""}>${ANCHORS.map(a => `<option ${a === st.anchor ? "selected" : ""}>${a}</option>`).join("")}</select></span></label>
           <label>Only when<select data-s="${id}:cond">${CONDS.map(a => `<option ${a === st.cond ? "selected" : ""}>${a}</option>`).join("")}</select></label>
-          <label>When done<select data-s="${id}:advance"><option value="">Nothing else</option>${stages.filter(x => x !== state.ckStage).map(x => `<option value="${esc(x)}" ${x === st.advance ? "selected" : ""}>Move deal to ${esc(x)}</option>`).join("")}</select></label>
+          ${stages.length ? `<label>When done<select data-s="${id}:advance"><option value="">Nothing else</option>${stages.filter(x => x !== trigStage).map(x => `<option value="${esc(x)}" ${x === st.advance ? "selected" : ""}>Move deal to ${esc(x)}</option>`).join("")}</select></label>` : ""}
         </div>
       </div>`;
     };
-    return `<h1>Checklist templates</h1>
-    <p>Every stage in both pipelines has its own checklist. When a deal enters a stage, that stage's steps are added to it. Stages you add under Pipelines &amp; stages show up here automatically.</p>
-    <div class="toolbar"><span class="seg2" role="group" aria-label="Pipeline">${Object.keys(state.pipes).map(p => `<button data-ckpipe="${p}" aria-pressed="${p === P}">${p} pipeline</button>`).join("")}</span></div>
-    <div class="chips">${stages.map(st => { const c = ckOf(P, st).phases.reduce((n, ph) => n + ph.steps.length, 0); return `<button class="schip" data-ckstage="${esc(st)}" aria-pressed="${st === state.ckStage}">${esc(st)} <span>${c || "empty"}</span></button>`; }).join("")}</div>
-    <div class="ck-head">
-      <div><h2 style="margin:0;font-size:17px">${esc(P)} · ${esc(state.ckStage)}</h2><span class="muted sm">${steps} step${steps === 1 ? "" : "s"} in ${ck.phases.length} phase${ck.phases.length === 1 ? "" : "s"}</span></div>
-      <div class="toolbar">
-        <select id="ck-copy" aria-label="Copy steps from another stage"><option value="">Copy steps from…</option>${others.map(([kk]) => `<option>${esc(kk)}</option>`).join("")}</select>
-        ${steps ? `<button class="btn" data-ckclear="1">${state.ckPending === "clear" ? "Click again to clear all" : "Clear all"}</button>` : ""}
-        <label class="sm" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="ck-apply" ${state.ckApply ? "checked" : ""}> Update open deals in this stage when I change steps</label>
+    const preview = HQ.expand(t, TODAY_A).slice(0, 8);
+    return `<h1>Task templates</h1>
+    <p>A template is a set of steps that turn into tasks. Set it to start when a deal reaches a stage, or leave it manual and apply it from a contact. Edit any template here; new and existing ones work the same way.</p>
+    <div class="tgrid">
+      <aside class="box tlist">
+        <div class="tl-top"><button class="btn primary" data-newck="1">+ New template</button></div>
+        <div class="tl-h">Start automatically</div>${auto.map(li).join("") || `<p class="muted sm" style="padding:4px 12px">None</p>`}
+        <div class="tl-h">Apply by hand</div>${manual.map(li).join("") || `<p class="muted sm" style="padding:4px 12px">None</p>`}
+      </aside>
+      <div class="main" style="gap:10px">
+        <div class="box ed-head">
+          <input class="tname" data-tname="1" value="${esc(t.name)}" aria-label="Template name">
+          <div class="toolbar">
+            <label class="lbl">Starts<select id="t-trigger"><option value="">By hand, from a contact</option>${Object.entries(state.pipes).map(([p, st]) => `<optgroup label="${p} pipeline">${st.map(x => `<option value="${esc(p + " · " + x)}" ${t.trigger === p + " · " + x ? "selected" : ""}>When a ${p.toLowerCase()} deal enters ${esc(x)}</option>`).join("")}</optgroup>`).join("")}</select></label>
+            <label class="lbl">Copy steps from<select id="ck-copy"><option value="">Choose a template…</option>${TPLS().filter(x => x !== t && stepCount(x)).map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></label>
+            <span style="display:flex;gap:6px;margin-left:auto"><button class="btn" data-tdup="1">Duplicate</button><button class="btn" data-tdel="1">${state.ckPending === "tdel" ? "Click again to delete" : "Delete"}</button></span>
+          </div>
+          ${t.trigger ? `<label class="sm" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="ck-apply" ${state.ckApply ? "checked" : ""}> Also update open deals already in ${esc(t.trigger)} when I change steps</label>` : `<p class="muted sm" style="margin:0">Apply it from any contact page: Tasks card → Apply template.</p>`}
+          ${twins.length ? `<p class="sm" style="margin:0;color:var(--warn)">${esc(twins.map(x => x.name).join(", "))} also starts at ${esc(t.trigger)}. Both will add their tasks.</p>` : ""}
+        </div>
+        ${t.phases.map((ph, pi) => `<div class="box">
+          <div class="ph-h"><input data-phname="${pi}" value="${esc(ph.name)}" aria-label="Phase name"><span class="muted sm">${ph.steps.length} step${ph.steps.length === 1 ? "" : "s"}</span>
+            <span style="margin-left:auto;display:flex;gap:2px"><button class="rm" data-phup="${pi}" aria-label="Move phase up" ${pi === 0 ? "disabled" : ""}>↑</button><button class="rm" data-phdown="${pi}" aria-label="Move phase down" ${pi === t.phases.length - 1 ? "disabled" : ""}>↓</button><button class="rm" data-phdel="${pi}" aria-label="Delete phase">${state.ckPending === "ph" + pi ? "Delete?" : "×"}</button></span></div>
+          ${ph.steps.length ? ph.steps.map((st, si) => row(st, pi, si, ph.steps.length)).join("") : `<p class="muted sm" style="margin:0;padding:8px 14px">No steps in this phase yet.</p>`}
+          <div class="addrow"><button class="btn" data-addstep="${pi}">+ Add step</button></div>
+        </div>`).join("") || `<div class="box" style="padding:18px 14px"><b>No steps yet.</b><p class="muted sm" style="margin:4px 0 0">Add a phase, or copy steps from another template and edit them.</p></div>`}
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-addphase="1">+ Add phase</button>${steps ? `<button class="btn" data-ckclear="1">${state.ckPending === "clear" ? "Click again to remove all steps" : "Remove all steps"}</button>` : ""}</div>
+        ${steps ? `<div class="box prev"><h2>Tasks it creates if it starts today <span class="muted sm" style="font-weight:400">${steps} total</span></h2>
+          ${preview.map(p => `<div class="prow"><span>${esc(p.t)}</span><span class="muted sm">${p.due ? p.due.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "No due date"} · ${esc(p.who)}</span></div>`).join("")}
+          ${steps > 8 ? `<p class="muted sm" style="margin:0;padding:6px 14px 10px">and ${steps - 8} more.</p>` : ""}
+          <p class="muted sm" style="margin:0;padding:6px 14px 12px">Steps timed from contract dates use the deal's real dates.</p></div>` : ""}
       </div>
-    </div>
-    ${ck.phases.map((ph, pi) => `<div class="box">
-      <div class="ph-h"><input data-phname="${pi}" value="${esc(ph.name)}" aria-label="Phase name"><span class="muted sm">${ph.steps.length} step${ph.steps.length === 1 ? "" : "s"}</span>
-        <span style="margin-left:auto;display:flex;gap:2px"><button class="rm" data-phup="${pi}" aria-label="Move phase up" ${pi === 0 ? "disabled" : ""}>↑</button><button class="rm" data-phdown="${pi}" aria-label="Move phase down" ${pi === ck.phases.length - 1 ? "disabled" : ""}>↓</button><button class="rm" data-phdel="${pi}" aria-label="Delete phase">${state.ckPending === "ph" + pi ? "Delete?" : "×"}</button></span></div>
-      ${ph.steps.length ? ph.steps.map((st, si) => row(st, pi, si, ph.steps.length)).join("") : `<p class="muted sm" style="margin:0;padding:4px 14px 8px">No steps in this phase yet.</p>`}
-      <div class="addrow"><button class="btn" data-addstep="${pi}">+ Add step</button></div>
-    </div>`).join("") || `<div class="box" style="padding:18px 14px"><b>No steps yet for ${esc(P)} · ${esc(state.ckStage)}.</b><p class="muted sm" style="margin:4px 0 0">Add a phase to start, or copy the steps from another stage and edit them.</p></div>`}
-    <div><button class="btn primary" data-addphase="1">+ Add phase</button></div>`;
+    </div>`;
   },
   fields() {
     return `<h1>Custom fields</h1><p>Extra fields on people or deals. Built-in fields (name, phones, stage, deal dates) aren't listed here.</p>
@@ -279,17 +314,8 @@ const V = {
     </tbody></table></div><div class="addrow"><button class="btn" data-addli="${key}">+ Add</button></div></div>`;
     return `<h1>Stages, sources &amp; follow-up</h1><div class="cards">${blk("Lead stages", "stages", "Where someone is overall. Under Contract and Past Client are set from their deals.")}${blk("Sources", "sources", "Where people came from.")}${blk("Follow-up frequencies", "follow", "Options for how often to touch base. People past due show up in Due for a touch.", true)}</div>`;
   },
-  templates() {
-    const list = state.templates.map((t, i) => [t, i]).filter(([t]) => state.tplFilter === "All" || t[1] === state.tplFilter || t[0] === state.tplFilter);
-    const t = state.templates[state.tplSel];
-    return `<h1>Text &amp; email templates</h1><p>Used by checklist steps (one-click drafts) and in Messages. Merge fields fill in from the person and deal.</p>
-    <div class="toolbar"><select id="tpl-filter" aria-label="Filter">${["All", "Text", "Email", "BPC", "BUC", "SPC", "SUC", "Leads"].map(f => `<option ${f === state.tplFilter ? "selected" : ""}>${f}</option>`).join("")}</select><button class="btn primary" data-newtpl="1">+ New template</button></div>
-    <div class="box tpl"><div class="tpl-list">${list.map(([x, i]) => `<button class="tpl-i" data-tsel="${i}" aria-current="${i === state.tplSel}">${esc(x[2])}<small>${x[0]} · ${x[1]}</small></button>`).join("")}</div>
-      <div class="tpl-ed"><div style="display:flex;gap:8px;flex-wrap:wrap"><label style="flex:1;min-width:180px">Name<input class="input" data-tf="2" value="${esc(t[2])}"></label><label>Type<select class="input" data-tf="0">${["Text", "Email"].map(x => `<option ${x === t[0] ? "selected" : ""}>${x}</option>`).join("")}</select></label><label>Folder<select class="input" data-tf="1">${["BPC", "BUC", "SPC", "SUC", "Leads"].map(x => `<option ${x === t[1] ? "selected" : ""}>${x}</option>`).join("")}</select></label></div>
-        <label>Message<textarea id="tpl-body" data-tf="3">${esc(t[3])}</textarea></label>
-        <div class="merge">${["{first}", "{address}", "{inspection_date}", "{closing_date}", "{earnest_money}", "{em_due}", "{lender}", "{link}"].map(m => `<button data-merge="${m}">${m}</button>`).join("")}</div>
-        <div style="display:flex;justify-content:flex-end;gap:6px"><button class="btn" data-toast="Used by 2 checklist steps">Where it's used</button><button class="btn primary" data-toast="Saved">Save</button></div></div></div>`;
-  },
+  texttpl() { return msgTpl("Text"); },
+  emailtpl() { return msgTpl("Email"); },
   integrations() {
     return `<h1>Integrations</h1>
     <div class="cards">
@@ -305,15 +331,17 @@ let tt; function toast(m) { const t = el("toast"); t.textContent = m; t.hidden =
 const pair = s => s.split(":");
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
-  if (ds.sec) { sec = ds.sec; render(); return; }
+  if (ds.sec) { sec = ds.sec; state.tplFilter = "All"; render(); return; }
   if (ds.invite) { state.users.push(["New user", "name@pettyhomes.com", "Assistant", "Invited"]); render(); toast("Invite added. They sign in with Google."); return; }
   if (ds.newrole) { state.roles.push("New role"); state.perms.forEach(p => p.push(false)); render(); toast("Added a role. Rename it in the Users table's role list later."); return; }
   if (ds.up || ds.down) { const [p, i] = pair(ds.up || ds.down), a = state.pipes[p], j = +i + (ds.up ? -1 : 1); if (j >= 0 && j < a.length) [a[i], a[j]] = [a[j], a[i]]; render(); return; }
   if (ds.rmstage) { const [p, i] = pair(ds.rmstage); state.pipes[p].splice(+i, 1); render(); return; }
   if (ds.addstage) { const a = state.pipes[ds.addstage]; a.splice(a.indexOf("Under Contract"), 0, "New stage"); render(); return; }
-  if (ds.gock) { const [pp, st] = ds.gock.split("|"); sec = "checklists"; state.ckPipe = pp; state.ckStage = st; render(); window.scrollTo(0, 0); return; }
-  if (ds.ckpipe) { state.ckPipe = ds.ckpipe; state.ckStage = state.pipes[ds.ckpipe].find(x => x === "Under Contract") || state.pipes[ds.ckpipe][0]; state.ckPending = null; render(); return; }
-  if (ds.ckstage) { state.ckStage = ds.ckstage; state.ckPending = null; render(); return; }
+  if (ds.tplid) { state.tplId = ds.tplid; state.ckPending = null; if (ds.gosec) { sec = "checklists"; window.scrollTo(0, 0); } render(); return; }
+  if (ds.gock) { const [pp, st] = ds.gock.split("|"); const x = { id: "t" + (++tplN), name: `${pp} · ${st}`, trigger: `${pp} · ${st}`, phases: [{ name: "Steps", steps: [] }] }; TPLS().push(x); state.tplId = x.id; sec = "checklists"; render(); window.scrollTo(0, 0); return; }
+  if (ds.newck) { const x = { id: "t" + (++tplN), name: "New template", trigger: "", phases: [{ name: "Steps", steps: [blankStep()] }] }; TPLS().push(x); state.tplId = x.id; state.ckPending = null; render(); const i = document.querySelector("[data-tname]"); if (i) { i.focus(); i.select(); } return; }
+  if (ds.tdup) { const x = JSON.parse(JSON.stringify(curCk())); x.id = "t" + (++tplN); x.name += " (copy)"; x.trigger = ""; TPLS().push(x); state.tplId = x.id; render(); toast("Duplicated. The copy is set to apply by hand until you choose when it starts."); return; }
+  if (ds.tdel) { if (state.ckPending !== "tdel") { state.ckPending = "tdel"; render(); return; } const x = curCk(); HQ.templates.splice(HQ.templates.indexOf(x), 1); state.tplId = (TPLS()[0] || {}).id; state.ckPending = null; render(); toast(`Deleted "${x.name}". Tasks it already created stay put.`); return; }
   if (ds.addphase) { curCk().phases.push({ name: "New phase", steps: [] }); render(); const ins = document.querySelectorAll("[data-phname]"); const i = ins[ins.length - 1]; if (i) { i.focus(); i.select(); } return; }
   if (ds.phup || ds.phdown) { const a = curCk().phases, i = +(ds.phup || ds.phdown), j = i + (ds.phup ? -1 : 1); [a[i], a[j]] = [a[j], a[i]]; render(); return; }
   if (ds.phdel) { const i = +ds.phdel, ph = curCk().phases[i]; if (ph.steps.length && state.ckPending !== "ph" + i) { state.ckPending = "ph" + i; render(); toast(`"${ph.name}" has ${ph.steps.length} steps. Click again to delete it.`); return; } curCk().phases.splice(i, 1); state.ckPending = null; render(); applied(); return; }
@@ -329,20 +357,23 @@ document.addEventListener("click", e => {
   if (ds.rmli) { const [k, i] = pair(ds.rmli); state[k].splice(+i, 1); render(); return; }
   if (ds.addli) { state[ds.addli].push(ds.addli === "follow" ? "45" : "New"); render(); return; }
   if (ds.tsel) { state.tplSel = +ds.tsel; render(); return; }
-  if (ds.newtpl) { state.templates.unshift(["Text", "Leads", "New template", ""]); state.tplSel = 0; render(); return; }
+  if (ds.newtpl) { state.templates.unshift([ds.newtpl, "Leads", "New template", ""]); state.tplSel = 0; state.tplFilter = "All"; render(); const i = document.querySelector("[data-tf=\"2\"]"); if (i) { i.focus(); i.select(); } return; }
+  if (ds.deltpl) { const t = state.templates.splice(state.tplSel, 1)[0]; state.tplSel = -1; render(); toast(`Deleted "${t[2]}".`); return; }
   if (ds.merge) { const ta = el("tpl-body"); const p = ta.selectionStart; ta.value = ta.value.slice(0, p) + ds.merge + ta.value.slice(ta.selectionEnd); state.templates[state.tplSel][3] = ta.value; ta.focus(); return; }
   if (ds.toast) { toast(ds.toast); return; }
 });
 document.addEventListener("change", e => {
   const t = e.target, ds = t.dataset;
   if (t.id === "ck-apply") { state.ckApply = t.checked; return; }
-  if (t.id === "ck-copy" && t.value) { state.ck[ckKey(state.ckPipe, state.ckStage)] = JSON.parse(JSON.stringify(state.ck[t.value])); toast(`Copied steps from ${t.value}. Edit them for this stage.`); render(); return; }
+  if (t.id === "ck-copy" && t.value) { const src = TPLS().find(x => x.id === t.value); curCk().phases = JSON.parse(JSON.stringify(src.phases)); toast(`Copied steps from ${src.name}. Edit them here.`); render(); return; }
+  if (t.id === "t-trigger") { curCk().trigger = t.value; render(); toast(t.value ? `Starts automatically when a deal enters ${t.value}.` : "Set to apply by hand from a contact."); return; }
+  if (ds.tname) { curCk().name = t.value.trim() || "Untitled template"; render(); return; }
   if (ds.phname !== undefined) { curCk().phases[+ds.phname].name = t.value; return; }
   if (ds.s) { const [pi, si, f] = ds.s.split(":"), st = curCk().phases[+pi].steps[+si]; st[f] = f === "days" ? Math.max(0, +t.value) : t.value; if (f === "type" && !["Email", "Text"].includes(t.value)) st.tpl = ""; if (["dir", "type"].includes(f)) render(); if (["days", "dir", "anchor"].includes(f)) applied(); return; }
   if (t.id === "tpl-filter") { state.tplFilter = t.value; render(); return; }
   if (ds.u) { const [i, j] = pair(ds.u); state.users[i][j] = t.value; return; }
   if (ds.perm) { const [i, j] = pair(ds.perm); state.perms[i][+j + 1] = t.checked; return; }
-  if (ds.stage) { const [p, i] = pair(ds.stage), old = state.pipes[p][i]; state.pipes[p][i] = t.value; if (state.ck[ckKey(p, old)]) { state.ck[ckKey(p, t.value)] = state.ck[ckKey(p, old)]; delete state.ck[ckKey(p, old)]; } if (state.ckStage === old) state.ckStage = t.value; toast("Renamed. Its checklist moved with it."); return; }
+  if (ds.stage) { const [p, i] = pair(ds.stage), old = state.pipes[p][i]; state.pipes[p][i] = t.value; TPLS().forEach(x => { if (x.trigger === p + " · " + old) x.trigger = p + " · " + t.value; }); toast("Renamed. Templates that start at this stage moved with it."); return; }
   if (ds.fd) { const [i, j] = pair(ds.fd); state.fields[i][j] = t.value; return; }
   if (ds.tag) { state.tags[ds.tag][0] = t.value; toast("Renamed everywhere."); return; }
   if (ds.li) { const [k, i] = pair(ds.li); state[k][i] = t.value; return; }

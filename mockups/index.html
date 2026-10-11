@@ -223,6 +223,8 @@ body { background: var(--bg); }
 #pg-deals .member { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; border-top: 1px solid var(--line); }
 #pg-deals .member:first-of-type { border-top: 0; padding-top: 0; }
 #pg-deals .member-n { font-weight: 700; font-size: 13px; }
+#pg-deals .apply { display: flex; gap: 6px; flex-wrap: wrap; }
+#pg-deals .apply select { flex: 1; min-width: 0; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
 #pg-deals .linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; text-decoration: underline; font-size: inherit; }
 #pg-deals .sm { font-size: 12.5px; }
 #pg-deals .od { color: var(--bad); font-size: 12.5px; }
@@ -710,6 +712,22 @@ body { background: var(--bg); }
 #pg-admin .tpl-ed textarea { min-height: 160px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); resize: vertical; }
 #pg-admin .merge { display: flex; flex-wrap: wrap; gap: 4px; }
 #pg-admin .merge button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; font-size: 11.5px; padding: 2px 8px; font-family: var(--font-data); }
+#pg-admin .tgrid { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 980px) {#pg-admin .tgrid { grid-template-columns: minmax(0, 1fr); }}
+#pg-admin .tlist { display: flex; flex-direction: column; padding-bottom: 8px; position: sticky; top: env(safe-area-inset-top, 0px); }
+#pg-admin .tl-top { padding: 10px 12px; border-bottom: 1px solid var(--line); }
+#pg-admin .tl-h { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; padding: 10px 12px 4px; }
+#pg-admin .tli { border: 0; background: none; text-align: left; padding: 7px 12px; display: flex; flex-direction: column; gap: 1px; font-size: 13px; }
+#pg-admin .tli:hover { background: var(--sunken); }
+#pg-admin .tli[aria-current="true"] { background: var(--accent-soft); }
+#pg-admin .tli small { color: var(--muted); font-size: 11.5px; }
+#pg-admin .ed-head { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+#pg-admin .tname { font-family: var(--font-display); font-weight: 800; font-size: 20px; border: 1px solid transparent; background: none; padding: 2px 6px; margin-left: -6px; border-radius: 6px; width: 100%; }
+#pg-admin .tname:hover, #pg-admin .tname:focus { border-color: var(--line); background: var(--bg); }
+#pg-admin .lbl { display: flex; flex-direction: column; gap: 2px; font-size: 11.5px; color: var(--muted); font-weight: 600; }
+#pg-admin .lbl select { padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-size: 13px; color: var(--fg); font-weight: 400; max-width: 320px; }
+#pg-admin .ed-head .toolbar { align-items: flex-end; }
+#pg-admin .prev .prow { display: flex; justify-content: space-between; gap: 10px; padding: 6px 14px; border-top: 1px solid var(--line); font-size: 13px; }
 #pg-admin .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 #pg-admin .schip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 12px; font-size: 13px; }
 #pg-admin .schip span { color: var(--muted); font-size: 12px; margin-left: 4px; }
@@ -828,44 +846,53 @@ body { background: var(--bg); }
 <div id="toast" class="toast" hidden></div>
 </div>
 <script>
+// Shared between mockup pages: task templates (edited in Admin, applied from
+// contact pages) and a hand-off queue of new tasks for the Tasks page.
+window.HQ = window.HQ || (() => {
+  const s = (name, anchor, days, dir, who, type, extra = {}) => Object.assign({ name, anchor, days, dir, who, type, tpl: "", cond: "Always", advance: "" }, extra);
+  let n = 0; const T = (name, trigger, phases) => ({ id: "t" + (++n), name, trigger, phases });
+  return {
+    newTasks: [],
+    templates: [
+      T("Buyer · New lead", "Buyer · Lead", [{ name: "First contact", steps: [s("Call new lead", "Start date", 0, "on", "Luke", "Call"), s("Intro email", "Start date", 0, "on", "Alyssa", "Email", { tpl: "Website sign-up welcome" }), s("Schedule consult", "Start date", 2, "after", "Luke", "Task", { advance: "Consult" })] }]),
+      T("Buyer · Consult", "Buyer · Consult", [{ name: "Before the consult", steps: [s("Agency disclosure + more info email", "Start date", 0, "on", "Alyssa", "Email"), s("Consult confirmation text", "Consult date", 1, "before", "Luke", "Text")] }, { name: "After the consult", steps: [s("Intro + Homespotter + legal name text", "Consult date", 0, "on", "Alyssa", "Text", { tpl: "Intro + Homespotter + legal name" }), s("Connect with lender?", "Consult date", 1, "after", "Luke", "Task")] }]),
+      T("Buyer · Rep signed & searching", "Buyer · Rep Signed / Searching", [{ name: "Buyer rep", steps: [s("Send buyer rep to sign", "Start date", 0, "on", "Alyssa", "Task"), s("Buyer rep breakdown email", "Start date", 0, "on", "Alyssa", "Email", { tpl: "Buyer rep breakdown" }), s("Buyer rep signed + saved", "Start date", 1, "after", "Alyssa", "Task")] }, { name: "Searching", steps: [s("Set up home search", "Buyer rep signed", 1, "after", "Luke", "Task"), s("Check in on showings", "Buyer rep signed", 14, "after", "Luke", "Call"), s("Buyer rep expiring soon", "Buyer rep expiration", 14, "before", "Luke", "Task")] }]),
+      T("Buyer · Under contract", "Buyer · Under Contract", [
+        { name: "Under Contract", steps: [s("Purchase agreement accepted email", "Final Acceptance", 0, "on", "Alyssa", "Email", { tpl: "Purchase agreement accepted" }), s("Lender intro email", "Final Acceptance", 0, "on", "Luke", "Email"), s("Request earnest money", "Final Acceptance", 1, "after", "Alyssa", "Text", { tpl: "Earnest money" }), s("Lead-paint pamphlet email", "Final Acceptance", 1, "after", "Alyssa", "Email", { cond: "Built before 1978" })] },
+        { name: "Inspection", steps: [s("Schedule inspection", "Final Acceptance", 1, "after", "Luke", "Task"), s("Day-of-inspection text", "Inspection", 3, "before", "Alyssa", "Text", { tpl: "Day-of-inspection" }), s("Review inspection report with clients", "Inspection", 2, "before", "Luke", "Task"), s("Signed amendment to lender + title", "Inspection", 0, "on", "Alyssa", "Email")] },
+        { name: "Financing", steps: [s("Remind lender about written statement", "Written Statement", 2, "before", "Alyssa", "Email")] },
+        { name: "HOA", steps: [s("Send HOA docs to clients", "Final Acceptance", 4, "after", "Alyssa", "Email", { cond: "HOA property" }), s("Confirm rescission period ended", "HOA Rescission", 0, "on", "Alyssa", "Task", { cond: "HOA property" })] },
+        { name: "Closing", steps: [s("Order closing gift", "Closing", 14, "before", "Luke", "Task"), s("Final walkthrough", "Closing", 1, "before", "Luke", "Task"), s("Closing day", "Closing", 0, "on", "Luke", "Task", { advance: "Closed" })] },
+      ]),
+      T("Buyer · Post-close", "Buyer · Closed", [{ name: "Post-close", steps: [s("\"How was the move?\" text", "Start date", 1, "after", "Luke", "Text"), s("Thank-you card", "Start date", 3, "after", "Luke", "Task"), s("Zillow review request", "Start date", 5, "after", "Alyssa", "Text"), s("Google review request", "Start date", 21, "after", "Alyssa", "Email")] }]),
+      T("Seller · Listing prep", "Seller · Listing Signed / Prep", [{ name: "Prep", steps: [s("Withhold listing in MLS", "Start date", 0, "on", "Alyssa", "Task"), s("Schedule photos", "Start date", 1, "after", "Alyssa", "Task"), s("Drop off lockbox", "Start date", 2, "after", "Luke", "Task"), s("Disclosures + lead paint", "Start date", 3, "after", "Alyssa", "Task", { cond: "Built before 1978" })] }, { name: "Media", steps: [s("Photos to clients", "Photos taken", 1, "after", "Alyssa", "Email"), s("Upload to MLS", "Photos taken", 2, "after", "Alyssa", "Task", { advance: "Coming Soon" })] }]),
+      T("Seller · Coming soon launch", "Seller · Coming Soon", [{ name: "Launch", steps: [s("Showing instructions", "Start date", 0, "on", "Alyssa", "Task"), s("Coming-soon email", "Start date", 0, "on", "Alyssa", "Email"), s("Sign install", "Active date", 3, "before", "Luke", "Task"), s("Go active in MLS", "Active date", 0, "on", "Alyssa", "Task", { advance: "Active" })] }]),
+      T("Seller · Under contract", "Seller · Under Contract", [{ name: "Under Contract", steps: [s("Mark contingent in MLS", "Final Acceptance", 0, "on", "Alyssa", "Task"), s("Purchase agreement accepted email", "Final Acceptance", 0, "on", "Alyssa", "Email", { tpl: "Purchase agreement accepted" })] }, { name: "Closing", steps: [s("Closing reminder email", "Closing", 14, "before", "Alyssa", "Email"), s("Closing day", "Closing", 0, "on", "Luke", "Task", { advance: "Closed" })] }]),
+      T("Open house follow-up", "", [{ name: "Follow-up", steps: [s("Thanks for coming text", "Start date", 0, "on", "Alyssa", "Text"), s("Send similar listings", "Start date", 1, "after", "Alyssa", "Email"), s("Follow-up call", "Start date", 3, "after", "Luke", "Call")] }]),
+      T("Past client yearly check-in", "", [{ name: "Check-in", steps: [s("Real estate health check call", "Start date", 0, "on", "Luke", "Call"), s("Send home value update", "Start date", 2, "after", "Alyssa", "Email"), s("Add to holiday card list", "Start date", 2, "after", "Alyssa", "Task")] }]),
+    ],
+  };
+})();
+// Turn a template into dated tasks, counting from `start` (a Date). Steps timed off
+// contract dates use the deal's dates when there is one; here they fall back to start.
+window.HQ.expand = (tpl, start, dates = {}) => tpl.phases.flatMap(ph => ph.steps.map(st => {
+  if (st.dir === "none") return { t: st.name, due: null, who: st.who, type: st.type, phase: ph.name };
+  const base = new Date(dates[st.anchor] || start);
+  base.setDate(base.getDate() + (st.dir === "before" ? -st.days : st.dir === "after" ? st.days : 0));
+  return { t: st.name, due: base, who: st.who, type: st.type, phase: ph.name };
+}));
+
 const INIT = {}, API = {};
 INIT.people = function (document) {
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 // [cid, name, stage, followDays, lastTouchDaysAgo, source, tags, deal, phone]
 let people = [
-  ["calloway", "Jordan & Priya Calloway", "Under Contract", 30, 1, "Sphere Referral", ["Buyer", "Seller", "A Lead"], "Buyer · Under Contract, Seller · Active", "(612) 555-0148"],
-  ["murphy", "Kate Murphy", "90 Day Sphere", 90, 12, "Sphere", ["Past Client", "Mailers", "Christmas Cards"], "", "(651) 555-0172"],
-  ["d14", "Ruth & Sam Engel", "Under Contract", null, 3, "Sphere", ["Buyer"], "Buyer · Under Contract", "(612) 555-0114"],
-  ["d15", "Dev Raman", "Under Contract", null, 2, "Website", ["Buyer"], "Buyer · Under Contract", "(612) 555-0115"],
-  ["d29", "Wes Halvorsen", "Under Contract", null, 4, "Sphere", ["Seller"], "Seller · Under Contract", "(612) 555-0129"],
+  ["calloway", "Jordan & Priya Calloway", "Lead", 30, 1, "Sphere Referral", ["Buyer", "Seller", "A Lead"], "Buyer · Under Contract, Seller · Active", "(612) 555-0148"],
+  ["murphy", "Kate Murphy", "Past Client", 90, 12, "Sphere", ["Past Client", "Mailers", "Christmas Cards"], "", "(651) 555-0172"],
   ["d11", "Owen Pryce", "Lead", null, 1, "Website", ["Buyer", "B Lead"], "Buyer · Offer Out", "(612) 555-0111"],
-  ["d12", "Mia Castellano", "Lead", null, 0, "Zillow Preferred", ["Buyer", "A Lead"], "Buyer · Offer Out", "(612) 555-0112"],
-  ["d7", "Nora Feld", "Lead", null, 6, "Sphere Referral", ["Buyer"], "Buyer · Searching", "(612) 555-0107"],
-  ["d8", "Theo & June Park", "Lead", null, 11, "Sphere", ["Buyer", "C Lead"], "Buyer · Searching", "(612) 555-0108"],
-  ["d9", "Isaac Brandt", "Lead", null, 4, "Website", ["Buyer"], "Buyer · Searching", "(612) 555-0109"],
-  ["d10", "Leah Sandoval", "Lead", null, 15, "Sphere", ["Buyer", "D Lead"], "Buyer · Searching", "(612) 555-0110"],
-  ["d1", "Ethan Moreau", "Lead", null, 3, "Website", [], "Buyer · Lead", "(612) 555-0101"],
-  ["d3", "Ben & Hana Okafor", "Lead", null, 7, "Zillow Preferred", [], "Buyer · Lead", "(612) 555-0103"],
-  ["d4", "Grace Thorsen", "Lead", null, 2, "Sphere", ["Buyer"], "Buyer · Consult", "(612) 555-0104"],
   ["d24", "Carol Fisk & Dean Moreno", "Lead", null, 4, "Sphere Referral", ["Seller", "A Lead"], "Seller · Prep", "(612) 555-0124"],
-  ["d26", "Hugo Bergstrom", "Lead", null, 2, "Sphere", ["Seller"], "Seller · Coming Soon", "(612) 555-0126"],
-  ["d27", "Margaret Ostby", "Lead", null, 5, "Website", ["Seller"], "Seller · Active", "(612) 555-0127"],
-  ["d28", "Greg & Lin Tam", "Lead", null, 8, "Sphere", ["Seller"], "Seller · Active", "(612) 555-0128"],
-  ["d16", "Kara Voss", "30 Day Sphere", 30, 13, "Sphere", ["Past Client", "Email Newsletter"], "", "(612) 555-0116"],
-  ["d17", "Liam Torres", "30 Day Sphere", 30, 20, "Website", ["Past Client"], "", "(612) 555-0117"],
-  ["d18", "Hollis Family", "30 Day Sphere", 30, 47, "Sphere", ["Past Client", "Mailers"], "", "(612) 555-0118"],
-  ["d30", "Irene Dahl", "30 Day Sphere", 30, 10, "Sphere Referral", ["Past Client"], "", "(612) 555-0130"],
-  ["x1", "Marcus & Elle Brandvold", "90 Day Sphere", 90, 98, "Sphere", ["Past Client", "Christmas Cards", "Mailers"], "", "(952) 555-0181"],
-  ["x2", "Rita Okonkwo", "7 Day Sphere", 7, 9, "Sphere Referral", ["A Lead"], "", "(612) 555-0182"],
-  ["x3", "Tom Lindgren", "180 Day Sphere", 180, 40, "Sphere", ["Past Client", "Email Newsletter"], "", "(763) 555-0183"],
-  ["x4", "Sarah Beckett", "Realtor", null, 120, "Industry", ["Realtors"], "", "(612) 555-0184"],
-  ["x5", "Dana Kim", "Industry Partners", null, 3, "Sphere", ["Lender"], "", "(612) 555-0185"],
-  ["x6", "Jake & Mara Holm", "30 Day Sphere", 30, 35, "Website", ["Past Client", "Mailers"], "", "(651) 555-0186"],
-  ["x7", "Lucy Tran", "Lead", null, 2, "Website", ["Buyer", "Email Newsletter"], "", "(612) 555-0187"],
-  ["x8", "Gary Pfeiffer", "Passive Marketing", null, 210, "Zillow Preferred", ["Email Newsletter"], "", "(952) 555-0188"],
-  ["x9", "Nina Sorensen", "60 Day Sphere", 60, 61, "Sphere", ["Past Client", "Christmas Cards"], "", "(612) 555-0189"],
-  ["x10", "Chris Albrecht", "90 Day Sphere", 90, 45, "Sphere Referral", ["Investor"], "", "(651) 555-0190"],
+  ["d16", "Kara Voss", "Past Client", 30, 34, "Sphere", ["Past Client", "Email Newsletter"], "", "(612) 555-0116"],
 ].map(([cid, name, stage, follow, last, source, tags, deal, phone]) => ({ cid, name, stage, follow, last, source, tags, deal, phone }));
 // Extra fields for filtering.
 people.forEach((p, i) => {
@@ -874,9 +901,10 @@ people.forEach((p, i) => {
 });
 
 /* ---------- Filters ---------- */
+const STAGES = ["Sphere", "Past Client", "Lead", "Industry Partners", "Passive Marketing", "Archive", "Trash"];
 const uniq = a => [...new Set(a)].sort();
 const FIELDS = {
-  stage: { label: "Stage", ops: ["is", "is not"], values: () => uniq(people.map(p => p.stage)) },
+  stage: { label: "Stage", ops: ["is", "is not"], values: () => STAGES },
   tag: { label: "Tag", ops: ["has", "doesn't have"], values: () => uniq(people.flatMap(p => p.tags)) },
   source: { label: "Source", ops: ["is", "is not"], values: () => uniq(people.map(p => p.source)) },
   deal: { label: "Deal", ops: ["is", "is not"], values: () => ["Under contract", "Active buyer", "Active seller", "No active deal"] },
@@ -905,10 +933,10 @@ let nid = 100;
 const L = (name, filters) => ({ id: "l" + (++nid), name, filters });
 let collections = [
   { id: "c1", name: "Clear Daily", open: false, lists: [L("Buyers under contract", [{ f: "deal", op: "is", v: "Under contract" }, { f: "tag", op: "has", v: "Buyer" }]), L("Sellers under contract", [{ f: "deal", op: "is", v: "Under contract" }, { f: "tag", op: "has", v: "Seller" }]), L("A leads", [{ f: "tag", op: "has", v: "A Lead" }])] },
-  { id: "c2", name: "Sphere", open: true, lists: [L("Past clients", [{ f: "tag", op: "has", v: "Past Client" }]), L("Due for a touch", [{ f: "due", op: "is", v: "Yes" }]), L("30 day sphere", [{ f: "follow", op: "is", v: "Every 30 days" }]), L("90 day sphere", [{ f: "follow", op: "is", v: "Every 90 days" }]), L("180 day sphere", [{ f: "follow", op: "is", v: "Every 180 days" }])] },
+  { id: "c2", name: "Sphere", open: true, lists: [L("Past clients", [{ f: "stage", op: "is", v: "Past Client" }]), L("Sphere", [{ f: "stage", op: "is", v: "Sphere" }]), L("Due for a touch", [{ f: "due", op: "is", v: "Yes" }]), L("30 day sphere", [{ f: "follow", op: "is", v: "Every 30 days" }]), L("90 day sphere", [{ f: "follow", op: "is", v: "Every 90 days" }]), L("180 day sphere", [{ f: "follow", op: "is", v: "Every 180 days" }])] },
   { id: "c3", name: "Leads", open: false, lists: [L("Buyers not under contract", [{ f: "deal", op: "is", v: "Active buyer" }]), L("Sellers not under contract", [{ f: "deal", op: "is", v: "Active seller" }]), L("Website leads", [{ f: "source", op: "is", v: "Website" }]), L("Zillow leads", [{ f: "source", op: "is", v: "Zillow Preferred" }]), L("Gone quiet (60+ days)", [{ f: "stage", op: "is", v: "Lead" }, { f: "last", op: "more than", v: "60" }])] },
-  { id: "c4", name: "Mailing Lists", open: false, lists: [L("Past client mailers", [{ f: "tag", op: "has", v: "Past Client" }, { f: "tag", op: "has", v: "Mailers" }]), L("Christmas cards", [{ f: "tag", op: "has", v: "Christmas Cards" }]), L("Email newsletter", [{ f: "tag", op: "has", v: "Email Newsletter" }])] },
-  { id: "c5", name: "Partners", open: false, lists: [L("Agents", [{ f: "stage", op: "is", v: "Realtor" }]), L("Lenders & industry", [{ f: "stage", op: "is", v: "Industry Partners" }])] },
+  { id: "c4", name: "Mailing Lists", open: false, lists: [L("Past client mailers", [{ f: "stage", op: "is", v: "Past Client" }, { f: "tag", op: "has", v: "Mailers" }]), L("Christmas cards", [{ f: "tag", op: "has", v: "Christmas Cards" }]), L("Email newsletter", [{ f: "tag", op: "has", v: "Email Newsletter" }])] },
+  { id: "c5", name: "Partners", open: false, lists: [L("Industry partners", [{ f: "stage", op: "is", v: "Industry Partners" }])] },
 ];
 let cur = null;           // current list id, null = All people
 let working = [];         // filters being shown (may differ from the saved list)
@@ -1023,7 +1051,7 @@ function personModal() {
     </div>
     <button type="button" class="btn" id="p2-toggle" data-p2="1">+ Add a second person (spouse, partner, co-buyer)</button>
     <p id="p-preview"></p>
-    <div class="two"><label>Stage<select class="input" id="f-stage">${["Lead", "7 Day Sphere", "30 Day Sphere", "90 Day Sphere", "180 Day Sphere", "Realtor", "Industry Partners"].map(s => `<option>${s}</option>`).join("")}</select></label>
+    <div class="two"><label>Stage<select class="input" id="f-stage">${STAGES.map(s => `<option>${s}</option>`).join("")}</select></label>
     <label>Source<select class="input" id="f-source">${["Sphere", "Sphere Referral", "Website", "Zillow Preferred", "AJ Gimme Lead", "Stacie Rihl"].map(s => `<option>${s}</option>`).join("")}</select></label></div>
     <div class="foot"><button type="button" class="btn" data-close="1">Cancel</button><button class="btn primary" type="submit">Add</button></div>
   </form></div>`;
@@ -1175,43 +1203,15 @@ const MS_NAMES = { fa: "Final Acceptance", insp: "Inspection", hoa: "HOA Resciss
 
 const deals = [
   // Buyers
-  { id: 1, side: "buyer", stage: "Lead", name: "Ethan Moreau", line: "Source: Website", since: "2026-10-09" },
-  { id: 2, side: "buyer", stage: "Lead", name: "Sofia Lindqvist", line: "Source: Sphere Referral", since: "2026-10-11" },
-  { id: 3, side: "buyer", stage: "Lead", name: "Ben & Hana Okafor", line: "Source: Zillow Preferred", since: "2026-10-05" },
-  { id: 4, side: "buyer", stage: "Consult", name: "Grace Thorsen", line: "Consult Wed Oct 14", since: "2026-10-10" },
-  { id: 5, side: "buyer", stage: "Consult", name: "Mateo Ruiz", line: "Consult Thu Oct 15", since: "2026-10-12" },
-  { id: 6, side: "buyer", stage: "Consult", name: "Avery Kline", line: "Consult done Oct 8", since: "2026-10-05" },
-  { id: 7, side: "buyer", stage: "Rep Signed / Searching", name: "Nora Feld", line: "SW Minneapolis · $350–400k", since: "2026-09-20" },
-  { id: 8, side: "buyer", stage: "Rep Signed / Searching", name: "Theo & June Park", line: "Edina / Richfield · to $520k", since: "2026-10-01" },
-  { id: 9, side: "buyer", stage: "Rep Signed / Searching", name: "Isaac Brandt", line: "St. Paul · condo", since: "2026-10-08" },
-  { id: 10, side: "buyer", stage: "Rep Signed / Searching", name: "Leah Sandoval", line: "Roseville / Shoreview", since: "2026-09-28" },
   { id: 11, side: "buyer", stage: "Offer Out", name: "Owen Pryce", line: "2215 Hillside Ave, Golden Valley", price: 389000, since: "2026-10-11" },
-  { id: 12, side: "buyer", stage: "Offer Out", name: "Mia Castellano", line: "845 Osceola Ave, St. Paul", price: 455000, since: "2026-10-12" },
   { id: 13, side: "buyer", stage: "Under Contract", name: "Jordan & Priya Calloway", cid: "calloway", line: "4127 Upton Ave S #3, Minneapolis", price: 412500, em: 8000, sc: 5000, bac: "2.5%", comm: 10312.5, fin: "Conventional",
     ms: { fa: "2026-10-02", insp: "2026-10-14", hoa: "2026-10-13", ws: "2026-10-23", close: "2026-10-30" }, msOrig: { insp: "2026-10-09" }, msStatus: { insp: "extended" },
     openPast: ["Earnest money receipt saved to file", "Insurance referral"], doneEarly: ["Confirm appraisal ordered"],
     people: [["Jordan Calloway", "Buyer"], ["Priya Calloway", "Buyer"], ["Dana Kim · Northfield Lending", "Lender"], ["Lakeview Title", "Title"], ["Marcus Holt · Bluewater Realty", "Listing agent"]] },
-  { id: 14, side: "buyer", stage: "Under Contract", name: "Ruth & Sam Engel", line: "6012 Xerxes Ave S, Edina", price: 598000, em: 12000, sc: 0, bac: "2.7%", comm: 16146, fin: "Conventional",
-    ms: { fa: "2026-10-09", insp: "2026-10-19", ws: "2026-10-30", close: "2026-11-06" } },
-  { id: 15, side: "buyer", stage: "Under Contract", name: "Dev Raman", line: "1530 Hague Ave, St. Paul", price: 329900, em: 5000, sc: 4000, bac: "2.5%", comm: 8247.5, fin: "FHA",
-    ms: { fa: "2026-09-19", insp: "2026-09-29", ws: "2026-10-09", close: "2026-10-23" } },
   { id: 16, side: "buyer", stage: "Closed", name: "Kara Voss", line: "3816 Grand Ave S, Minneapolis", price: 376000, closed: "2026-09-29" },
-  { id: 17, side: "buyer", stage: "Closed", name: "Liam Torres", line: "5521 Abbott Ave S, Edina", price: 510000, closed: "2026-09-22" },
-  { id: 18, side: "buyer", stage: "Closed", name: "Hollis Family", line: "2440 Cleveland Ave N, Roseville", price: 289500, closed: "2026-09-18" },
   // Sellers
-  { id: 21, side: "seller", stage: "Lead", name: "Patricia Wendt", line: "Source: Sphere", since: "2026-10-07" },
-  { id: 22, side: "seller", stage: "Lead", name: "Joel Amundsen", line: "Source: Website", since: "2026-10-11" },
-  { id: 23, side: "seller", stage: "Consult", name: "Erik & Tove Brekke", line: "Consult Fri Oct 16", since: "2026-10-09" },
   { id: 24, side: "seller", stage: "Listing Signed / Prep", name: "Carol Fisk & Dean Moreno", line: "3318 47th Ave S, Minneapolis", price: 365000, since: "2026-10-08" },
-  { id: 25, side: "seller", stage: "Listing Signed / Prep", name: "Ana Ruiz-Hall", line: "1207 Chatsworth St N, Roseville", price: 299000, since: "2026-10-01" },
-  { id: 26, side: "seller", stage: "Coming Soon", name: "Hugo Bergstrom", line: "709 Lincoln Ave, St. Paul", price: 625000, since: "2026-10-10" },
-  { id: 27, side: "seller", stage: "Active", name: "Margaret Ostby", line: "4540 Drew Ave S, Edina", price: 749000, since: "2026-09-30" },
-  { id: 28, side: "seller", stage: "Active", name: "Greg & Lin Tam", line: "2810 Fremont Ave N, Minneapolis", price: 315000, since: "2026-09-12" },
   { id: 32, side: "seller", stage: "Active", name: "Jordan & Priya Calloway", cid: "calloway", line: "2201 Lyndale Ave S #407, Minneapolis", price: 289000, since: "2026-10-05" },
-  { id: 29, side: "seller", stage: "Under Contract", name: "Wes Halvorsen", line: "1904 Stinson Pkwy NE, Minneapolis", price: 442000, em: 7500, sc: 3000, bac: "2.5%", comm: 11050, fin: "Conventional",
-    ms: { fa: "2026-10-07", insp: "2026-10-17", ws: "2026-10-28", close: "2026-11-13" } },
-  { id: 30, side: "seller", stage: "Closed", name: "Irene Dahl", line: "6125 Morgan Ave S, Richfield", price: 398000, closed: "2026-10-02" },
-  { id: 31, side: "seller", stage: "Closed", name: "Paul Nyberg", line: "880 Ashland Ave, St. Paul", price: 265000, closed: "2026-09-25" },
 ];
 
 // Build each deal's checklist once.
@@ -1339,7 +1339,7 @@ const CONTACTS = {
     ],
   },
   murphy: {
-    name: "Kate Murphy", stage: "90 Day Sphere", follow: 90, source: "Sphere", referred: "", mailing: "Kate Murphy",
+    name: "Kate Murphy", stage: "Past Client", follow: 90, source: "Sphere", referred: "", mailing: "Kate Murphy",
     tags: ["Past Client", "Mailers", "Christmas Cards", "Email Newsletter", "2026 RE Health Check Needed"],
     phones: [["Mobile", "(651) 555-0172"]], emails: [["", "kate.murphy@example.com"]], address: "1789 Juliet Ave, St. Paul, MN 55105",
     birthdays: [["Kate", "Jan 22"]], homeiversary: "Jun 18, 2021",
@@ -1356,18 +1356,7 @@ const CONTACTS = {
 };
 const cidOf = dl => dl.cid || "d" + dl.id;
 // People without deals (matches the People mockup): [name, stage, follow, source, tags, phone, days since last touch]
-const EXTRA = {
-  x1: ["Marcus & Elle Brandvold", "90 Day Sphere", 90, "Sphere", ["Past Client", "Christmas Cards", "Mailers"], "(952) 555-0181", 98],
-  x2: ["Rita Okonkwo", "7 Day Sphere", 7, "Sphere Referral", ["A Lead"], "(612) 555-0182", 9],
-  x3: ["Tom Lindgren", "180 Day Sphere", 180, "Sphere", ["Past Client", "Email Newsletter"], "(763) 555-0183", 40],
-  x4: ["Sarah Beckett", "Realtor", null, "Industry", ["Realtors"], "(612) 555-0184", 120],
-  x5: ["Dana Kim", "Industry Partners", null, "Sphere", ["Lender"], "(612) 555-0185", 3],
-  x6: ["Jake & Mara Holm", "30 Day Sphere", 30, "Website", ["Past Client", "Mailers"], "(651) 555-0186", 35],
-  x7: ["Lucy Tran", "Lead", null, "Website", ["Buyer", "Email Newsletter"], "(612) 555-0187", 2],
-  x8: ["Gary Pfeiffer", "Passive Marketing", null, "Zillow Preferred", ["Email Newsletter"], "(952) 555-0188", 210],
-  x9: ["Nina Sorensen", "60 Day Sphere", 60, "Sphere", ["Past Client", "Christmas Cards"], "(612) 555-0189", 61],
-  x10: ["Chris Albrecht", "90 Day Sphere", 90, "Sphere Referral", ["Investor"], "(651) 555-0190", 45],
-};
+const EXTRA = {};
 function contact(cid) {
   if (CONTACTS[cid]) return CONTACTS[cid];
   if (EXTRA[cid]) {
@@ -1381,7 +1370,7 @@ function contact(cid) {
   const closed = dl.stage === "Closed";
   const pair = memberNames(dl.name);
   const c = {
-    name: dl.name, stage: closed ? "30 Day Sphere" : "Lead", follow: closed ? 30 : null, source: dl.line.startsWith("Source: ") ? dl.line.slice(8) : "Sphere",
+    name: dl.name, stage: closed ? "Past Client" : "Lead", follow: closed ? 30 : null, source: dl.line.startsWith("Source: ") ? dl.line.slice(8) : "Sphere",
     referred: "", mailing: dl.name, tags: [dl.side === "buyer" ? "Buyer" : "Seller"].concat(closed ? ["Past Client", "Email Newsletter", "Mailers"] : ["Email Newsletter"]),
     phones: pair ? pair.map((n, i) => [n.split(" ")[0], "(612) 555-01" + String(dl.id + i * 40).padStart(2, "0")]) : [["Mobile", "(612) 555-01" + String(dl.id).padStart(2, "0")]],
     emails: pair ? pair.map(n => [n.split(" ")[0], n.toLowerCase().replace(" ", ".") + "@example.com"]) : [["", `${first}.${last}@example.com`]],
@@ -1396,7 +1385,7 @@ function contact(cid) {
   };
   CONTACTS[cid] = c; return c;
 }
-let openContact = null, ctab = {}, tlFilter = "all", composer = "note";
+let openContact = null, ctab = {}, tlFilter = "all", composer = "note", applyOpen = false;
 const isActive = dl => dl.stage !== "Closed";
 const WHO = { LP: "Luke", AS: "Alyssa" };
 
@@ -1406,7 +1395,7 @@ function renderContact() {
   const active = myDeals.filter(isActive);
   if (!ctab[openContact]) ctab[openContact] = active.length ? "deal-" + active[0].id : "timeline";
   const tab = ctab[openContact];
-  const stage = active.some(x => x.stage === "Under Contract") ? "Under Contract" : c.stage;
+  const stage = c.stage;
   const lastTouch = c.history.filter(h => ["note", "text", "call", "email"].includes(h[1])).map(h => d(h[0])).sort((a, b) => b - a)[0];
   const ago = lastTouch ? diff(TODAY, lastTouch) : null;
   const touchDue = c.follow && ago !== null && ago >= c.follow;
@@ -1428,6 +1417,8 @@ function renderContact() {
         <div class="card-s">
           <h3>Tasks <span class="muted">${c.tasks.filter(t => t.s === "open").length}</span><button class="plus" data-toast="Quick add, already linked to ${esc(c.name)}" aria-label="Add task">+</button></h3>
           ${c.tasks.length ? c.tasks.map((t, i) => ptaskHtml(t, i)).join("") : `<p class="muted sm">No tasks outside their deals.</p>`}
+          ${applyOpen ? `<div class="apply"><select id="apply-tpl" aria-label="Template">${(typeof HQ !== "undefined" ? HQ.templates : []).slice().sort((a, b) => !!a.trigger - !!b.trigger).map(t => `<option value="${t.id}">${esc(t.name)}${t.trigger ? "" : " (by hand)"}</option>`).join("")}</select><button class="btn primary" data-applytpl="1">Apply</button><button class="btn" data-applycancel="1">Cancel</button></div>`
+            : `<button class="btn" data-applyopen="1">Apply template</button>`}
         </div>
         <div class="card-s">
           <h3>Deals <span class="muted">${myDeals.length}</span></h3>
@@ -1471,6 +1462,7 @@ function factsInline(dl) {
 }
 
 function ptaskHtml(t, i) {
+  if (!t.due) return `<div class="ptask ${t.s === "done" ? "done" : ""}"><button class="check" data-ptask="${i}" aria-label="Mark done: ${esc(t.t)}">${t.s === "done" ? CHECK : ""}</button><div><div class="title">${esc(t.t)}</div><div class="sm muted">No due date · ${WHO[t.who]}</div></div></div>`;
   const n = diff(d(t.due), TODAY), done = t.s === "done";
   return `<div class="ptask ${done ? "done" : ""}">
     <button class="check" data-ptask="${i}" aria-label="Mark ${done ? "not done" : "done"}: ${esc(t.t)}">${done ? CHECK : ""}</button>
@@ -1559,7 +1551,7 @@ function rowHtml(dl, t) {
 /* ---------- Editable left column ---------- */
 let editCard = null, draft = null, tagAdding = false;
 const OPTS = {
-  stage: ["Lead", "Realtor", "Industry Partners", "FSBO", "Passive Marketing", "Archive/No Direct Contact", "Petty Homes Admin", "180 Day Sphere", "90 Day Sphere", "60 Day Sphere", "30 Day Sphere", "7 Day Sphere", "Closed", "Trash"],
+  stage: ["Sphere", "Past Client", "Lead", "Industry Partners", "Passive Marketing", "Archive", "Trash"],
   follow: ["Not set", "Every 7 days", "Every 30 days", "Every 60 days", "Every 90 days", "Every 180 days"],
   source: ["Sphere", "Sphere Referral", "Website", "AJ Gimme Lead", "Stacie Rihl", "Zillow Preferred"],
   assigned: ["Luke Pettersen", "Alyssa Chakiton"],
@@ -1622,12 +1614,11 @@ function detailsCard(c, stage, touchDue) {
       <label>Source${pick("source", draft.source)}</label>
       <label>Referred by<input data-f="referred" value="${esc(draft.referred)}" placeholder="Search people"></label>
       <label>Mailing name<input data-f="mailing" value="${esc(draft.mailing)}"></label>
-      <p class="muted sm">Stage shows "Under Contract" automatically while a deal is under contract.</p>
       ${foot("details")}</div>`;
   }
   return `<div class="card-s">${head("Details", "details")}
     <dl class="kv">
-      <dt>Stage</dt><dd>${esc(stage)}${stage === "Under Contract" ? ` <span class="muted sm">(from deal)</span>` : ""}</dd>
+      <dt>Stage</dt><dd>${esc(stage)}</dd>
       <dt>Follow up</dt><dd>${c.follow ? `${followTxt(c.follow)}${touchDue ? ` <span class="due-chip">Due now</span>` : ""}` : `<span class="muted">Not set</span>`}</dd>
       <dt>Assigned to</dt><dd>${esc(c.assigned || "Luke Pettersen")}</dd>
       <dt>Source</dt><dd>${esc(c.source)}</dd>
@@ -1725,6 +1716,15 @@ document.addEventListener("click", e => {
     return;
   }
   if (b.dataset.deal) { openCard(+b.dataset.deal); return; }
+  if (b.dataset.applyopen) { applyOpen = true; render(); return; }
+  if (b.dataset.applycancel) { applyOpen = false; render(); return; }
+  if (b.dataset.applytpl) {
+    const tpl = HQ.templates.find(x => x.id === el("apply-tpl").value), c = contact(openContact);
+    const made = HQ.expand(tpl, TODAY).map(x => ({ t: x.t, due: x.due ? iso(x.due) : null, who: x.who === "Alyssa" ? "AS" : "LP", s: "open" }));
+    c.tasks.push(...made);
+    HQ.newTasks.push(...made.map(x => Object.assign({ cid: openContact, name: c.name }, x)));
+    applyOpen = false; render(); toast(`Added ${made.length} tasks from "${tpl.name}". They're on the Tasks page too.`); return;
+  }
   if (b.dataset.editcard) { const c = contact(openContact); editCard = b.dataset.editcard; draft = JSON.parse(JSON.stringify(c)); draft.assigned = draft.assigned || "Luke Pettersen"; draft.newMode = {}; render(); return; }
   if (b.dataset.cancelcard) { editCard = null; draft = null; render(); return; }
   if (b.dataset.savecard) { saveCard(b.dataset.savecard); return; }
@@ -1831,57 +1831,31 @@ const PEOPLE = { LP: "Luke", AS: "Alyssa (assistant)" };
 // Links a task can point to. Deals match the pipeline mockup.
 const LINKS = {
   calloway: { kind: "deal", label: "Jordan & Priya Calloway", full: "Jordan & Priya Calloway · Buyer, Under Contract" },
-  engel: { kind: "deal", label: "Ruth & Sam Engel", full: "Ruth & Sam Engel · Buyer, Under Contract" },
-  raman: { kind: "deal", label: "Dev Raman", full: "Dev Raman · Buyer, Under Contract" },
-  halvorsen: { kind: "deal", label: "Wes Halvorsen", full: "Wes Halvorsen · Seller, Under Contract" },
-  okafor: { kind: "deal", label: "Ben & Hana Okafor", full: "Ben & Hana Okafor · Buyer, Lead" },
-  thorsen: { kind: "deal", label: "Grace Thorsen", full: "Grace Thorsen · Buyer, Consult" },
+  pryce: { kind: "deal", label: "Owen Pryce", full: "Owen Pryce · Buyer, Offer Out" },
   fisk: { kind: "deal", label: "Carol Fisk & Dean Moreno", full: "Carol Fisk & Dean Moreno · Seller, Prep" },
-  murphy: { kind: "person", label: "Kate Murphy", full: "Kate Murphy · 90 Day Sphere" },
-  dana: { kind: "person", label: "Dana Kim", full: "Dana Kim · Lender, Northfield Lending" },
+  murphy: { kind: "person", label: "Kate Murphy", full: "Kate Murphy · Past Client" },
+  voss: { kind: "person", label: "Kara Voss", full: "Kara Voss · Past Client" },
 };
 
 // Contact page each link opens in the pipeline mockup.
-const CID = { calloway: "calloway", engel: "d14", raman: "d15", halvorsen: "d29", okafor: "d3", thorsen: "d4", fisk: "d24", murphy: "murphy", dana: "calloway" };
+const CID = { calloway: "calloway", pryce: "d11", fisk: "d24", murphy: "murphy", voss: "d16" };
 // p: priority 0 none, 1 low, 2 med, 3 high. step: deal checklist info.
 let tasks = [
   { t: "Earnest money receipt saved to file", due: "2026-10-07", who: "AS", link: "calloway", step: { phase: "Under Contract", rule: "Final Acceptance + 5d" } },
   { t: "Insurance referral", due: "2026-10-07", who: "AS", link: "calloway", kind: "email", step: { phase: "Financing", rule: "Final Acceptance + 5d" } },
-  { t: "Schedule consult", due: "2026-10-07", who: "LP", link: "okafor", step: { phase: "Lead", rule: "Lead + 2d" } },
-  { t: "Replace furnace filter, Lake St duplex", due: "2026-10-10", who: "LP", p: 1 },
   { t: "Review inspection report with clients", due: "2026-10-12", time: "4:00pm", who: "LP", link: "calloway", p: 3, step: { phase: "Inspection", rule: "Inspection − 2d" } },
-  { t: "Check October rent payments", due: "2026-10-12", who: "LP", repeat: "Monthly" },
+  { t: "Follow up with listing agent", due: "2026-10-12", who: "LP", link: "pryce", p: 2, step: { phase: "Offer Out", rule: "Start date + 1d" } },
   { t: "Call Kate about spring listing timing", due: "2026-10-12", time: "11:00am", who: "LP", link: "murphy", p: 2 },
   { t: "Draft inspection amendment", due: "2026-10-13", who: "LP", link: "calloway", p: 3, step: { phase: "Inspection", rule: "Inspection − 1d" } },
-  { t: "Order fall trifold mailers", due: "2026-10-13", who: "AS", repeat: "Yearly", subs: [["Pull mailing list", true], ["Approve proof", false], ["Submit print order", false]] },
+  { t: "Send school district info for Upton Ave", due: "2026-10-13", who: "LP", link: "calloway" },
   { t: "Signed amendment to lender + title", due: "2026-10-14", who: "AS", link: "calloway", kind: "email", step: { phase: "Inspection", rule: "Inspection day of" } },
-  { t: "Final walkthrough scheduling text", due: "2026-10-14", who: "AS", link: "raman", kind: "text", step: { phase: "Closing", rule: "Closing − 9d" } },
-  { t: "Day-of-inspection text", due: "2026-10-14", who: "AS", link: "halvorsen", kind: "text", step: { phase: "Inspection", rule: "Inspection − 3d" } },
-  { t: "Hold consult", due: "2026-10-14", time: "6:30pm", who: "LP", link: "thorsen", step: { phase: "Consult", rule: "Consult + 3d" } },
-  { t: "Dentist", due: "2026-10-14", time: "2:00pm", who: "LP" },
-  { t: "Record podcast ep. 38 with lender guest", due: "2026-10-15", who: "LP", p: 2, subs: [["Confirm guest", true], ["Outline questions", false], ["Book studio", false]] },
-  { t: "Schedule listing photos", due: "2026-10-15", who: "AS", link: "fisk", step: { phase: "Listing Signed / Prep", rule: "Prep + 1d" } },
-  { t: "Confirm cash to close", due: "2026-10-16", who: "AS", link: "raman", step: { phase: "Closing", rule: "Closing − 7d" } },
-  { t: "Day-of-inspection text", due: "2026-10-16", who: "AS", link: "engel", kind: "text", step: { phase: "Inspection", rule: "Inspection − 3d" } },
-  { t: "Review buyer's inspection requests", due: "2026-10-17", who: "LP", link: "halvorsen", step: { phase: "Inspection", rule: "Inspection day of" } },
-  { t: "Weekly task report email", due: "2026-10-18", who: "AS", repeat: "Weekly" },
-  { t: "Plan next week's social posts", due: "2026-10-16", who: "AS", repeat: "Weekly" },
-  { t: "Send New Year's postcard", due: "2026-12-28", who: "AS", repeat: "Yearly" },
-  { t: "Send spring postcard", due: "2027-03-15", who: "AS", repeat: "Yearly" },
-  { t: "Quarterly market update email", due: "2027-01-05", who: "LP", repeat: "Quarterly" },
-  { t: "Review settlement statement", due: "2026-10-19", who: "LP", link: "raman", step: { phase: "Closing", rule: "Closing − 4d" } },
-  { t: "Finish MN license CE credits", due: "2026-10-30", who: "LP", p: 3 },
-  { t: "Get appraisal date from lender", due: "2026-10-13", who: "AS", link: "calloway" },
+  { t: "Schedule listing photos", due: "2026-10-15", who: "AS", link: "fisk", step: { phase: "Prep", rule: "Start date + 1d" } },
+  { t: "Send home value update", due: "2026-10-27", who: "AS", link: "voss", repeat: "Yearly" },
 ];
 tasks.forEach((t, i) => { t.id = i; t.done = false; t.p = t.p || 0; t.kind = t.kind || "task"; });
 let nextId = tasks.length;
 
-const touches = [
-  { n: "Kara Voss", f: "30 days", last: "Sep 9" },
-  { n: "Marcus & Elle Brandvold", f: "90 days", last: "Jul 6" },
-  { n: "Hollis Family", f: "30 days", last: "Sep 10" },
-  { n: "Rita Okonkwo", f: "7 days", last: "Oct 3" },
-];
+const touches = [];
 
 let view = "today", filter = "all", sel = null, me = "LP", whoF = "everyone";
 let LISTS = [], newListOpen = false;
@@ -2121,8 +2095,21 @@ document.addEventListener("change", e => {
   render();
 });
 
+// Tasks created elsewhere (e.g. a template applied on a contact page).
+function drain() {
+  if (typeof HQ === "undefined" || !HQ.newTasks.length) return 0;
+  const n = HQ.newTasks.length;
+  HQ.newTasks.splice(0).forEach(x => {
+    const key = "c_" + x.cid;
+    if (!LINKS[key]) { LINKS[key] = { kind: "person", label: x.name, full: x.name }; CID[key] = x.cid; }
+    tasks.push({ id: nextId++, t: x.t, due: x.due || iso(TODAY), who: x.who, link: key, p: 0, kind: "task", done: false });
+  });
+  return n;
+}
+drain();
 render();
 
+return { onShow() { const n = drain(); if (n) { render(); toast(`${n} new task${n === 1 ? "" : "s"} from a template.`); } } };
 };
 INIT.messages = function (document) {
 
@@ -2131,19 +2118,12 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 let convs = [
   { id: 1, name: "Priya Calloway", cid: "calloway", phone: "(612) 555-0193", unread: true, stage: "Under Contract", deal: "Buyer · 4127 Upton Ave S #3", next: "Review inspection report · Today 4pm", tags: ["Buyer", "Seller", "A Lead"],
     m: [["out", "Inspector is wrapping up, we'll go over the report Monday at 4.", "3:12 PM", "Sat Oct 10"], ["in", "Perfect. Can you send the report before so we can read it?", "3:20 PM", "Sat Oct 10"], ["out", "Yep, it'll come straight from the inspector tonight.", "3:22 PM", "Sat Oct 10"], ["in", "Got it, thanks! Is the water heater thing a big deal?", "8:41 AM", "Today"]] },
-  { id: 2, name: "(763) 555-0110", cid: null, phone: "(763) 555-0110", unread: true, m: [["missed", "Missed call · no voicemail", "9:02 AM", "Today"], ["in", "Hi, saw your sign on Lincoln Ave. Is it still available? Could we see it this week?", "9:05 AM", "Today"]] },
   { id: 3, name: "Owen Pryce", cid: "d11", phone: "(612) 555-0111", unread: false, stage: "Lead", deal: "Buyer · Offer Out", next: "Follow up with listing agent · Today", tags: ["Buyer", "B Lead"],
     m: [["out", "Offer is in on Hillside Ave. Response deadline is tomorrow at 5pm.", "6:15 PM", "Sun Oct 11"], ["in", "Fingers crossed 🤞", "6:20 PM", "Sun Oct 11"]] },
-  { id: 4, name: "Kate Murphy", cid: "murphy", phone: "(651) 555-0172", unread: false, stage: "90 Day Sphere", deal: "", next: "Call Kate about spring listing timing · Today", tags: ["Past Client", "Mailers"],
+  { id: 4, name: "Kate Murphy", cid: "murphy", phone: "(651) 555-0172", unread: false, stage: "Past Client", deal: "", next: "Call Kate about spring listing timing · Today", tags: ["Past Client", "Mailers"],
     m: [["missed", "Missed call · 0:42 voicemail", "5:48 PM", "Fri Oct 9"]] },
-  { id: 5, name: "Marcus Holt", cid: null, phone: "(612) 555-0177", unread: false, known: "Listing agent on Calloway deal",
-    m: [["in", "Sellers are open to a credit on the water heater. Send over the amendment when ready.", "11:30 AM", "Today"]] },
-  { id: 6, name: "Dev Raman", cid: "d15", phone: "(612) 555-0115", unread: false, stage: "Under Contract", deal: "Buyer · 1530 Hague Ave", next: "Final walkthrough scheduling text · Wed", tags: ["Buyer"],
-    m: [["in", "Lender says we're clear to close!", "4:02 PM", "Thu Oct 8"], ["out", "Huge! 🎉 Closing is still Oct 23 at Lakeview Title.", "4:10 PM", "Thu Oct 8"]] },
-  { id: 7, name: "Hugo Bergstrom", cid: "d26", phone: "(612) 555-0126", unread: false, stage: "Lead", deal: "Seller · Coming Soon", next: "Sign install · Tue", tags: ["Seller"],
-    m: [["out", "Photos are in! Sending the link now.", "1:15 PM", "Fri Oct 9"], ["in", "These look amazing", "1:40 PM", "Fri Oct 9"]] },
-  { id: 8, name: "Rita Okonkwo", cid: "x2", phone: "(612) 555-0182", unread: false, stage: "7 Day Sphere", deal: "", next: "", tags: ["A Lead"],
-    m: [["in", "Any new condos near the lakes this week?", "7:55 PM", "Thu Oct 8"]] },
+  { id: 9, name: "Carol Fisk", cid: "d24", phone: "(612) 555-0124", unread: false, stage: "Lead", deal: "Seller · 3318 47th Ave S", next: "Schedule listing photos · Thu", tags: ["Seller", "A Lead"],
+    m: [["out", "Photographer can do Thursday at 10. Does that work?", "2:05 PM", "Fri Oct 9"], ["in", "Thursday works. Dean will be home to let them in.", "2:31 PM", "Fri Oct 9"]] },
 ];
 const TEMPLATES = [
   ["", "Insert template…"],
@@ -2167,11 +2147,11 @@ function ts(m) {
 }
 const nowKey = () => 100000 + (++clock);
 const INCOMING = [
-  [8, "Actually, could we see the one on Lake Harriet Pkwy Saturday?"],
-  [7, "Sign looks great! Any showings booked yet?"],
+  [3, "Any word from the listing agent yet?"],
+  [9, "Quick question, should we be out of the house for the photos?"],
   [null, "Hi Luke, got your name from Kara Voss. We're thinking about selling next spring.", "(952) 555-0144"],
   [4, "Sorry I missed you! Free after 4 today if you want to call."],
-  [3, "Listing agent says they'll have an answer by noon tomorrow."],
+  [1, "Also, can we move the final walkthrough to the morning?"],
 ];
 let nextIn = 0;
 
@@ -2203,6 +2183,10 @@ function renderThread() {
 }
 function renderInfo() {
   const c = convs.find(x => x.id === cur);
+  if (!c.cid && c.created) {
+    el("info").innerHTML = `<h3>${esc(c.name)}</h3><dl class="kv"><dt>Stage</dt><dd>${esc(c.stage)}</dd><dt>Next up</dt><dd>${esc(c.next)}</dd><dt>Phone</dt><dd class="num">${c.phone}</dd></dl><p class="muted sm" style="margin:0">Added to People just now.</p>`;
+    return;
+  }
   if (!c.cid) {
     el("info").innerHTML = `<h3>${c.known ? "Not in People yet" : "New number"}</h3>
       <p class="muted sm" style="margin:0">${c.known ? esc(c.known) + "." : "Not linked to anyone. Add them as a lead or link to an existing person."}</p>
@@ -2240,7 +2224,7 @@ document.addEventListener("click", e => {
   }
   if (b.dataset.create) {
     const c = convs.find(x => x.id === cur), n = el("nc-name").value.trim(); if (!n) { toast("Add a name first."); return; }
-    Object.assign(c, { name: n, cid: "x2", stage: el("nc-stage").value, deal: "", next: "Follow up on new lead · Today", tags: [] });
+    Object.assign(c, { name: n, created: true, stage: el("nc-stage").value, deal: "", next: "Follow up on new lead · Today", tags: [] });
     toast(`Created ${n}. A follow-up task was added.`); render(); return;
   }
   if (b.dataset.toast) { toast(b.dataset.toast); return; }
@@ -2261,9 +2245,9 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 const el = id => document.getElementById(id);
 const SECTIONS = [
   ["Team", [["users", "Users & roles"]]],
-  ["Deals", [["pipelines", "Pipelines & stages"], ["checklists", "Checklist templates"]]],
+  ["Deals", [["pipelines", "Pipelines & stages"], ["checklists", "Task templates"]]],
   ["People", [["fields", "Custom fields"], ["tags", "Tags"], ["lists", "Stages, sources & follow-up"]]],
-  ["Messaging", [["templates", "Text & email templates"]]],
+  ["Messaging", [["texttpl", "Text templates"], ["emailtpl", "Email templates"]]],
   ["Connections", [["integrations", "Integrations"]]],
 ];
 let sec = "checklists";
@@ -2273,29 +2257,10 @@ const state = {
   roles: ["Admin", "Assistant"],
   perms: [["See commissions", true, false], ["Delete people and deals", true, false], ["Manage users and roles", true, false], ["Edit checklist templates", true, true], ["Edit text and email templates", true, true], ["Export data", true, false], ["Send texts", true, true]],
   pipes: { Buyer: ["Lead", "Consult", "Rep Signed / Searching", "Offer Out", "Under Contract", "Closed"], Seller: ["Lead", "Consult", "Listing Signed / Prep", "Coming Soon", "Active", "Under Contract", "Closed"] },
-  ckPipe: "Buyer", ckStage: "Under Contract", ckApply: true, ckPending: null,
-  ck: (() => {
-    const s = (name, anchor, days, dir, who, type, extra = {}) => Object.assign({ name, anchor, days, dir, who, type, tpl: "", cond: "Always", advance: "" }, extra);
-    return {
-      "Buyer · Lead": { phases: [{ name: "First contact", steps: [s("Call new lead", "Stage start", 0, "on", "Luke", "Call"), s("Intro email", "Stage start", 0, "on", "Alyssa", "Email", { tpl: "Website sign-up welcome" }), s("Schedule consult", "Stage start", 2, "after", "Luke", "Task", { advance: "Consult" })] }] },
-      "Buyer · Consult": { phases: [{ name: "Before the consult", steps: [s("Agency disclosure + more info email", "Stage start", 0, "on", "Alyssa", "Email"), s("Consult confirmation text", "Consult date", 1, "before", "Luke", "Text")] }, { name: "After the consult", steps: [s("Intro + Homespotter + legal name text", "Consult date", 0, "on", "Alyssa", "Text", { tpl: "Intro + Homespotter + legal name" }), s("Connect with lender?", "Consult date", 1, "after", "Luke", "Task")] }] },
-      "Buyer · Rep Signed / Searching": { phases: [{ name: "Buyer rep", steps: [s("Send buyer rep to sign", "Stage start", 0, "on", "Alyssa", "Task"), s("Buyer rep breakdown email", "Stage start", 0, "on", "Alyssa", "Email", { tpl: "Buyer rep breakdown" }), s("Buyer rep signed + saved", "Stage start", 1, "after", "Alyssa", "Task")] }, { name: "Searching", steps: [s("Set up home search", "Buyer rep signed", 1, "after", "Luke", "Task"), s("Check in on showings", "Buyer rep signed", 14, "after", "Luke", "Call"), s("Buyer rep expiring soon", "Buyer rep expiration", 14, "before", "Luke", "Task")] }] },
-      "Buyer · Under Contract": { phases: [
-        { name: "Under Contract", steps: [s("Purchase agreement accepted email", "Final Acceptance", 0, "on", "Alyssa", "Email", { tpl: "Purchase agreement accepted" }), s("Lender intro email", "Final Acceptance", 0, "on", "Luke", "Email"), s("Request earnest money", "Final Acceptance", 1, "after", "Alyssa", "Text", { tpl: "Earnest money" }), s("Lead-paint pamphlet email", "Final Acceptance", 1, "after", "Alyssa", "Email", { cond: "Built before 1978" })] },
-        { name: "Inspection", steps: [s("Schedule inspection", "Final Acceptance", 1, "after", "Luke", "Task"), s("Day-of-inspection text", "Inspection", 3, "before", "Alyssa", "Text", { tpl: "Day-of-inspection" }), s("Review inspection report with clients", "Inspection", 2, "before", "Luke", "Task"), s("Signed amendment to lender + title", "Inspection", 0, "on", "Alyssa", "Email")] },
-        { name: "Financing", steps: [s("Remind lender about written statement", "Written Statement", 2, "before", "Alyssa", "Email")] },
-        { name: "HOA", steps: [s("Send HOA docs to clients", "Final Acceptance", 4, "after", "Alyssa", "Email", { cond: "HOA property" }), s("Confirm rescission period ended", "HOA Rescission", 0, "on", "Alyssa", "Task", { cond: "HOA property" })] },
-        { name: "Closing", steps: [s("Order closing gift", "Closing", 14, "before", "Luke", "Task"), s("Final walkthrough", "Closing", 1, "before", "Luke", "Task"), s("Closing day", "Closing", 0, "on", "Luke", "Task", { advance: "Closed" })] },
-      ] },
-      "Buyer · Closed": { phases: [{ name: "Post-close", steps: [s("\"How was the move?\" text", "Stage start", 1, "after", "Luke", "Text"), s("Thank-you card", "Stage start", 3, "after", "Luke", "Task"), s("Zillow review request", "Stage start", 5, "after", "Alyssa", "Text"), s("Google review request", "Stage start", 21, "after", "Alyssa", "Email")] }] },
-      "Seller · Listing Signed / Prep": { phases: [{ name: "Prep", steps: [s("Withhold listing in MLS", "Stage start", 0, "on", "Alyssa", "Task"), s("Schedule photos", "Stage start", 1, "after", "Alyssa", "Task"), s("Drop off lockbox", "Stage start", 2, "after", "Luke", "Task"), s("Disclosures + lead paint", "Stage start", 3, "after", "Alyssa", "Task", { cond: "Built before 1978" })] }, { name: "Media", steps: [s("Photos to clients", "Photos taken", 1, "after", "Alyssa", "Email"), s("Upload to MLS", "Photos taken", 2, "after", "Alyssa", "Task", { advance: "Coming Soon" })] }] },
-      "Seller · Coming Soon": { phases: [{ name: "Launch", steps: [s("Showing instructions", "Stage start", 0, "on", "Alyssa", "Task"), s("Coming-soon email", "Stage start", 0, "on", "Alyssa", "Email"), s("Sign install", "Active date", 3, "before", "Luke", "Task"), s("Go active in MLS", "Active date", 0, "on", "Alyssa", "Task", { advance: "Active" })] }] },
-      "Seller · Under Contract": { phases: [{ name: "Under Contract", steps: [s("Mark contingent in MLS", "Final Acceptance", 0, "on", "Alyssa", "Task"), s("Purchase agreement accepted email", "Final Acceptance", 0, "on", "Alyssa", "Email", { tpl: "Purchase agreement accepted" })] }, { name: "Closing", steps: [s("Closing reminder email", "Closing", 14, "before", "Alyssa", "Email"), s("Closing day", "Closing", 0, "on", "Luke", "Task", { advance: "Closed" })] }] },
-    };
-  })(),
+  tplId: "t4", ckApply: true, ckPending: null,
   fields: [["Mailing name", "Text", "People"], ["Referred by", "Person", "People"], ["Homeiversary", "Date", "People"], ["Preferred contact time", "Dropdown", "People"], ["Pre-approval amount", "Number", "Deals"], ["Lender", "Person", "Deals"], ["New construction", "Checkbox", "Deals"]],
-  tags: [["Past Client", 218], ["Email Newsletter", 436], ["Petty Homes Event List", 284], ["Mailers", 260], ["Christmas Cards", 216], ["Real Estate Health Check", 200], ["Timberwolves Tickets 2026-2027 NOT RESPONDED", 178], ["2026 RE Health Check Needed", 160], ["Google Review Sent", 84], ["Buyer", 58], ["Bounced", 54], ["A Lead", 29], ["B Lead", 8], ["C Lead", 21], ["D Lead", 19], ["Seller", 22], ["Investor", 5]],
-  stages: ["Lead", "Realtor", "Industry Partners", "FSBO", "Passive Marketing", "Archive/No Direct Contact", "Petty Homes Admin", "Closed", "Trash"],
+  tags: [["Past Client", 2], ["Buyer", 2], ["Seller", 2], ["A Lead", 2], ["B Lead", 1], ["Mailers", 1], ["Christmas Cards", 1], ["Email Newsletter", 1]],
+  stages: ["Sphere", "Past Client", "Lead", "Industry Partners", "Passive Marketing", "Archive", "Trash"],
   sources: ["Sphere", "Sphere Referral", "Website", "AJ Gimme Lead", "Stacie Rihl", "Zillow Preferred"],
   follow: ["7", "30", "60", "90", "180"],
   templates: [
@@ -2310,13 +2275,33 @@ const state = {
   ],
   tplSel: 2, tplFilter: "All",
 };
-const ANCHORS = ["Stage start", "Consult date", "Buyer rep signed", "Buyer rep expiration", "Listing agreement signed", "Listing expiration", "Photos taken", "Active date", "Final Acceptance", "Inspection", "Written Statement", "HOA Rescission", "Closing"];
-const ckKey = (p, st) => `${p} · ${st}`;
-const ckOf = (p, st) => state.ck[ckKey(p, st)] || (state.ck[ckKey(p, st)] = { phases: [] });
-const curCk = () => ckOf(state.ckPipe, state.ckStage);
-const blankStep = () => ({ name: "New step", anchor: "Stage start", days: 1, dir: "after", who: "Alyssa", type: "Task", tpl: "", cond: "Always", advance: "" });
-const applied = () => { if (state.ckApply) toast(`Open deals in ${state.ckPipe} · ${state.ckStage} get this change too.`); };
+const ANCHORS = ["Start date", "Consult date", "Buyer rep signed", "Buyer rep expiration", "Listing agreement signed", "Listing expiration", "Photos taken", "Active date", "Final Acceptance", "Inspection", "Written Statement", "HOA Rescission", "Closing"];
+const TODAY_A = new Date(2026, 9, 12);
+const TPLS = () => HQ.templates;
+const curCk = () => TPLS().find(x => x.id === state.tplId) || TPLS()[0];
+const stepCount = x => x.phases.reduce((n, ph) => n + ph.steps.length, 0);
+const trigOptions = () => Object.entries(state.pipes).flatMap(([p, st]) => st.map(x => `${p} · ${x}`));
+const blankStep = () => ({ name: "New step", anchor: "Start date", days: 1, dir: "after", who: "Alyssa", type: "Task", tpl: "", cond: "Always", advance: "" });
+const applied = () => { const x = curCk(); if (state.ckApply && x.trigger) toast(`Open deals in ${x.trigger} get this change too.`); };
+let tplN = 100;
 const CONDS = ["Always", "HOA property", "No HOA", "New construction", "Built before 1978", "Condo / townhome", "FHA / VA loan", "Cash purchase", "Well / septic", "Referral partner", "Out of town client"];
+
+function msgTpl(type) {
+  const folders = ["BPC", "BUC", "SPC", "SUC", "Leads", "Past clients"];
+  const list = state.templates.map((t, i) => [t, i]).filter(([t]) => t[0] === type && (state.tplFilter === "All" || t[1] === state.tplFilter));
+  if (!state.templates[state.tplSel] || state.templates[state.tplSel][0] !== type) state.tplSel = (list[0] || [null, -1])[1];
+  const t = state.templates[state.tplSel];
+  const used = t ? HQ.templates.filter(x => x.phases.some(ph => ph.steps.some(st => st.tpl === t[2]))).map(x => x.name) : [];
+  return `<h1>${type} templates</h1><p>${type === "Text" ? "Used in Messages and by text steps in task templates." : "Used by email steps in task templates. Drafts open ready to review, then send from Gmail."} Merge fields fill in from the person and deal.</p>
+    <div class="toolbar"><select id="tpl-filter" aria-label="Folder">${["All", ...folders].map(f => `<option value="${f}" ${f === state.tplFilter ? "selected" : ""}>${f === "All" ? "All folders" : f}</option>`).join("")}</select><button class="btn primary" data-newtpl="${type}">+ New ${type.toLowerCase()} template</button></div>
+    <div class="box tpl"><div class="tpl-list">${list.map(([x, i]) => `<button class="tpl-i" data-tsel="${i}" aria-current="${i === state.tplSel}">${esc(x[2])}<small>${x[1]}</small></button>`).join("") || `<p class="muted sm" style="padding:10px 12px">None in this folder.</p>`}</div>
+      ${t ? `<div class="tpl-ed"><div style="display:flex;gap:8px;flex-wrap:wrap"><label style="flex:1;min-width:180px">Name<input class="input" data-tf="2" value="${esc(t[2])}"></label><label>Folder<select class="input" data-tf="1">${folders.map(x => `<option ${x === t[1] ? "selected" : ""}>${x}</option>`).join("")}</select></label></div>
+        ${type === "Email" ? `<label>Subject<input class="input" data-tf="4" value="${esc(t[4] || "")}" placeholder="e.g. Your key dates for {address}"></label>` : ""}
+        <label>Message<textarea id="tpl-body" data-tf="3" ${type === "Text" ? 'style="min-height:110px"' : ""}>${esc(t[3])}</textarea></label>
+        ${type === "Text" ? `<span class="muted sm">${t[3].length} characters${t[3].length > 160 ? " · sends as " + Math.ceil(t[3].length / 153) + " texts" : ""}</span>` : `<button class="btn" style="align-self:flex-start" data-toast="Attach a file that goes out with every draft from this template">+ Attach file</button>`}
+        <div class="merge">${["{first}", "{address}", "{inspection_date}", "{closing_date}", "{earnest_money}", "{em_due}", "{lender}", "{link}"].map(m => `<button data-merge="${m}">${m}</button>`).join("")}</div>
+        <div style="display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;align-items:center"><span class="muted sm">${used.length ? "Used in: " + esc(used.join(", ")) : "Not used in any task template yet"}</span><span style="display:flex;gap:6px"><button class="btn" data-deltpl="1">Delete</button><button class="btn primary" data-toast="Saved">Save</button></span></div></div>` : `<div class="tpl-ed muted">Create a ${type.toLowerCase()} template to get started.</div>`}</div>`;
+}
 
 function side() {
   el("side").innerHTML = SECTIONS.map(([g, items]) => `<div><h4>${g}</h4><ul>${items.map(([k, l]) => `<li><button class="nav-i" data-sec="${k}" aria-current="${sec === k}"><span>${l}</span></button></li>`).join("")}</ul></div>`).join("");
@@ -2334,14 +2319,18 @@ const V = {
   pipelines() {
     return `<h1>Pipelines &amp; stages</h1><p>The columns on the Deals board. You can also edit these from the board with "Edit stages". Under Contract and Closed can be renamed but not removed.</p>
     <div class="cards">${Object.entries(state.pipes).map(([p, st]) => `<div class="box"><h2>${p} pipeline</h2><div class="tbl-wrap"><table><tbody>
-      ${st.map((s, i) => `<tr><td class="muted" style="width:28px">${i + 1}</td><td><input data-stage="${p}:${i}" value="${esc(s)}"></td><td style="white-space:nowrap"><button class="linkbtn" data-gock="${p}|${esc(s)}">${(() => { const n = ckOf(p, s).phases.reduce((m, ph) => m + ph.steps.length, 0); return n ? n + " steps" : "No steps"; })()} · Edit checklist</button></td><td style="width:90px;white-space:nowrap"><button class="rm" data-up="${p}:${i}" aria-label="Move up">↑</button><button class="rm" data-down="${p}:${i}" aria-label="Move down">↓</button>${["Under Contract", "Closed"].includes(s) ? "" : `<button class="rm" data-rmstage="${p}:${i}" aria-label="Remove">×</button>`}</td></tr>`).join("")}
+      ${st.map((s, i) => `<tr><td class="muted" style="width:28px">${i + 1}</td><td><input data-stage="${p}:${i}" value="${esc(s)}"></td><td style="white-space:nowrap">${(() => { const ts = TPLS().filter(x => x.trigger === p + " · " + s); return ts.length ? ts.map(x => `<button class="linkbtn" data-tplid="${x.id}" data-gosec="1">${esc(x.name)} (${stepCount(x)})</button>`).join(", ") : `<button class="linkbtn" data-gock="${p}|${esc(s)}">+ Add template</button>`; })()}</td><td style="width:90px;white-space:nowrap"><button class="rm" data-up="${p}:${i}" aria-label="Move up">↑</button><button class="rm" data-down="${p}:${i}" aria-label="Move down">↓</button>${["Under Contract", "Closed"].includes(s) ? "" : `<button class="rm" data-rmstage="${p}:${i}" aria-label="Remove">×</button>`}</td></tr>`).join("")}
     </tbody></table></div><div class="addrow"><button class="btn" data-addstage="${p}">+ Add stage</button></div></div>`).join("")}</div>`;
   },
   checklists() {
-    const P = state.ckPipe, stages = state.pipes[P], k = ckKey(P, state.ckStage), ck = ckOf(P, state.ckStage);
-    const steps = ck.phases.reduce((n, ph) => n + ph.steps.length, 0);
-    const others = Object.entries(state.ck).filter(([kk, v]) => kk !== k && v.phases.some(ph => ph.steps.length));
-    const tplOpts = type => state.templates.filter(t => t[0] === type).map(t => t[2]);
+    const t = curCk(), steps = stepCount(t);
+    const [trigPipe, trigStage] = t.trigger ? t.trigger.split(" · ") : [null, null];
+    const stages = trigPipe ? state.pipes[trigPipe] || [] : [];
+    const tplOpts = type => state.templates.filter(x => x[0] === type).map(x => x[2]);
+    const twins = t.trigger ? TPLS().filter(x => x !== t && x.trigger === t.trigger) : [];
+    const li = x => `<button class="tli" data-tplid="${x.id}" aria-current="${x.id === t.id}"><b>${esc(x.name)}</b><small>${x.trigger ? "Starts at " + esc(x.trigger) : "Apply by hand"} · ${stepCount(x)} step${stepCount(x) === 1 ? "" : "s"}</small></button>`;
+    const order = trigOptions();
+    const auto = TPLS().filter(x => x.trigger).sort((a, b) => order.indexOf(a.trigger) - order.indexOf(b.trigger)), manual = TPLS().filter(x => !x.trigger);
     const row = (st, pi, si, n) => {
       const id = `${pi}:${si}`, noDue = st.dir === "none";
       return `<div class="step">
@@ -2350,7 +2339,7 @@ const V = {
           <input class="st-name" data-s="${id}:name" value="${esc(st.name)}" aria-label="Step name">
           <label>Assignee<select data-s="${id}:who">${["Luke", "Alyssa", "Deal owner"].map(a => `<option ${a === st.who ? "selected" : ""}>${a}</option>`).join("")}</select></label>
           <label>Type<select data-s="${id}:type">${["Task", "Call", "Email", "Text"].map(a => `<option ${a === st.type ? "selected" : ""}>${a}</option>`).join("")}</select></label>
-          ${st.type === "Email" || st.type === "Text" ? `<label>Template<select data-s="${id}:tpl"><option value="">No template</option>${tplOpts(st.type).map(t => `<option ${t === st.tpl ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></label>` : ""}
+          ${st.type === "Email" || st.type === "Text" ? `<label>Message template<select data-s="${id}:tpl"><option value="">None</option>${tplOpts(st.type).map(x => `<option ${x === st.tpl ? "selected" : ""}>${esc(x)}</option>`).join("")}</select></label>` : ""}
           <span class="mv end"><button class="rm" data-sdup="${id}" aria-label="Duplicate step" title="Duplicate">⧉</button><button class="rm" data-sdel="${id}" aria-label="Delete step" title="Delete">×</button></span>
         </div>
         <div class="st-l2">
@@ -2359,29 +2348,43 @@ const V = {
             <select data-s="${id}:dir" aria-label="When">${[["before", "days before"], ["after", "days after"], ["on", "on the day of"], ["none", "no due date"]].map(([v, l]) => `<option value="${v}" ${v === st.dir ? "selected" : ""}>${l}</option>`).join("")}</select>
             <select data-s="${id}:anchor" aria-label="Date it's counted from" ${noDue ? "disabled" : ""}>${ANCHORS.map(a => `<option ${a === st.anchor ? "selected" : ""}>${a}</option>`).join("")}</select></span></label>
           <label>Only when<select data-s="${id}:cond">${CONDS.map(a => `<option ${a === st.cond ? "selected" : ""}>${a}</option>`).join("")}</select></label>
-          <label>When done<select data-s="${id}:advance"><option value="">Nothing else</option>${stages.filter(x => x !== state.ckStage).map(x => `<option value="${esc(x)}" ${x === st.advance ? "selected" : ""}>Move deal to ${esc(x)}</option>`).join("")}</select></label>
+          ${stages.length ? `<label>When done<select data-s="${id}:advance"><option value="">Nothing else</option>${stages.filter(x => x !== trigStage).map(x => `<option value="${esc(x)}" ${x === st.advance ? "selected" : ""}>Move deal to ${esc(x)}</option>`).join("")}</select></label>` : ""}
         </div>
       </div>`;
     };
-    return `<h1>Checklist templates</h1>
-    <p>Every stage in both pipelines has its own checklist. When a deal enters a stage, that stage's steps are added to it. Stages you add under Pipelines &amp; stages show up here automatically.</p>
-    <div class="toolbar"><span class="seg2" role="group" aria-label="Pipeline">${Object.keys(state.pipes).map(p => `<button data-ckpipe="${p}" aria-pressed="${p === P}">${p} pipeline</button>`).join("")}</span></div>
-    <div class="chips">${stages.map(st => { const c = ckOf(P, st).phases.reduce((n, ph) => n + ph.steps.length, 0); return `<button class="schip" data-ckstage="${esc(st)}" aria-pressed="${st === state.ckStage}">${esc(st)} <span>${c || "empty"}</span></button>`; }).join("")}</div>
-    <div class="ck-head">
-      <div><h2 style="margin:0;font-size:17px">${esc(P)} · ${esc(state.ckStage)}</h2><span class="muted sm">${steps} step${steps === 1 ? "" : "s"} in ${ck.phases.length} phase${ck.phases.length === 1 ? "" : "s"}</span></div>
-      <div class="toolbar">
-        <select id="ck-copy" aria-label="Copy steps from another stage"><option value="">Copy steps from…</option>${others.map(([kk]) => `<option>${esc(kk)}</option>`).join("")}</select>
-        ${steps ? `<button class="btn" data-ckclear="1">${state.ckPending === "clear" ? "Click again to clear all" : "Clear all"}</button>` : ""}
-        <label class="sm" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="ck-apply" ${state.ckApply ? "checked" : ""}> Update open deals in this stage when I change steps</label>
+    const preview = HQ.expand(t, TODAY_A).slice(0, 8);
+    return `<h1>Task templates</h1>
+    <p>A template is a set of steps that turn into tasks. Set it to start when a deal reaches a stage, or leave it manual and apply it from a contact. Edit any template here; new and existing ones work the same way.</p>
+    <div class="tgrid">
+      <aside class="box tlist">
+        <div class="tl-top"><button class="btn primary" data-newck="1">+ New template</button></div>
+        <div class="tl-h">Start automatically</div>${auto.map(li).join("") || `<p class="muted sm" style="padding:4px 12px">None</p>`}
+        <div class="tl-h">Apply by hand</div>${manual.map(li).join("") || `<p class="muted sm" style="padding:4px 12px">None</p>`}
+      </aside>
+      <div class="main" style="gap:10px">
+        <div class="box ed-head">
+          <input class="tname" data-tname="1" value="${esc(t.name)}" aria-label="Template name">
+          <div class="toolbar">
+            <label class="lbl">Starts<select id="t-trigger"><option value="">By hand, from a contact</option>${Object.entries(state.pipes).map(([p, st]) => `<optgroup label="${p} pipeline">${st.map(x => `<option value="${esc(p + " · " + x)}" ${t.trigger === p + " · " + x ? "selected" : ""}>When a ${p.toLowerCase()} deal enters ${esc(x)}</option>`).join("")}</optgroup>`).join("")}</select></label>
+            <label class="lbl">Copy steps from<select id="ck-copy"><option value="">Choose a template…</option>${TPLS().filter(x => x !== t && stepCount(x)).map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></label>
+            <span style="display:flex;gap:6px;margin-left:auto"><button class="btn" data-tdup="1">Duplicate</button><button class="btn" data-tdel="1">${state.ckPending === "tdel" ? "Click again to delete" : "Delete"}</button></span>
+          </div>
+          ${t.trigger ? `<label class="sm" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="ck-apply" ${state.ckApply ? "checked" : ""}> Also update open deals already in ${esc(t.trigger)} when I change steps</label>` : `<p class="muted sm" style="margin:0">Apply it from any contact page: Tasks card → Apply template.</p>`}
+          ${twins.length ? `<p class="sm" style="margin:0;color:var(--warn)">${esc(twins.map(x => x.name).join(", "))} also starts at ${esc(t.trigger)}. Both will add their tasks.</p>` : ""}
+        </div>
+        ${t.phases.map((ph, pi) => `<div class="box">
+          <div class="ph-h"><input data-phname="${pi}" value="${esc(ph.name)}" aria-label="Phase name"><span class="muted sm">${ph.steps.length} step${ph.steps.length === 1 ? "" : "s"}</span>
+            <span style="margin-left:auto;display:flex;gap:2px"><button class="rm" data-phup="${pi}" aria-label="Move phase up" ${pi === 0 ? "disabled" : ""}>↑</button><button class="rm" data-phdown="${pi}" aria-label="Move phase down" ${pi === t.phases.length - 1 ? "disabled" : ""}>↓</button><button class="rm" data-phdel="${pi}" aria-label="Delete phase">${state.ckPending === "ph" + pi ? "Delete?" : "×"}</button></span></div>
+          ${ph.steps.length ? ph.steps.map((st, si) => row(st, pi, si, ph.steps.length)).join("") : `<p class="muted sm" style="margin:0;padding:8px 14px">No steps in this phase yet.</p>`}
+          <div class="addrow"><button class="btn" data-addstep="${pi}">+ Add step</button></div>
+        </div>`).join("") || `<div class="box" style="padding:18px 14px"><b>No steps yet.</b><p class="muted sm" style="margin:4px 0 0">Add a phase, or copy steps from another template and edit them.</p></div>`}
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-addphase="1">+ Add phase</button>${steps ? `<button class="btn" data-ckclear="1">${state.ckPending === "clear" ? "Click again to remove all steps" : "Remove all steps"}</button>` : ""}</div>
+        ${steps ? `<div class="box prev"><h2>Tasks it creates if it starts today <span class="muted sm" style="font-weight:400">${steps} total</span></h2>
+          ${preview.map(p => `<div class="prow"><span>${esc(p.t)}</span><span class="muted sm">${p.due ? p.due.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "No due date"} · ${esc(p.who)}</span></div>`).join("")}
+          ${steps > 8 ? `<p class="muted sm" style="margin:0;padding:6px 14px 10px">and ${steps - 8} more.</p>` : ""}
+          <p class="muted sm" style="margin:0;padding:6px 14px 12px">Steps timed from contract dates use the deal's real dates.</p></div>` : ""}
       </div>
-    </div>
-    ${ck.phases.map((ph, pi) => `<div class="box">
-      <div class="ph-h"><input data-phname="${pi}" value="${esc(ph.name)}" aria-label="Phase name"><span class="muted sm">${ph.steps.length} step${ph.steps.length === 1 ? "" : "s"}</span>
-        <span style="margin-left:auto;display:flex;gap:2px"><button class="rm" data-phup="${pi}" aria-label="Move phase up" ${pi === 0 ? "disabled" : ""}>↑</button><button class="rm" data-phdown="${pi}" aria-label="Move phase down" ${pi === ck.phases.length - 1 ? "disabled" : ""}>↓</button><button class="rm" data-phdel="${pi}" aria-label="Delete phase">${state.ckPending === "ph" + pi ? "Delete?" : "×"}</button></span></div>
-      ${ph.steps.length ? ph.steps.map((st, si) => row(st, pi, si, ph.steps.length)).join("") : `<p class="muted sm" style="margin:0;padding:4px 14px 8px">No steps in this phase yet.</p>`}
-      <div class="addrow"><button class="btn" data-addstep="${pi}">+ Add step</button></div>
-    </div>`).join("") || `<div class="box" style="padding:18px 14px"><b>No steps yet for ${esc(P)} · ${esc(state.ckStage)}.</b><p class="muted sm" style="margin:4px 0 0">Add a phase to start, or copy the steps from another stage and edit them.</p></div>`}
-    <div><button class="btn primary" data-addphase="1">+ Add phase</button></div>`;
+    </div>`;
   },
   fields() {
     return `<h1>Custom fields</h1><p>Extra fields on people or deals. Built-in fields (name, phones, stage, deal dates) aren't listed here.</p>
@@ -2401,17 +2404,8 @@ const V = {
     </tbody></table></div><div class="addrow"><button class="btn" data-addli="${key}">+ Add</button></div></div>`;
     return `<h1>Stages, sources &amp; follow-up</h1><div class="cards">${blk("Lead stages", "stages", "Where someone is overall. Under Contract and Past Client are set from their deals.")}${blk("Sources", "sources", "Where people came from.")}${blk("Follow-up frequencies", "follow", "Options for how often to touch base. People past due show up in Due for a touch.", true)}</div>`;
   },
-  templates() {
-    const list = state.templates.map((t, i) => [t, i]).filter(([t]) => state.tplFilter === "All" || t[1] === state.tplFilter || t[0] === state.tplFilter);
-    const t = state.templates[state.tplSel];
-    return `<h1>Text &amp; email templates</h1><p>Used by checklist steps (one-click drafts) and in Messages. Merge fields fill in from the person and deal.</p>
-    <div class="toolbar"><select id="tpl-filter" aria-label="Filter">${["All", "Text", "Email", "BPC", "BUC", "SPC", "SUC", "Leads"].map(f => `<option ${f === state.tplFilter ? "selected" : ""}>${f}</option>`).join("")}</select><button class="btn primary" data-newtpl="1">+ New template</button></div>
-    <div class="box tpl"><div class="tpl-list">${list.map(([x, i]) => `<button class="tpl-i" data-tsel="${i}" aria-current="${i === state.tplSel}">${esc(x[2])}<small>${x[0]} · ${x[1]}</small></button>`).join("")}</div>
-      <div class="tpl-ed"><div style="display:flex;gap:8px;flex-wrap:wrap"><label style="flex:1;min-width:180px">Name<input class="input" data-tf="2" value="${esc(t[2])}"></label><label>Type<select class="input" data-tf="0">${["Text", "Email"].map(x => `<option ${x === t[0] ? "selected" : ""}>${x}</option>`).join("")}</select></label><label>Folder<select class="input" data-tf="1">${["BPC", "BUC", "SPC", "SUC", "Leads"].map(x => `<option ${x === t[1] ? "selected" : ""}>${x}</option>`).join("")}</select></label></div>
-        <label>Message<textarea id="tpl-body" data-tf="3">${esc(t[3])}</textarea></label>
-        <div class="merge">${["{first}", "{address}", "{inspection_date}", "{closing_date}", "{earnest_money}", "{em_due}", "{lender}", "{link}"].map(m => `<button data-merge="${m}">${m}</button>`).join("")}</div>
-        <div style="display:flex;justify-content:flex-end;gap:6px"><button class="btn" data-toast="Used by 2 checklist steps">Where it's used</button><button class="btn primary" data-toast="Saved">Save</button></div></div></div>`;
-  },
+  texttpl() { return msgTpl("Text"); },
+  emailtpl() { return msgTpl("Email"); },
   integrations() {
     return `<h1>Integrations</h1>
     <div class="cards">
@@ -2427,15 +2421,17 @@ let tt; function toast(m) { const t = el("toast"); t.textContent = m; t.hidden =
 const pair = s => s.split(":");
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
-  if (ds.sec) { sec = ds.sec; render(); return; }
+  if (ds.sec) { sec = ds.sec; state.tplFilter = "All"; render(); return; }
   if (ds.invite) { state.users.push(["New user", "name@pettyhomes.com", "Assistant", "Invited"]); render(); toast("Invite added. They sign in with Google."); return; }
   if (ds.newrole) { state.roles.push("New role"); state.perms.forEach(p => p.push(false)); render(); toast("Added a role. Rename it in the Users table's role list later."); return; }
   if (ds.up || ds.down) { const [p, i] = pair(ds.up || ds.down), a = state.pipes[p], j = +i + (ds.up ? -1 : 1); if (j >= 0 && j < a.length) [a[i], a[j]] = [a[j], a[i]]; render(); return; }
   if (ds.rmstage) { const [p, i] = pair(ds.rmstage); state.pipes[p].splice(+i, 1); render(); return; }
   if (ds.addstage) { const a = state.pipes[ds.addstage]; a.splice(a.indexOf("Under Contract"), 0, "New stage"); render(); return; }
-  if (ds.gock) { const [pp, st] = ds.gock.split("|"); sec = "checklists"; state.ckPipe = pp; state.ckStage = st; render(); window.scrollTo(0, 0); return; }
-  if (ds.ckpipe) { state.ckPipe = ds.ckpipe; state.ckStage = state.pipes[ds.ckpipe].find(x => x === "Under Contract") || state.pipes[ds.ckpipe][0]; state.ckPending = null; render(); return; }
-  if (ds.ckstage) { state.ckStage = ds.ckstage; state.ckPending = null; render(); return; }
+  if (ds.tplid) { state.tplId = ds.tplid; state.ckPending = null; if (ds.gosec) { sec = "checklists"; window.scrollTo(0, 0); } render(); return; }
+  if (ds.gock) { const [pp, st] = ds.gock.split("|"); const x = { id: "t" + (++tplN), name: `${pp} · ${st}`, trigger: `${pp} · ${st}`, phases: [{ name: "Steps", steps: [] }] }; TPLS().push(x); state.tplId = x.id; sec = "checklists"; render(); window.scrollTo(0, 0); return; }
+  if (ds.newck) { const x = { id: "t" + (++tplN), name: "New template", trigger: "", phases: [{ name: "Steps", steps: [blankStep()] }] }; TPLS().push(x); state.tplId = x.id; state.ckPending = null; render(); const i = document.querySelector("[data-tname]"); if (i) { i.focus(); i.select(); } return; }
+  if (ds.tdup) { const x = JSON.parse(JSON.stringify(curCk())); x.id = "t" + (++tplN); x.name += " (copy)"; x.trigger = ""; TPLS().push(x); state.tplId = x.id; render(); toast("Duplicated. The copy is set to apply by hand until you choose when it starts."); return; }
+  if (ds.tdel) { if (state.ckPending !== "tdel") { state.ckPending = "tdel"; render(); return; } const x = curCk(); HQ.templates.splice(HQ.templates.indexOf(x), 1); state.tplId = (TPLS()[0] || {}).id; state.ckPending = null; render(); toast(`Deleted "${x.name}". Tasks it already created stay put.`); return; }
   if (ds.addphase) { curCk().phases.push({ name: "New phase", steps: [] }); render(); const ins = document.querySelectorAll("[data-phname]"); const i = ins[ins.length - 1]; if (i) { i.focus(); i.select(); } return; }
   if (ds.phup || ds.phdown) { const a = curCk().phases, i = +(ds.phup || ds.phdown), j = i + (ds.phup ? -1 : 1); [a[i], a[j]] = [a[j], a[i]]; render(); return; }
   if (ds.phdel) { const i = +ds.phdel, ph = curCk().phases[i]; if (ph.steps.length && state.ckPending !== "ph" + i) { state.ckPending = "ph" + i; render(); toast(`"${ph.name}" has ${ph.steps.length} steps. Click again to delete it.`); return; } curCk().phases.splice(i, 1); state.ckPending = null; render(); applied(); return; }
@@ -2451,20 +2447,23 @@ document.addEventListener("click", e => {
   if (ds.rmli) { const [k, i] = pair(ds.rmli); state[k].splice(+i, 1); render(); return; }
   if (ds.addli) { state[ds.addli].push(ds.addli === "follow" ? "45" : "New"); render(); return; }
   if (ds.tsel) { state.tplSel = +ds.tsel; render(); return; }
-  if (ds.newtpl) { state.templates.unshift(["Text", "Leads", "New template", ""]); state.tplSel = 0; render(); return; }
+  if (ds.newtpl) { state.templates.unshift([ds.newtpl, "Leads", "New template", ""]); state.tplSel = 0; state.tplFilter = "All"; render(); const i = document.querySelector("[data-tf=\"2\"]"); if (i) { i.focus(); i.select(); } return; }
+  if (ds.deltpl) { const t = state.templates.splice(state.tplSel, 1)[0]; state.tplSel = -1; render(); toast(`Deleted "${t[2]}".`); return; }
   if (ds.merge) { const ta = el("tpl-body"); const p = ta.selectionStart; ta.value = ta.value.slice(0, p) + ds.merge + ta.value.slice(ta.selectionEnd); state.templates[state.tplSel][3] = ta.value; ta.focus(); return; }
   if (ds.toast) { toast(ds.toast); return; }
 });
 document.addEventListener("change", e => {
   const t = e.target, ds = t.dataset;
   if (t.id === "ck-apply") { state.ckApply = t.checked; return; }
-  if (t.id === "ck-copy" && t.value) { state.ck[ckKey(state.ckPipe, state.ckStage)] = JSON.parse(JSON.stringify(state.ck[t.value])); toast(`Copied steps from ${t.value}. Edit them for this stage.`); render(); return; }
+  if (t.id === "ck-copy" && t.value) { const src = TPLS().find(x => x.id === t.value); curCk().phases = JSON.parse(JSON.stringify(src.phases)); toast(`Copied steps from ${src.name}. Edit them here.`); render(); return; }
+  if (t.id === "t-trigger") { curCk().trigger = t.value; render(); toast(t.value ? `Starts automatically when a deal enters ${t.value}.` : "Set to apply by hand from a contact."); return; }
+  if (ds.tname) { curCk().name = t.value.trim() || "Untitled template"; render(); return; }
   if (ds.phname !== undefined) { curCk().phases[+ds.phname].name = t.value; return; }
   if (ds.s) { const [pi, si, f] = ds.s.split(":"), st = curCk().phases[+pi].steps[+si]; st[f] = f === "days" ? Math.max(0, +t.value) : t.value; if (f === "type" && !["Email", "Text"].includes(t.value)) st.tpl = ""; if (["dir", "type"].includes(f)) render(); if (["days", "dir", "anchor"].includes(f)) applied(); return; }
   if (t.id === "tpl-filter") { state.tplFilter = t.value; render(); return; }
   if (ds.u) { const [i, j] = pair(ds.u); state.users[i][j] = t.value; return; }
   if (ds.perm) { const [i, j] = pair(ds.perm); state.perms[i][+j + 1] = t.checked; return; }
-  if (ds.stage) { const [p, i] = pair(ds.stage), old = state.pipes[p][i]; state.pipes[p][i] = t.value; if (state.ck[ckKey(p, old)]) { state.ck[ckKey(p, t.value)] = state.ck[ckKey(p, old)]; delete state.ck[ckKey(p, old)]; } if (state.ckStage === old) state.ckStage = t.value; toast("Renamed. Its checklist moved with it."); return; }
+  if (ds.stage) { const [p, i] = pair(ds.stage), old = state.pipes[p][i]; state.pipes[p][i] = t.value; TPLS().forEach(x => { if (x.trigger === p + " · " + old) x.trigger = p + " · " + t.value; }); toast("Renamed. Templates that start at this stage moved with it."); return; }
   if (ds.fd) { const [i, j] = pair(ds.fd); state.fields[i][j] = t.value; return; }
   if (ds.tag) { state.tags[ds.tag][0] = t.value; toast("Renamed everywhere."); return; }
   if (ds.li) { const [k, i] = pair(ds.li); state[k][i] = t.value; return; }
@@ -2486,6 +2485,7 @@ function show(key, hash) {
   document.querySelectorAll(".pg").forEach(p => p.hidden = p.id !== "pg-" + key);
   if (!API[key]) API[key] = INIT[key](scopedDoc(document.getElementById("pg-" + key))) || {};
   if (hash && API[key].open) API[key].open(hash);
+  if (API[key].onShow) API[key].onShow();
   window.scrollTo(0, 0);
 }
 document.addEventListener("click", e => {
