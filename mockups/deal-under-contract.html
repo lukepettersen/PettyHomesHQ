@@ -1,0 +1,544 @@
+<title>Deal Checklist Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: app shell — top nav, deal header with stage bar + milestone strip, then checklist (main) beside Next Up / deal facts (side). Side stacks first on phones. */
+:root {
+  --bg: #f4f6f7;
+  --surface: #ffffff;
+  --sunken: #eaeef0;
+  --line: #d8dee2;
+  --fg: #16222a;
+  --muted: #5b6b75;
+  --accent: #1d6a85;
+  --accent-soft: #dcecf2;
+  --ok: #2f7a4b;
+  --ok-soft: #e0f0e5;
+  --warn: #9a6400;
+  --warn-soft: #fbefd6;
+  --bad: #b3372b;
+  --bad-soft: #f9e1de;
+  --waive: #6b6480;
+  --waive-soft: #ebe8f2;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45;
+    --fg: #e4ecf0; --muted: #93a5b0; --accent: #5fb3d1; --accent-soft: #173a48;
+    --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+    --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45;
+  --fg: #e4ecf0; --muted: #93a5b0; --accent: #5fb3d1; --accent-soft: #173a48;
+  --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+  --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num, .date { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+
+.mock-bar { background: var(--accent-soft); color: var(--fg); padding-block: 8px; padding-inline: 16px; font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; justify-content: space-between; }
+.mock-bar strong { font-weight: 600; }
+.role { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--surface); }
+.role button { border: 0; background: none; padding: 4px 12px; font-size: 13px; }
+.role button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+
+.topnav { background: var(--surface); border-bottom: 1px solid var(--line); padding-inline: 16px; display: flex; align-items: center; gap: 24px; overflow-x: auto; }
+.brand { font-family: var(--font-display); font-weight: 700; font-size: 17px; padding-block: 12px; white-space: nowrap; }
+.brand span { color: var(--accent); }
+.topnav nav { display: flex; gap: 4px; }
+.topnav nav a { color: var(--muted); text-decoration: none; padding: 14px 10px; border-bottom: 2px solid transparent; white-space: nowrap; }
+.topnav nav a.on { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
+
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 48px; display: flex; flex-direction: column; gap: 18px; }
+
+/* Header */
+.dealhead { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: flex-end; justify-content: space-between; }
+.crumbs { color: var(--muted); font-size: 13px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 3vw, 30px); line-height: 1.15; margin: 2px 0 0; text-wrap: balance; }
+.sub { color: var(--muted); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--sunken); color: var(--muted); white-space: nowrap; }
+.chip.buyer { background: var(--accent-soft); color: var(--accent); }
+.health { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; padding: 6px 12px; border-radius: 999px; }
+.health::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.health.g { background: var(--ok-soft); color: var(--ok); }
+.health.y { background: var(--warn-soft); color: var(--warn); }
+.health.r { background: var(--bad-soft); color: var(--bad); }
+
+.stages { display: flex; overflow-x: auto; gap: 2px; }
+.stage { flex: 1 0 auto; min-width: 110px; padding: 8px 12px; background: var(--sunken); color: var(--muted); font-size: 12.5px; font-weight: 600; text-align: center; white-space: nowrap; }
+.stage:first-child { border-radius: var(--r) 0 0 var(--r); }
+.stage:last-child { border-radius: 0 var(--r) var(--r) 0; }
+.stage.past { background: var(--accent-soft); color: var(--accent); }
+.stage.now { background: var(--accent); color: var(--surface); }
+
+.ms-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+.milestones { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.ms { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.ms:hover { border-color: var(--accent); }
+.ms[aria-expanded="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.ms .n { font-weight: 600; font-size: 13px; }
+.ms .d { font-size: 13px; }
+.ms .was { font-size: 11.5px; color: var(--muted); text-decoration: line-through; }
+.pill { align-self: flex-start; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 2px 7px; border-radius: 4px; }
+.pill.pending { background: var(--sunken); color: var(--muted); }
+.pill.met { background: var(--ok-soft); color: var(--ok); }
+.pill.waived { background: var(--waive-soft); color: var(--waive); }
+.pill.extended { background: var(--warn-soft); color: var(--warn); }
+.ms-edit { margin-top: 8px; background: var(--surface); border: 1px solid var(--accent); border-radius: var(--r); padding: 12px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: flex-end; }
+.ms-edit label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 600; }
+.ms-edit input, .ms-edit select { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); min-width: 150px; }
+.ms-edit p { margin: 0; flex: 1 1 260px; color: var(--muted); font-size: 13px; }
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 13px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+
+/* Body grid */
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; align-items: start; }
+.side { display: flex; flex-direction: column; gap: 14px; position: sticky; top: env(safe-area-inset-top, 0px); }
+@media (max-width: 920px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .side { position: static; order: -1; }
+}
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.panel h2 { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin: 0; padding: 12px 14px 0; }
+.panel .body { padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 12px; }
+
+.nu-group h3 { margin: 0 0 4px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; }
+.nu-group h3.bad { color: var(--bad); }
+.nu-item { display: grid; grid-template-columns: 62px minmax(0, 1fr) auto; gap: 8px; align-items: baseline; padding: 5px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.nu-item:first-of-type { border-top: 0; }
+.nu-item .date { color: var(--muted); font-size: 12px; }
+.nu-item.overdue .date { color: var(--bad); font-weight: 500; }
+.nextms { background: var(--sunken); border-radius: 6px; padding: 10px 12px; display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.nextms b { font-family: var(--font-display); font-size: 15px; }
+.nextms .cd { font-size: 12px; color: var(--muted); }
+.empty { color: var(--muted); font-size: 13px; }
+
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 13px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; text-align: right; }
+.facts .hidden-note { color: var(--muted); font-style: italic; font-family: var(--font-body); font-size: 12px; }
+.people { display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.person { display: flex; justify-content: space-between; gap: 8px; }
+.person span:last-child { color: var(--muted); }
+
+/* Checklist */
+.cl-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center; }
+.cl-head h2 { font-family: var(--font-display); font-size: 19px; margin: 0; }
+.progress { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+.bar { width: 160px; height: 6px; border-radius: 3px; background: var(--sunken); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--ok); }
+.filters { display: flex; gap: 4px; }
+.filters button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 3px 10px; font-size: 12.5px; }
+.filters button[aria-pressed="true"] { background: var(--fg); color: var(--surface); border-color: var(--fg); }
+.hidden-steps { font-size: 12.5px; color: var(--muted); background: var(--sunken); border-radius: 6px; padding: 8px 12px; }
+
+.phase { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.phase > header { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--sunken); }
+.phase > header h3 { margin: 0; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.phase > header .count { font-size: 12.5px; color: var(--muted); }
+.phase.complete > header h3::after { content: "Complete"; font-size: 11px; color: var(--ok); background: var(--ok-soft); padding: 1px 6px; border-radius: 4px; }
+.row { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 10px 14px; border-top: 1px solid var(--line); }
+.row:first-of-type { border-top: 0; }
+.check { width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid var(--line); background: var(--surface); display: grid; place-items: center; padding: 0; margin-top: 1px; }
+.check:hover { border-color: var(--ok); }
+.row.done .check { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+.row.na .check, .row.skip .check, .row.waived .check { background: var(--sunken); border-color: var(--line); color: var(--muted); }
+.t { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.t .title { font-weight: 500; }
+.row.done .title, .row.na .title, .row.skip .title, .row.waived .title { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--muted); align-items: center; }
+.rule { font-family: var(--font-data); font-size: 11.5px; }
+.tag { font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; background: var(--sunken); color: var(--muted); }
+.tag.attach { background: var(--warn-soft); color: var(--warn); }
+.tag.moved { background: var(--warn-soft); color: var(--warn); }
+.tag.early { background: var(--ok-soft); color: var(--ok); }
+.tag.state { background: var(--waive-soft); color: var(--waive); }
+.draft { border: 1px solid var(--accent); color: var(--accent); background: none; border-radius: 5px; font-size: 11.5px; font-weight: 600; padding: 1px 7px; }
+.right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.due { font-size: 12.5px; white-space: nowrap; }
+.due.overdue { color: var(--bad); font-weight: 500; }
+.due.today { color: var(--accent); font-weight: 500; }
+.who { display: flex; align-items: center; gap: 6px; }
+.av { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 700; background: var(--accent-soft); color: var(--accent); }
+.av.as { background: var(--waive-soft); color: var(--waive); }
+.more { border: 0; background: none; color: var(--muted); padding: 0 4px; font-size: 16px; line-height: 1; }
+.menu { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.menu button { border: 1px solid var(--line); background: var(--surface); border-radius: 5px; font-size: 12px; padding: 2px 8px; }
+@media (max-width: 520px) {
+  .row { grid-template-columns: 24px minmax(0, 1fr); }
+  .right { grid-column: 2; flex-direction: row; align-items: center; justify-content: space-between; }
+  .bar { width: 100px; }
+}
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); }
+@media (prefers-reduced-motion: no-preference) { .row, .ms { transition: background-color .15s, border-color .15s; } }
+</style>
+
+<div class="mock-bar">
+  <span><strong>Mockup</strong> · fake data, "today" is Mon Oct 12, 2026. Try: click the Inspection card and move its date, mark HOA Waived, check off a step, switch roles.</span>
+  <span class="role" role="group" aria-label="View as">
+    <button id="role-admin" aria-pressed="true">Admin view</button>
+    <button id="role-assistant" aria-pressed="false">Assistant view</button>
+  </span>
+</div>
+
+<header class="topnav">
+  <div class="brand">Petty Homes <span>HQ</span></div>
+  <nav aria-label="Main">
+    <a href="#">People</a><a href="#" class="on">Deals</a><a href="#">Tasks</a><a href="#">Messages</a><a href="#">Admin</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <section>
+    <div class="dealhead">
+      <div>
+        <div class="crumbs">Deals › Buyers › Calloway</div>
+        <h1>4127 Upton Ave S #3, Minneapolis</h1>
+        <div class="sub">
+          <span class="chip buyer">Buyer</span>
+          <span>Jordan &amp; Priya Calloway</span>
+          <span>Townhome · HOA · Built 1994</span>
+          <span>Buyer rep signed Aug 28</span>
+        </div>
+      </div>
+      <div id="health" class="health y">Needs attention</div>
+    </div>
+  </section>
+
+  <div class="stages" id="stages" aria-label="Deal stage"></div>
+
+  <section aria-labelledby="ms-label">
+    <div class="ms-label" id="ms-label">Contract milestones · click one to change its date or status</div>
+    <div class="milestones" id="milestones"></div>
+    <div id="ms-edit"></div>
+  </section>
+
+  <div class="grid">
+    <section style="display:flex;flex-direction:column;gap:12px;min-width:0">
+      <div class="cl-head">
+        <h2>Transaction checklist</h2>
+        <div class="progress"><span id="prog-text"></span><span class="bar"><i id="prog-bar"></i></span></div>
+      </div>
+      <div class="cl-head">
+        <div class="filters" role="group" aria-label="Show">
+          <button data-f="all" aria-pressed="true">All steps</button>
+          <button data-f="open" aria-pressed="false">Open only</button>
+          <button data-f="mine" aria-pressed="false">Mine</button>
+        </div>
+      </div>
+      <div class="hidden-steps">3 template steps hidden because they don't apply: new construction (off), well/septic (city water), lead-paint pamphlet (built 1994).</div>
+      <div id="phases" style="display:flex;flex-direction:column;gap:12px"></div>
+    </section>
+
+    <aside class="side">
+      <div class="panel">
+        <h2>Next up</h2>
+        <div class="body" id="nextup"></div>
+      </div>
+      <div class="panel">
+        <h2>Deal</h2>
+        <div class="body"><dl class="facts" id="facts"></dl></div>
+      </div>
+      <div class="panel">
+        <h2>People</h2>
+        <div class="body people">
+          <div class="person"><span>Jordan Calloway</span><span>Buyer</span></div>
+          <div class="person"><span>Priya Calloway</span><span>Buyer</span></div>
+          <div class="person"><span>Dana Kim · Northfield Lending</span><span>Lender</span></div>
+          <div class="person"><span>Lakeview Title</span><span>Title</span></div>
+          <div class="person"><span>Marcus Holt · Bluewater Realty</span><span>Listing agent</span></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</main>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+const TODAY = d("2026-10-12");
+let role = "admin", filter = "all", editing = null, openMenu = null;
+
+function d(s) { const [y, m, dd] = s.split("-").map(Number); return new Date(y, m - 1, dd); }
+function iso(dt) { return dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0"); }
+function add(dt, n) { const x = new Date(dt); x.setDate(x.getDate() + n); return x; }
+function diff(a, b) { return Math.round((a - b) / 86400000); }
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function fmt(dt) { return DOW[dt.getDay()] + " " + MON[dt.getMonth()] + " " + dt.getDate(); }
+function short(dt) { return MON[dt.getMonth()] + " " + dt.getDate(); }
+
+const STAGES = ["Lead", "Consult", "Rep Signed / Searching", "Offer Out", "Under Contract", "Closed"];
+const STAGE_NOW = 4;
+
+const milestones = [
+  { id: "fa", name: "Final Acceptance", date: "2026-10-02", status: "met" },
+  { id: "insp", name: "Inspection", date: "2026-10-14", orig: "2026-10-09", status: "extended", note: "Extended by amendment" },
+  { id: "hoa", name: "HOA Doc Rescission", date: "2026-10-12", status: "pending" },
+  { id: "ws", name: "Written Statement", date: "2026-10-23", status: "pending" },
+  { id: "close", name: "Closing", date: "2026-10-30", status: "pending" },
+];
+const M = id => milestones.find(m => m.id === id);
+
+const phases = [
+  { id: "uc", name: "Under Contract" },
+  { id: "insp", name: "Inspection", ms: "insp" },
+  { id: "fin", name: "Financing", ms: "ws" },
+  { id: "hoa", name: "HOA", ms: "hoa", cond: "HOA property" },
+  { id: "pre", name: "Pre-Closing", ms: "close" },
+  { id: "closing", name: "Closing", ms: "close" },
+  { id: "post", name: "Post-Close", ms: "close" },
+];
+
+// state: open | done | na | skip. kind: email | text | task. Due date = anchor milestone date + offset.
+const tasks = [
+  { p: "uc", t: "Purchase agreement accepted email to clients", a: "fa", o: 0, who: "AS", kind: "email", s: "done" },
+  { p: "uc", t: "Lender intro email", a: "fa", o: 0, who: "LP", kind: "email", s: "done" },
+  { p: "uc", t: "Request earnest money + text wiring instructions", a: "fa", o: 1, who: "AS", kind: "text", s: "done" },
+  { p: "uc", t: "Submit docs to brokerage", a: "fa", o: 1, who: "AS", kind: "task", s: "done" },
+  { p: "uc", t: "Title request + listing agent intro", a: "fa", o: 1, who: "AS", kind: "email", s: "done" },
+  { p: "uc", t: "Under-contract social post", a: "fa", o: 2, who: "LP", kind: "task", s: "skip", why: "Clients asked to keep it private" },
+  { p: "uc", t: "Earnest money receipt saved to file", a: "fa", o: 5, who: "AS", kind: "task", s: "open" },
+
+  { p: "insp", t: "Schedule inspection", a: "fa", o: 1, who: "LP", kind: "task", s: "done" },
+  { p: "insp", t: "Sewer scope email to clients", a: "fa", o: 2, who: "AS", kind: "email", s: "na", why: "Townhome, HOA covers sewer line" },
+  { p: "insp", t: "Day-of-inspection text to clients", a: "insp", o: -3, who: "AS", kind: "text", s: "done" },
+  { p: "insp", t: "Review inspection report with clients", a: "insp", o: -2, who: "LP", kind: "task", s: "open" },
+  { p: "insp", t: "Draft inspection amendment", a: "insp", o: -1, who: "LP", kind: "task", s: "open" },
+  { p: "insp", t: "Send signed amendment to lender + title", a: "insp", o: 0, who: "AS", kind: "email", s: "open", attach: true },
+
+  { p: "fin", t: "Confirm appraisal ordered", a: "fa", o: 7, who: "AS", kind: "task", s: "done", early: "Oct 6" },
+  { p: "fin", t: "Insurance referral to clients", a: "fa", o: 5, who: "AS", kind: "email", s: "open" },
+  { p: "fin", t: "Remind lender about written statement", a: "ws", o: -2, who: "AS", kind: "email", s: "open" },
+  { p: "fin", t: "Written statement received", a: "ws", o: 0, who: "LP", kind: "task", s: "open" },
+
+  { p: "hoa", t: "Request HOA resale disclosure", a: "fa", o: 1, who: "AS", kind: "task", s: "done" },
+  { p: "hoa", t: "Send HOA docs to clients", a: "fa", o: 4, who: "AS", kind: "email", s: "done", attach: true },
+  { p: "hoa", t: "Review HOA docs + rescission window with clients", a: "hoa", o: -2, who: "LP", kind: "task", s: "open" },
+  { p: "hoa", t: "Confirm rescission period ended", a: "hoa", o: 0, who: "AS", kind: "task", s: "open" },
+
+  { p: "pre", t: "Repairs amendment needed?", a: "close", o: -14, who: "LP", kind: "task", s: "open" },
+  { p: "pre", t: "Order closing gift", a: "close", o: -14, who: "LP", kind: "task", s: "open" },
+  { p: "pre", t: "Final walkthrough scheduling text", a: "close", o: -9, who: "AS", kind: "text", s: "open" },
+  { p: "pre", t: "Utilities setup email", a: "close", o: -9, who: "AS", kind: "email", s: "open", attach: true },
+  { p: "pre", t: "Confirm cash to close with lender", a: "close", o: -7, who: "AS", kind: "task", s: "open" },
+  { p: "pre", t: "Review settlement statement from title", a: "close", o: -4, who: "LP", kind: "task", s: "open" },
+
+  { p: "closing", t: "Final walkthrough", a: "close", o: -1, who: "LP", kind: "task", s: "open" },
+  { p: "closing", t: "Closing day", a: "close", o: 0, who: "LP", kind: "task", s: "open" },
+
+  { p: "post", t: "Post-closing email", a: "close", o: 1, who: "AS", kind: "email", s: "open" },
+  { p: "post", t: "\"How was the move?\" text", a: "close", o: 1, who: "LP", kind: "text", s: "open" },
+  { p: "post", t: "Thank-you card", a: "close", o: 3, who: "LP", kind: "task", s: "open" },
+  { p: "post", t: "Zillow review request", a: "close", o: 5, who: "AS", kind: "text", s: "open" },
+  { p: "post", t: "Homestead reminder text", a: "close", o: 14, who: "AS", kind: "text", s: "open" },
+  { p: "post", t: "Google review request", a: "close", o: 21, who: "AS", kind: "email", s: "open" },
+];
+tasks.forEach((t, i) => t.id = i);
+
+const label = { fa: "Final Acceptance", insp: "Inspection", hoa: "HOA Rescission", ws: "Written Statement", close: "Closing" };
+function due(t) { return add(d(M(t.a).date), t.o); }
+function origDue(t) { const m = M(t.a); return m.orig ? add(d(m.orig), t.o) : null; }
+function ruleText(t) { return label[t.a] + (t.o === 0 ? " day of" : (t.o > 0 ? " + " : " − ") + Math.abs(t.o) + (Math.abs(t.o) === 1 ? " day" : " days")); }
+// Effective state: waiving a milestone resolves its open steps in that phase.
+function eff(t) {
+  if (t.s !== "open") return t.s;
+  const ph = phases.find(p => p.id === t.p);
+  if (ph.ms && M(ph.ms).status === "waived" && t.a === ph.ms) return "waived";
+  return "open";
+}
+
+const el = id => document.getElementById(id);
+function esc(s) { return s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+const ICON_CHECK = '<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICON_DASH = '<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 8h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+
+function renderStages() {
+  el("stages").innerHTML = STAGES.map((s, i) => `<div class="stage ${i < STAGE_NOW ? "past" : i === STAGE_NOW ? "now" : ""}">${s}</div>`).join("");
+}
+
+function renderMilestones() {
+  el("milestones").innerHTML = milestones.map(m => {
+    const dt = d(m.date), n = diff(dt, TODAY);
+    const when = m.status === "met" || m.status === "waived" ? "" : n === 0 ? " · today" : n > 0 ? ` · in ${n}d` : ` · ${-n}d ago`;
+    return `<button class="ms" data-ms="${m.id}" aria-expanded="${editing === m.id}">
+      <span class="n">${m.name}</span>
+      <span class="d date">${fmt(dt)}<span style="color:var(--muted)">${when}</span></span>
+      ${m.orig && m.orig !== m.date ? `<span class="was date">${fmt(d(m.orig))}</span>` : ""}
+      <span class="pill ${m.status}">${m.status}</span>
+    </button>`;
+  }).join("");
+  const box = el("ms-edit");
+  if (!editing) { box.innerHTML = ""; return; }
+  const m = M(editing);
+  const affected = tasks.filter(t => t.a === m.id && t.s === "open").length;
+  box.innerHTML = `<div class="ms-edit">
+    <label>Date<input type="date" id="ms-date" value="${m.date}"></label>
+    <label>Status<select id="ms-status">
+      ${["pending", "met", "waived", "extended"].map(s => `<option value="${s}" ${s === m.status ? "selected" : ""}>${s[0].toUpperCase() + s.slice(1)}</option>`).join("")}
+    </select></label>
+    <p>${affected} open step${affected === 1 ? " is" : "s are"} timed off ${m.name}. Changing the date moves them. Marking it Waived resolves the open steps in its phase.</p>
+    <button class="btn" id="ms-cancel">Close</button>
+  </div>`;
+  el("ms-date").addEventListener("change", e => {
+    if (!e.target.value) return;
+    if (!m.orig) m.orig = m.date;
+    m.date = e.target.value;
+    if (m.status === "pending" && m.orig !== m.date) m.status = "extended";
+    if (m.orig === m.date) { delete m.orig; if (m.status === "extended") m.status = "pending"; }
+    toast(`${m.name} moved to ${fmt(d(m.date))}. ${affected} step${affected === 1 ? "" : "s"} re-dated.`);
+    renderAll();
+  });
+  el("ms-status").addEventListener("change", e => {
+    m.status = e.target.value;
+    if (m.status === "waived") toast(`${m.name} waived. Its open steps are resolved.`);
+    renderAll();
+  });
+  el("ms-cancel").addEventListener("click", () => { editing = null; renderAll(); });
+}
+
+function dueClass(dt) { const n = diff(dt, TODAY); return n < 0 ? "overdue" : n === 0 ? "today" : ""; }
+
+function renderPhases() {
+  const html = phases.map(ph => {
+    let list = tasks.filter(t => t.p === ph.id);
+    const total = list.length, resolved = list.filter(t => eff(t) !== "open").length;
+    if (filter === "open") list = list.filter(t => eff(t) === "open");
+    if (filter === "mine") list = list.filter(t => t.who === (role === "admin" ? "LP" : "AS"));
+    if (!list.length) return "";
+    list.sort((a, b) => due(a) - due(b));
+    const msChip = ph.ms ? `<span class="chip">${M(ph.ms).name} · ${short(d(M(ph.ms).date))}</span>` : "";
+    return `<section class="phase ${resolved === total ? "complete" : ""}">
+      <header><h3>${ph.name}</h3><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${ph.cond ? `<span class="chip">Shown: ${ph.cond}</span>` : ""}${msChip}<span class="count">${resolved}/${total}</span></span></header>
+      ${list.map(rowHtml).join("")}
+    </section>`;
+  }).join("");
+  el("phases").innerHTML = html || `<p class="empty">Nothing open in this view.</p>`;
+
+  const all = tasks.length, res = tasks.filter(t => eff(t) !== "open").length;
+  el("prog-text").textContent = `${res} of ${all} steps resolved`;
+  el("prog-bar").style.width = Math.round(res / all * 100) + "%";
+}
+
+function rowHtml(t) {
+  const st = eff(t), dt = due(t), od = origDue(t);
+  const icon = st === "done" ? ICON_CHECK : st === "open" ? "" : ICON_DASH;
+  const tags = [];
+  if (t.kind !== "task") tags.push(`<button class="draft" data-draft="${t.id}">Draft ${t.kind}</button>`);
+  if (t.attach && st === "open") tags.push(`<span class="tag attach">Needs attachment</span>`);
+  if (st === "open" && od && iso(od) !== iso(dt)) tags.push(`<span class="tag moved">Moved from ${short(od)}</span>`);
+  if (st === "done" && t.early) tags.push(`<span class="tag early">Done early · ${t.early}</span>`);
+  if (st === "na") tags.push(`<span class="tag state">N/A${t.why ? " · " + esc(t.why) : ""}</span>`);
+  if (st === "skip") tags.push(`<span class="tag state">Skipped${t.why ? " · " + esc(t.why) : ""}</span>`);
+  if (st === "waived") tags.push(`<span class="tag state">Resolved · milestone waived</span>`);
+  const menu = openMenu === t.id ? `<div class="menu">
+      ${st !== "done" ? `<button data-set="done" data-id="${t.id}">Done</button>` : ""}
+      ${st !== "na" ? `<button data-set="na" data-id="${t.id}">N/A</button>` : ""}
+      ${st !== "skip" ? `<button data-set="skip" data-id="${t.id}">Skip</button>` : ""}
+      ${st !== "open" && st !== "waived" ? `<button data-set="open" data-id="${t.id}">Reopen</button>` : ""}
+      <button data-set="edit" data-id="${t.id}">Edit timing</button>
+    </div>` : "";
+  return `<div class="row ${st}">
+    <button class="check" data-toggle="${t.id}" aria-label="${st === "done" ? "Mark not done" : "Mark done"}: ${esc(t.t)}">${icon}</button>
+    <div class="t">
+      <span class="title">${esc(t.t)}</span>
+      <span class="meta"><span class="rule">${ruleText(t)}</span>${tags.join("")}</span>
+      ${menu}
+    </div>
+    <div class="right">
+      <span class="due date ${st === "open" ? dueClass(dt) : ""}">${fmt(dt)}</span>
+      <span class="who"><span class="av ${t.who === "AS" ? "as" : ""}" title="${t.who === "LP" ? "Luke" : "Assistant"}">${t.who}</span><button class="more" data-menu="${t.id}" aria-label="More options">⋯</button></span>
+    </div>
+  </div>`;
+}
+
+function renderNextUp() {
+  const open = tasks.filter(t => eff(t) === "open");
+  const overdue = open.filter(t => diff(due(t), TODAY) < 0).sort((a, b) => due(a) - due(b));
+  const today = open.filter(t => diff(due(t), TODAY) === 0);
+  const week = open.filter(t => { const n = diff(due(t), TODAY); return n > 0 && n <= 7; }).sort((a, b) => due(a) - due(b));
+  const next = milestones.filter(m => (m.status === "pending" || m.status === "extended") && diff(d(m.date), TODAY) >= 0).sort((a, b) => d(a.date) - d(b.date))[0];
+
+  const item = (t, cls) => `<div class="nu-item ${cls || ""}"><span class="date">${short(due(t))}</span><span>${esc(t.t)}</span><span class="av ${t.who === "AS" ? "as" : ""}">${t.who}</span></div>`;
+  let h = "";
+  if (next) {
+    const n = diff(d(next.date), TODAY);
+    const left = open.filter(t => t.a === next.id).length;
+    h += `<div class="nextms"><div><div class="cd">Next milestone</div><b>${next.name}</b><div class="cd">${fmt(d(next.date))} · ${left} open step${left === 1 ? "" : "s"} tied to it</div></div><span class="pill ${next.status}">${n === 0 ? "Today" : "In " + n + "d"}</span></div>`;
+  }
+  h += `<div class="nu-group"><h3 class="${overdue.length ? "bad" : ""}"><span>Overdue</span><span>${overdue.length}</span></h3>${overdue.length ? overdue.map(t => item(t, "overdue")).join("") : `<div class="empty">Nothing overdue.</div>`}</div>`;
+  h += `<div class="nu-group"><h3><span>Today</span><span>${today.length}</span></h3>${today.length ? today.map(t => item(t)).join("") : `<div class="empty">Nothing due today.</div>`}</div>`;
+  h += `<div class="nu-group"><h3><span>Next 7 days</span><span>${week.length}</span></h3>${week.length ? week.map(t => item(t)).join("") : `<div class="empty">Nothing in the next week.</div>`}</div>`;
+  el("nextup").innerHTML = h;
+
+  const hEl = el("health");
+  const soon = next && diff(d(next.date), TODAY) <= 2 && open.some(t => t.a === next.id);
+  if (overdue.length >= 3) { hEl.className = "health r"; hEl.textContent = "Behind"; }
+  else if (overdue.length || soon) { hEl.className = "health y"; hEl.textContent = overdue.length ? `${overdue.length} overdue` : "Deadline close"; }
+  else { hEl.className = "health g"; hEl.textContent = "On track"; }
+}
+
+function renderFacts() {
+  const rows = [
+    ["Purchase price", "$412,500"],
+    ["Earnest money", "$8,000"],
+    ["Seller contributions", "$5,000"],
+    ["BAC", "2.5%"],
+    ["Commission", role === "admin" ? "$10,312.50" : null],
+    ["Financing", "Conventional"],
+    ["Close date", fmt(d(M("close").date))],
+  ];
+  el("facts").innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd class="num">${v === null ? `<span class="hidden-note">Hidden for Assistant role</span>` : v}</dd>`).join("");
+}
+
+function renderAll() { renderStages(); renderMilestones(); renderPhases(); renderNextUp(); renderFacts(); }
+
+let toastTimer;
+function toast(msg) { const t = el("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2800); }
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.ms) { editing = editing === b.dataset.ms ? null : b.dataset.ms; renderAll(); return; }
+  if (b.dataset.toggle) {
+    const t = tasks[+b.dataset.toggle];
+    if (eff(t) === "waived") { toast("Resolved by the waived milestone. Reopen the milestone to change it."); return; }
+    const wasOpen = t.s === "open";
+    t.s = wasOpen ? "done" : "open";
+    if (wasOpen && diff(due(t), TODAY) > 0) t.early = short(TODAY);
+    if (!wasOpen) delete t.early;
+    renderAll(); return;
+  }
+  if (b.dataset.menu) { openMenu = openMenu === +b.dataset.menu ? null : +b.dataset.menu; renderPhases(); return; }
+  if (b.dataset.set) {
+    const t = tasks[+b.dataset.id];
+    if (b.dataset.set === "edit") { toast(`In the app: change "${ruleText(t)}" or set a fixed date for this deal only.`); return; }
+    t.s = b.dataset.set; if (t.s === "open") { delete t.why; delete t.early; }
+    openMenu = null; renderAll(); return;
+  }
+  if (b.dataset.draft) { const t = tasks[+b.dataset.draft]; toast(`Opens a pre-filled ${t.kind} from the "${t.t}" template to review and send.`); return; }
+  if (b.dataset.f) {
+    filter = b.dataset.f;
+    document.querySelectorAll("[data-f]").forEach(x => x.setAttribute("aria-pressed", x === b));
+    renderPhases(); return;
+  }
+  if (b.id === "role-admin" || b.id === "role-assistant") {
+    role = b.id === "role-admin" ? "admin" : "assistant";
+    el("role-admin").setAttribute("aria-pressed", role === "admin");
+    el("role-assistant").setAttribute("aria-pressed", role === "assistant");
+    renderAll(); return;
+  }
+});
+
+renderAll();
+</script>
