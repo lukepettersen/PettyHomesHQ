@@ -98,6 +98,33 @@ td input.n { width: 60px; min-width: 60px; }
 .tpl-ed textarea { min-height: 160px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); resize: vertical; }
 .merge { display: flex; flex-wrap: wrap; gap: 4px; }
 .merge button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; font-size: 11.5px; padding: 2px 8px; font-family: var(--font-data); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.schip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 12px; font-size: 13px; }
+.schip span { color: var(--muted); font-size: 12px; margin-left: 4px; }
+.schip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.schip[aria-pressed="true"] span { color: inherit; opacity: .8; }
+.seg2 { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--surface); }
+.seg2 button { border: 0; background: none; padding: 5px 14px; font-size: 13px; }
+.seg2 button[aria-pressed="true"] { background: var(--fg); color: var(--surface); }
+.ck-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: flex-end; padding-top: 4px; }
+.ph-h { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--sunken); border-radius: var(--r) var(--r) 0 0; }
+.ph-h input { font-weight: 700; font-size: 14px; border: 1px solid transparent; background: none; padding: 3px 6px; border-radius: 5px; min-width: 0; width: 240px; }
+.ph-h input:hover, .ph-h input:focus { border-color: var(--line); background: var(--surface); }
+.step { padding: 10px 14px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.ph-h + .step { border-top: 0; }
+.st-l1, .st-l2 { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: flex-end; }
+.st-l2 { padding-left: 46px; }
+.step label { display: flex; flex-direction: column; gap: 2px; font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.step select, .step input { padding: 4px 7px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); font-size: 13px; color: var(--fg); font-weight: 400; }
+.step .st-name { flex: 1 1 240px; min-width: 0; font-weight: 600; font-size: 13.5px; padding: 6px 8px; }
+.step .timing { display: flex; gap: 4px; flex-wrap: wrap; min-width: 0; }
+.step .n { width: 56px; }
+.mv { display: flex; gap: 0; white-space: nowrap; align-self: center; }
+.mv.end { margin-left: auto; }
+@media (max-width: 760px) { .st-l2 { padding-left: 0; } }
+.rm:disabled { opacity: .3; cursor: default; }
+select:disabled, input:disabled { opacity: .45; }
+.linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; font-size: 12.5px; }
 .perm td:not(:first-child), .perm th:not(:first-child) { text-align: center; }
 </style>
 <div class="mock-bar"><strong>Mockup</strong> · fake data. Changes work on the page but aren't saved.</div>
@@ -124,39 +151,26 @@ const state = {
   roles: ["Admin", "Assistant"],
   perms: [["See commissions", true, false], ["Delete people and deals", true, false], ["Manage users and roles", true, false], ["Edit checklist templates", true, true], ["Edit text and email templates", true, true], ["Export data", true, false], ["Send texts", true, true]],
   pipes: { Buyer: ["Lead", "Consult", "Rep Signed / Searching", "Offer Out", "Under Contract", "Closed"], Seller: ["Lead", "Consult", "Listing Signed / Prep", "Coming Soon", "Active", "Under Contract", "Closed"] },
-  tpl: "Buyer · Under Contract",
-  checklists: {
-    "Buyer · Under Contract": [
-      ["Under Contract", "Purchase agreement accepted email", "Final Acceptance", 0, "Alyssa", "Email", "Always", ""],
-      ["Under Contract", "Lender intro email", "Final Acceptance", 0, "Luke", "Email", "Always", ""],
-      ["Under Contract", "Request earnest money", "Final Acceptance", 1, "Alyssa", "Text", "Always", ""],
-      ["Under Contract", "Lead-paint pamphlet email", "Final Acceptance", 1, "Alyssa", "Email", "Built before 1978", ""],
-      ["Inspection", "Schedule inspection", "Final Acceptance", 1, "Luke", "Task", "Always", ""],
-      ["Inspection", "Review inspection report with clients", "Inspection", -2, "Luke", "Task", "Always", ""],
-      ["Inspection", "Signed amendment to lender + title", "Inspection", 0, "Alyssa", "Email", "Always", ""],
-      ["Financing", "Remind lender about written statement", "Written Statement", -2, "Alyssa", "Email", "Always", ""],
-      ["HOA", "Send HOA docs to clients", "Final Acceptance", 4, "Alyssa", "Email", "HOA property", ""],
-      ["HOA", "Confirm rescission period ended", "HOA Rescission", 0, "Alyssa", "Task", "HOA property", ""],
-      ["Closing", "Order closing gift", "Closing", -14, "Luke", "Task", "Always", ""],
-      ["Closing", "Final walkthrough", "Closing", -1, "Luke", "Task", "Always", ""],
-      ["Closing", "Closing day", "Closing", 0, "Luke", "Task", "Always", "Moves deal to Closed"],
-      ["Post-Close", "Zillow review request", "Closing", 5, "Alyssa", "Text", "Always", ""],
-    ],
-    "Buyer · Rep Signed / Searching": [
-      ["Rep Signed", "Send buyer rep to sign", "Stage start", 0, "Alyssa", "Task", "Always", ""],
-      ["Rep Signed", "Buyer rep signed + saved", "Stage start", 1, "Alyssa", "Task", "Always", "Moves deal to Rep Signed / Searching"],
-      ["Searching", "Homespotter app + intro text", "Stage start", 2, "Alyssa", "Text", "Always", ""],
-      ["Searching", "Set up home search", "Stage start", 2, "Luke", "Task", "Always", ""],
-    ],
-    "Seller · Listing Signed / Prep": [
-      ["Prep", "Withhold listing in MLS", "Stage start", 0, "Alyssa", "Task", "Always", ""],
-      ["Prep", "Schedule photos", "Stage start", 1, "Alyssa", "Task", "Always", ""],
-      ["Prep", "Drop off lockbox", "Stage start", 2, "Luke", "Task", "Always", ""],
-      ["Prep", "Disclosures + lead paint", "Stage start", 3, "Alyssa", "Task", "Built before 1978", ""],
-      ["Media", "Photos to clients", "Photos taken", 1, "Alyssa", "Email", "Always", ""],
-      ["Media", "Upload to MLS", "Photos taken", 2, "Alyssa", "Task", "Always", "Moves deal to Coming Soon"],
-    ],
-  },
+  ckPipe: "Buyer", ckStage: "Under Contract", ckApply: true, ckPending: null,
+  ck: (() => {
+    const s = (name, anchor, days, dir, who, type, extra = {}) => Object.assign({ name, anchor, days, dir, who, type, tpl: "", cond: "Always", advance: "" }, extra);
+    return {
+      "Buyer · Lead": { phases: [{ name: "First contact", steps: [s("Call new lead", "Stage start", 0, "on", "Luke", "Call"), s("Intro email", "Stage start", 0, "on", "Alyssa", "Email", { tpl: "Website sign-up welcome" }), s("Schedule consult", "Stage start", 2, "after", "Luke", "Task", { advance: "Consult" })] }] },
+      "Buyer · Consult": { phases: [{ name: "Before the consult", steps: [s("Agency disclosure + more info email", "Stage start", 0, "on", "Alyssa", "Email"), s("Consult confirmation text", "Consult date", 1, "before", "Luke", "Text")] }, { name: "After the consult", steps: [s("Intro + Homespotter + legal name text", "Consult date", 0, "on", "Alyssa", "Text", { tpl: "Intro + Homespotter + legal name" }), s("Connect with lender?", "Consult date", 1, "after", "Luke", "Task")] }] },
+      "Buyer · Rep Signed / Searching": { phases: [{ name: "Buyer rep", steps: [s("Send buyer rep to sign", "Stage start", 0, "on", "Alyssa", "Task"), s("Buyer rep breakdown email", "Stage start", 0, "on", "Alyssa", "Email", { tpl: "Buyer rep breakdown" }), s("Buyer rep signed + saved", "Stage start", 1, "after", "Alyssa", "Task")] }, { name: "Searching", steps: [s("Set up home search", "Buyer rep signed", 1, "after", "Luke", "Task"), s("Check in on showings", "Buyer rep signed", 14, "after", "Luke", "Call"), s("Buyer rep expiring soon", "Buyer rep expiration", 14, "before", "Luke", "Task")] }] },
+      "Buyer · Under Contract": { phases: [
+        { name: "Under Contract", steps: [s("Purchase agreement accepted email", "Final Acceptance", 0, "on", "Alyssa", "Email", { tpl: "Purchase agreement accepted" }), s("Lender intro email", "Final Acceptance", 0, "on", "Luke", "Email"), s("Request earnest money", "Final Acceptance", 1, "after", "Alyssa", "Text", { tpl: "Earnest money" }), s("Lead-paint pamphlet email", "Final Acceptance", 1, "after", "Alyssa", "Email", { cond: "Built before 1978" })] },
+        { name: "Inspection", steps: [s("Schedule inspection", "Final Acceptance", 1, "after", "Luke", "Task"), s("Day-of-inspection text", "Inspection", 3, "before", "Alyssa", "Text", { tpl: "Day-of-inspection" }), s("Review inspection report with clients", "Inspection", 2, "before", "Luke", "Task"), s("Signed amendment to lender + title", "Inspection", 0, "on", "Alyssa", "Email")] },
+        { name: "Financing", steps: [s("Remind lender about written statement", "Written Statement", 2, "before", "Alyssa", "Email")] },
+        { name: "HOA", steps: [s("Send HOA docs to clients", "Final Acceptance", 4, "after", "Alyssa", "Email", { cond: "HOA property" }), s("Confirm rescission period ended", "HOA Rescission", 0, "on", "Alyssa", "Task", { cond: "HOA property" })] },
+        { name: "Closing", steps: [s("Order closing gift", "Closing", 14, "before", "Luke", "Task"), s("Final walkthrough", "Closing", 1, "before", "Luke", "Task"), s("Closing day", "Closing", 0, "on", "Luke", "Task", { advance: "Closed" })] },
+      ] },
+      "Buyer · Closed": { phases: [{ name: "Post-close", steps: [s("\"How was the move?\" text", "Stage start", 1, "after", "Luke", "Text"), s("Thank-you card", "Stage start", 3, "after", "Luke", "Task"), s("Zillow review request", "Stage start", 5, "after", "Alyssa", "Text"), s("Google review request", "Stage start", 21, "after", "Alyssa", "Email")] }] },
+      "Seller · Listing Signed / Prep": { phases: [{ name: "Prep", steps: [s("Withhold listing in MLS", "Stage start", 0, "on", "Alyssa", "Task"), s("Schedule photos", "Stage start", 1, "after", "Alyssa", "Task"), s("Drop off lockbox", "Stage start", 2, "after", "Luke", "Task"), s("Disclosures + lead paint", "Stage start", 3, "after", "Alyssa", "Task", { cond: "Built before 1978" })] }, { name: "Media", steps: [s("Photos to clients", "Photos taken", 1, "after", "Alyssa", "Email"), s("Upload to MLS", "Photos taken", 2, "after", "Alyssa", "Task", { advance: "Coming Soon" })] }] },
+      "Seller · Coming Soon": { phases: [{ name: "Launch", steps: [s("Showing instructions", "Stage start", 0, "on", "Alyssa", "Task"), s("Coming-soon email", "Stage start", 0, "on", "Alyssa", "Email"), s("Sign install", "Active date", 3, "before", "Luke", "Task"), s("Go active in MLS", "Active date", 0, "on", "Alyssa", "Task", { advance: "Active" })] }] },
+      "Seller · Under Contract": { phases: [{ name: "Under Contract", steps: [s("Mark contingent in MLS", "Final Acceptance", 0, "on", "Alyssa", "Task"), s("Purchase agreement accepted email", "Final Acceptance", 0, "on", "Alyssa", "Email", { tpl: "Purchase agreement accepted" })] }, { name: "Closing", steps: [s("Closing reminder email", "Closing", 14, "before", "Alyssa", "Email"), s("Closing day", "Closing", 0, "on", "Luke", "Task", { advance: "Closed" })] }] },
+    };
+  })(),
   fields: [["Mailing name", "Text", "People"], ["Referred by", "Person", "People"], ["Homeiversary", "Date", "People"], ["Preferred contact time", "Dropdown", "People"], ["Pre-approval amount", "Number", "Deals"], ["Lender", "Person", "Deals"], ["New construction", "Checkbox", "Deals"]],
   tags: [["Past Client", 218], ["Email Newsletter", 436], ["Petty Homes Event List", 284], ["Mailers", 260], ["Christmas Cards", 216], ["Real Estate Health Check", 200], ["Timberwolves Tickets 2026-2027 NOT RESPONDED", 178], ["2026 RE Health Check Needed", 160], ["Google Review Sent", 84], ["Buyer", 58], ["Bounced", 54], ["A Lead", 29], ["B Lead", 8], ["C Lead", 21], ["D Lead", 19], ["Seller", 22], ["Investor", 5]],
   stages: ["Lead", "Realtor", "Industry Partners", "FSBO", "Passive Marketing", "Archive/No Direct Contact", "Petty Homes Admin", "Closed", "Trash"],
@@ -174,8 +188,13 @@ const state = {
   ],
   tplSel: 2, tplFilter: "All",
 };
-const ANCHORS = ["Final Acceptance", "Inspection", "Written Statement", "HOA Rescission", "Closing", "Stage start", "Photos taken"];
-const CONDS = ["Always", "HOA property", "New construction", "Built before 1978", "FHA / VA loan", "Well / septic", "Referral partner"];
+const ANCHORS = ["Stage start", "Consult date", "Buyer rep signed", "Buyer rep expiration", "Listing agreement signed", "Listing expiration", "Photos taken", "Active date", "Final Acceptance", "Inspection", "Written Statement", "HOA Rescission", "Closing"];
+const ckKey = (p, st) => `${p} · ${st}`;
+const ckOf = (p, st) => state.ck[ckKey(p, st)] || (state.ck[ckKey(p, st)] = { phases: [] });
+const curCk = () => ckOf(state.ckPipe, state.ckStage);
+const blankStep = () => ({ name: "New step", anchor: "Stage start", days: 1, dir: "after", who: "Alyssa", type: "Task", tpl: "", cond: "Always", advance: "" });
+const applied = () => { if (state.ckApply) toast(`Open deals in ${state.ckPipe} · ${state.ckStage} get this change too.`); };
+const CONDS = ["Always", "HOA property", "No HOA", "New construction", "Built before 1978", "Condo / townhome", "FHA / VA loan", "Cash purchase", "Well / septic", "Referral partner", "Out of town client"];
 
 function side() {
   el("side").innerHTML = SECTIONS.map(([g, items]) => `<div><h4>${g}</h4><ul>${items.map(([k, l]) => `<li><button class="nav-i" data-sec="${k}" aria-current="${sec === k}"><span>${l}</span></button></li>`).join("")}</ul></div>`).join("");
@@ -193,23 +212,54 @@ const V = {
   pipelines() {
     return `<h1>Pipelines &amp; stages</h1><p>The columns on the Deals board. You can also edit these from the board with "Edit stages". Under Contract and Closed can be renamed but not removed.</p>
     <div class="cards">${Object.entries(state.pipes).map(([p, st]) => `<div class="box"><h2>${p} pipeline</h2><div class="tbl-wrap"><table><tbody>
-      ${st.map((s, i) => `<tr><td class="muted" style="width:28px">${i + 1}</td><td><input data-stage="${p}:${i}" value="${esc(s)}"></td><td style="width:90px;white-space:nowrap"><button class="rm" data-up="${p}:${i}" aria-label="Move up">↑</button><button class="rm" data-down="${p}:${i}" aria-label="Move down">↓</button>${["Under Contract", "Closed"].includes(s) ? "" : `<button class="rm" data-rmstage="${p}:${i}" aria-label="Remove">×</button>`}</td></tr>`).join("")}
+      ${st.map((s, i) => `<tr><td class="muted" style="width:28px">${i + 1}</td><td><input data-stage="${p}:${i}" value="${esc(s)}"></td><td style="white-space:nowrap"><button class="linkbtn" data-gock="${p}|${esc(s)}">${(() => { const n = ckOf(p, s).phases.reduce((m, ph) => m + ph.steps.length, 0); return n ? n + " steps" : "No steps"; })()} · Edit checklist</button></td><td style="width:90px;white-space:nowrap"><button class="rm" data-up="${p}:${i}" aria-label="Move up">↑</button><button class="rm" data-down="${p}:${i}" aria-label="Move down">↓</button>${["Under Contract", "Closed"].includes(s) ? "" : `<button class="rm" data-rmstage="${p}:${i}" aria-label="Remove">×</button>`}</td></tr>`).join("")}
     </tbody></table></div><div class="addrow"><button class="btn" data-addstage="${p}">+ Add stage</button></div></div>`).join("")}</div>`;
   },
   checklists() {
-    const rows = state.checklists[state.tpl]; let ph = "";
-    return `<h1>Checklist templates</h1><p>Each stage has a checklist that's added to a deal when it enters that stage. Due dates are counted from a contract date or the day the stage started, so they move when dates change.</p>
-    <div class="toolbar"><select id="tpl-pick" aria-label="Template">${Object.keys(state.checklists).map(k => `<option ${k === state.tpl ? "selected" : ""}>${k}</option>`).join("")}</select><button class="btn" data-toast="Pick a pipeline and stage to start a new checklist">+ New checklist</button><span class="muted sm">${rows.length} steps</span></div>
-    <div class="box"><div class="tbl-wrap"><table style="min-width:980px"><thead><tr><th>Step</th><th>Due</th><th>Assignee</th><th>Type</th><th>Only when</th><th>When done</th><th></th></tr></thead><tbody>
-      ${rows.map((r, i) => { const h = r[0] !== ph ? `<tr class="phase-h"><td colspan="7">${esc(r[0])}</td></tr>` : ""; ph = r[0]; return h + `<tr>
-        <td><input data-c="${i}:1" value="${esc(r[1])}"></td>
-        <td><div class="timing"><input class="n" type="number" data-c="${i}:3" value="${Math.abs(r[3])}" aria-label="Days"><select data-dir="${i}" aria-label="Before or after"><option ${r[3] < 0 ? "selected" : ""}>days before</option><option ${r[3] >= 0 ? "selected" : ""}>days after</option></select><select data-c="${i}:2" aria-label="Anchor">${ANCHORS.map(a => `<option ${a === r[2] ? "selected" : ""}>${a}</option>`).join("")}</select></div></td>
-        <td><select data-c="${i}:4">${["Luke", "Alyssa"].map(a => `<option ${a === r[4] ? "selected" : ""}>${a}</option>`).join("")}</select></td>
-        <td><select data-c="${i}:5">${["Task", "Email", "Text"].map(a => `<option ${a === r[5] ? "selected" : ""}>${a}</option>`).join("")}</select></td>
-        <td><select data-c="${i}:6">${CONDS.map(a => `<option ${a === r[6] ? "selected" : ""}>${a}</option>`).join("")}</select></td>
-        <td class="muted sm">${r[7] ? esc(r[7]) : "—"}</td>
-        <td><button class="rm" data-rmstep="${i}" aria-label="Remove step">×</button></td></tr>`; }).join("")}
-    </tbody></table></div><div class="addrow"><select id="new-phase" aria-label="Phase">${[...new Set(rows.map(r => r[0]))].map(p => `<option>${esc(p)}</option>`).join("")}</select><input class="input" id="new-step" placeholder="New step name" style="max-width:280px"><button class="btn primary" data-addstep="1">+ Add step</button></div></div>`;
+    const P = state.ckPipe, stages = state.pipes[P], k = ckKey(P, state.ckStage), ck = ckOf(P, state.ckStage);
+    const steps = ck.phases.reduce((n, ph) => n + ph.steps.length, 0);
+    const others = Object.entries(state.ck).filter(([kk, v]) => kk !== k && v.phases.some(ph => ph.steps.length));
+    const tplOpts = type => state.templates.filter(t => t[0] === type).map(t => t[2]);
+    const row = (st, pi, si, n) => {
+      const id = `${pi}:${si}`, noDue = st.dir === "none";
+      return `<div class="step">
+        <div class="st-l1">
+          <span class="mv"><button class="rm" data-sup="${id}" aria-label="Move up" ${si === 0 ? "disabled" : ""}>↑</button><button class="rm" data-sdown="${id}" aria-label="Move down" ${si === n - 1 ? "disabled" : ""}>↓</button></span>
+          <input class="st-name" data-s="${id}:name" value="${esc(st.name)}" aria-label="Step name">
+          <label>Assignee<select data-s="${id}:who">${["Luke", "Alyssa", "Deal owner"].map(a => `<option ${a === st.who ? "selected" : ""}>${a}</option>`).join("")}</select></label>
+          <label>Type<select data-s="${id}:type">${["Task", "Call", "Email", "Text"].map(a => `<option ${a === st.type ? "selected" : ""}>${a}</option>`).join("")}</select></label>
+          ${st.type === "Email" || st.type === "Text" ? `<label>Template<select data-s="${id}:tpl"><option value="">No template</option>${tplOpts(st.type).map(t => `<option ${t === st.tpl ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></label>` : ""}
+          <span class="mv end"><button class="rm" data-sdup="${id}" aria-label="Duplicate step" title="Duplicate">⧉</button><button class="rm" data-sdel="${id}" aria-label="Delete step" title="Delete">×</button></span>
+        </div>
+        <div class="st-l2">
+          <label>Due<span class="timing">
+            <input class="n" type="number" min="0" data-s="${id}:days" value="${st.days}" aria-label="Days" ${st.dir === "on" || noDue ? "disabled" : ""}>
+            <select data-s="${id}:dir" aria-label="When">${[["before", "days before"], ["after", "days after"], ["on", "on the day of"], ["none", "no due date"]].map(([v, l]) => `<option value="${v}" ${v === st.dir ? "selected" : ""}>${l}</option>`).join("")}</select>
+            <select data-s="${id}:anchor" aria-label="Date it's counted from" ${noDue ? "disabled" : ""}>${ANCHORS.map(a => `<option ${a === st.anchor ? "selected" : ""}>${a}</option>`).join("")}</select></span></label>
+          <label>Only when<select data-s="${id}:cond">${CONDS.map(a => `<option ${a === st.cond ? "selected" : ""}>${a}</option>`).join("")}</select></label>
+          <label>When done<select data-s="${id}:advance"><option value="">Nothing else</option>${stages.filter(x => x !== state.ckStage).map(x => `<option value="${esc(x)}" ${x === st.advance ? "selected" : ""}>Move deal to ${esc(x)}</option>`).join("")}</select></label>
+        </div>
+      </div>`;
+    };
+    return `<h1>Checklist templates</h1>
+    <p>Every stage in both pipelines has its own checklist. When a deal enters a stage, that stage's steps are added to it. Stages you add under Pipelines &amp; stages show up here automatically.</p>
+    <div class="toolbar"><span class="seg2" role="group" aria-label="Pipeline">${Object.keys(state.pipes).map(p => `<button data-ckpipe="${p}" aria-pressed="${p === P}">${p} pipeline</button>`).join("")}</span></div>
+    <div class="chips">${stages.map(st => { const c = ckOf(P, st).phases.reduce((n, ph) => n + ph.steps.length, 0); return `<button class="schip" data-ckstage="${esc(st)}" aria-pressed="${st === state.ckStage}">${esc(st)} <span>${c || "empty"}</span></button>`; }).join("")}</div>
+    <div class="ck-head">
+      <div><h2 style="margin:0;font-size:17px">${esc(P)} · ${esc(state.ckStage)}</h2><span class="muted sm">${steps} step${steps === 1 ? "" : "s"} in ${ck.phases.length} phase${ck.phases.length === 1 ? "" : "s"}</span></div>
+      <div class="toolbar">
+        <select id="ck-copy" aria-label="Copy steps from another stage"><option value="">Copy steps from…</option>${others.map(([kk]) => `<option>${esc(kk)}</option>`).join("")}</select>
+        ${steps ? `<button class="btn" data-ckclear="1">${state.ckPending === "clear" ? "Click again to clear all" : "Clear all"}</button>` : ""}
+        <label class="sm" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="ck-apply" ${state.ckApply ? "checked" : ""}> Update open deals in this stage when I change steps</label>
+      </div>
+    </div>
+    ${ck.phases.map((ph, pi) => `<div class="box">
+      <div class="ph-h"><input data-phname="${pi}" value="${esc(ph.name)}" aria-label="Phase name"><span class="muted sm">${ph.steps.length} step${ph.steps.length === 1 ? "" : "s"}</span>
+        <span style="margin-left:auto;display:flex;gap:2px"><button class="rm" data-phup="${pi}" aria-label="Move phase up" ${pi === 0 ? "disabled" : ""}>↑</button><button class="rm" data-phdown="${pi}" aria-label="Move phase down" ${pi === ck.phases.length - 1 ? "disabled" : ""}>↓</button><button class="rm" data-phdel="${pi}" aria-label="Delete phase">${state.ckPending === "ph" + pi ? "Delete?" : "×"}</button></span></div>
+      ${ph.steps.length ? ph.steps.map((st, si) => row(st, pi, si, ph.steps.length)).join("") : `<p class="muted sm" style="margin:0;padding:4px 14px 8px">No steps in this phase yet.</p>`}
+      <div class="addrow"><button class="btn" data-addstep="${pi}">+ Add step</button></div>
+    </div>`).join("") || `<div class="box" style="padding:18px 14px"><b>No steps yet for ${esc(P)} · ${esc(state.ckStage)}.</b><p class="muted sm" style="margin:4px 0 0">Add a phase to start, or copy the steps from another stage and edit them.</p></div>`}
+    <div><button class="btn primary" data-addphase="1">+ Add phase</button></div>`;
   },
   fields() {
     return `<h1>Custom fields</h1><p>Extra fields on people or deals. Built-in fields (name, phones, stage, deal dates) aren't listed here.</p>
@@ -261,8 +311,17 @@ document.addEventListener("click", e => {
   if (ds.up || ds.down) { const [p, i] = pair(ds.up || ds.down), a = state.pipes[p], j = +i + (ds.up ? -1 : 1); if (j >= 0 && j < a.length) [a[i], a[j]] = [a[j], a[i]]; render(); return; }
   if (ds.rmstage) { const [p, i] = pair(ds.rmstage); state.pipes[p].splice(+i, 1); render(); return; }
   if (ds.addstage) { const a = state.pipes[ds.addstage]; a.splice(a.indexOf("Under Contract"), 0, "New stage"); render(); return; }
-  if (ds.rmstep) { state.checklists[state.tpl].splice(+ds.rmstep, 1); render(); return; }
-  if (ds.addstep) { const n = el("new-step").value.trim(); if (!n) { toast("Name the step first."); return; } const ph = el("new-phase").value, rows = state.checklists[state.tpl]; let at = rows.map(r => r[0]).lastIndexOf(ph) + 1; rows.splice(at, 0, [ph, n, rows[at - 1][2], 0, "Alyssa", "Task", "Always", ""]); render(); toast("Step added. New deals get it; open deals can be updated too."); return; }
+  if (ds.gock) { const [pp, st] = ds.gock.split("|"); sec = "checklists"; state.ckPipe = pp; state.ckStage = st; render(); window.scrollTo(0, 0); return; }
+  if (ds.ckpipe) { state.ckPipe = ds.ckpipe; state.ckStage = state.pipes[ds.ckpipe].find(x => x === "Under Contract") || state.pipes[ds.ckpipe][0]; state.ckPending = null; render(); return; }
+  if (ds.ckstage) { state.ckStage = ds.ckstage; state.ckPending = null; render(); return; }
+  if (ds.addphase) { curCk().phases.push({ name: "New phase", steps: [] }); render(); const ins = document.querySelectorAll("[data-phname]"); const i = ins[ins.length - 1]; if (i) { i.focus(); i.select(); } return; }
+  if (ds.phup || ds.phdown) { const a = curCk().phases, i = +(ds.phup || ds.phdown), j = i + (ds.phup ? -1 : 1); [a[i], a[j]] = [a[j], a[i]]; render(); return; }
+  if (ds.phdel) { const i = +ds.phdel, ph = curCk().phases[i]; if (ph.steps.length && state.ckPending !== "ph" + i) { state.ckPending = "ph" + i; render(); toast(`"${ph.name}" has ${ph.steps.length} steps. Click again to delete it.`); return; } curCk().phases.splice(i, 1); state.ckPending = null; render(); applied(); return; }
+  if (ds.addstep) { const ph = curCk().phases[+ds.addstep]; ph.steps.push(blankStep()); render(); const i = document.querySelector(`[data-s="${ds.addstep}:${ph.steps.length - 1}:name"]`); if (i) { i.focus(); i.select(); } applied(); return; }
+  if (ds.sup || ds.sdown) { const [pi, si] = (ds.sup || ds.sdown).split(":").map(Number), a = curCk().phases[pi].steps, j = si + (ds.sup ? -1 : 1); [a[si], a[j]] = [a[j], a[si]]; render(); return; }
+  if (ds.sdup) { const [pi, si] = ds.sdup.split(":").map(Number), a = curCk().phases[pi].steps; a.splice(si + 1, 0, Object.assign({}, a[si], { name: a[si].name + " (copy)" })); render(); applied(); return; }
+  if (ds.sdel) { const [pi, si] = ds.sdel.split(":").map(Number); curCk().phases[pi].steps.splice(si, 1); render(); applied(); return; }
+  if (ds.ckclear) { if (state.ckPending !== "clear") { state.ckPending = "clear"; render(); return; } curCk().phases = []; state.ckPending = null; render(); return; }
   if (ds.rmfield) { state.fields.splice(+ds.rmfield, 1); render(); return; }
   if (ds.addfield) { const n = el("nf-name").value.trim(); if (!n) return; state.fields.push([n, el("nf-type").value, el("nf-on").value]); render(); return; }
   if (ds.rmtag) { const t = state.tags.splice(+ds.rmtag, 1)[0]; render(); toast(`Removed "${t[0]}" from ${t[1]} people.`); return; }
@@ -276,13 +335,14 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("change", e => {
   const t = e.target, ds = t.dataset;
-  if (t.id === "tpl-pick") { state.tpl = t.value; render(); return; }
+  if (t.id === "ck-apply") { state.ckApply = t.checked; return; }
+  if (t.id === "ck-copy" && t.value) { state.ck[ckKey(state.ckPipe, state.ckStage)] = JSON.parse(JSON.stringify(state.ck[t.value])); toast(`Copied steps from ${t.value}. Edit them for this stage.`); render(); return; }
+  if (ds.phname !== undefined) { curCk().phases[+ds.phname].name = t.value; return; }
+  if (ds.s) { const [pi, si, f] = ds.s.split(":"), st = curCk().phases[+pi].steps[+si]; st[f] = f === "days" ? Math.max(0, +t.value) : t.value; if (f === "type" && !["Email", "Text"].includes(t.value)) st.tpl = ""; if (["dir", "type"].includes(f)) render(); if (["days", "dir", "anchor"].includes(f)) applied(); return; }
   if (t.id === "tpl-filter") { state.tplFilter = t.value; render(); return; }
   if (ds.u) { const [i, j] = pair(ds.u); state.users[i][j] = t.value; return; }
   if (ds.perm) { const [i, j] = pair(ds.perm); state.perms[i][+j + 1] = t.checked; return; }
-  if (ds.stage) { const [p, i] = pair(ds.stage); state.pipes[p][i] = t.value; return; }
-  if (ds.c) { const [i, j] = pair(ds.c), r = state.checklists[state.tpl][i]; r[j] = j === "3" ? Math.abs(+t.value) * (r[3] < 0 ? -1 : 1) : t.value; if (j === "3" || j === "2") toast("Open deals using this template will re-date this step."); return; }
-  if (ds.dir) { const r = state.checklists[state.tpl][ds.dir]; r[3] = Math.abs(r[3]) * (t.value === "days before" ? -1 : 1); return; }
+  if (ds.stage) { const [p, i] = pair(ds.stage), old = state.pipes[p][i]; state.pipes[p][i] = t.value; if (state.ck[ckKey(p, old)]) { state.ck[ckKey(p, t.value)] = state.ck[ckKey(p, old)]; delete state.ck[ckKey(p, old)]; } if (state.ckStage === old) state.ckStage = t.value; toast("Renamed. Its checklist moved with it."); return; }
   if (ds.fd) { const [i, j] = pair(ds.fd); state.fields[i][j] = t.value; return; }
   if (ds.tag) { state.tags[ds.tag][0] = t.value; toast("Renamed everywhere."); return; }
   if (ds.li) { const [k, i] = pair(ds.li); state[k][i] = t.value; return; }

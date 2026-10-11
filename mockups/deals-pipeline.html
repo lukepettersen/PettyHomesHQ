@@ -851,12 +851,12 @@ function tagsCard(c) {
 
 function datesCard(c) {
   if (editCard === "dates") {
-    return `<div class="card-s ed">${head("Birthdays &amp; homeiversary", "dates")}
+    return `<div class="card-s ed">${head("Important Dates", "dates")}
       <label>Birthdays</label>${listRows(draft.birthdays, "h", "Date, e.g. Mar 4")}<button class="addlink" data-addrow="h">+ Add birthday</button>
       <label>Homeiversary<input data-f="homeiversary" value="${esc(draft.homeiversary || "")}" placeholder="Fills in when a deal closes"></label>
       ${foot("dates")}</div>`;
   }
-  return `<div class="card-s">${head("Birthdays &amp; homeiversary", "dates")}
+  return `<div class="card-s">${head("Important Dates", "dates")}
     <dl class="kv">${c.birthdays.map(([n, b]) => `<dt>${esc(n)}</dt><dd>${esc(b)}</dd>`).join("") || `<dt>Birthdays</dt><dd class="muted">None added</dd>`}
     <dt>Homeiversary</dt><dd>${c.homeiversary ? esc(c.homeiversary) : `<span class="muted">Fills in when a deal closes</span>`}</dd></dl></div>`;
 }
