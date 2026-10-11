@@ -1,0 +1,218 @@
+<title>Messages Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #f4f6f7; --surface: #ffffff; --sunken: #eaeef0; --line: #d8dee2; --fg: #16222a; --muted: #5b6b75;
+  --accent: #1d6a85; --accent-soft: #dcecf2; --ok: #2f7a4b; --ok-soft: #e0f0e5; --warn: #9a6400; --warn-soft: #fbefd6;
+  --bad: #b3372b; --bad-soft: #f9e1de; --waive: #6b6480; --waive-soft: #ebe8f2;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45; --fg: #e4ecf0; --muted: #93a5b0;
+    --accent: #5fb3d1; --accent-soft: #173a48; --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+    --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45; --fg: #e4ecf0; --muted: #93a5b0;
+  --accent: #5fb3d1; --accent-soft: #173a48; --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+  --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+button, select, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.date, .num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.mock-bar { background: var(--accent-soft); padding-block: 7px; padding-inline: 16px; font-size: 13px; }
+.topnav { background: var(--surface); border-bottom: 1px solid var(--line); padding-inline: 16px; display: flex; align-items: center; gap: 24px; overflow-x: auto; }
+.brand { font-family: var(--font-display); font-weight: 700; font-size: 17px; padding-block: 12px; white-space: nowrap; }
+.brand span { color: var(--accent); }
+.topnav nav { display: flex; gap: 4px; }
+.topnav nav a { color: var(--muted); text-decoration: none; padding: 14px 10px; border-bottom: 2px solid transparent; white-space: nowrap; }
+.topnav nav a.on { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 2.6vw, 25px); line-height: 1.15; margin: 0; }
+.muted { color: var(--muted); } .sm { font-size: 12.5px; }
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 13px; text-decoration: none; display: inline-block; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.input { padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); width: 100%; }
+.tagchip { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; background: var(--sunken); color: var(--muted); white-space: nowrap; }
+.pill { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.side-nav { display: flex; flex-direction: column; gap: 12px; }
+.side-nav h4 { margin: 0 0 4px; padding: 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+.side-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.nav-i { width: 100%; border: 0; background: none; text-align: left; padding: 7px 10px; border-radius: 6px; display: flex; justify-content: space-between; gap: 8px; }
+.nav-i:hover { background: var(--sunken); }
+.nav-i[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.nav-i .c { font-size: 12px; color: var(--muted); }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); z-index: 40; }
+@media (max-width: 760px) {
+  .side-nav { flex-direction: row; overflow-x: auto; }
+  .side-nav h4 { display: none; }
+  .side-nav ul { flex-direction: row; gap: 6px; }
+  .nav-i { white-space: nowrap; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; }
+}
+</style>
+<style>
+/* Layout: conversation list | thread with composer | contact summary. Texts and missed calls only; email stays in Gmail. */
+.shell { max-width: 1500px; margin: 0 auto; padding-inline: 16px; padding-block: 14px 24px; display: grid; grid-template-columns: 300px minmax(0, 1fr) 280px; gap: 12px; align-items: start; }
+@media (max-width: 1100px) { .shell { grid-template-columns: 280px minmax(0, 1fr); } .info { display: none; } }
+@media (max-width: 760px) { .shell { grid-template-columns: minmax(0, 1fr); } .shell.thread-open .convs { display: none; } .shell:not(.thread-open) .thread { display: none; } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.convs { display: flex; flex-direction: column; }
+.convs .top { padding: 10px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--line); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; align-self: flex-start; }
+.seg button { border: 0; background: none; padding: 3px 11px; font-size: 12.5px; }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--surface); }
+.conv { border: 0; border-top: 1px solid var(--line); background: none; text-align: left; padding: 10px 12px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; width: 100%; }
+.conv:first-of-type { border-top: 0; }
+.conv:hover { background: var(--bg); }
+.conv[aria-current="true"] { background: var(--accent-soft); }
+.conv .n { font-weight: 600; display: flex; gap: 6px; align-items: center; min-width: 0; }
+.conv .n span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conv.unread .n::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+.conv .t { font-size: 12px; color: var(--muted); }
+.conv .s { grid-column: 1 / -1; font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conv .s.missed { color: var(--bad); font-weight: 600; }
+.thread { display: flex; flex-direction: column; min-height: 70vh; }
+.th-h { padding: 10px 14px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 8px; align-items: center; flex-wrap: wrap; }
+.th-h b { font-size: 15px; }
+.back { display: none; border: 0; background: none; color: var(--accent); font-weight: 600; padding: 0; }
+@media (max-width: 760px) { .back { display: inline; } }
+.msgs { flex: 1; padding: 14px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; max-height: 62vh; }
+.day { align-self: center; font-size: 11.5px; color: var(--muted); font-weight: 600; margin: 4px 0; }
+.bub { max-width: 72%; padding: 8px 12px; border-radius: 14px; font-size: 13.5px; line-height: 1.4; }
+.bub small { display: block; font-size: 11px; opacity: .7; margin-top: 3px; }
+.bub.in { align-self: flex-start; background: var(--sunken); border-bottom-left-radius: 4px; }
+.bub.out { align-self: flex-end; background: var(--accent); color: var(--surface); border-bottom-right-radius: 4px; }
+.sys { align-self: center; font-size: 12.5px; background: var(--bad-soft); color: var(--bad); padding: 5px 12px; border-radius: 999px; display: flex; gap: 10px; align-items: center; }
+.sys button { border: 0; background: none; color: inherit; font-weight: 700; text-decoration: underline; padding: 0; font-size: 12.5px; }
+.comp { border-top: 1px solid var(--line); padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+.comp textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; resize: vertical; background: var(--bg); }
+.comp .row { display: flex; justify-content: space-between; gap: 8px; align-items: center; flex-wrap: wrap; }
+.comp select { border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; background: var(--surface); max-width: 260px; }
+.info { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.info h3 { margin: 0; font-size: 13.5px; }
+.kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 5px 10px; margin: 0; font-size: 13px; }
+.kv dt { color: var(--muted); font-weight: 600; font-size: 12.5px; } .kv dd { margin: 0; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.newc label { font-size: 12px; color: var(--muted); font-weight: 600; display: flex; flex-direction: column; gap: 3px; }
+.newc { display: flex; flex-direction: column; gap: 8px; }
+</style>
+<div class="mock-bar"><strong>Mockup</strong> · fake data. Texts and missed calls from your business line (612) 555-0100. Email stays in Gmail.</div>
+<header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html">Deals</a><a href="tasks.html">Tasks</a><a href="messages.html" class="on">Messages</a><a href="admin.html">Admin</a></nav></header>
+<div class="shell" id="shell">
+  <section class="panel convs" id="convs"></section>
+  <section class="panel thread" id="thread"></section>
+  <aside class="panel info" id="info"></aside>
+</div>
+<div id="toast" class="toast" hidden></div>
+<script>
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// m: [dir in/out/missed, text, time, day]
+let convs = [
+  { id: 1, name: "Priya Calloway", cid: "calloway", phone: "(612) 555-0193", unread: true, stage: "Under Contract", deal: "Buyer · 4127 Upton Ave S #3", next: "Review inspection report · Today 4pm", tags: ["Buyer", "Seller", "A Lead"],
+    m: [["out", "Inspector is wrapping up, we'll go over the report Monday at 4.", "3:12 PM", "Sat Oct 10"], ["in", "Perfect. Can you send the report before so we can read it?", "3:20 PM", "Sat Oct 10"], ["out", "Yep, it'll come straight from the inspector tonight.", "3:22 PM", "Sat Oct 10"], ["in", "Got it, thanks! Is the water heater thing a big deal?", "8:41 AM", "Today"]] },
+  { id: 2, name: "(763) 555-0110", cid: null, phone: "(763) 555-0110", unread: true, m: [["missed", "Missed call · no voicemail", "9:02 AM", "Today"], ["in", "Hi, saw your sign on Lincoln Ave. Is it still available? Could we see it this week?", "9:05 AM", "Today"]] },
+  { id: 3, name: "Owen Pryce", cid: "d11", phone: "(612) 555-0111", unread: false, stage: "Lead", deal: "Buyer · Offer Out", next: "Follow up with listing agent · Today", tags: ["Buyer", "B Lead"],
+    m: [["out", "Offer is in on Hillside Ave. Response deadline is tomorrow at 5pm.", "6:15 PM", "Sun Oct 11"], ["in", "Fingers crossed 🤞", "6:20 PM", "Sun Oct 11"]] },
+  { id: 4, name: "Kate Murphy", cid: "murphy", phone: "(651) 555-0172", unread: false, stage: "90 Day Sphere", deal: "", next: "Call Kate about spring listing timing · Today", tags: ["Past Client", "Mailers"],
+    m: [["missed", "Missed call · 0:42 voicemail", "5:48 PM", "Fri Oct 9"]] },
+  { id: 5, name: "Marcus Holt", cid: null, phone: "(612) 555-0177", unread: false, known: "Listing agent on Calloway deal",
+    m: [["in", "Sellers are open to a credit on the water heater. Send over the amendment when ready.", "11:30 AM", "Today"]] },
+  { id: 6, name: "Dev Raman", cid: "d15", phone: "(612) 555-0115", unread: false, stage: "Under Contract", deal: "Buyer · 1530 Hague Ave", next: "Final walkthrough scheduling text · Wed", tags: ["Buyer"],
+    m: [["in", "Lender says we're clear to close!", "4:02 PM", "Thu Oct 8"], ["out", "Huge! 🎉 Closing is still Oct 23 at Lakeview Title.", "4:10 PM", "Thu Oct 8"]] },
+  { id: 7, name: "Hugo Bergstrom", cid: "d26", phone: "(612) 555-0126", unread: false, stage: "Lead", deal: "Seller · Coming Soon", next: "Sign install · Tue", tags: ["Seller"],
+    m: [["out", "Photos are in! Sending the link now.", "1:15 PM", "Fri Oct 9"], ["in", "These look amazing", "1:40 PM", "Fri Oct 9"]] },
+  { id: 8, name: "Rita Okonkwo", cid: "x2", phone: "(612) 555-0182", unread: false, stage: "7 Day Sphere", deal: "", next: "", tags: ["A Lead"],
+    m: [["in", "Any new condos near the lakes this week?", "7:55 PM", "Thu Oct 8"]] },
+];
+const TEMPLATES = [
+  ["", "Insert template…"],
+  ["Hi {first}, just checking in! Anything I can help with?", "Check-in"],
+  ["Hi {first}, the inspection is scheduled for {date}. I'll meet you there.", "BUC · Day-of-inspection text"],
+  ["Hi {first}, earnest money is due by {date}. Wiring instructions are in your email.", "BUC · Earnest money"],
+  ["Hi {first}! Thanks for reaching out. I'm Luke with Petty Homes. What's the best time to talk?", "Lead · First reply"],
+  ["Hi {first}, it's Alyssa from Luke's team. I'll be helping with paperwork and scheduling.", "SPC · Intro with assistant"],
+];
+let cur = 1, filt = "all", q = "";
+const el = id => document.getElementById(id);
+const first = c => c.name.startsWith("(") ? "there" : c.name.split(" ")[0];
+const last = c => c.m[c.m.length - 1];
+
+function renderList() {
+  let list = convs.filter(c => filt === "all" || (filt === "unread" ? c.unread : c.m.some(m => m[0] === "missed")));
+  if (q) list = list.filter(c => (c.name + c.phone + c.m.map(m => m[1]).join(" ")).toLowerCase().includes(q.toLowerCase()));
+  el("convs").innerHTML = `<div class="top"><input class="input" id="q" placeholder="Search messages" value="${esc(q)}" aria-label="Search messages">
+    <span class="seg" role="group" aria-label="Filter">${[["all", "All"], ["unread", "Unread"], ["missed", "Missed calls"]].map(([k, l]) => `<button data-filt="${k}" aria-pressed="${filt === k}">${l}</button>`).join("")}</span>
+    <button class="btn" data-toast="Start a text to anyone in People, or a new number">+ New message</button></div>
+    ${list.map(c => { const l = last(c); return `<button class="conv ${c.unread ? "unread" : ""}" data-conv="${c.id}" aria-current="${cur === c.id}"><span class="n"><span>${esc(c.name)}</span></span><span class="t">${l[3] === "Today" ? l[2] : l[3].replace(/^\w+ /, "")}</span><span class="s ${l[0] === "missed" ? "missed" : ""}">${l[0] === "out" ? "You: " : ""}${esc(l[1])}</span></button>`; }).join("") || `<p class="muted" style="padding:14px">No conversations.</p>`}`;
+  const qi = el("q"); qi.addEventListener("input", () => { q = qi.value; const p = qi.selectionStart; renderList(); const n = el("q"); n.focus(); n.setSelectionRange(p, p); });
+}
+function renderThread() {
+  const c = convs.find(x => x.id === cur); c.unread = false;
+  let day = "";
+  const body = c.m.map(([dir, txt, time, d]) => {
+    const dh = d !== day ? `<div class="day">${d}</div>` : ""; day = d;
+    if (dir === "missed") return dh + `<div class="sys">📞 ${esc(txt)} · ${time}<button data-toast="Calls ${esc(c.phone)} from your business line">Call back</button><button data-toast="Creates a task: Call back ${esc(c.name)}">Make task</button></div>`;
+    return dh + `<div class="bub ${dir}">${esc(txt)}<small>${time}</small></div>`;
+  }).join("");
+  el("thread").innerHTML = `<div class="th-h"><div><button class="back" data-back="1">← All</button> <b>${esc(c.name)}</b> <span class="muted sm num">${c.cid || c.name.startsWith("(") ? "" : c.phone}</span>${c.known ? ` <span class="muted sm">· ${esc(c.known)}</span>` : ""}</div>
+    <div style="display:flex;gap:6px">${c.cid ? `<a class="btn" href="deals.html#contact-${c.cid}">Open contact</a>` : ""}<button class="btn" data-toast="Calls ${esc(c.phone)} from your business line">Call</button></div></div>
+    <div class="msgs" id="msgs">${body}</div>
+    <div class="comp"><textarea id="txt" rows="2" placeholder="Text ${esc(first(c))}…"></textarea>
+      <div class="row"><select id="tpl" aria-label="Insert template">${TEMPLATES.map(([v, l]) => `<option value="${esc(v)}">${l}</option>`).join("")}</select>
+      <span style="display:flex;gap:8px;align-items:center"><span class="muted sm">Logged to their timeline</span><button class="btn primary" data-send="1">Send</button></span></div></div>`;
+  const m = el("msgs"); m.scrollTop = m.scrollHeight;
+  el("shell").classList.add("thread-open");
+}
+function renderInfo() {
+  const c = convs.find(x => x.id === cur);
+  if (!c.cid) {
+    el("info").innerHTML = `<h3>${c.known ? "Not in People yet" : "New number"}</h3>
+      <p class="muted sm" style="margin:0">${c.known ? esc(c.known) + "." : "Not linked to anyone. Add them as a lead or link to an existing person."}</p>
+      <div class="newc"><label>Name<input class="input" id="nc-name" placeholder="Full name" value="${c.known ? esc(c.name) : ""}"></label>
+      <label>Stage<select class="input" id="nc-stage">${(c.known ? ["Realtor", "Industry Partners", "Lead"] : ["Lead", "Realtor", "Industry Partners"]).map(s => `<option>${s}</option>`).join("")}</select></label>
+      <label>Source<select class="input">${["Sign call", "Website", "Sphere Referral", "Zillow Preferred"].map(s => `<option>${s}</option>`).join("")}</select></label>
+      <button class="btn primary" data-create="1">Create contact</button><button class="btn" data-toast="Search People and attach this number">Link to existing person</button></div>`;
+    return;
+  }
+  el("info").innerHTML = `<h3>${esc(c.name)}</h3>
+    <dl class="kv"><dt>Stage</dt><dd>${esc(c.stage)}</dd>${c.deal ? `<dt>Deal</dt><dd>${esc(c.deal)}</dd>` : ""}${c.next ? `<dt>Next up</dt><dd>${esc(c.next)}</dd>` : ""}<dt>Phone</dt><dd class="num">${c.phone}</dd></dl>
+    <div class="tags">${c.tags.map(t => `<span class="tagchip">${esc(t)}</span>`).join("")}</div>
+    <a class="btn" href="deals.html#contact-${c.cid}">Open contact page</a>
+    <button class="btn" data-toast="Quick add a task linked to ${esc(c.name)}">+ Task</button>`;
+}
+function render() { renderList(); renderThread(); renderInfo(); }
+let tt; function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.conv) { cur = +b.dataset.conv; render(); return; }
+  if (b.dataset.filt) { filt = b.dataset.filt; renderList(); return; }
+  if (b.dataset.back) { el("shell").classList.remove("thread-open"); return; }
+  if (b.dataset.send) {
+    const t = el("txt"), v = t.value.trim(); if (!v) return;
+    convs.find(x => x.id === cur).m.push(["out", v, "Now", "Today"]); render(); toast("Sent and logged to their timeline."); return;
+  }
+  if (b.dataset.create) {
+    const c = convs.find(x => x.id === cur), n = el("nc-name").value.trim(); if (!n) { toast("Add a name first."); return; }
+    Object.assign(c, { name: n, cid: "x2", stage: el("nc-stage").value, deal: "", next: "Follow up on new lead · Today", tags: [] });
+    toast(`Created ${n}. A follow-up task was added.`); render(); return;
+  }
+  if (b.dataset.toast) { toast(b.dataset.toast); return; }
+});
+document.addEventListener("change", e => {
+  if (e.target.id === "tpl" && e.target.value) {
+    const c = convs.find(x => x.id === cur);
+    el("txt").value = e.target.value.replace("{first}", first(c)).replace("{date}", "Wed Oct 14"); e.target.value = ""; el("txt").focus();
+  }
+});
+render();
+el("shell").classList.remove("thread-open");
+</script>

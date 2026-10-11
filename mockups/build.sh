@@ -6,7 +6,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 out="${1:?usage: build.sh <out-dir>}"
 mkdir -p "$out"
-for pair in deals-pipeline:deals tasks:tasks; do
+for pair in deals-pipeline:deals tasks:tasks people:people messages:messages admin:admin; do
   src="${pair%%:*}"; dst="${pair##*:}"
   {
     printf '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>html{color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%%}[hidden]{display:none!important}</style>\n'

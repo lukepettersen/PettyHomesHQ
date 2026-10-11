@@ -1,0 +1,212 @@
+<title>People Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #f4f6f7; --surface: #ffffff; --sunken: #eaeef0; --line: #d8dee2; --fg: #16222a; --muted: #5b6b75;
+  --accent: #1d6a85; --accent-soft: #dcecf2; --ok: #2f7a4b; --ok-soft: #e0f0e5; --warn: #9a6400; --warn-soft: #fbefd6;
+  --bad: #b3372b; --bad-soft: #f9e1de; --waive: #6b6480; --waive-soft: #ebe8f2;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45; --fg: #e4ecf0; --muted: #93a5b0;
+    --accent: #5fb3d1; --accent-soft: #173a48; --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+    --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45; --fg: #e4ecf0; --muted: #93a5b0;
+  --accent: #5fb3d1; --accent-soft: #173a48; --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+  --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+button, select, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.date, .num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.mock-bar { background: var(--accent-soft); padding-block: 7px; padding-inline: 16px; font-size: 13px; }
+.topnav { background: var(--surface); border-bottom: 1px solid var(--line); padding-inline: 16px; display: flex; align-items: center; gap: 24px; overflow-x: auto; }
+.brand { font-family: var(--font-display); font-weight: 700; font-size: 17px; padding-block: 12px; white-space: nowrap; }
+.brand span { color: var(--accent); }
+.topnav nav { display: flex; gap: 4px; }
+.topnav nav a { color: var(--muted); text-decoration: none; padding: 14px 10px; border-bottom: 2px solid transparent; white-space: nowrap; }
+.topnav nav a.on { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 2.6vw, 25px); line-height: 1.15; margin: 0; }
+.muted { color: var(--muted); } .sm { font-size: 12.5px; }
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 13px; text-decoration: none; display: inline-block; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.input { padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); width: 100%; }
+.tagchip { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; background: var(--sunken); color: var(--muted); white-space: nowrap; }
+.pill { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.side-nav { display: flex; flex-direction: column; gap: 12px; }
+.side-nav h4 { margin: 0 0 4px; padding: 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+.side-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.nav-i { width: 100%; border: 0; background: none; text-align: left; padding: 7px 10px; border-radius: 6px; display: flex; justify-content: space-between; gap: 8px; }
+.nav-i:hover { background: var(--sunken); }
+.nav-i[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.nav-i .c { font-size: 12px; color: var(--muted); }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); z-index: 40; }
+@media (max-width: 760px) {
+  .side-nav { flex-direction: row; overflow-x: auto; }
+  .side-nav h4 { display: none; }
+  .side-nav ul { flex-direction: row; gap: 6px; }
+  .nav-i { white-space: nowrap; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; }
+}
+</style>
+<style>
+/* Layout: smart lists on the left, searchable table of people on the right. */
+.shell { max-width: 1500px; margin: 0 auto; padding-inline: 16px; padding-block: 14px 40px; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 760px) { .shell { grid-template-columns: minmax(0, 1fr); } }
+.main { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
+.bar .l { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.search { max-width: 340px; }
+.tbl-wrap { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 860px; font-size: 13px; }
+th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; padding: 9px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th button { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; }
+td { padding: 8px 10px; border-top: 1px solid var(--line); vertical-align: middle; }
+tr:hover td { background: var(--bg); }
+td a.name { color: var(--fg); font-weight: 600; text-decoration: none; }
+td a.name:hover { color: var(--accent); }
+.due { color: var(--bad); font-weight: 600; }
+.tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.bulk { background: var(--fg); color: var(--surface); border-radius: var(--r); padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.bulk button { border: 1px solid rgb(255 255 255 / .3); background: none; color: inherit; border-radius: 6px; padding: 3px 10px; font-size: 13px; }
+.modal-bg { position: fixed; inset: 0; background: rgb(0 0 0 / .35); display: grid; place-items: center; z-index: 30; padding: 16px; }
+.modal { background: var(--surface); border-radius: 10px; padding: 18px; width: min(440px, 100%); display: flex; flex-direction: column; gap: 10px; }
+.modal h2 { margin: 0; font-family: var(--font-display); font-size: 18px; }
+.modal label { font-size: 12px; color: var(--muted); font-weight: 600; display: flex; flex-direction: column; gap: 3px; }
+.modal .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.modal .foot { display: flex; justify-content: flex-end; gap: 6px; }
+</style>
+<div class="mock-bar"><strong>Mockup</strong> · fake data. Click a name to open their contact page. Check boxes for bulk actions.</div>
+<header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html" class="on">People</a><a href="deals.html">Deals</a><a href="tasks.html">Tasks</a><a href="messages.html">Messages</a><a href="admin.html">Admin</a></nav></header>
+<div class="shell">
+  <aside class="side-nav" id="side"></aside>
+  <main class="main" id="main"></main>
+</div>
+<div id="modal"></div>
+<div id="toast" class="toast" hidden></div>
+<script>
+const TODAY = new Date(2026, 9, 12);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// [cid, name, stage, followDays, lastTouchDaysAgo, source, tags, deal, phone]
+let people = [
+  ["calloway", "Jordan & Priya Calloway", "Under Contract", 30, 1, "Sphere Referral", ["Buyer", "Seller", "A Lead"], "Buyer · Under Contract, Seller · Active", "(612) 555-0148"],
+  ["murphy", "Kate Murphy", "90 Day Sphere", 90, 12, "Sphere", ["Past Client", "Mailers", "Christmas Cards"], "", "(651) 555-0172"],
+  ["d14", "Ruth & Sam Engel", "Under Contract", null, 3, "Sphere", ["Buyer"], "Buyer · Under Contract", "(612) 555-0114"],
+  ["d15", "Dev Raman", "Under Contract", null, 2, "Website", ["Buyer"], "Buyer · Under Contract", "(612) 555-0115"],
+  ["d29", "Wes Halvorsen", "Under Contract", null, 4, "Sphere", ["Seller"], "Seller · Under Contract", "(612) 555-0129"],
+  ["d11", "Owen Pryce", "Lead", null, 1, "Website", ["Buyer", "B Lead"], "Buyer · Offer Out", "(612) 555-0111"],
+  ["d12", "Mia Castellano", "Lead", null, 0, "Zillow Preferred", ["Buyer", "A Lead"], "Buyer · Offer Out", "(612) 555-0112"],
+  ["d7", "Nora Feld", "Lead", null, 6, "Sphere Referral", ["Buyer"], "Buyer · Searching", "(612) 555-0107"],
+  ["d8", "Theo & June Park", "Lead", null, 11, "Sphere", ["Buyer", "C Lead"], "Buyer · Searching", "(612) 555-0108"],
+  ["d9", "Isaac Brandt", "Lead", null, 4, "Website", ["Buyer"], "Buyer · Searching", "(612) 555-0109"],
+  ["d10", "Leah Sandoval", "Lead", null, 15, "Sphere", ["Buyer", "D Lead"], "Buyer · Searching", "(612) 555-0110"],
+  ["d1", "Ethan Moreau", "Lead", null, 3, "Website", [], "Buyer · Lead", "(612) 555-0101"],
+  ["d3", "Ben & Hana Okafor", "Lead", null, 7, "Zillow Preferred", [], "Buyer · Lead", "(612) 555-0103"],
+  ["d4", "Grace Thorsen", "Lead", null, 2, "Sphere", ["Buyer"], "Buyer · Consult", "(612) 555-0104"],
+  ["d24", "Carol & Dean Fisk", "Lead", null, 4, "Sphere Referral", ["Seller", "A Lead"], "Seller · Prep", "(612) 555-0124"],
+  ["d26", "Hugo Bergstrom", "Lead", null, 2, "Sphere", ["Seller"], "Seller · Coming Soon", "(612) 555-0126"],
+  ["d27", "Margaret Ostby", "Lead", null, 5, "Website", ["Seller"], "Seller · Active", "(612) 555-0127"],
+  ["d28", "Greg & Lin Tam", "Lead", null, 8, "Sphere", ["Seller"], "Seller · Active", "(612) 555-0128"],
+  ["d16", "Kara Voss", "30 Day Sphere", 30, 13, "Sphere", ["Past Client", "Email Newsletter"], "", "(612) 555-0116"],
+  ["d17", "Liam Torres", "30 Day Sphere", 30, 20, "Website", ["Past Client"], "", "(612) 555-0117"],
+  ["d18", "Hollis Family", "30 Day Sphere", 30, 47, "Sphere", ["Past Client", "Mailers"], "", "(612) 555-0118"],
+  ["d30", "Irene Dahl", "30 Day Sphere", 30, 10, "Sphere Referral", ["Past Client"], "", "(612) 555-0130"],
+  ["x1", "Marcus & Elle Brandvold", "90 Day Sphere", 90, 98, "Sphere", ["Past Client", "Christmas Cards", "Mailers"], "", "(952) 555-0181"],
+  ["x2", "Rita Okonkwo", "7 Day Sphere", 7, 9, "Sphere Referral", ["A Lead"], "", "(612) 555-0182"],
+  ["x3", "Tom Lindgren", "180 Day Sphere", 180, 40, "Sphere", ["Past Client", "Email Newsletter"], "", "(763) 555-0183"],
+  ["x4", "Sarah Beckett", "Realtor", null, 120, "Industry", ["Realtors"], "", "(612) 555-0184"],
+  ["x5", "Dana Kim", "Industry Partners", null, 3, "Sphere", ["Lender"], "", "(612) 555-0185"],
+  ["x6", "Jake & Mara Holm", "30 Day Sphere", 30, 35, "Website", ["Past Client", "Mailers"], "", "(651) 555-0186"],
+  ["x7", "Lucy Tran", "Lead", null, 2, "Website", ["Buyer", "Email Newsletter"], "", "(612) 555-0187"],
+  ["x8", "Gary Pfeiffer", "Passive Marketing", null, 210, "Zillow Preferred", ["Email Newsletter"], "", "(952) 555-0188"],
+  ["x9", "Nina Sorensen", "60 Day Sphere", 60, 61, "Sphere", ["Past Client", "Christmas Cards"], "", "(612) 555-0189"],
+  ["x10", "Chris Albrecht", "90 Day Sphere", 90, 45, "Sphere Referral", ["Investor"], "", "(651) 555-0190"],
+].map(([cid, name, stage, follow, last, source, tags, deal, phone]) => ({ cid, name, stage, follow, last, source, tags, deal, phone }));
+
+const isSphere = p => /Sphere/.test(p.stage);
+const due = p => p.follow && p.last >= p.follow;
+const LISTS = [
+  ["Everyone", [["all", "All people", () => true], ["due", "Due for a touch", due]]],
+  ["Pipeline", [["leads", "Leads", p => p.stage === "Lead"], ["buyers", "Buyers not under contract", p => /Buyer · (?!Under)/.test(p.deal)], ["sellers", "Sellers not under contract", p => /Seller · (?!Under)/.test(p.deal)], ["uc", "Under contract", p => /Under Contract/.test(p.deal)]]],
+  ["Sphere", [["past", "Past clients", p => p.tags.includes("Past Client")], ["sphere", "Sphere (all frequencies)", isSphere]]],
+  ["Mailing", [["mail", "Mailers", p => p.tags.includes("Mailers")], ["xmas", "Christmas cards", p => p.tags.includes("Christmas Cards")], ["news", "Email newsletter", p => p.tags.includes("Email Newsletter")]]],
+  ["Other", [["partners", "Agents & partners", p => ["Realtor", "Industry Partners"].includes(p.stage)]]],
+];
+const ALLF = Object.fromEntries(LISTS.flatMap(g => g[1]).map(([k, , f]) => [k, f]));
+const NAMES = Object.fromEntries(LISTS.flatMap(g => g[1]).map(([k, n]) => [k, n]));
+let list = "all", q = "", sort = "name", sel = new Set();
+const el = id => document.getElementById(id);
+
+function rows() {
+  let r = people.filter(ALLF[list]);
+  if (q) { const s = q.toLowerCase(); r = r.filter(p => [p.name, p.phone, p.stage, p.source, p.deal, ...p.tags].join(" ").toLowerCase().includes(s)); }
+  r.sort(sort === "name" ? (a, b) => a.name.localeCompare(b.name) : sort === "last" ? (a, b) => b.last - a.last : (a, b) => a.stage.localeCompare(b.stage));
+  return r;
+}
+function render() {
+  el("side").innerHTML = LISTS.map(([g, items]) => `<div><h4>${g}</h4><ul>${items.map(([k, n, f]) => `<li><button class="nav-i" data-list="${k}" aria-current="${list === k}"><span>${n}</span><span class="c">${people.filter(f).length}</span></button></li>`).join("")}</ul></div>`).join("")
+    + `<div><ul><li><button class="nav-i" data-toast="Pick filters (stage, tag, source, last contact) and save them as a list"><span style="color:var(--accent)">+ New smart list</span></button></li></ul></div>`;
+  const r = rows();
+  el("main").innerHTML = `
+    <div class="bar"><div class="l"><h1>${NAMES[list]}</h1><span class="muted">${r.length} people</span></div>
+      <div style="display:flex;gap:8px;flex:1;justify-content:flex-end;min-width:240px"><input class="input search" id="q" placeholder="Search name, phone, tag…" value="${esc(q)}" aria-label="Search people"><button class="btn primary" data-add="1">+ Add person</button></div></div>
+    ${sel.size ? `<div class="bulk"><b>${sel.size} selected</b><button data-toast="Add a tag to ${sel.size} people">Add tag</button><button data-toast="Change stage for ${sel.size} people">Change stage</button><button data-toast="Set follow-up frequency for ${sel.size} people">Set follow-up</button><button data-toast="Assign ${sel.size} people">Assign</button><button data-toast="Download a CSV of ${sel.size} people">Export</button><button data-clear="1">Clear</button></div>` : ""}
+    <div class="tbl-wrap"><table>
+      <thead><tr><th style="width:30px"><input type="checkbox" id="all" aria-label="Select all" ${r.length && r.every(p => sel.has(p.cid)) ? "checked" : ""}></th>
+        <th><button data-sort="name">Name${sort === "name" ? " ↓" : ""}</button></th><th><button data-sort="stage">Stage${sort === "stage" ? " ↓" : ""}</button></th>
+        <th><button data-sort="last">Last contact${sort === "last" ? " ↓" : ""}</button></th><th>Follow up</th><th>Deal</th><th>Tags</th><th>Source</th></tr></thead>
+      <tbody>${r.map(p => `<tr>
+        <td><input type="checkbox" data-sel="${p.cid}" ${sel.has(p.cid) ? "checked" : ""} aria-label="Select ${esc(p.name)}"></td>
+        <td><a class="name" href="deals.html#contact-${p.cid}">${esc(p.name)}</a><div class="muted sm num">${p.phone}</div></td>
+        <td>${esc(p.stage)}</td>
+        <td class="${due(p) ? "due" : ""}">${p.last === 0 ? "Today" : p.last + " days ago"}</td>
+        <td>${p.follow ? `Every ${p.follow}d${due(p) ? ` <span class="pill" style="background:var(--warn-soft);color:var(--warn)">Due</span>` : ""}` : `<span class="muted">—</span>`}</td>
+        <td>${p.deal ? `<span class="sm">${esc(p.deal)}</span>` : `<span class="muted">—</span>`}</td>
+        <td><div class="tags">${p.tags.slice(0, 2).map(t => `<span class="tagchip">${esc(t)}</span>`).join("")}${p.tags.length > 2 ? `<span class="muted sm">+${p.tags.length - 2}</span>` : ""}</div></td>
+        <td class="muted">${esc(p.source)}</td></tr>`).join("") || `<tr><td colspan="8" class="muted" style="text-align:center;padding:24px">No one matches.</td></tr>`}</tbody>
+    </table></div>`;
+  const qi = el("q"); qi.addEventListener("input", () => { q = qi.value; const pos = qi.selectionStart; render(); const n = el("q"); n.focus(); n.setSelectionRange(pos, pos); });
+}
+function modal() {
+  el("modal").innerHTML = `<div class="modal-bg" data-close="1"><form class="modal" id="add-form" autocomplete="off">
+    <h2>Add person</h2>
+    <div class="two"><label>First name<input class="input" id="f-first" required></label><label>Last name<input class="input" id="f-last"></label></div>
+    <label>Phone<input class="input" id="f-phone"></label><label>Email<input class="input" id="f-email"></label>
+    <div class="two"><label>Stage<select class="input" id="f-stage">${["Lead", "7 Day Sphere", "30 Day Sphere", "90 Day Sphere", "180 Day Sphere", "Realtor", "Industry Partners"].map(s => `<option>${s}</option>`).join("")}</select></label>
+    <label>Source<select class="input" id="f-source">${["Sphere", "Sphere Referral", "Website", "Zillow Preferred", "AJ Gimme Lead", "Stacie Rihl"].map(s => `<option>${s}</option>`).join("")}</select></label></div>
+    <div class="foot"><button type="button" class="btn" data-close="1">Cancel</button><button class="btn primary" type="submit">Add person</button></div>
+  </form></div>`;
+  el("f-first").focus();
+  el("add-form").addEventListener("submit", e => {
+    e.preventDefault();
+    const name = (el("f-first").value + " " + el("f-last").value).trim(); const st = el("f-stage").value; const m = st.match(/\d+/);
+    people.push({ cid: "x" + (people.length + 100), name, stage: st, follow: m ? +m[0] : null, last: 0, source: el("f-source").value, tags: [], deal: "", phone: el("f-phone").value || "—" });
+    el("modal").innerHTML = ""; toast(`Added ${name}.`); render();
+  });
+}
+let tt; function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
+document.addEventListener("click", e => {
+  const b = e.target.closest("button, .modal-bg"); if (!b) return;
+  if (b.dataset.close && (e.target === b || b.tagName === "BUTTON")) { el("modal").innerHTML = ""; return; }
+  if (b.dataset.list) { list = b.dataset.list; sel.clear(); render(); return; }
+  if (b.dataset.sort) { sort = b.dataset.sort; render(); return; }
+  if (b.dataset.add) { modal(); return; }
+  if (b.dataset.clear) { sel.clear(); render(); return; }
+  if (b.dataset.toast) { toast(b.dataset.toast); return; }
+});
+document.addEventListener("change", e => {
+  if (e.target.dataset.sel) { const k = e.target.dataset.sel; e.target.checked ? sel.add(k) : sel.delete(k); render(); }
+  if (e.target.id === "all") { rows().forEach(p => e.target.checked ? sel.add(p.cid) : sel.delete(p.cid)); render(); }
+});
+render();
+</script>

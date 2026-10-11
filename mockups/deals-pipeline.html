@@ -101,6 +101,18 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 
 /* Contact page: three columns like FUB. Left = who they are, center = deal or timeline, right = tasks + deals. */
 .muted { color: var(--muted); }
+.edit-btn { margin-left: auto; border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 12.5px; padding: 0; align-self: flex-start; }
+.ed label { font-size: 12px; color: var(--muted); font-weight: 600; display: flex; flex-direction: column; gap: 3px; }
+.ed input, .ed select, .ed-row2 input { width: 100%; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); font-size: 13px; color: var(--fg); font-weight: 400; }
+.ed-row { display: grid; grid-template-columns: 74px minmax(0, 1fr) 22px; gap: 5px; align-items: center; }
+.ed-row2 { display: flex; gap: 6px; }
+.ed-row2 input { flex: 1; min-width: 0; }
+.rm { border: 0; background: none; color: var(--muted); font-size: 16px; padding: 0; }
+.addlink { border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 12.5px; padding: 0; text-align: left; align-self: flex-start; }
+.ed-foot { display: flex; justify-content: flex-end; gap: 6px; }
+.tagchip { display: inline-flex; align-items: center; }
+.tagchip button { border: 0; background: none; color: inherit; padding: 0 0 0 5px; font-size: 13px; line-height: 1; }
+.tagchip button:hover { color: var(--bad); }
 .linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; text-decoration: underline; font-size: inherit; }
 .sm { font-size: 12.5px; }
 .od { color: var(--bad); font-size: 12.5px; } .td { color: var(--accent); font-size: 12.5px; }
@@ -262,12 +274,7 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
   </span>
 </div>
 
-<header class="topnav">
-  <div class="brand">Petty Homes <span>HQ</span></div>
-  <nav aria-label="Main">
-    <a href="#" title="Not mocked yet">People</a><a href="deals.html" class="on">Deals</a><a href="tasks.html">Tasks</a><a href="#" title="Not mocked yet">Messages</a><a href="#" title="Not mocked yet">Admin</a>
-  </nav>
-</header>
+<header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html" class="on">Deals</a><a href="tasks.html">Tasks</a><a href="messages.html">Messages</a><a href="admin.html">Admin</a></nav></header>
 
 <main class="wrap" id="app"></main>
 <div id="toast" class="toast" hidden></div>
@@ -517,7 +524,6 @@ const CONTACTS = {
     emails: [["Jordan", "jordan.calloway@example.com"], ["Priya", "priya.calloway@example.com"]],
     address: "2201 Lyndale Ave S #407, Minneapolis, MN 55405",
     household: [["Jordan", "Mar 4"], ["Priya", "Jul 19"], ["Mila (daughter)", "Nov 2"]],
-    background: "First-time buyers in 2019. Moving up for more space and a yard for Mila. Both work from home two days a week.",
     tasks: [
       { t: "Send school district info for Upton Ave", due: "2026-10-13", who: "LP", s: "open" },
       { t: "Ask about storage unit timing", due: "2026-10-20", who: "AS", s: "open" },
@@ -536,7 +542,6 @@ const CONTACTS = {
     tags: ["Past Client", "Mailers", "Christmas Cards", "Email Newsletter", "2026 RE Health Check Needed"],
     phones: [["Mobile", "(651) 555-0172"]], emails: [["", "kate.murphy@example.com"]], address: "1789 Juliet Ave, St. Paul, MN 55105",
     household: [["Kate", "Jan 22"], ["Homeiversary", "Jun 18 (2021)"]],
-    background: "Bought on Juliet Ave in 2021. Teacher at Highland Park. Thinking about downsizing in a couple of years.",
     tasks: [{ t: "Call Kate about spring listing timing", due: "2026-10-12", who: "LP", s: "open" }, { t: "Send homeiversary card", due: "2027-06-11", who: "AS", s: "open" }],
     history: [
       ["2026-09-30", "email", "Gmail · Batch email: Timberwolves season tickets are back!", "AS"],
@@ -549,8 +554,27 @@ const CONTACTS = {
   },
 };
 const cidOf = dl => dl.cid || "d" + dl.id;
+// People without deals (matches the People mockup): [name, stage, follow, source, tags, phone, days since last touch]
+const EXTRA = {
+  x1: ["Marcus & Elle Brandvold", "90 Day Sphere", 90, "Sphere", ["Past Client", "Christmas Cards", "Mailers"], "(952) 555-0181", 98],
+  x2: ["Rita Okonkwo", "7 Day Sphere", 7, "Sphere Referral", ["A Lead"], "(612) 555-0182", 9],
+  x3: ["Tom Lindgren", "180 Day Sphere", 180, "Sphere", ["Past Client", "Email Newsletter"], "(763) 555-0183", 40],
+  x4: ["Sarah Beckett", "Realtor", null, "Industry", ["Realtors"], "(612) 555-0184", 120],
+  x5: ["Dana Kim", "Industry Partners", null, "Sphere", ["Lender"], "(612) 555-0185", 3],
+  x6: ["Jake & Mara Holm", "30 Day Sphere", 30, "Website", ["Past Client", "Mailers"], "(651) 555-0186", 35],
+  x7: ["Lucy Tran", "Lead", null, "Website", ["Buyer", "Email Newsletter"], "(612) 555-0187", 2],
+  x8: ["Gary Pfeiffer", "Passive Marketing", null, "Zillow Preferred", ["Email Newsletter"], "(952) 555-0188", 210],
+  x9: ["Nina Sorensen", "60 Day Sphere", 60, "Sphere", ["Past Client", "Christmas Cards"], "(612) 555-0189", 61],
+  x10: ["Chris Albrecht", "90 Day Sphere", 90, "Sphere Referral", ["Investor"], "(651) 555-0190", 45],
+};
 function contact(cid) {
   if (CONTACTS[cid]) return CONTACTS[cid];
+  if (EXTRA[cid]) {
+    const [name, stage, follow, source, tags, phone, last] = EXTRA[cid];
+    const f = name.split(/[ &]/)[0].toLowerCase(), l = name.split(" ").pop().toLowerCase();
+    return CONTACTS[cid] = { name, stage, follow, source, referred: "", mailing: name, tags: [...tags], phones: [["Mobile", phone]], emails: [["", `${f}.${l}@example.com`]],
+      address: "Twin Cities, MN", household: [], tasks: [], history: [[iso(add(TODAY, -last)), "call", "Caught up. Nothing new on their end.", "LP"], [iso(add(TODAY, -last - 30)), "email", "Gmail · Minnesota Market Update", "LP"]] };
+  }
   const dl = deals.find(x => cidOf(x) === cid);
   const first = dl.name.split(/[ &]/)[0].toLowerCase(), last = dl.name.split(" ").pop().toLowerCase();
   const closed = dl.stage === "Closed";
@@ -558,7 +582,7 @@ function contact(cid) {
     name: dl.name, stage: closed ? "30 Day Sphere" : "Lead", follow: closed ? 30 : null, source: dl.line.startsWith("Source: ") ? dl.line.slice(8) : "Sphere",
     referred: "", mailing: dl.name, tags: [dl.side === "buyer" ? "Buyer" : "Seller"].concat(closed ? ["Past Client", "Email Newsletter", "Mailers"] : ["Email Newsletter"]),
     phones: [["Mobile", "(612) 555-01" + String(dl.id).padStart(2, "0")]], emails: [["", `${first}.${last}@example.com`]],
-    address: dl.side === "seller" && dl.price ? dl.line + ", MN" : "Twin Cities, MN", household: [], background: "",
+    address: dl.side === "seller" && dl.price ? dl.line + ", MN" : "Twin Cities, MN", household: [],
     tasks: [], history: closed ? [
       [iso(add(d(dl.closed), 7)), "text", "How's the new place? Let us know if you need any vendor recs.", "LP"],
       [iso(add(d(dl.closed), 1)), "email", "Gmail · Congrats on closing! A few things for your first week", "AS"],
@@ -587,33 +611,7 @@ function renderContact() {
   app.innerHTML = `
     <button class="back" data-back="1">← ${side === "buyer" ? "Buyers" : "Sellers"} pipeline</button>
     <div class="c3">
-      <aside class="cleft">
-        <div class="card-s">
-          <div class="who-h"><span class="avatar">${esc(initials(c.name))}</span><div><h1>${esc(c.name)}</h1><div class="muted sm">${ago === null ? "No contact yet" : `Last contact ${ago === 0 ? "today" : ago + " days ago"}`}</div></div></div>
-          <ul class="contact-l">
-            ${c.phones.map(([l, v]) => `<li><span class="ic">☎</span><span><span class="lk">${v}</span> <span class="muted sm">${esc(l)}</span></span></li>`).join("")}
-            ${c.emails.map(([l, v]) => `<li><span class="ic">✉</span><span><span class="lk">${v}</span> <span class="muted sm">${esc(l)}</span></span></li>`).join("")}
-            <li><span class="ic">⌂</span><span>${esc(c.address)}</span></li>
-          </ul>
-        </div>
-        <div class="card-s">
-          <h3>Details</h3>
-          <dl class="kv">
-            <dt>Stage</dt><dd>${esc(stage)}${stage === "Under Contract" ? ` <span class="muted sm">(from deal)</span>` : ""}</dd>
-            <dt>Follow up</dt><dd>${c.follow ? `Every ${c.follow} days${touchDue ? ` <span class="due-chip">Due now</span>` : ""}` : `<span class="muted">Not set</span>`}</dd>
-            <dt>Assigned to</dt><dd>Luke Pettersen</dd>
-            <dt>Source</dt><dd>${esc(c.source)}</dd>
-            ${c.referred ? `<dt>Referred by</dt><dd><span class="lk">${esc(c.referred)}</span></dd>` : ""}
-            <dt>Mailing name</dt><dd>${esc(c.mailing)}</dd>
-          </dl>
-          <div class="tags">${c.tags.map(t => `<span class="tagchip">${esc(t)}</span>`).join("")}<button class="tag-add" data-toast="Add a tag" aria-label="Add tag">+</button></div>
-        </div>
-        <div class="card-s">
-          <h3>Household &amp; dates</h3>
-          ${c.household.length ? `<dl class="kv">${c.household.map(([n, b]) => `<dt>${esc(n)}</dt><dd>${esc(b)}</dd>`).join("")}</dl>` : `<p class="muted sm">No birthdays added.</p>`}
-        </div>
-        <div class="card-s"><h3>Background</h3>${c.background ? `<p class="sm">${esc(c.background)}</p>` : `<p class="muted sm">Add background</p>`}</div>
-      </aside>
+      <aside class="cleft">${leftHtml(c, stage, ago, touchDue)}</aside>
 
       <section class="ccenter">
         <div class="ctabs" role="tablist">
@@ -690,10 +688,10 @@ function timelinePane(c, myDeals) {
   const count = k => items.filter(F[k]).length;
   return `<div class="pane">
     <div class="composer">
-      <div class="comp-tabs">${[["note", "Note"], ["text", "Text"], ["call", "Log call"]].map(([k, l]) => `<button data-comp="${k}" aria-pressed="${composer === k}">${l}</button>`).join("")}</div>
+      <div class="comp-tabs">${[["note", "Note"], ["text", "Send text"], ["logtext", "Log text"], ["call", "Log call"]].map(([k, l]) => `<button data-comp="${k}" aria-pressed="${composer === k}">${l}</button>`).join("")}</div>
       ${composer === "call" ? `<div class="comp-row"><select id="call-outcome" aria-label="Call outcome"><option>Talked</option><option>Left voicemail</option><option>No answer</option></select></div>` : ""}
-      <textarea id="comp-text" rows="3" placeholder="${composer === "note" ? "Add a note. Type @alyssa to notify." : composer === "text" ? "Text " + esc(c.phones[0][1]) + " from your business number" : "What did you talk about?"}"></textarea>
-      <div class="comp-foot"><span class="muted sm">${composer === "text" ? "Replies show up in Messages and here." : "Email stays in Gmail. Sent and received emails show up here automatically."}</span><button class="btn primary" data-save="1">${composer === "note" ? "Save note" : composer === "text" ? "Send text" : "Log call"}</button></div>
+      <textarea id="comp-text" rows="3" placeholder="${composer === "note" ? "Add a note. Type @alyssa to notify." : composer === "text" ? "Text " + esc((c.phones[0] || ["", "them"])[1]) + " from your business number" : composer === "logtext" ? "What did you text them? For texts sent from your own phone." : "What did you talk about?"}"></textarea>
+      <div class="comp-foot"><span class="muted sm">${composer === "text" ? "Replies show up in Messages and here." : composer === "logtext" ? "Records the text here without sending anything." : "Email stays in Gmail. Sent and received emails show up here automatically."}</span><button class="btn primary" data-save="1">${composer === "note" ? "Save note" : composer === "text" ? "Send text" : composer === "logtext" ? "Log text" : "Log call"}</button></div>
     </div>
     <div class="tl-filters">${[["all", "All"], ["note", "Notes"], ["text", "Texts"], ["call", "Calls"], ["email", "Emails"], ["deal", "Deal activity"]].map(([k, l]) => `<button data-tlf="${k}" aria-pressed="${tlFilter === k}">${l} <span>${count(k)}</span></button>`).join("")}</div>
     ${list.length ? `<ol class="tl">${list.map(i => `<li><span class="tk ${i.k}">${KIND[i.k]}</span><div><div>${esc(i.txt)}</div><div class="muted sm">${fmt(d(i.dt))}${i.who ? " · " + WHO[i.who] : ""}</div></div></li>`).join("")}</ol>` : `<p class="empty">Nothing here yet.</p>`}
@@ -755,6 +753,119 @@ function rowHtml(dl, t) {
   </div>`;
 }
 
+/* ---------- Editable left column ---------- */
+let editCard = null, draft = null, tagAdding = false;
+const OPTS = {
+  stage: ["Lead", "Realtor", "Industry Partners", "FSBO", "Passive Marketing", "Archive/No Direct Contact", "Petty Homes Admin", "180 Day Sphere", "90 Day Sphere", "60 Day Sphere", "30 Day Sphere", "7 Day Sphere", "Closed", "Trash"],
+  follow: ["Not set", "Every 7 days", "Every 30 days", "Every 60 days", "Every 90 days", "Every 180 days"],
+  source: ["Sphere", "Sphere Referral", "Website", "AJ Gimme Lead", "Stacie Rihl", "Zillow Preferred"],
+  assigned: ["Luke Pettersen", "Alyssa Chakiton"],
+};
+const ALL_TAGS = ["A Lead", "B Lead", "C Lead", "D Lead", "Buyer", "Seller", "Past Client", "Email Newsletter", "Mailers", "Christmas Cards", "Petty Homes Event List", "Real Estate Health Check", "2026 RE Health Check Needed", "Google Review Sent", "Investor", "No Bday Needed", "Timberwolves Tickets 2026-2027 NOT RESPONDED"];
+const followTxt = n => n ? `Every ${n} days` : "Not set";
+
+function leftHtml(c, stage, ago, touchDue) { return infoCard(c, ago) + detailsCard(c, stage, touchDue) + tagsCard(c) + householdCard(c); }
+const head = (title, key) => `<h3>${title}${editCard === key ? "" : `<button class="edit-btn" data-editcard="${key}">Edit</button>`}</h3>`;
+const foot = key => `<div class="ed-foot"><button class="btn" data-cancelcard="1">Cancel</button><button class="btn primary" data-savecard="${key}">Save</button></div>`;
+const listRows = (arr, kind, ph) => arr.map(([l, v], i) => `<div class="ed-row"><input class="lbl" data-${kind}l="${i}" value="${esc(l)}" placeholder="Label" aria-label="Label"><input data-${kind}v="${i}" value="${esc(v)}" placeholder="${ph}" aria-label="${ph}"><button class="rm" data-rm="${kind}:${i}" aria-label="Remove">×</button></div>`).join("");
+
+function infoCard(c, ago) {
+  if (editCard === "info") {
+    return `<div class="card-s ed">${head("Contact info", "info")}
+      <label>Name<input data-f="name" value="${esc(draft.name)}"></label>
+      <label>Phones</label>${listRows(draft.phones, "p", "Phone")}<button class="addlink" data-addrow="p">+ Add phone</button>
+      <label>Emails</label>${listRows(draft.emails, "e", "Email")}<button class="addlink" data-addrow="e">+ Add email</button>
+      <label>Address<input data-f="address" value="${esc(draft.address)}"></label>
+      ${foot("info")}</div>`;
+  }
+  return `<div class="card-s">
+    <div class="who-h"><span class="avatar">${esc(initials(c.name))}</span><div style="flex:1;min-width:0"><h1>${esc(c.name)}</h1><div class="muted sm">${ago === null ? "No contact yet" : `Last contact ${ago === 0 ? "today" : ago + " days ago"}`}</div></div><button class="edit-btn" data-editcard="info">Edit</button></div>
+    <ul class="contact-l">
+      ${c.phones.map(([l, v]) => `<li><span class="ic">☎</span><span><span class="lk">${esc(v)}</span> <span class="muted sm">${esc(l)}</span></span></li>`).join("")}
+      ${c.emails.map(([l, v]) => `<li><span class="ic">✉</span><span><span class="lk">${esc(v)}</span> <span class="muted sm">${esc(l)}</span></span></li>`).join("")}
+      <li><span class="ic">⌂</span><span>${esc(c.address)}</span></li>
+    </ul></div>`;
+}
+
+function pick(k, cur) {
+  if (draft.newMode[k]) return `<input data-new="${k}" placeholder="New ${k === "follow" ? "frequency, e.g. Every 45 days" : k}" value="${esc(draft["new_" + k] || "")}">`;
+  return `<select data-f="${k}">${OPTS[k].map(o => `<option ${o === cur ? "selected" : ""}>${esc(o)}</option>`).join("")}<option value="__new">+ New ${k === "follow" ? "frequency" : k}…</option></select>`;
+}
+
+function detailsCard(c, stage, touchDue) {
+  if (editCard === "details") {
+    return `<div class="card-s ed">${head("Details", "details")}
+      <label>Stage${pick("stage", draft.stage)}</label>
+      <label>Follow up${pick("follow", typeof draft.follow === "string" ? draft.follow : followTxt(draft.follow))}</label>
+      <label>Assigned to${pick("assigned", draft.assigned)}</label>
+      <label>Source${pick("source", draft.source)}</label>
+      <label>Referred by<input data-f="referred" value="${esc(draft.referred)}" placeholder="Search people"></label>
+      <label>Mailing name<input data-f="mailing" value="${esc(draft.mailing)}"></label>
+      <p class="muted sm">Stage shows "Under Contract" automatically while a deal is under contract.</p>
+      ${foot("details")}</div>`;
+  }
+  return `<div class="card-s">${head("Details", "details")}
+    <dl class="kv">
+      <dt>Stage</dt><dd>${esc(stage)}${stage === "Under Contract" ? ` <span class="muted sm">(from deal)</span>` : ""}</dd>
+      <dt>Follow up</dt><dd>${c.follow ? `${followTxt(c.follow)}${touchDue ? ` <span class="due-chip">Due now</span>` : ""}` : `<span class="muted">Not set</span>`}</dd>
+      <dt>Assigned to</dt><dd>${esc(c.assigned || "Luke Pettersen")}</dd>
+      <dt>Source</dt><dd>${esc(c.source)}</dd>
+      ${c.referred ? `<dt>Referred by</dt><dd><span class="lk">${esc(c.referred)}</span></dd>` : ""}
+      <dt>Mailing name</dt><dd>${esc(c.mailing)}</dd>
+    </dl></div>`;
+}
+
+function tagsCard(c) {
+  return `<div class="card-s"><h3>Tags</h3>
+    <div class="tags">${c.tags.map((t, i) => `<span class="tagchip">${esc(t)}<button data-rmtag="${i}" aria-label="Remove ${esc(t)}">×</button></span>`).join("")}
+    ${tagAdding ? "" : `<button class="tag-add" data-tagadd="1" aria-label="Add tag">+</button>`}</div>
+    ${tagAdding ? `<div class="ed-row2"><input id="tag-in" list="tag-list" placeholder="Type a tag, new or existing" aria-label="Tag"><button class="btn primary" data-tagsave="1">Add</button><button class="btn" data-tagcancel="1">Cancel</button></div>
+      <datalist id="tag-list">${ALL_TAGS.filter(t => !c.tags.includes(t)).map(t => `<option value="${esc(t)}">`).join("")}</datalist>` : ""}
+  </div>`;
+}
+
+function householdCard(c) {
+  if (editCard === "household") {
+    return `<div class="card-s ed">${head("Household &amp; dates", "household")}
+      ${listRows(draft.household, "h", "Date, e.g. Mar 4")}<button class="addlink" data-addrow="h">+ Add person or date</button>
+      ${foot("household")}</div>`;
+  }
+  return `<div class="card-s">${head("Household &amp; dates", "household")}
+    ${c.household.length ? `<dl class="kv">${c.household.map(([n, b]) => `<dt>${esc(n)}</dt><dd>${esc(b)}</dd>`).join("")}</dl>` : `<p class="muted sm">No birthdays or dates yet.</p>`}</div>`;
+}
+
+function collect() {
+  if (!draft) return;
+  const q = s => [...document.querySelectorAll(s)];
+  q("[data-f]").forEach(i => { if (i.value !== "__new") draft[i.dataset.f] = i.value; });
+  [["p", "phones"], ["e", "emails"], ["h", "household"]].forEach(([k, f]) => {
+    q(`[data-${k}l]`).forEach(i => draft[f][+i.getAttribute(`data-${k}l`)][0] = i.value);
+    q(`[data-${k}v]`).forEach(i => draft[f][+i.getAttribute(`data-${k}v`)][1] = i.value);
+  });
+  q("[data-new]").forEach(i => draft["new_" + i.dataset.new] = i.value);
+}
+
+function saveCard(key) {
+  collect();
+  const c = contact(openContact);
+  if (key === "info") {
+    c.name = draft.name.trim() || c.name; c.address = draft.address;
+    c.phones = draft.phones.filter(r => r[1].trim()); c.emails = draft.emails.filter(r => r[1].trim());
+  }
+  if (key === "details") {
+    ["stage", "follow", "assigned", "source"].forEach(k => {
+      if (draft.newMode[k] && (draft["new_" + k] || "").trim()) { const v = draft["new_" + k].trim(); if (!OPTS[k].includes(v)) OPTS[k].push(v); draft[k] = v; }
+    });
+    c.stage = draft.stage; c.assigned = draft.assigned; c.source = draft.source; c.referred = draft.referred; c.mailing = draft.mailing;
+    const f = typeof draft.follow === "string" ? draft.follow : followTxt(draft.follow);
+    const n = f.match(/\d+/); c.follow = n ? +n[0] : null;
+  }
+  if (key === "household") c.household = draft.household.filter(r => r[0].trim() || r[1].trim());
+  editCard = null; draft = null;
+  toast("Saved.");
+  render();
+}
+
 /* ---------- Events ---------- */
 function render() { openContact ? renderContact() : renderBoard(); }
 let tt;
@@ -762,7 +873,7 @@ function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; 
 
 function openCard(dealId) {
   const dl = deals.find(x => x.id === dealId);
-  openContact = cidOf(dl); side = dl.side; editing = null; openMenu = null; tlFilter = "all";
+  openContact = cidOf(dl); side = dl.side; editing = null; editCard = null; draft = null; tagAdding = false; openMenu = null; tlFilter = "all";
   ctab[openContact] = isActive(dl) ? "deal-" + dl.id : "timeline";
   render(); window.scrollTo(0, 0);
 }
@@ -791,6 +902,15 @@ document.addEventListener("click", e => {
     return;
   }
   if (b.dataset.deal) { openCard(+b.dataset.deal); return; }
+  if (b.dataset.editcard) { const c = contact(openContact); editCard = b.dataset.editcard; draft = JSON.parse(JSON.stringify(c)); draft.assigned = draft.assigned || "Luke Pettersen"; draft.newMode = {}; render(); return; }
+  if (b.dataset.cancelcard) { editCard = null; draft = null; render(); return; }
+  if (b.dataset.savecard) { saveCard(b.dataset.savecard); return; }
+  if (b.dataset.addrow) { collect(); const f = { p: "phones", e: "emails", h: "household" }[b.dataset.addrow]; draft[f].push([b.dataset.addrow === "p" ? "Mobile" : "", ""]); render(); return; }
+  if (b.dataset.rm) { collect(); const [k, i] = b.dataset.rm.split(":"); draft[{ p: "phones", e: "emails", h: "household" }[k]].splice(+i, 1); render(); return; }
+  if (b.dataset.rmtag) { const c = contact(openContact); const t = c.tags.splice(+b.dataset.rmtag, 1)[0]; toast(`Removed tag "${t}".`); render(); return; }
+  if (b.dataset.tagadd) { tagAdding = true; render(); const i = el("tag-in"); if (i) i.focus(); return; }
+  if (b.dataset.tagcancel) { tagAdding = false; render(); return; }
+  if (b.dataset.tagsave) { addTag(); return; }
   if (b.dataset.opencontact) { openContact = b.dataset.opencontact; tlFilter = "all"; editing = null; render(); window.scrollTo(0, 0); return; }
   if (b.dataset.back) { openContact = null; editing = null; try { history.replaceState(null, "", location.pathname); } catch (_) {} render(); return; }
   if (b.dataset.ctab) { ctab[openContact] = b.dataset.ctab; editing = null; render(); return; }
@@ -800,10 +920,10 @@ document.addEventListener("click", e => {
     const ta = el("comp-text"), txt = ta && ta.value.trim();
     if (!txt) { toast("Type something first."); return; }
     const c = contact(openContact);
-    const kind = composer === "call" ? "call" : composer;
-    const out = composer === "call" ? el("call-outcome").value + ": " : "";
+    const kind = composer === "call" ? "call" : composer === "logtext" ? "text" : composer;
+    const out = composer === "call" ? el("call-outcome").value + ": " : composer === "logtext" ? "Logged: " : "";
     c.history.unshift([iso(TODAY), kind, out + txt, "LP"]);
-    toast(composer === "note" ? "Note saved." : composer === "text" ? "Text sent." : "Call logged.");
+    toast(composer === "note" ? "Note saved." : composer === "text" ? "Text sent." : composer === "logtext" ? "Text logged." : "Call logged.");
     render(); return;
   }
   if (b.dataset.ptask) { const t = contact(openContact).tasks[+b.dataset.ptask]; t.s = t.s === "open" ? "done" : "open"; render(); return; }
@@ -831,6 +951,7 @@ document.addEventListener("click", e => {
 
 document.addEventListener("change", e => {
   const ds = e.target.dataset;
+  if (ds.f && e.target.value === "__new") { collect(); draft.newMode[ds.f] = true; render(); const i = document.querySelector(`[data-new="${ds.f}"]`); if (i) i.focus(); return; }
   if (ds.rename) { const v = e.target.value.trim(); if (v) LABEL[side][ds.rename] = v; render(); return; }
   if (ds.msdate && e.target.value) {
     const [id, k] = ds.msdate.split(":"), dl = deals.find(x => x.id === +id);
@@ -843,10 +964,19 @@ document.addEventListener("change", e => {
   if (ds.msstatus) { const [id, k] = ds.msstatus.split(":"); deals.find(x => x.id === +id).msStatus[k] = e.target.value; render(); }
 });
 
+function addTag() {
+  const i = el("tag-in"), v = i && i.value.trim(); if (!v) return;
+  const c = contact(openContact);
+  if (!c.tags.includes(v)) c.tags.push(v);
+  const isNew = !ALL_TAGS.includes(v); if (isNew) ALL_TAGS.push(v);
+  tagAdding = false; toast(isNew ? `Created new tag "${v}".` : `Tagged "${v}".`); render();
+}
+document.addEventListener("keydown", e => { if (e.target.id === "tag-in" && e.key === "Enter") { e.preventDefault(); addTag(); } if (e.target.id === "tag-in" && e.key === "Escape") { tagAdding = false; render(); } });
+
 // Deep link from the Tasks mockup: deals.html#contact-calloway
 function fromHash() {
   const m = location.hash.match(/^#contact-([\w-]+)$/);
-  if (m && (CONTACTS[m[1]] || deals.some(x => cidOf(x) === m[1]))) {
+  if (m && (CONTACTS[m[1]] || EXTRA[m[1]] || deals.some(x => cidOf(x) === m[1]))) {
     openContact = m[1]; tlFilter = "all";
     const first = deals.find(x => cidOf(x) === m[1] && isActive(x));
     if (first) side = first.side;

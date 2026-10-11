@@ -1,0 +1,292 @@
+<title>Admin Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #f4f6f7; --surface: #ffffff; --sunken: #eaeef0; --line: #d8dee2; --fg: #16222a; --muted: #5b6b75;
+  --accent: #1d6a85; --accent-soft: #dcecf2; --ok: #2f7a4b; --ok-soft: #e0f0e5; --warn: #9a6400; --warn-soft: #fbefd6;
+  --bad: #b3372b; --bad-soft: #f9e1de; --waive: #6b6480; --waive-soft: #ebe8f2;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45; --fg: #e4ecf0; --muted: #93a5b0;
+    --accent: #5fb3d1; --accent-soft: #173a48; --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+    --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45; --fg: #e4ecf0; --muted: #93a5b0;
+  --accent: #5fb3d1; --accent-soft: #173a48; --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+  --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+button, select, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.date, .num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.mock-bar { background: var(--accent-soft); padding-block: 7px; padding-inline: 16px; font-size: 13px; }
+.topnav { background: var(--surface); border-bottom: 1px solid var(--line); padding-inline: 16px; display: flex; align-items: center; gap: 24px; overflow-x: auto; }
+.brand { font-family: var(--font-display); font-weight: 700; font-size: 17px; padding-block: 12px; white-space: nowrap; }
+.brand span { color: var(--accent); }
+.topnav nav { display: flex; gap: 4px; }
+.topnav nav a { color: var(--muted); text-decoration: none; padding: 14px 10px; border-bottom: 2px solid transparent; white-space: nowrap; }
+.topnav nav a.on { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 2.6vw, 25px); line-height: 1.15; margin: 0; }
+.muted { color: var(--muted); } .sm { font-size: 12.5px; }
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 13px; text-decoration: none; display: inline-block; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.input { padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); width: 100%; }
+.tagchip { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; background: var(--sunken); color: var(--muted); white-space: nowrap; }
+.pill { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.side-nav { display: flex; flex-direction: column; gap: 12px; }
+.side-nav h4 { margin: 0 0 4px; padding: 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+.side-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.nav-i { width: 100%; border: 0; background: none; text-align: left; padding: 7px 10px; border-radius: 6px; display: flex; justify-content: space-between; gap: 8px; }
+.nav-i:hover { background: var(--sunken); }
+.nav-i[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.nav-i .c { font-size: 12px; color: var(--muted); }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); z-index: 40; }
+@media (max-width: 760px) {
+  .side-nav { flex-direction: row; overflow-x: auto; }
+  .side-nav h4 { display: none; }
+  .side-nav ul { flex-direction: row; gap: 6px; }
+  .nav-i { white-space: nowrap; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; }
+}
+</style>
+<style>
+/* Layout: settings sections on the left, one section at a time on the right. */
+.shell { max-width: 1300px; margin: 0 auto; padding-inline: 16px; padding-block: 14px 40px; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 760px) { .shell { grid-template-columns: minmax(0, 1fr); } }
+.main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.main > p { margin: 0; color: var(--muted); }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.box > h2 { margin: 0; padding: 12px 14px 6px; font-size: 14.5px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; padding: 8px 12px; white-space: nowrap; }
+td { padding: 7px 12px; border-top: 1px solid var(--line); vertical-align: middle; }
+td input:not([type=checkbox]), td select { padding: 4px 7px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); font-size: 13px; width: 100%; min-width: 70px; }
+td input.n { width: 60px; min-width: 60px; }
+.timing { display: flex; gap: 4px; align-items: center; min-width: 250px; }
+.rm { border: 0; background: none; color: var(--muted); font-size: 16px; padding: 0 4px; }
+.rm:hover { color: var(--bad); }
+.addrow { padding: 10px 14px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; border-top: 1px solid var(--line); }
+.phase-h td { background: var(--sunken); font-weight: 700; font-size: 12.5px; }
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.toolbar select { padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.icard { padding: 14px; display: flex; flex-direction: column; gap: 6px; }
+.icard h3 { margin: 0; font-size: 14px; display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.st { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+.st.on { background: var(--ok-soft); color: var(--ok); } .st.off { background: var(--sunken); color: var(--muted); }
+.icard p { margin: 0; font-size: 13px; color: var(--muted); }
+.code { font-family: var(--font-data); font-size: 12px; background: var(--sunken); padding: 6px 8px; border-radius: 5px; overflow-wrap: anywhere; color: var(--fg); }
+.tpl { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 0; }
+@media (max-width: 760px) { .tpl { grid-template-columns: minmax(0, 1fr); } }
+.tpl-list { border-right: 1px solid var(--line); max-height: 520px; overflow-y: auto; }
+.tpl-i { width: 100%; border: 0; border-top: 1px solid var(--line); background: none; text-align: left; padding: 8px 12px; display: flex; flex-direction: column; gap: 1px; font-size: 13px; }
+.tpl-i[aria-current="true"] { background: var(--accent-soft); }
+.tpl-i small { color: var(--muted); font-size: 11.5px; }
+.tpl-ed { padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.tpl-ed label { font-size: 12px; color: var(--muted); font-weight: 600; display: flex; flex-direction: column; gap: 3px; }
+.tpl-ed textarea { min-height: 160px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); resize: vertical; }
+.merge { display: flex; flex-wrap: wrap; gap: 4px; }
+.merge button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; font-size: 11.5px; padding: 2px 8px; font-family: var(--font-data); }
+.perm td:not(:first-child), .perm th:not(:first-child) { text-align: center; }
+</style>
+<div class="mock-bar"><strong>Mockup</strong> · fake data. Changes work on the page but aren't saved.</div>
+<header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html">Deals</a><a href="tasks.html">Tasks</a><a href="messages.html">Messages</a><a href="admin.html" class="on">Admin</a></nav></header>
+<div class="shell">
+  <aside class="side-nav" id="side"></aside>
+  <main class="main" id="main"></main>
+</div>
+<div id="toast" class="toast" hidden></div>
+<script>
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const el = id => document.getElementById(id);
+const SECTIONS = [
+  ["Team", [["users", "Users & roles"]]],
+  ["Deals", [["pipelines", "Pipelines & stages"], ["checklists", "Checklist templates"]]],
+  ["People", [["fields", "Custom fields"], ["tags", "Tags"], ["lists", "Stages, sources & follow-up"]]],
+  ["Messaging", [["templates", "Text & email templates"]]],
+  ["Connections", [["integrations", "Integrations"]]],
+];
+let sec = "checklists";
+
+const state = {
+  users: [["Luke Pettersen", "luke@pettyhomes.com", "Admin", "Active"], ["Alyssa Chakiton", "assistant@pettyhomes.com", "Assistant", "Active"]],
+  roles: ["Admin", "Assistant"],
+  perms: [["See commissions", true, false], ["Delete people and deals", true, false], ["Manage users and roles", true, false], ["Edit checklist templates", true, true], ["Edit text and email templates", true, true], ["Export data", true, false], ["Send texts", true, true]],
+  pipes: { Buyer: ["Lead", "Consult", "Rep Signed / Searching", "Offer Out", "Under Contract", "Closed"], Seller: ["Lead", "Consult", "Listing Signed / Prep", "Coming Soon", "Active", "Under Contract", "Closed"] },
+  tpl: "Buyer · Under Contract",
+  checklists: {
+    "Buyer · Under Contract": [
+      ["Under Contract", "Purchase agreement accepted email", "Final Acceptance", 0, "Alyssa", "Email", "Always", ""],
+      ["Under Contract", "Lender intro email", "Final Acceptance", 0, "Luke", "Email", "Always", ""],
+      ["Under Contract", "Request earnest money", "Final Acceptance", 1, "Alyssa", "Text", "Always", ""],
+      ["Under Contract", "Lead-paint pamphlet email", "Final Acceptance", 1, "Alyssa", "Email", "Built before 1978", ""],
+      ["Inspection", "Schedule inspection", "Final Acceptance", 1, "Luke", "Task", "Always", ""],
+      ["Inspection", "Review inspection report with clients", "Inspection", -2, "Luke", "Task", "Always", ""],
+      ["Inspection", "Signed amendment to lender + title", "Inspection", 0, "Alyssa", "Email", "Always", ""],
+      ["Financing", "Remind lender about written statement", "Written Statement", -2, "Alyssa", "Email", "Always", ""],
+      ["HOA", "Send HOA docs to clients", "Final Acceptance", 4, "Alyssa", "Email", "HOA property", ""],
+      ["HOA", "Confirm rescission period ended", "HOA Rescission", 0, "Alyssa", "Task", "HOA property", ""],
+      ["Closing", "Order closing gift", "Closing", -14, "Luke", "Task", "Always", ""],
+      ["Closing", "Final walkthrough", "Closing", -1, "Luke", "Task", "Always", ""],
+      ["Closing", "Closing day", "Closing", 0, "Luke", "Task", "Always", "Moves deal to Closed"],
+      ["Post-Close", "Zillow review request", "Closing", 5, "Alyssa", "Text", "Always", ""],
+    ],
+    "Buyer · Rep Signed / Searching": [
+      ["Rep Signed", "Send buyer rep to sign", "Stage start", 0, "Alyssa", "Task", "Always", ""],
+      ["Rep Signed", "Buyer rep signed + saved", "Stage start", 1, "Alyssa", "Task", "Always", "Moves deal to Rep Signed / Searching"],
+      ["Searching", "Homespotter app + intro text", "Stage start", 2, "Alyssa", "Text", "Always", ""],
+      ["Searching", "Set up home search", "Stage start", 2, "Luke", "Task", "Always", ""],
+    ],
+    "Seller · Listing Signed / Prep": [
+      ["Prep", "Withhold listing in MLS", "Stage start", 0, "Alyssa", "Task", "Always", ""],
+      ["Prep", "Schedule photos", "Stage start", 1, "Alyssa", "Task", "Always", ""],
+      ["Prep", "Drop off lockbox", "Stage start", 2, "Luke", "Task", "Always", ""],
+      ["Prep", "Disclosures + lead paint", "Stage start", 3, "Alyssa", "Task", "Built before 1978", ""],
+      ["Media", "Photos to clients", "Photos taken", 1, "Alyssa", "Email", "Always", ""],
+      ["Media", "Upload to MLS", "Photos taken", 2, "Alyssa", "Task", "Always", "Moves deal to Coming Soon"],
+    ],
+  },
+  fields: [["Mailing name", "Text", "People"], ["Referred by", "Person", "People"], ["Homeiversary", "Date", "People"], ["Preferred contact time", "Dropdown", "People"], ["Pre-approval amount", "Number", "Deals"], ["Lender", "Person", "Deals"], ["New construction", "Checkbox", "Deals"]],
+  tags: [["Past Client", 218], ["Email Newsletter", 436], ["Petty Homes Event List", 284], ["Mailers", 260], ["Christmas Cards", 216], ["Real Estate Health Check", 200], ["Timberwolves Tickets 2026-2027 NOT RESPONDED", 178], ["2026 RE Health Check Needed", 160], ["Google Review Sent", 84], ["Buyer", 58], ["Bounced", 54], ["A Lead", 29], ["B Lead", 8], ["C Lead", 21], ["D Lead", 19], ["Seller", 22], ["Investor", 5]],
+  stages: ["Lead", "Realtor", "Industry Partners", "FSBO", "Passive Marketing", "Archive/No Direct Contact", "Petty Homes Admin", "Closed", "Trash"],
+  sources: ["Sphere", "Sphere Referral", "Website", "AJ Gimme Lead", "Stacie Rihl", "Zillow Preferred"],
+  follow: ["7", "30", "60", "90", "180"],
+  templates: [
+    ["Text", "BPC", "Intro + Homespotter + legal name", "Hi {first}! Great meeting you. Download Homespotter here: {link}. Can you confirm your full legal names for the buyer rep?"],
+    ["Email", "BPC", "Buyer rep breakdown", "Hi {first},\n\nAttached is the buyer representation agreement. Here's a quick breakdown of what it covers…"],
+    ["Email", "BUC", "Purchase agreement accepted", "Hi {first},\n\nCongratulations! Your offer on {address} was accepted. Here are your key dates:\n\nInspection: {inspection_date}\nClosing: {closing_date}"],
+    ["Text", "BUC", "Day-of-inspection", "Hi {first}, the inspection at {address} is today. I'll meet you there!"],
+    ["Text", "BUC", "Earnest money", "Hi {first}, earnest money of {earnest_money} is due by {em_due}. Wiring instructions are in your email."],
+    ["Email", "SPC", "CMA + net sheet", "Hi {first},\n\nAttached is the market analysis and estimated net sheet for {address}."],
+    ["Text", "SUC", "We're pending", "Great news {first}, we're officially pending on {address}! 🎉"],
+    ["Email", "Leads", "Website sign-up welcome", "Hi {first},\n\nThanks for signing up on pettyhomes.com…"],
+  ],
+  tplSel: 2, tplFilter: "All",
+};
+const ANCHORS = ["Final Acceptance", "Inspection", "Written Statement", "HOA Rescission", "Closing", "Stage start", "Photos taken"];
+const CONDS = ["Always", "HOA property", "New construction", "Built before 1978", "FHA / VA loan", "Well / septic", "Referral partner"];
+
+function side() {
+  el("side").innerHTML = SECTIONS.map(([g, items]) => `<div><h4>${g}</h4><ul>${items.map(([k, l]) => `<li><button class="nav-i" data-sec="${k}" aria-current="${sec === k}"><span>${l}</span></button></li>`).join("")}</ul></div>`).join("");
+}
+const V = {
+  users() {
+    return `<h1>Users &amp; roles</h1><p>Roles decide what each person can see and do. Commissions are hidden from anyone without "See commissions".</p>
+    <div class="box"><h2>Users <button class="btn primary" data-invite="1">+ Invite user</button></h2><div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead><tbody>
+      ${state.users.map(([n, e, r, s], i) => `<tr><td><input data-u="${i}:0" value="${esc(n)}"></td><td><input data-u="${i}:1" value="${esc(e)}"></td><td><select data-u="${i}:2">${state.roles.map(x => `<option ${x === r ? "selected" : ""}>${x}</option>`).join("")}</select></td><td><span class="pill" style="${s === "Invited" ? "background:var(--warn-soft);color:var(--warn)" : ""}">${s}</span></td></tr>`).join("")}
+    </tbody></table></div></div>
+    <div class="box"><h2>Role permissions <button class="btn" data-newrole="1">+ New role</button></h2><div class="tbl-wrap"><table class="perm"><thead><tr><th>Permission</th>${state.roles.map(r => `<th>${esc(r)}</th>`).join("")}</tr></thead><tbody>
+      ${state.perms.map((p, i) => `<tr><td>${p[0]}</td>${state.roles.map((r, j) => `<td><input type="checkbox" data-perm="${i}:${j}" ${p[j + 1] ? "checked" : ""} ${j === 0 ? "disabled" : ""} aria-label="${esc(r)}: ${p[0]}"></td>`).join("")}</tr>`).join("")}
+    </tbody></table></div></div>`;
+  },
+  pipelines() {
+    return `<h1>Pipelines &amp; stages</h1><p>The columns on the Deals board. You can also edit these from the board with "Edit stages". Under Contract and Closed can be renamed but not removed.</p>
+    <div class="cards">${Object.entries(state.pipes).map(([p, st]) => `<div class="box"><h2>${p} pipeline</h2><div class="tbl-wrap"><table><tbody>
+      ${st.map((s, i) => `<tr><td class="muted" style="width:28px">${i + 1}</td><td><input data-stage="${p}:${i}" value="${esc(s)}"></td><td style="width:90px;white-space:nowrap"><button class="rm" data-up="${p}:${i}" aria-label="Move up">↑</button><button class="rm" data-down="${p}:${i}" aria-label="Move down">↓</button>${["Under Contract", "Closed"].includes(s) ? "" : `<button class="rm" data-rmstage="${p}:${i}" aria-label="Remove">×</button>`}</td></tr>`).join("")}
+    </tbody></table></div><div class="addrow"><button class="btn" data-addstage="${p}">+ Add stage</button></div></div>`).join("")}</div>`;
+  },
+  checklists() {
+    const rows = state.checklists[state.tpl]; let ph = "";
+    return `<h1>Checklist templates</h1><p>Each stage has a checklist that's added to a deal when it enters that stage. Due dates are counted from a contract date or the day the stage started, so they move when dates change.</p>
+    <div class="toolbar"><select id="tpl-pick" aria-label="Template">${Object.keys(state.checklists).map(k => `<option ${k === state.tpl ? "selected" : ""}>${k}</option>`).join("")}</select><button class="btn" data-toast="Pick a pipeline and stage to start a new checklist">+ New checklist</button><span class="muted sm">${rows.length} steps</span></div>
+    <div class="box"><div class="tbl-wrap"><table style="min-width:980px"><thead><tr><th>Step</th><th>Due</th><th>Assignee</th><th>Type</th><th>Only when</th><th>When done</th><th></th></tr></thead><tbody>
+      ${rows.map((r, i) => { const h = r[0] !== ph ? `<tr class="phase-h"><td colspan="7">${esc(r[0])}</td></tr>` : ""; ph = r[0]; return h + `<tr>
+        <td><input data-c="${i}:1" value="${esc(r[1])}"></td>
+        <td><div class="timing"><input class="n" type="number" data-c="${i}:3" value="${Math.abs(r[3])}" aria-label="Days"><select data-dir="${i}" aria-label="Before or after"><option ${r[3] < 0 ? "selected" : ""}>days before</option><option ${r[3] >= 0 ? "selected" : ""}>days after</option></select><select data-c="${i}:2" aria-label="Anchor">${ANCHORS.map(a => `<option ${a === r[2] ? "selected" : ""}>${a}</option>`).join("")}</select></div></td>
+        <td><select data-c="${i}:4">${["Luke", "Alyssa"].map(a => `<option ${a === r[4] ? "selected" : ""}>${a}</option>`).join("")}</select></td>
+        <td><select data-c="${i}:5">${["Task", "Email", "Text"].map(a => `<option ${a === r[5] ? "selected" : ""}>${a}</option>`).join("")}</select></td>
+        <td><select data-c="${i}:6">${CONDS.map(a => `<option ${a === r[6] ? "selected" : ""}>${a}</option>`).join("")}</select></td>
+        <td class="muted sm">${r[7] ? esc(r[7]) : "—"}</td>
+        <td><button class="rm" data-rmstep="${i}" aria-label="Remove step">×</button></td></tr>`; }).join("")}
+    </tbody></table></div><div class="addrow"><select id="new-phase" aria-label="Phase">${[...new Set(rows.map(r => r[0]))].map(p => `<option>${esc(p)}</option>`).join("")}</select><input class="input" id="new-step" placeholder="New step name" style="max-width:280px"><button class="btn primary" data-addstep="1">+ Add step</button></div></div>`;
+  },
+  fields() {
+    return `<h1>Custom fields</h1><p>Extra fields on people or deals. Built-in fields (name, phones, stage, deal dates) aren't listed here.</p>
+    <div class="box"><div class="tbl-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Shows on</th><th></th></tr></thead><tbody>
+      ${state.fields.map(([n, t, on], i) => `<tr><td><input data-fd="${i}:0" value="${esc(n)}"></td><td><select data-fd="${i}:1">${["Text", "Number", "Date", "Dropdown", "Checkbox", "Person"].map(x => `<option ${x === t ? "selected" : ""}>${x}</option>`).join("")}</select></td><td><select data-fd="${i}:2">${["People", "Deals"].map(x => `<option ${x === on ? "selected" : ""}>${x}</option>`).join("")}</select></td><td><button class="rm" data-rmfield="${i}" aria-label="Remove">×</button></td></tr>`).join("")}
+    </tbody></table></div><div class="addrow"><input class="input" id="nf-name" placeholder="Field name" style="max-width:240px"><select class="input" id="nf-type" style="max-width:140px">${["Text", "Number", "Date", "Dropdown", "Checkbox", "Person"].map(x => `<option>${x}</option>`).join("")}</select><select class="input" id="nf-on" style="max-width:120px"><option>People</option><option>Deals</option></select><button class="btn primary" data-addfield="1">+ Add field</button></div></div>`;
+  },
+  tags() {
+    return `<h1>Tags</h1><p>Rename a tag and it updates everywhere. Removing a tag takes it off everyone who has it.</p>
+    <div class="box"><div class="tbl-wrap"><table><thead><tr><th>Tag</th><th>People</th><th></th></tr></thead><tbody>
+      ${state.tags.map(([t, n], i) => `<tr><td><input data-tag="${i}" value="${esc(t)}"></td><td class="num">${n}</td><td><button class="rm" data-rmtag="${i}" aria-label="Remove">×</button></td></tr>`).join("")}
+    </tbody></table></div><div class="addrow"><input class="input" id="nt" placeholder="New tag" style="max-width:280px"><button class="btn primary" data-addtag="1">+ Add tag</button></div></div>`;
+  },
+  lists() {
+    const blk = (title, key, note, fmt) => `<div class="box"><h2>${title}</h2><p class="muted sm" style="margin:0;padding:0 14px 6px">${note}</p><div class="tbl-wrap"><table><tbody>
+      ${state[key].map((v, i) => `<tr><td>${fmt ? `<span style="display:flex;gap:6px;align-items:center">Every <input class="n" data-li="${key}:${i}" value="${esc(v)}"> days</span>` : `<input data-li="${key}:${i}" value="${esc(v)}">`}</td><td style="width:36px"><button class="rm" data-rmli="${key}:${i}" aria-label="Remove">×</button></td></tr>`).join("")}
+    </tbody></table></div><div class="addrow"><button class="btn" data-addli="${key}">+ Add</button></div></div>`;
+    return `<h1>Stages, sources &amp; follow-up</h1><div class="cards">${blk("Lead stages", "stages", "Where someone is overall. Under Contract and Past Client are set from their deals.")}${blk("Sources", "sources", "Where people came from.")}${blk("Follow-up frequencies", "follow", "Options for how often to touch base. People past due show up in Due for a touch.", true)}</div>`;
+  },
+  templates() {
+    const list = state.templates.map((t, i) => [t, i]).filter(([t]) => state.tplFilter === "All" || t[1] === state.tplFilter || t[0] === state.tplFilter);
+    const t = state.templates[state.tplSel];
+    return `<h1>Text &amp; email templates</h1><p>Used by checklist steps (one-click drafts) and in Messages. Merge fields fill in from the person and deal.</p>
+    <div class="toolbar"><select id="tpl-filter" aria-label="Filter">${["All", "Text", "Email", "BPC", "BUC", "SPC", "SUC", "Leads"].map(f => `<option ${f === state.tplFilter ? "selected" : ""}>${f}</option>`).join("")}</select><button class="btn primary" data-newtpl="1">+ New template</button></div>
+    <div class="box tpl"><div class="tpl-list">${list.map(([x, i]) => `<button class="tpl-i" data-tsel="${i}" aria-current="${i === state.tplSel}">${esc(x[2])}<small>${x[0]} · ${x[1]}</small></button>`).join("")}</div>
+      <div class="tpl-ed"><div style="display:flex;gap:8px;flex-wrap:wrap"><label style="flex:1;min-width:180px">Name<input class="input" data-tf="2" value="${esc(t[2])}"></label><label>Type<select class="input" data-tf="0">${["Text", "Email"].map(x => `<option ${x === t[0] ? "selected" : ""}>${x}</option>`).join("")}</select></label><label>Folder<select class="input" data-tf="1">${["BPC", "BUC", "SPC", "SUC", "Leads"].map(x => `<option ${x === t[1] ? "selected" : ""}>${x}</option>`).join("")}</select></label></div>
+        <label>Message<textarea id="tpl-body" data-tf="3">${esc(t[3])}</textarea></label>
+        <div class="merge">${["{first}", "{address}", "{inspection_date}", "{closing_date}", "{earnest_money}", "{em_due}", "{lender}", "{link}"].map(m => `<button data-merge="${m}">${m}</button>`).join("")}</div>
+        <div style="display:flex;justify-content:flex-end;gap:6px"><button class="btn" data-toast="Used by 2 checklist steps">Where it's used</button><button class="btn primary" data-toast="Saved">Save</button></div></div></div>`;
+  },
+  integrations() {
+    return `<h1>Integrations</h1>
+    <div class="cards">
+      <div class="box icard"><h3>Google Workspace <span class="st on">Connected</span></h3><p>Sign-in, Gmail and Calendar for pettyhomes.com. Emails show on contact timelines; deal deadlines go to Calendar.</p><div class="sm">luke@pettyhomes.com, assistant@pettyhomes.com</div><button class="btn" data-toast="Choose which calendar gets deal deadlines">Calendar settings</button></div>
+      <div class="box icard"><h3>Business texting <span class="st on">Connected</span></h3><p>Texts and missed calls in Messages.</p><div class="sm num">(612) 555-0100 · Twilio</div><button class="btn" data-toast="Set office hours and the missed-call auto-reply">Texting settings</button></div>
+      <div class="box icard"><h3>Website leads <span class="st off">Not connected</span></h3><p>Send WordPress form submissions to HQ. Each one creates a person (source Website) and a follow-up task.</p><div class="code">https://hq.pettyhomes.com/api/leads/wp_7f3a…</div><button class="btn" data-toast="Copied. Paste it into your form plugin's webhook setting.">Copy webhook URL</button></div>
+      <div class="box icard"><h3>Follow Up Boss import <span class="st off">Not started</span></h3><p>Bring over people, notes, tags and templates when you're ready. Nothing moves until you start it.</p><button class="btn" data-toast="Import is planned for after the build is approved">Start import</button></div>
+    </div>`;
+  },
+};
+function render() { side(); el("main").innerHTML = V[sec](); }
+let tt; function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
+const pair = s => s.split(":");
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
+  if (ds.sec) { sec = ds.sec; render(); return; }
+  if (ds.invite) { state.users.push(["New user", "name@pettyhomes.com", "Assistant", "Invited"]); render(); toast("Invite added. They sign in with Google."); return; }
+  if (ds.newrole) { state.roles.push("New role"); state.perms.forEach(p => p.push(false)); render(); toast("Added a role. Rename it in the Users table's role list later."); return; }
+  if (ds.up || ds.down) { const [p, i] = pair(ds.up || ds.down), a = state.pipes[p], j = +i + (ds.up ? -1 : 1); if (j >= 0 && j < a.length) [a[i], a[j]] = [a[j], a[i]]; render(); return; }
+  if (ds.rmstage) { const [p, i] = pair(ds.rmstage); state.pipes[p].splice(+i, 1); render(); return; }
+  if (ds.addstage) { const a = state.pipes[ds.addstage]; a.splice(a.indexOf("Under Contract"), 0, "New stage"); render(); return; }
+  if (ds.rmstep) { state.checklists[state.tpl].splice(+ds.rmstep, 1); render(); return; }
+  if (ds.addstep) { const n = el("new-step").value.trim(); if (!n) { toast("Name the step first."); return; } const ph = el("new-phase").value, rows = state.checklists[state.tpl]; let at = rows.map(r => r[0]).lastIndexOf(ph) + 1; rows.splice(at, 0, [ph, n, rows[at - 1][2], 0, "Alyssa", "Task", "Always", ""]); render(); toast("Step added. New deals get it; open deals can be updated too."); return; }
+  if (ds.rmfield) { state.fields.splice(+ds.rmfield, 1); render(); return; }
+  if (ds.addfield) { const n = el("nf-name").value.trim(); if (!n) return; state.fields.push([n, el("nf-type").value, el("nf-on").value]); render(); return; }
+  if (ds.rmtag) { const t = state.tags.splice(+ds.rmtag, 1)[0]; render(); toast(`Removed "${t[0]}" from ${t[1]} people.`); return; }
+  if (ds.addtag) { const n = el("nt").value.trim(); if (!n) return; state.tags.unshift([n, 0]); render(); return; }
+  if (ds.rmli) { const [k, i] = pair(ds.rmli); state[k].splice(+i, 1); render(); return; }
+  if (ds.addli) { state[ds.addli].push(ds.addli === "follow" ? "45" : "New"); render(); return; }
+  if (ds.tsel) { state.tplSel = +ds.tsel; render(); return; }
+  if (ds.newtpl) { state.templates.unshift(["Text", "Leads", "New template", ""]); state.tplSel = 0; render(); return; }
+  if (ds.merge) { const ta = el("tpl-body"); const p = ta.selectionStart; ta.value = ta.value.slice(0, p) + ds.merge + ta.value.slice(ta.selectionEnd); state.templates[state.tplSel][3] = ta.value; ta.focus(); return; }
+  if (ds.toast) { toast(ds.toast); return; }
+});
+document.addEventListener("change", e => {
+  const t = e.target, ds = t.dataset;
+  if (t.id === "tpl-pick") { state.tpl = t.value; render(); return; }
+  if (t.id === "tpl-filter") { state.tplFilter = t.value; render(); return; }
+  if (ds.u) { const [i, j] = pair(ds.u); state.users[i][j] = t.value; return; }
+  if (ds.perm) { const [i, j] = pair(ds.perm); state.perms[i][+j + 1] = t.checked; return; }
+  if (ds.stage) { const [p, i] = pair(ds.stage); state.pipes[p][i] = t.value; return; }
+  if (ds.c) { const [i, j] = pair(ds.c), r = state.checklists[state.tpl][i]; r[j] = j === "3" ? Math.abs(+t.value) * (r[3] < 0 ? -1 : 1) : t.value; if (j === "3" || j === "2") toast("Open deals using this template will re-date this step."); return; }
+  if (ds.dir) { const r = state.checklists[state.tpl][ds.dir]; r[3] = Math.abs(r[3]) * (t.value === "days before" ? -1 : 1); return; }
+  if (ds.fd) { const [i, j] = pair(ds.fd); state.fields[i][j] = t.value; return; }
+  if (ds.tag) { state.tags[ds.tag][0] = t.value; toast("Renamed everywhere."); return; }
+  if (ds.li) { const [k, i] = pair(ds.li); state[k][i] = t.value; return; }
+  if (ds.tf) { state.templates[state.tplSel][ds.tf] = t.value; if (ds.tf !== "3") render(); return; }
+});
+render();
+</script>
