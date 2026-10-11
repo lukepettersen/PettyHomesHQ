@@ -99,7 +99,35 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 .mini i { display: block; height: 100%; background: var(--ok); }
 .col-foot { font-size: 12px; color: var(--accent); padding: 0 12px 10px; }
 
-/* Deal page */
+/* Contact page */
+.actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.tagchip { font-size: 11.5px; padding: 1px 8px; border-radius: 999px; background: var(--sunken); color: var(--muted); }
+.dpanel.open { border-color: var(--accent); }
+.dp-h { width: 100%; border: 0; background: none; text-align: left; padding: 10px 14px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; align-items: center; }
+.dp-h:hover { background: var(--bg); }
+.dp-l, .dp-r { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; min-width: 0; }
+.dp-t { font-weight: 600; }
+.dp-r .muted { color: var(--muted); font-size: 12.5px; }
+.sidechip { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 2px 7px; border-radius: 4px; }
+.sidechip.buyer { background: var(--accent-soft); color: var(--accent); }
+.sidechip.seller { background: var(--ok-soft); color: var(--ok); }
+.pad { padding: 0 14px 8px; display: flex; flex-direction: column; gap: 8px; }
+.factline { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 0 14px 8px; font-size: 12.5px; }
+.factline em { font-style: normal; color: var(--muted); margin-right: 3px; }
+.factline .hid { color: var(--muted); }
+.subh { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 4px 14px 2px; }
+.morelink { border: 0; border-top: 1px solid var(--line); background: none; width: 100%; text-align: left; color: var(--accent); font-weight: 600; font-size: 13px; padding: 9px 14px; }
+.morelink:hover { background: var(--bg); }
+.fullcl { border-top: 1px solid var(--line); }
+.facts.info dd { text-align: right; overflow-wrap: anywhere; }
+.tl { list-style: none; margin: 0; padding: 4px 14px 12px; display: flex; flex-direction: column; }
+.tl li { display: grid; grid-template-columns: 50px 52px minmax(0, 1fr); gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 13px; align-items: baseline; }
+.tl li:first-child { border-top: 0; }
+.tl .date { color: var(--muted); font-size: 12px; }
+.tk { font-size: 11px; font-weight: 600; color: var(--muted); }
+.tk.note { color: var(--accent); } .tk.done { color: var(--ok); } .tk.stage { color: var(--warn); }
+
+/* Deal panel parts */
 .back { border: 0; background: none; color: var(--accent); font-weight: 600; padding: 0; align-self: flex-start; }
 .dhead { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: flex-end; }
 .dhead .sub { color: var(--muted); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
@@ -182,7 +210,7 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 </style>
 
 <div class="mock-bar">
-  <span><strong>Mockup</strong> · fake data, "today" is Mon Oct 12, 2026. Click any deal card to open it.</span>
+  <span><strong>Mockup</strong> · fake data, "today" is Mon Oct 12, 2026. Click any deal card to open the client.</span>
   <span class="seg" role="group" aria-label="View as">
     <button id="role-admin" aria-pressed="true">Admin view</button>
     <button id="role-assistant" aria-pressed="false">Assistant view</button>
@@ -211,7 +239,7 @@ const short = x => MON[x.getMonth()] + " " + x.getDate();
 const money = n => "$" + n.toLocaleString("en-US");
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-let role = "admin", side = "buyer", openDeal = null, editing = null, openMenu = null, editStages = false, customN = 0;
+let role = "admin", side = "buyer", editing = null, openMenu = null, editStages = false, customN = 0;
 const expanded = {};
 // Display names for stages. Internal keys never change, so renaming is safe.
 const LABEL = { buyer: {}, seller: {} };
@@ -306,7 +334,7 @@ const deals = [
   { id: 10, side: "buyer", stage: "Rep Signed / Searching", name: "Leah Sandoval", line: "Roseville / Shoreview", since: "2026-09-28" },
   { id: 11, side: "buyer", stage: "Offer Out", name: "Owen Pryce", line: "2215 Hillside Ave, Golden Valley", price: 389000, since: "2026-10-11" },
   { id: 12, side: "buyer", stage: "Offer Out", name: "Mia Castellano", line: "845 Osceola Ave, St. Paul", price: 455000, since: "2026-10-12" },
-  { id: 13, side: "buyer", stage: "Under Contract", name: "Jordan & Priya Calloway", line: "4127 Upton Ave S #3, Minneapolis", price: 412500, em: 8000, sc: 5000, bac: "2.5%", comm: 10312.5, fin: "Conventional",
+  { id: 13, side: "buyer", stage: "Under Contract", name: "Jordan & Priya Calloway", cid: "calloway", line: "4127 Upton Ave S #3, Minneapolis", price: 412500, em: 8000, sc: 5000, bac: "2.5%", comm: 10312.5, fin: "Conventional",
     ms: { fa: "2026-10-02", insp: "2026-10-14", hoa: "2026-10-13", ws: "2026-10-23", close: "2026-10-30" }, msOrig: { insp: "2026-10-09" }, msStatus: { insp: "extended" },
     openPast: ["Earnest money receipt saved to file", "Insurance referral"], doneEarly: ["Confirm appraisal ordered"],
     people: [["Jordan Calloway", "Buyer"], ["Priya Calloway", "Buyer"], ["Dana Kim · Northfield Lending", "Lender"], ["Lakeview Title", "Title"], ["Marcus Holt · Bluewater Realty", "Listing agent"]] },
@@ -326,6 +354,7 @@ const deals = [
   { id: 26, side: "seller", stage: "Coming Soon", name: "Hugo Bergstrom", line: "709 Lincoln Ave, St. Paul", price: 625000, since: "2026-10-10" },
   { id: 27, side: "seller", stage: "Active", name: "Margaret Ostby", line: "4540 Drew Ave S, Edina", price: 749000, since: "2026-09-30" },
   { id: 28, side: "seller", stage: "Active", name: "Greg & Lin Tam", line: "2810 Fremont Ave N, Minneapolis", price: 315000, since: "2026-09-12" },
+  { id: 32, side: "seller", stage: "Active", name: "Jordan & Priya Calloway", cid: "calloway", line: "2201 Lyndale Ave S #407, Minneapolis", price: 289000, since: "2026-10-05" },
   { id: 29, side: "seller", stage: "Under Contract", name: "Wes Halvorsen", line: "1904 Stinson Pkwy NE, Minneapolis", price: 442000, em: 7500, sc: 3000, bac: "2.5%", comm: 11050, fin: "Conventional",
     ms: { fa: "2026-10-07", insp: "2026-10-17", ws: "2026-10-28", close: "2026-11-13" } },
   { id: 30, side: "seller", stage: "Closed", name: "Irene Dahl", line: "6125 Morgan Ave S, Richfield", price: 398000, closed: "2026-10-02" },
@@ -434,75 +463,168 @@ function cardHtml(dl) {
   </button>`;
 }
 
-/* ---------- Deal page ---------- */
-function renderDeal() {
-  const dl = deals.find(x => x.id === openDeal);
-  const uc = dl.stage === "Under Contract";
-  const h = health(dl);
-  const open = openTasks(dl);
-  const upNext = open.slice(0, 4);
-  const phases = [...new Set(dl.tasks.map(t => t.phase))];
-  if (!expanded[dl.id]) {
-    const firstOpen = phases.find(p => dl.tasks.some(t => t.phase === p && eff(dl, t) === "open"));
-    expanded[dl.id] = new Set(firstOpen ? [firstOpen] : []);
-  }
-  const nextMs = uc ? Object.keys(dl.ms).filter(k => ["pending", "extended"].includes(dl.msStatus[k]) && d(dl.ms[k]) >= TODAY).sort((a, b) => d(dl.ms[a]) - d(dl.ms[b]))[0] : null;
+/* ---------- Contacts ---------- */
+const CONTACTS = {
+  calloway: {
+    name: "Jordan & Priya Calloway", follow: "Every 30 days", source: "Sphere Referral", referred: "Kara Voss", mailing: "The Calloways",
+    tags: ["Buyer", "Seller", "A Lead", "Email Newsletter"],
+    phones: [["Jordan", "(612) 555-0148"], ["Priya", "(612) 555-0193"]],
+    emails: [["Jordan", "jordan.calloway@example.com"], ["Priya", "priya.calloway@example.com"]],
+    address: "2201 Lyndale Ave S #407, Minneapolis, MN 55405",
+    household: [["Jordan", "Mar 4"], ["Priya", "Jul 19"], ["Mila (daughter)", "Nov 2"]],
+    tasks: [
+      { t: "Send school district info for Upton Ave", due: "2026-10-13", who: "LP", s: "open" },
+      { t: "Ask about storage unit timing", due: "2026-10-20", who: "AS", s: "open" },
+    ],
+    notes: [
+      ["2026-10-11", "Note", "Inspection done. Minor items: water heater is 14 years old, deck railing loose. Asking for a $1,500 credit."],
+      ["2026-10-03", "Note", "Priya prefers texts after 5pm. Jordan is fine with calls anytime."],
+      ["2026-09-30", "Note", "Listing their condo too. Want both to close within a week of each other."],
+    ],
+  },
+  murphy: {
+    name: "Kate Murphy", follow: "Every 90 days", source: "Sphere", referred: "", mailing: "Kate Murphy", tags: ["Past Client", "Mailers"],
+    phones: [["Mobile", "(651) 555-0172"]], emails: [["", "kate.murphy@example.com"]], address: "1789 Juliet Ave, St. Paul, MN 55105",
+    household: [["Kate", "Jan 22"]],
+    tasks: [{ t: "Call Kate about spring listing timing", due: "2026-10-12", who: "LP", s: "open" }],
+    notes: [["2026-07-14", "Note", "Thinking about selling next spring. Wants a CMA in January."]],
+  },
+};
+const cidOf = dl => dl.cid || "d" + dl.id;
+function contact(cid) {
+  if (CONTACTS[cid]) return CONTACTS[cid];
+  const dl = deals.find(x => cidOf(x) === cid);
+  const first = dl.name.split(/[ &]/)[0].toLowerCase(), last = dl.name.split(" ").pop().toLowerCase();
+  const c = {
+    name: dl.name, follow: dl.stage === "Closed" ? "Every 30 days" : "Not set", source: dl.line.startsWith("Source: ") ? dl.line.slice(8) : "Sphere",
+    referred: "", mailing: dl.name, tags: [dl.side === "buyer" ? "Buyer" : "Seller"].concat(dl.stage === "Closed" ? ["Past Client"] : []),
+    phones: [["Mobile", "(612) 555-01" + String(dl.id).padStart(2, "0")]], emails: [["", `${first}.${last}@example.com`]],
+    address: dl.side === "seller" && dl.price ? dl.line : "Twin Cities, MN", household: [], tasks: [], notes: [],
+  };
+  CONTACTS[cid] = c; return c;
+}
 
+let openContact = null, openPanels = new Set(), fullList = new Set();
+
+function renderContact() {
+  const c = contact(openContact);
+  const myDeals = deals.filter(x => cidOf(x) === openContact).sort((a, b) => (a.stage === "Closed") - (b.stage === "Closed"));
+  const lead = myDeals.find(x => x.stage === "Under Contract") ? "Under Contract" : myDeals.some(x => x.stage === "Closed") ? "Past Client" : myDeals.length ? "Lead" : "90 Day Sphere";
   app.innerHTML = `
     <button class="back" data-back="1">← ${side === "buyer" ? "Buyers" : "Sellers"} pipeline</button>
     <div class="dhead">
       <div>
-        <h1>${esc(dl.name)}</h1>
-        <div class="sub"><span class="stagepill">${esc(label(dl.side, dl.stage))}</span><span>${esc(dl.line)}</span>${dl.price ? `<span class="num">${money(dl.price)}</span>` : ""}</div>
+        <h1>${esc(c.name)}</h1>
+        <div class="sub"><span class="stagepill" title="${lead === "Under Contract" ? "Set automatically from the deal" : "Lead stage"}">${lead}</span><span>${esc(c.follow)}</span><span>Source: ${esc(c.source)}</span>${c.tags.map(t => `<span class="tagchip">${esc(t)}</span>`).join("")}</div>
       </div>
-      ${dl.stage !== "Closed" ? `<span class="health"><span class="dot ${h}"></span>${{ g: "On track", y: "Something overdue", r: "Behind" }[h]}</span>` : ""}
+      <div class="actions">
+        <button class="btn" data-toast="Opens the buyer form: buyer rep dates and BAC, then a purchase agreement when they're under contract">+ Add Buyer</button>
+        <button class="btn" data-toast="Opens the seller form: listing agreement dates, list price and commission">+ Add Seller</button>
+        <button class="btn" data-toast="Adds a note to the timeline">Add note</button>
+      </div>
     </div>
-    ${uc ? datesHtml(dl) : ""}
     <div class="dgrid">
       <div class="stack">
-        ${dl.stage === "Closed" ? `<div class="box"><h2>Closed ${fmt(d(dl.closed))}</h2><p class="empty">Closed deals keep their history and drop off the board after 30 days.</p></div>` : `
-        <div class="box">
-          <h2>${uc ? "Checklist" : "Stage checklist"} <small>${dl.tasks.filter(t => eff(dl, t) !== "open").length} of ${dl.tasks.length} done</small></h2>
-          ${phases.map(p => phaseHtml(dl, p)).join("")}
-        </div>`}
+        ${myDeals.length ? myDeals.map(panelHtml).join("") : `<div class="box"><p class="empty" style="padding-top:12px">No deals yet. Use + Add Buyer or + Add Seller to start one.</p></div>`}
+        <div class="box"><h2>Timeline</h2>${timelineHtml(c, myDeals)}</div>
       </div>
       <div class="stack">
-        ${dl.stage !== "Closed" ? `<div class="box">
-          <h2>Up next <small>${open.length} open</small></h2>
-          ${nextMs ? `<div class="nextms">Next deadline: <b>${MS_NAMES[nextMs]}</b>, ${fmt(d(dl.ms[nextMs]))}</div>` : ""}
-          ${upNext.length ? upNext.map(t => rowHtml(dl, t)).join("") : `<p class="empty">All caught up.</p>`}
-        </div>` : ""}
-        ${uc ? `<div class="box"><h2>Details</h2><dl class="facts">${factsHtml(dl)}</dl></div>` : ""}
-        <div class="box"><h2>People</h2><div class="people">${(dl.people || [[dl.name, dl.side === "buyer" ? "Buyer" : "Seller"]]).map(([n, r]) => `<div><span>${esc(n)}</span><span>${r}</span></div>`).join("")}</div></div>
+        <div class="box"><h2>Contact</h2><dl class="facts info">${infoHtml(c)}</dl></div>
+        <div class="box"><h2>Tasks <small>${c.tasks.filter(t => t.s === "open").length} open</small></h2>
+          ${c.tasks.length ? c.tasks.map((t, i) => ptaskHtml(t, i)).join("") : `<p class="empty">No tasks outside their deals.</p>`}
+          <div style="padding:8px 12px 12px"><button class="btn" data-toast="Quick add, already linked to ${esc(c.name)}">+ Add task</button></div>
+        </div>
       </div>
     </div>`;
+}
+
+function panelHtml(dl) {
+  const isOpen = openPanels.has(dl.id), uc = dl.stage === "Under Contract", closed = dl.stage === "Closed";
+  const h = health(dl), done = dl.tasks.filter(t => eff(dl, t) !== "open").length;
+  const right = closed ? `Closed ${short(d(dl.closed))}` : uc ? `Closing ${short(d(dl.ms.close))}` : `${dl.tasks.length - done} open steps`;
+  let body = "";
+  if (isOpen && !closed) {
+    const open = openTasks(dl);
+    const phases = [...new Set(dl.tasks.map(t => t.phase))];
+    if (!expanded[dl.id]) { const f = phases.find(p => dl.tasks.some(t => t.phase === p && eff(dl, t) === "open")); expanded[dl.id] = new Set(f ? [f] : []); }
+    const others = (dl.people || []).filter(p => !["Buyer", "Seller"].includes(p[1]));
+    body = `
+      ${uc ? `<div class="pad">${datesHtml(dl)}</div>` : ""}
+      ${uc ? `<div class="factline">${factsInline(dl)}</div>` : ""}
+      ${others.length ? `<div class="factline">${others.map(([n, r]) => `<span><em>${r}</em> ${esc(n)}</span>`).join("")}</div>` : ""}
+      <div class="subh">Up next</div>
+      ${open.length ? open.slice(0, 3).map(t => rowHtml(dl, t)).join("") : `<p class="empty">All caught up.</p>`}
+      <button class="morelink" data-full="${dl.id}" aria-expanded="${fullList.has(dl.id)}">${fullList.has(dl.id) ? "Hide" : "Show"} full checklist · ${done} of ${dl.tasks.length} done</button>
+      ${fullList.has(dl.id) ? `<div class="fullcl">${phases.map(p => phaseHtml(dl, p)).join("")}</div>` : ""}`;
+  }
+  return `<section class="box dpanel ${isOpen ? "open" : ""}" id="deal-${dl.id}">
+    <button class="dp-h" data-panel="${dl.id}" aria-expanded="${isOpen}">
+      <span class="dp-l"><span class="sidechip ${dl.side}">${dl.side === "buyer" ? "Buyer" : "Seller"}</span><span class="dp-t">${esc(dl.line)}</span>${dl.price ? `<span class="num">${money(dl.price)}</span>` : ""}</span>
+      <span class="dp-r"><span class="stagepill">${esc(label(dl.side, dl.stage))}</span>${closed ? "" : `<span class="dot ${h}"></span>`}<span class="muted">${right}</span></span>
+    </button>
+    ${body}
+  </section>`;
+}
+
+function factsInline(dl) {
+  return [["Price", money(dl.price)], ["Earnest", money(dl.em)], ["Seller contrib.", money(dl.sc)], ["BAC", dl.bac],
+    ["Commission", role === "admin" ? money(dl.comm) : null], ["Financing", dl.fin]]
+    .map(([k, v]) => `<span><em>${k}</em> ${v === null ? `<i class="hid">hidden</i>` : `<b class="num">${v}</b>`}</span>`).join("");
+}
+
+function infoHtml(c) {
+  const rows = [];
+  c.phones.forEach(([l, v]) => rows.push([`Phone${l && c.phones.length > 1 ? " · " + l : ""}`, v]));
+  c.emails.forEach(([l, v]) => rows.push([`Email${l && c.emails.length > 1 ? " · " + l : ""}`, v]));
+  rows.push(["Address", c.address]);
+  if (c.mailing) rows.push(["Mailing name", c.mailing]);
+  if (c.referred) rows.push(["Referred by", c.referred]);
+  c.household.forEach(([n, b]) => rows.push(["Birthday · " + n, b]));
+  return rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
+}
+
+function ptaskHtml(t, i) {
+  const n = diff(d(t.due), TODAY), done = t.s === "done";
+  return `<div class="row ${done ? "done" : ""}">
+    <button class="check" data-ptask="${i}" aria-label="Mark ${done ? "not done" : "done"}: ${esc(t.t)}">${done ? CHECK : ""}</button>
+    <span class="title">${esc(t.t)}</span>
+    <span class="r"><span class="due date ${!done && n < 0 ? "overdue" : !done && n === 0 ? "today" : ""}">${n === 0 && !done ? "Today" : short(d(t.due))}</span><span class="av ${t.who === "AS" ? "as" : ""}">${t.who}</span></span>
+  </div>`;
+}
+
+function timelineHtml(c, myDeals) {
+  const items = c.notes.map(([dt, k, txt]) => ({ dt, k, txt }));
+  myDeals.forEach(dl => {
+    const where = dl.side === "buyer" ? "Buyer" : "Seller";
+    if (dl.stage === "Closed") items.push({ dt: dl.closed, k: "Stage", txt: `${where} deal closed · ${dl.line}` });
+    else items.push({ dt: dl.ms ? dl.ms.fa : dl.since, k: "Stage", txt: `${where} deal moved to ${label(dl.side, dl.stage)}` });
+    dl.tasks.filter(t => t.s === "done").forEach(t => items.push({ dt: iso(dueOf(dl, t) > TODAY ? TODAY : dueOf(dl, t)), k: "Done", txt: `${t.t} · ${t.who === "AS" ? "Alyssa" : "Luke"}` }));
+  });
+  items.sort((a, b) => d(b.dt) - d(a.dt));
+  if (!items.length) return `<p class="empty">Nothing yet.</p>`;
+  return `<ol class="tl">${items.slice(0, 9).map(i => `<li><span class="date">${short(d(i.dt))}</span><span class="tk ${i.k.toLowerCase()}">${i.k}</span><span>${esc(i.txt)}</span></li>`).join("")}</ol>
+    ${items.length > 9 ? `<p class="empty">${items.length - 9} older entries</p>` : ""}`;
 }
 
 function datesHtml(dl) {
   const keys = Object.keys(dl.ms);
   let html = `<div class="dates">${keys.map(k => {
     const st = dl.msStatus[k], n = diff(d(dl.ms[k]), TODAY);
-    const label = st === "met" ? "✓ Met" : st === "waived" ? "Waived" : st === "extended" ? "Extended" : n === 0 ? "Today" : n > 0 ? `In ${n} days` : "Past due";
+    const txt = st === "met" ? "✓ Met" : st === "waived" ? "Waived" : st === "extended" ? "Extended" : n === 0 ? "Today" : n > 0 ? `In ${n} days` : "Past due";
     const cls = st !== "pending" ? st : n <= 3 ? "soon" : "";
-    return `<button class="dt" data-ms="${k}" aria-expanded="${editing === k}"><span class="l">${MS_NAMES[k]}</span><span class="v date">${fmt(d(dl.ms[k]))}</span><span class="s ${cls}">${label}</span></button>`;
+    return `<button class="dt" data-dl="${dl.id}" data-ms="${k}" aria-expanded="${editing === dl.id + ":" + k}"><span class="l">${MS_NAMES[k]}</span><span class="v date">${fmt(d(dl.ms[k]))}</span><span class="s ${cls}">${txt}</span></button>`;
   }).join("")}</div>`;
-  if (editing && dl.ms[editing]) {
-    const st = dl.msStatus[editing];
-    const n = dl.tasks.filter(t => t.a === editing && t.s === "open").length;
+  const k = editing && editing.startsWith(dl.id + ":") ? editing.split(":")[1] : null;
+  if (k) {
+    const n = dl.tasks.filter(t => t.a === k && t.s === "open").length;
     html += `<div class="edit">
-      <label>${MS_NAMES[editing]} date<input type="date" id="ms-date" value="${dl.ms[editing]}"></label>
-      <label>Status<select id="ms-status">${["pending", "met", "waived", "extended"].map(s => `<option value="${s}" ${s === st ? "selected" : ""}>${s[0].toUpperCase() + s.slice(1)}</option>`).join("")}</select></label>
+      <label>${MS_NAMES[k]} date<input type="date" data-msdate="${dl.id}:${k}" value="${dl.ms[k]}"></label>
+      <label>Status<select data-msstatus="${dl.id}:${k}">${["pending", "met", "waived", "extended"].map(s => `<option value="${s}" ${s === dl.msStatus[k] ? "selected" : ""}>${s[0].toUpperCase() + s.slice(1)}</option>`).join("")}</select></label>
       <p>${n} open step${n === 1 ? "" : "s"} move with this date. Waived clears them.</p>
       <button class="btn" data-close="1">Done</button>
     </div>`;
   }
   return html;
-}
-
-function factsHtml(dl) {
-  return [["Price", money(dl.price)], ["Earnest money", money(dl.em)], ["Seller contributions", money(dl.sc)], ["BAC", dl.bac],
-    ["Commission", role === "admin" ? money(dl.comm) : null], ["Financing", dl.fin]]
-    .map(([k, v]) => `<dt>${k}</dt><dd class="num">${v === null ? `<span class="hid">Hidden for assistant</span>` : v}</dd>`).join("");
 }
 
 function phaseHtml(dl, p) {
@@ -511,7 +633,7 @@ function phaseHtml(dl, p) {
   const isOpen = expanded[dl.id].has(p);
   const od = items.some(t => eff(dl, t) === "open" && dueOf(dl, t) < TODAY);
   return `<div class="phase">
-    <button class="phase-h" data-phase="${esc(p)}" aria-expanded="${isOpen}">
+    <button class="phase-h" data-dl="${dl.id}" data-phase="${esc(p)}" aria-expanded="${isOpen}">
       <span class="pn">${esc(p)}</span>
       <span class="pc">${od ? `<span class="dot y"></span>` : ""}${done === items.length ? `<span class="ok">✓ Done</span>` : `${done}/${items.length}`}</span>
     </button>
@@ -525,28 +647,38 @@ function rowHtml(dl, t) {
   const note = st === "na" ? "N/A" : st === "skip" ? "Skipped" : st === "waived" ? "Waived" : "";
   const dueCls = st === "open" ? (n < 0 ? "overdue" : n === 0 ? "today" : "") : "";
   const rule = t.a ? `${MS_NAMES[t.a]} ${t.o === 0 ? "day of" : (t.o > 0 ? "+ " : "− ") + Math.abs(t.o) + "d"}` : "";
-  const key = dl.id + ":" + t.id;
+  const key = dl.id + ":" + t.id, A = `data-dl="${dl.id}"`;
   return `<div class="row ${st}">
-    <button class="check" data-toggle="${t.id}" aria-label="Mark ${st === "done" ? "not done" : "done"}: ${esc(t.t)}">${icon}</button>
-    <span class="title">${esc(t.t)}${note ? `<small>${note}</small>` : ""}${t.kind !== "task" && st === "open" ? `<button class="draft" data-draft="${t.id}">Draft ${t.kind}</button>` : ""}</span>
-    <span class="r"><span class="due date ${dueCls}" title="${rule}">${n === 0 && st === "open" ? "Today" : short(due)}</span><span class="av ${t.who === "AS" ? "as" : ""}">${t.who}</span><button class="more" data-menu="${t.id}" aria-label="More options">⋯</button></span>
+    <button class="check" ${A} data-toggle="${t.id}" aria-label="Mark ${st === "done" ? "not done" : "done"}: ${esc(t.t)}">${icon}</button>
+    <span class="title">${esc(t.t)}${note ? `<small>${note}</small>` : ""}${t.kind !== "task" && st === "open" ? `<button class="draft" ${A} data-draft="${t.id}">Draft ${t.kind}</button>` : ""}</span>
+    <span class="r"><span class="due date ${dueCls}" title="${rule}">${n === 0 && st === "open" ? "Today" : short(due)}</span><span class="av ${t.who === "AS" ? "as" : ""}">${t.who}</span><button class="more" ${A} data-menu="${t.id}" aria-label="More options">⋯</button></span>
     ${openMenu === key ? `<div class="menu">
-      ${st !== "na" ? `<button data-set="na" data-id="${t.id}">Mark N/A</button>` : ""}
-      ${st !== "skip" ? `<button data-set="skip" data-id="${t.id}">Skip</button>` : ""}
-      ${st !== "open" && st !== "waived" ? `<button data-set="open" data-id="${t.id}">Reopen</button>` : ""}
+      ${st !== "na" ? `<button ${A} data-set="na" data-id="${t.id}">Mark N/A</button>` : ""}
+      ${st !== "skip" ? `<button ${A} data-set="skip" data-id="${t.id}">Skip</button>` : ""}
+      ${st !== "open" && st !== "waived" ? `<button ${A} data-set="open" data-id="${t.id}">Reopen</button>` : ""}
       ${rule ? `<span style="font-size:12px;color:var(--muted);align-self:center">Timing: ${rule}</span>` : ""}
     </div>` : ""}
   </div>`;
 }
 
 /* ---------- Events ---------- */
-function render() { openDeal ? renderDeal() : renderBoard(); }
+function render() { openContact ? renderContact() : renderBoard(); }
 let tt;
-function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
+function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2800); }
+
+function openCard(dealId) {
+  const dl = deals.find(x => x.id === dealId);
+  openContact = cidOf(dl); side = dl.side; editing = null; openMenu = null;
+  openPanels = new Set([dl.id]);
+  render();
+  const p = document.getElementById("deal-" + dl.id);
+  window.scrollTo(0, 0);
+  if (p && deals.filter(x => cidOf(x) === openContact).length > 1) p.scrollIntoView({ block: "start" });
+}
 
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
-  const dl = deals.find(x => x.id === openDeal);
+  const dl = b.dataset.dl ? deals.find(x => x.id === +b.dataset.dl) : null;
   if (b.dataset.side) { side = b.dataset.side; render(); return; }
   if (b.dataset.editstages) { editStages = !editStages; render(); return; }
   if (b.dataset.move) {
@@ -567,19 +699,25 @@ document.addEventListener("click", e => {
     const inp = document.querySelector(`[data-rename="${k}"]`); if (inp) { inp.focus(); inp.select(); }
     return;
   }
-  if (b.dataset.deal) { openDeal = +b.dataset.deal; editing = null; openMenu = null; render(); window.scrollTo(0, 0); return; }
-  if (b.dataset.back) { openDeal = null; editing = null; render(); return; }
-  if (b.dataset.ms) { editing = editing === b.dataset.ms ? null : b.dataset.ms; render(); return; }
+  if (b.dataset.deal) { openCard(+b.dataset.deal); return; }
+  if (b.dataset.back) { openContact = null; editing = null; try { history.replaceState(null, "", location.pathname); } catch (_) {} render(); return; }
+  if (b.dataset.panel) { const id = +b.dataset.panel; openPanels.has(id) ? openPanels.delete(id) : openPanels.add(id); render(); return; }
+  if (b.dataset.full) { const id = +b.dataset.full; fullList.has(id) ? fullList.delete(id) : fullList.add(id); render(); return; }
+  if (b.dataset.ptask) { const t = contact(openContact).tasks[+b.dataset.ptask]; t.s = t.s === "open" ? "done" : "open"; render(); return; }
+  if (b.dataset.ms) { const k = dl.id + ":" + b.dataset.ms; editing = editing === k ? null : k; render(); return; }
   if (b.dataset.close) { editing = null; render(); return; }
   if (b.dataset.phase) { const s = expanded[dl.id]; s.has(b.dataset.phase) ? s.delete(b.dataset.phase) : s.add(b.dataset.phase); render(); return; }
   if (b.dataset.toggle) {
     const t = dl.tasks[+b.dataset.toggle];
     if (eff(dl, t) === "waived") { toast("Cleared by a waived deadline."); return; }
-    t.s = t.s === "open" ? "done" : "open"; render(); return;
+    t.s = t.s === "open" ? "done" : "open";
+    if (t.s === "done") toast("Done. Logged to the timeline and cleared from Tasks.");
+    render(); return;
   }
   if (b.dataset.menu) { const k = dl.id + ":" + b.dataset.menu; openMenu = openMenu === k ? null : k; render(); return; }
   if (b.dataset.set) { dl.tasks[+b.dataset.id].s = b.dataset.set; openMenu = null; render(); return; }
   if (b.dataset.draft) { const t = dl.tasks[+b.dataset.draft]; toast(`Opens a pre-filled ${t.kind}: "${t.t}". You review, then send.`); return; }
+  if (b.dataset.toast) { toast(b.dataset.toast); return; }
   if (b.id === "role-admin" || b.id === "role-assistant") {
     role = b.id === "role-admin" ? "admin" : "assistant";
     el("role-admin").setAttribute("aria-pressed", role === "admin");
@@ -589,21 +727,30 @@ document.addEventListener("click", e => {
 });
 
 document.addEventListener("change", e => {
-  if (e.target.dataset.rename) {
-    const v = e.target.value.trim();
-    if (v) LABEL[side][e.target.dataset.rename] = v;
+  const ds = e.target.dataset;
+  if (ds.rename) { const v = e.target.value.trim(); if (v) LABEL[side][ds.rename] = v; render(); return; }
+  if (ds.msdate && e.target.value) {
+    const [id, k] = ds.msdate.split(":"), dl = deals.find(x => x.id === +id);
+    const n = dl.tasks.filter(t => t.a === k && t.s === "open").length;
+    dl.ms[k] = e.target.value;
+    if (dl.msStatus[k] === "pending") dl.msStatus[k] = "extended";
+    toast(`${MS_NAMES[k]} moved to ${fmt(d(e.target.value))}. ${n} step${n === 1 ? "" : "s"} re-dated.`);
     render(); return;
   }
-  const dl = deals.find(x => x.id === openDeal); if (!dl || !editing) return;
-  if (e.target.id === "ms-date" && e.target.value) {
-    const n = dl.tasks.filter(t => t.a === editing && t.s === "open").length;
-    dl.ms[editing] = e.target.value;
-    if (dl.msStatus[editing] === "pending") dl.msStatus[editing] = "extended";
-    toast(`${MS_NAMES[editing]} moved to ${fmt(d(e.target.value))}. ${n} step${n === 1 ? "" : "s"} re-dated.`);
-    render();
-  }
-  if (e.target.id === "ms-status") { dl.msStatus[editing] = e.target.value; render(); }
+  if (ds.msstatus) { const [id, k] = ds.msstatus.split(":"); deals.find(x => x.id === +id).msStatus[k] = e.target.value; render(); }
 });
 
+// Deep link from the Tasks mockup: deals.html#contact-calloway
+function fromHash() {
+  const m = location.hash.match(/^#contact-([\w-]+)$/);
+  if (m && (CONTACTS[m[1]] || deals.some(x => cidOf(x) === m[1]))) {
+    openContact = m[1];
+    const first = deals.find(x => cidOf(x) === m[1] && x.stage !== "Closed");
+    if (first) { side = first.side; openPanels = new Set([first.id]); }
+    render();
+  }
+}
+window.addEventListener("hashchange", fromHash);
 render();
+fromHash();
 </script>

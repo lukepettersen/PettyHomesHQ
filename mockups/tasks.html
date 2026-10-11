@@ -205,6 +205,8 @@ const LINKS = {
   dana: { kind: "person", label: "Dana Kim", full: "Dana Kim · Lender, Northfield Lending" },
 };
 
+// Contact page each link opens in the pipeline mockup.
+const CID = { calloway: "calloway", engel: "d14", raman: "d15", halvorsen: "d29", okafor: "d3", thorsen: "d4", fisk: "d24", murphy: "murphy", dana: "calloway" };
 // p: priority 0 none, 1 low, 2 med, 3 high. step: deal checklist info.
 let tasks = [
   { t: "Earnest money receipt saved to file", due: "2026-10-07", who: "AS", link: "calloway", step: { phase: "Under Contract", rule: "Final Acceptance + 5d" } },
@@ -347,9 +349,9 @@ function renderDetail() {
       <button class="x" data-close="1" aria-label="Close">×</button>
     </div>
     ${t.step ? `<div class="from" style="margin-top:12px">
-      <span>From the <b>${esc(L.label)}</b> checklist · ${esc(t.step.phase)}</span>
+      <span>From the <b>${esc(L.label)}</b> deal checklist · ${esc(t.step.phase)}</span>
       <span>Timing: ${esc(t.step.rule)}. Moves automatically if that date changes.</span>
-      <span class="acts"><button class="btn" data-toast="Opens the ${esc(L.label)} deal page">Open deal</button>${t.kind !== "task" ? `<button class="btn primary" data-toast="Opens a pre-filled ${t.kind} to review and send">Draft ${t.kind}</button>` : ""}</span>
+      <span class="acts"><a class="btn" href="deals.html#contact-${CID[t.link]}" style="text-decoration:none">Open contact</a>${t.kind !== "task" ? `<button class="btn primary" data-toast="Opens a pre-filled ${t.kind} to review and send">Draft ${t.kind}</button>` : ""}</span>
     </div>` : ""}
     <div class="fields">
       <label for="d-due">Due</label><input type="date" id="d-due" value="${t.due}">
@@ -357,7 +359,7 @@ function renderDetail() {
       <label for="d-repeat">Repeat</label><select id="d-repeat">${["", "Daily", "Weekly", "Monthly", "Yearly"].map(r => `<option value="${r}" ${t.repeat === r || (!t.repeat && !r) ? "selected" : ""}>${r || "Never"}</option>`).join("")}</select>
       <label for="d-p">Priority</label><select id="d-p">${["None", "Low", "Medium", "High"].map((p, i) => `<option value="${i}" ${t.p === i ? "selected" : ""}>${p}</option>`).join("")}</select>
       <label for="d-who">Assignee</label><select id="d-who">${Object.entries(PEOPLE).map(([k, v]) => `<option value="${k}" ${t.who === k ? "selected" : ""}>${v}</option>`).join("")}</select>
-      <label>Linked to</label><span>${L ? `<span class="link ${L.kind}">${esc(L.full)}</span>` : `<span style="color:var(--muted)">Nothing (general task)</span>`}</span>
+      <label>Linked to</label><span>${L ? `<a class="link ${L.kind}" href="deals.html#contact-${CID[t.link]}" style="text-decoration:none">${esc(L.full)}</a>` : `<span style="color:var(--muted)">Nothing (general task)</span>`}</span>
     </div>
     <div class="sec"><h5>Subtasks</h5>
       ${(t.subs || []).map((s, i) => `<label class="sub-i ${s[1] ? "done" : ""}"><input type="checkbox" data-sub="${i}" ${s[1] ? "checked" : ""}><span>${esc(s[0])}</span></label>`).join("") || `<span style="font-size:12.5px;color:var(--muted)">None yet</span>`}
