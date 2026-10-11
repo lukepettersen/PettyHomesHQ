@@ -303,14 +303,16 @@ archive one-offs and dated notices.
 
 ### Tasks
 - FUB's Tasks page is too basic. Owner wants a real task-system approach, not just a list.
-- **Reference app: TickTick** (owner likes it; open to better ideas). Model HQ Tasks on it:
+- **Reference app: TickTick** (owner likes it; open to better ideas), but **less intense**:
+  owner does not like TickTick's folders. Keep it simple. Model HQ Tasks on it:
   - Smart views: Today, Tomorrow, Next 7 Days, Overdue, plus "Waiting on" and "Assigned to
     assistant".
-  - Lists grouped in folders for non-deal work (e.g. Rentals, Podcast, Marketing, Admin,
-    Personal); deal checklist tasks appear in the same views.
+  - **No folders.** A short, flat set of lists for non-deal work (e.g. Rentals, Podcast,
+    Marketing, Admin, Personal), or none at all; deal checklist tasks appear in the same views.
   - Natural-language quick add ("call lender re Murphy Fri 9am").
   - Priority, tags, subtasks, recurring tasks (yearly mailers, weekly reports).
-  - Views per list: list, board (kanban), and calendar.
+  - Default to a plain list view. Board and calendar views are optional extras, not front
+    and center.
   - CRM extras TickTick doesn't have: optional link to a person/deal, assignee, and
     delegation status.
   - Skip TickTick's habits and focus timer.
