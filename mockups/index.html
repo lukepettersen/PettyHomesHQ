@@ -1,0 +1,2155 @@
+<title>Petty Homes HQ Mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root { --bg: #f4f6f7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0f171c; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #0f171c; color-scheme: dark; }
+body { background: var(--bg); }
+.pg { min-height: 100%; }
+:root {
+  --bg: #f4f6f7; --surface: #ffffff; --sunken: #eaeef0; --line: #d8dee2; --fg: #16222a; --muted: #5b6b75;
+  --accent: #1d6a85; --accent-soft: #dcecf2; --ok: #2f7a4b; --ok-soft: #e0f0e5; --warn: #9a6400; --warn-soft: #fbefd6;
+  --bad: #b3372b; --bad-soft: #f9e1de; --waive: #6b6480; --waive-soft: #ebe8f2;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {:root:not([data-theme="light"]) {
+    --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45; --fg: #e4ecf0; --muted: #93a5b0;
+    --accent: #5fb3d1; --accent-soft: #173a48; --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+    --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840; color-scheme: dark;
+  }}
+:root[data-theme="dark"] {
+  --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45; --fg: #e4ecf0; --muted: #93a5b0;
+  --accent: #5fb3d1; --accent-soft: #173a48; --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+  --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840; color-scheme: dark;
+}
+#pg-people, #pg-people * { box-sizing: border-box; }
+#pg-people { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+#pg-people button, #pg-people select, #pg-people input, #pg-people textarea { font: inherit; color: inherit; }
+#pg-people button { cursor: pointer; }
+#pg-people :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#pg-people .date, #pg-people .num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+#pg-people .mock-bar { background: var(--accent-soft); padding-block: 7px; padding-inline: 16px; font-size: 13px; }
+#pg-people .topnav { background: var(--surface); border-bottom: 1px solid var(--line); padding-inline: 16px; display: flex; align-items: center; gap: 24px; overflow-x: auto; }
+#pg-people .brand { font-family: var(--font-display); font-weight: 700; font-size: 17px; padding-block: 12px; white-space: nowrap; }
+#pg-people .brand span { color: var(--accent); }
+#pg-people .topnav nav { display: flex; gap: 4px; }
+#pg-people .topnav nav a { color: var(--muted); text-decoration: none; padding: 14px 10px; border-bottom: 2px solid transparent; white-space: nowrap; }
+#pg-people .topnav nav a.on { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
+#pg-people h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 2.6vw, 25px); line-height: 1.15; margin: 0; }
+#pg-people .muted { color: var(--muted); }
+#pg-people .sm { font-size: 12.5px; }
+#pg-people .btn { border: 1px solid var(--line); background: var(--surface); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 13px; text-decoration: none; display: inline-block; }
+#pg-people .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+#pg-people .input { padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); width: 100%; }
+#pg-people .tagchip { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; background: var(--sunken); color: var(--muted); white-space: nowrap; }
+#pg-people .pill { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+#pg-people .side-nav { display: flex; flex-direction: column; gap: 12px; }
+#pg-people .side-nav h4 { margin: 0 0 4px; padding: 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+#pg-people .side-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+#pg-people .nav-i { width: 100%; border: 0; background: none; text-align: left; padding: 7px 10px; border-radius: 6px; display: flex; justify-content: space-between; gap: 8px; }
+#pg-people .nav-i:hover { background: var(--sunken); }
+#pg-people .nav-i[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+#pg-people .nav-i .c { font-size: 12px; color: var(--muted); }
+#pg-people .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); z-index: 40; }
+@media (max-width: 760px) {#pg-people .side-nav { flex-direction: row; overflow-x: auto; }
+#pg-people .side-nav h4 { display: none; }
+#pg-people .side-nav ul { flex-direction: row; gap: 6px; }
+#pg-people .nav-i { white-space: nowrap; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; }}
+#pg-people .shell { max-width: 1500px; margin: 0 auto; padding-inline: 16px; padding-block: 14px 40px; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 760px) {#pg-people .shell { grid-template-columns: minmax(0, 1fr); }}
+#pg-people .main { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+#pg-people .bar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
+#pg-people .bar .l { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+#pg-people .search { max-width: 340px; }
+#pg-people .tbl-wrap { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow-x: auto; }
+#pg-people table { border-collapse: collapse; width: 100%; min-width: 860px; font-size: 13px; }
+#pg-people th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; padding: 9px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+#pg-people th button { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; }
+#pg-people td { padding: 8px 10px; border-top: 1px solid var(--line); vertical-align: middle; }
+#pg-people tr:hover td { background: var(--bg); }
+#pg-people td a.name { color: var(--fg); font-weight: 600; text-decoration: none; }
+#pg-people td a.name:hover { color: var(--accent); }
+#pg-people .due { color: var(--bad); font-weight: 600; }
+#pg-people .tags { display: flex; gap: 4px; flex-wrap: wrap; }
+#pg-people .bulk { background: var(--fg); color: var(--surface); border-radius: var(--r); padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#pg-people .bulk button { border: 1px solid rgb(255 255 255 / .3); background: none; color: inherit; border-radius: 6px; padding: 3px 10px; font-size: 13px; }
+#pg-people .modal-bg { position: fixed; inset: 0; background: rgb(0 0 0 / .35); display: grid; place-items: center; z-index: 30; padding: 16px; }
+#pg-people .modal { background: var(--surface); border-radius: 10px; padding: 18px; width: min(440px, 100%); display: flex; flex-direction: column; gap: 10px; }
+#pg-people .modal h2 { margin: 0; font-family: var(--font-display); font-size: 18px; }
+#pg-people .modal label { font-size: 12px; color: var(--muted); font-weight: 600; display: flex; flex-direction: column; gap: 3px; }
+#pg-people .modal .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+#pg-people .modal .foot { display: flex; justify-content: flex-end; gap: 6px; }
+:root {
+  --bg: #f4f6f7;
+  --surface: #ffffff;
+  --sunken: #eaeef0;
+  --line: #d8dee2;
+  --fg: #16222a;
+  --muted: #5b6b75;
+  --accent: #1d6a85;
+  --accent-soft: #dcecf2;
+  --ok: #2f7a4b;
+  --ok-soft: #e0f0e5;
+  --warn: #9a6400;
+  --warn-soft: #fbefd6;
+  --bad: #b3372b;
+  --bad-soft: #f9e1de;
+  --waive: #6b6480;
+  --waive-soft: #ebe8f2;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {:root:not([data-theme="light"]) {
+    --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45;
+    --fg: #e4ecf0; --muted: #93a5b0; --accent: #5fb3d1; --accent-soft: #173a48;
+    --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+    --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840;
+    color-scheme: dark;
+  }}
+:root[data-theme="dark"] {
+  --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45;
+  --fg: #e4ecf0; --muted: #93a5b0; --accent: #5fb3d1; --accent-soft: #173a48;
+  --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+  --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840;
+  color-scheme: dark;
+}
+#pg-deals, #pg-deals * { box-sizing: border-box; }
+#pg-deals { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+#pg-deals button, #pg-deals select, #pg-deals input { font: inherit; color: inherit; }
+#pg-deals button { cursor: pointer; }
+#pg-deals :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#pg-deals .date, #pg-deals .num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+#pg-deals .mock-bar { background: var(--accent-soft); padding-block: 7px; padding-inline: 16px; font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; justify-content: space-between; }
+#pg-deals .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--surface); }
+#pg-deals .seg button { border: 0; background: none; padding: 4px 12px; font-size: 13px; }
+#pg-deals .seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+#pg-deals .topnav { background: var(--surface); border-bottom: 1px solid var(--line); padding-inline: 16px; display: flex; align-items: center; gap: 24px; overflow-x: auto; }
+#pg-deals .brand { font-family: var(--font-display); font-weight: 700; font-size: 17px; padding-block: 12px; white-space: nowrap; }
+#pg-deals .brand span { color: var(--accent); }
+#pg-deals .topnav nav { display: flex; gap: 4px; }
+#pg-deals .topnav nav a { color: var(--muted); text-decoration: none; padding: 14px 10px; border-bottom: 2px solid transparent; white-space: nowrap; }
+#pg-deals .topnav nav a.on { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
+#pg-deals .wrap { max-width: 1600px; margin: 0 auto; padding-inline: 16px; padding-block: 12px 40px; display: flex; flex-direction: column; gap: 12px; }
+#pg-deals h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 2.6vw, 25px); line-height: 1.15; margin: 0; text-wrap: balance; }
+#pg-deals .btn-ghost { border: 1px solid var(--line); background: var(--surface); padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+#pg-deals .btn-ghost[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+#pg-deals .board-head { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+#pg-deals .board-head .left { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+#pg-deals .board-sum { color: var(--muted); font-size: 13px; }
+#pg-deals .board { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; align-items: flex-start; }
+#pg-deals .col { flex: 1 0 172px; min-width: 172px; background: var(--sunken); border-radius: var(--r); display: flex; flex-direction: column; }
+#pg-deals .col-h { padding: 8px 9px 6px; display: flex; flex-direction: column; gap: 1px; }
+#pg-deals .col-h .name { font-weight: 700; font-size: 13px; display: flex; justify-content: space-between; gap: 6px; }
+#pg-deals .col-h .name span:last-child { color: var(--muted); font-weight: 600; }
+#pg-deals .col-h .vol { font-size: 11.5px; color: var(--muted); }
+#pg-deals .col-h input { width: 100%; font-weight: 700; font-size: 13px; padding: 3px 6px; border: 1px solid var(--accent); border-radius: 5px; background: var(--surface); }
+#pg-deals .col-tools { display: flex; gap: 4px; margin-top: 4px; }
+#pg-deals .col-tools button { border: 1px solid var(--line); background: var(--surface); border-radius: 4px; font-size: 12px; padding: 1px 7px; color: var(--muted); }
+#pg-deals .col-tools button:hover { color: var(--fg); border-color: var(--muted); }
+#pg-deals .col.add { flex: 0 0 150px; min-width: 150px; background: none; border: 2px dashed var(--line); color: var(--accent); font-weight: 600; padding: 14px; align-self: stretch; justify-content: center; align-items: center; }
+#pg-deals .col.add:hover { border-color: var(--accent); }
+#pg-deals .edit-note { font-size: 12.5px; color: var(--muted); background: var(--accent-soft); border-radius: 6px; padding: 8px 12px; }
+#pg-deals .cards { display: flex; flex-direction: column; gap: 5px; padding: 0 6px 8px; }
+#pg-deals .card { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; display: flex; flex-direction: column; gap: 2px; width: 100%; font-size: 13px; }
+#pg-deals .card:hover { border-color: var(--accent); }
+#pg-deals .card .who { font-weight: 600; display: flex; justify-content: space-between; gap: 6px; align-items: center; }
+#pg-deals .card .addr { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 6px; }
+#pg-deals .card .addr span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#pg-deals .card .price { font-size: 12px; color: var(--fg); white-space: nowrap; }
+#pg-deals .card .next { font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 3px; margin-top: 2px; display: flex; justify-content: space-between; gap: 6px; }
+#pg-deals .card .next.overdue { color: var(--bad); }
+#pg-deals .card .next span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#pg-deals .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; }
+#pg-deals .dot.g { background: var(--ok); }
+#pg-deals .dot.y { background: var(--warn); }
+#pg-deals .dot.r { background: var(--bad); }
+#pg-deals .mini { height: 4px; border-radius: 2px; background: var(--sunken); overflow: hidden; }
+#pg-deals .mini i { display: block; height: 100%; background: var(--ok); }
+#pg-deals .col-foot { font-size: 12px; color: var(--accent); padding: 0 12px 10px; }
+#pg-deals .muted { color: var(--muted); }
+#pg-deals .edit-btn { margin-left: auto; border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 12.5px; padding: 0; align-self: flex-start; }
+#pg-deals .ed label { font-size: 12px; color: var(--muted); font-weight: 600; display: flex; flex-direction: column; gap: 3px; }
+#pg-deals .ed input, #pg-deals .ed select, #pg-deals .ed-row2 input { width: 100%; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); font-size: 13px; color: var(--fg); font-weight: 400; }
+#pg-deals .ed-row { display: grid; grid-template-columns: 74px minmax(0, 1fr) 22px; gap: 5px; align-items: center; }
+#pg-deals .ed-row2 { display: flex; gap: 6px; }
+#pg-deals .ed-row2 input { flex: 1; min-width: 0; }
+#pg-deals .rm { border: 0; background: none; color: var(--muted); font-size: 16px; padding: 0; }
+#pg-deals .addlink { border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 12.5px; padding: 0; text-align: left; align-self: flex-start; }
+#pg-deals .ed-foot { display: flex; justify-content: flex-end; gap: 6px; }
+#pg-deals .tagchip { display: inline-flex; align-items: center; }
+#pg-deals .tagchip button { border: 0; background: none; color: inherit; padding: 0 0 0 5px; font-size: 13px; line-height: 1; }
+#pg-deals .tagchip button:hover { color: var(--bad); }
+#pg-deals .linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; text-decoration: underline; font-size: inherit; }
+#pg-deals .sm { font-size: 12.5px; }
+#pg-deals .od { color: var(--bad); font-size: 12.5px; }
+#pg-deals .td { color: var(--accent); font-size: 12.5px; }
+#pg-deals .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+#pg-deals .c3 { display: grid; grid-template-columns: 290px minmax(0, 1fr) 300px; gap: 12px; align-items: start; }
+@media (max-width: 1100px) {#pg-deals .c3 { grid-template-columns: 270px minmax(0, 1fr); }
+#pg-deals .cright { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }}
+@media (max-width: 760px) {#pg-deals .c3 { grid-template-columns: minmax(0, 1fr); }
+#pg-deals .cright { grid-column: auto; }}
+#pg-deals .cleft, #pg-deals .cright { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+#pg-deals .ccenter { min-width: 0; display: flex; flex-direction: column; gap: 0; }
+#pg-deals .card-s { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+#pg-deals .card-s h3 { margin: 0; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+#pg-deals .card-s p { margin: 0; }
+#pg-deals .who-h { display: flex; gap: 12px; align-items: center; }
+#pg-deals .who-h h1 { font-size: 19px; }
+#pg-deals .avatar { width: 46px; height: 46px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-weight: 700; font-size: 16px; flex: none; }
+#pg-deals .contact-l { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+#pg-deals .contact-l li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 6px; overflow-wrap: anywhere; }
+#pg-deals .ic { color: var(--muted); text-align: center; }
+#pg-deals .lk { color: var(--accent); }
+#pg-deals .kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 5px 10px; margin: 0; font-size: 13px; }
+#pg-deals .kv dt { color: var(--muted); font-weight: 600; font-size: 12.5px; }
+#pg-deals .kv dd { margin: 0; }
+#pg-deals .due-chip { font-size: 11px; font-weight: 700; background: var(--warn-soft); color: var(--warn); padding: 1px 6px; border-radius: 4px; margin-left: 4px; }
+#pg-deals .tags { display: flex; flex-wrap: wrap; gap: 4px; }
+#pg-deals .tagchip { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; background: var(--sunken); color: var(--muted); }
+#pg-deals .tag-add, #pg-deals .plus { width: 22px; height: 22px; border-radius: 50%; border: 0; background: var(--accent); color: var(--surface); font-weight: 700; line-height: 1; padding: 0; }
+#pg-deals .plus { margin-left: auto; }
+#pg-deals .ctabs { display: flex; gap: 2px; overflow-x: auto; }
+#pg-deals .ctabs button { border: 1px solid var(--line); border-bottom: 0; background: var(--sunken); padding: 8px 14px; border-radius: var(--r) var(--r) 0 0; font-size: 13px; font-weight: 600; white-space: nowrap; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+#pg-deals .ctabs button[aria-selected="true"] { background: var(--surface); color: var(--fg); }
+#pg-deals .pane { background: var(--surface); border: 1px solid var(--line); border-radius: 0 var(--r) var(--r) var(--r); padding-bottom: 6px; }
+#pg-deals .pane-h { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; align-items: center; padding: 12px 14px 10px; }
+#pg-deals .dp-r { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+#pg-deals .sidechip { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 1px 6px; border-radius: 4px; }
+#pg-deals .sidechip.buyer { background: var(--accent-soft); color: var(--accent); }
+#pg-deals .sidechip.seller { background: var(--ok-soft); color: var(--ok); }
+#pg-deals .pad { padding: 0 14px 8px; display: flex; flex-direction: column; gap: 8px; }
+#pg-deals .factline { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 0 14px 8px; font-size: 12.5px; }
+#pg-deals .factline em { font-style: normal; color: var(--muted); margin-right: 3px; }
+#pg-deals .factline .hid { color: var(--muted); }
+#pg-deals .subh { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 6px 14px 2px; }
+#pg-deals .fullcl { border-top: 1px solid var(--line); margin-top: 4px; }
+#pg-deals .composer { margin: 12px 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--bg); padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; }
+#pg-deals .comp-tabs { display: flex; gap: 4px; }
+#pg-deals .comp-tabs button { border: 0; background: none; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 13px; color: var(--muted); }
+#pg-deals .comp-tabs button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 0 0 1px var(--line); }
+#pg-deals .composer textarea, #pg-deals .composer select { width: 100%; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 8px; resize: vertical; }
+#pg-deals .composer select { width: auto; padding: 5px 8px; }
+#pg-deals .comp-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+#pg-deals .tl-filters { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 14px 8px; }
+#pg-deals .tl-filters button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 3px 10px; font-size: 12.5px; }
+#pg-deals .tl-filters button span { color: var(--muted); }
+#pg-deals .tl-filters button[aria-pressed="true"] { background: var(--fg); color: var(--surface); border-color: var(--fg); }
+#pg-deals .tl-filters button[aria-pressed="true"] span { color: inherit; opacity: .7; }
+#pg-deals .tl { list-style: none; margin: 0; padding: 0 14px 8px; display: flex; flex-direction: column; }
+#pg-deals .tl li { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 13px; }
+#pg-deals .tk { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding-top: 2px; }
+#pg-deals .tk.note { color: var(--accent); }
+#pg-deals .tk.text { color: var(--ok); }
+#pg-deals .tk.call { color: var(--waive); }
+#pg-deals .tk.missed { color: var(--bad); }
+#pg-deals .tk.email { color: var(--warn); }
+#pg-deals .tk.done { color: var(--ok); }
+#pg-deals .ptask { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; align-items: start; font-size: 13px; padding-top: 6px; border-top: 1px solid var(--line); }
+#pg-deals .ptask:first-of-type { border-top: 0; }
+#pg-deals .ptask.done .title { color: var(--muted); text-decoration: line-through; }
+#pg-deals .ptask .check { width: 18px; height: 18px; }
+#pg-deals .ptask.done .check { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+#pg-deals .deal-li { border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 7px 9px; text-align: left; display: flex; flex-direction: column; gap: 2px; font-size: 13px; font-weight: 600; }
+#pg-deals .deal-li:hover { border-color: var(--accent); }
+#pg-deals .deal-li .muted { font-weight: 400; }
+#pg-deals .row-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+#pg-deals .back { border: 0; background: none; color: var(--accent); font-weight: 600; padding: 0; align-self: flex-start; }
+#pg-deals .dhead { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: flex-end; }
+#pg-deals .dhead .sub { color: var(--muted); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+#pg-deals .stagepill { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+#pg-deals .health { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; }
+#pg-deals .dates { display: flex; flex-wrap: wrap; gap: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+#pg-deals .dt { flex: 1 1 130px; text-align: left; border: 0; border-right: 1px solid var(--line); background: none; padding: 9px 12px; display: flex; flex-direction: column; gap: 1px; }
+#pg-deals .dt:last-child { border-right: 0; }
+#pg-deals .dt:hover, #pg-deals .dt[aria-expanded="true"] { background: var(--accent-soft); }
+#pg-deals .dt .l { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+#pg-deals .dt .v { font-size: 13px; }
+#pg-deals .dt .s { font-size: 11.5px; font-weight: 600; color: var(--muted); }
+#pg-deals .dt .s.met { color: var(--ok); }
+#pg-deals .dt .s.waived { color: var(--waive); }
+#pg-deals .dt .s.extended { color: var(--warn); }
+#pg-deals .dt .s.soon { color: var(--accent); }
+#pg-deals .edit { background: var(--surface); border: 1px solid var(--accent); border-radius: var(--r); padding: 12px; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; }
+#pg-deals .edit label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 600; }
+#pg-deals .edit input, #pg-deals .edit select { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+#pg-deals .edit p { margin: 0; flex: 1 1 220px; color: var(--muted); font-size: 13px; }
+#pg-deals .btn { border: 1px solid var(--line); background: var(--surface); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 13px; }
+#pg-deals .dgrid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 14px; align-items: start; }
+#pg-deals .dgrid > .stack:last-child .row { padding-inline: 12px; }
+@media (max-width: 880px) {#pg-deals .dgrid { grid-template-columns: minmax(0, 1fr); }}
+#pg-deals .stack { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+#pg-deals .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+#pg-deals .box > h2 { font-family: var(--font-display); font-size: 15px; margin: 0; padding: 12px 14px 4px; display: flex; justify-content: space-between; align-items: baseline; }
+#pg-deals .box > h2 small { font-family: var(--font-body); font-size: 12.5px; color: var(--muted); font-weight: 500; }
+#pg-deals .row { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 14px; border-top: 1px solid var(--line); }
+#pg-deals .box > .row:first-of-type, #pg-deals .phase-body > .row:first-child { border-top: 0; }
+#pg-deals .check { width: 20px; height: 20px; border-radius: 5px; border: 1.5px solid var(--line); background: var(--surface); display: grid; place-items: center; padding: 0; }
+#pg-deals .check:hover { border-color: var(--ok); }
+#pg-deals .row.done .check { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+#pg-deals .row.na .check, #pg-deals .row.skip .check, #pg-deals .row.waived .check { background: var(--sunken); color: var(--muted); }
+#pg-deals .row .title { min-width: 0; }
+#pg-deals .row.done .title, #pg-deals .row.na .title, #pg-deals .row.skip .title, #pg-deals .row.waived .title { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+#pg-deals .row .title small { color: var(--muted); text-decoration: none; display: inline-block; margin-left: 6px; font-size: 11.5px; }
+#pg-deals .row .title .draft { border: 0; background: none; color: var(--accent); font-size: 12px; font-weight: 600; padding: 0 0 0 6px; }
+#pg-deals .row .r { display: flex; align-items: center; gap: 8px; }
+#pg-deals .row .due { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+#pg-deals .row .due.overdue { color: var(--bad); font-weight: 500; }
+#pg-deals .row .due.today { color: var(--accent); font-weight: 500; }
+#pg-deals .av { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 700; background: var(--accent-soft); color: var(--accent); flex: none; }
+#pg-deals .av.as { background: var(--waive-soft); color: var(--waive); }
+#pg-deals .more { border: 0; background: none; color: var(--muted); padding: 0 2px; font-size: 16px; line-height: 1; }
+#pg-deals .menu { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 4px; }
+#pg-deals .menu button { border: 1px solid var(--line); background: var(--surface); border-radius: 5px; font-size: 12px; padding: 2px 8px; }
+#pg-deals .nextms { margin: 6px 14px 4px; font-size: 13px; color: var(--muted); }
+#pg-deals .nextms b { color: var(--fg); }
+#pg-deals .phase { border-top: 1px solid var(--line); }
+#pg-deals .phase:first-of-type { border-top: 0; }
+#pg-deals .phase-h { width: 100%; border: 0; background: none; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left; }
+#pg-deals .phase-h:hover { background: var(--sunken); }
+#pg-deals .phase-h .pn { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+#pg-deals .phase-h .pn::before { content: "›"; display: inline-block; width: 10px; color: var(--muted); transition: transform .15s; }
+#pg-deals .phase-h[aria-expanded="true"] .pn::before { transform: rotate(90deg); }
+#pg-deals .phase-h .pc { font-size: 12.5px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+#pg-deals .phase-h .pc .ok { color: var(--ok); font-weight: 600; }
+#pg-deals .phase-body { background: var(--bg); }
+#pg-deals .phase-body .row { padding-left: 32px; }
+#pg-deals .facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 13px; padding: 6px 14px 14px; margin: 0; }
+#pg-deals .facts dt { color: var(--muted); }
+#pg-deals .facts dd { margin: 0; text-align: right; }
+#pg-deals .facts .hid { color: var(--muted); font-style: italic; font-family: var(--font-body); font-size: 12px; }
+#pg-deals .people { padding: 6px 14px 14px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+#pg-deals .people div { display: flex; justify-content: space-between; gap: 8px; }
+#pg-deals .people span:last-child { color: var(--muted); }
+#pg-deals .empty { color: var(--muted); font-size: 13px; padding: 4px 14px 12px; }
+@media (max-width: 520px) {#pg-deals .row { grid-template-columns: 22px minmax(0, 1fr); }
+#pg-deals .row .r { grid-column: 2; }
+#pg-deals .phase-body .row { padding-left: 14px; }
+#pg-deals .dt { flex-basis: 50%; border-bottom: 1px solid var(--line); }}
+#pg-deals .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); }
+@media (prefers-reduced-motion: reduce) {#pg-deals .phase-h .pn::before { transition: none; }}
+:root {
+  --bg: #f4f6f7;
+  --surface: #ffffff;
+  --sunken: #eaeef0;
+  --line: #d8dee2;
+  --fg: #16222a;
+  --muted: #5b6b75;
+  --accent: #1d6a85;
+  --accent-soft: #dcecf2;
+  --ok: #2f7a4b;
+  --ok-soft: #e0f0e5;
+  --warn: #9a6400;
+  --warn-soft: #fbefd6;
+  --bad: #b3372b;
+  --bad-soft: #f9e1de;
+  --waive: #6b6480;
+  --waive-soft: #ebe8f2;
+  --p-high: #c2410c;
+  --p-med: #b7860b;
+  --p-low: #2f6fb3;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {:root:not([data-theme="light"]) {
+    --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45;
+    --fg: #e4ecf0; --muted: #93a5b0; --accent: #5fb3d1; --accent-soft: #173a48;
+    --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+    --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840;
+    --p-high: #fb923c; --p-med: #e2b04f; --p-low: #6aa8e8;
+    color-scheme: dark;
+  }}
+:root[data-theme="dark"] {
+  --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45;
+  --fg: #e4ecf0; --muted: #93a5b0; --accent: #5fb3d1; --accent-soft: #173a48;
+  --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+  --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840;
+  --p-high: #fb923c; --p-med: #e2b04f; --p-low: #6aa8e8;
+  color-scheme: dark;
+}
+#pg-tasks, #pg-tasks * { box-sizing: border-box; }
+#pg-tasks { height: 100%; }
+#pg-tasks { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+#pg-tasks button, #pg-tasks select, #pg-tasks input, #pg-tasks textarea { font: inherit; color: inherit; }
+#pg-tasks button { cursor: pointer; }
+#pg-tasks :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#pg-tasks .date { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+#pg-tasks .mock-bar { background: var(--accent-soft); padding-block: 7px; padding-inline: 16px; font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
+#pg-tasks .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--surface); }
+#pg-tasks .seg button { border: 0; background: none; padding: 4px 12px; font-size: 12.5px; }
+#pg-tasks .seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+#pg-tasks .main-h .tools { display: flex; flex-wrap: wrap; gap: 8px; }
+#pg-tasks .topnav { background: var(--surface); border-bottom: 1px solid var(--line); padding-inline: 16px; display: flex; align-items: center; gap: 24px; overflow-x: auto; }
+#pg-tasks .brand { font-family: var(--font-display); font-weight: 700; font-size: 17px; padding-block: 12px; white-space: nowrap; }
+#pg-tasks .brand span { color: var(--accent); }
+#pg-tasks .topnav nav { display: flex; gap: 4px; }
+#pg-tasks .topnav nav a { color: var(--muted); text-decoration: none; padding: 14px 10px; border-bottom: 2px solid transparent; white-space: nowrap; }
+#pg-tasks .topnav nav a.on { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
+#pg-tasks .shell { max-width: 1320px; margin: 0 auto; padding-inline: 16px; padding-block: 18px 48px; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 20px; align-items: start; }
+#pg-tasks .shell.with-detail { grid-template-columns: 210px minmax(0, 1fr) 340px; }
+#pg-tasks .side { display: flex; flex-direction: column; gap: 14px; position: sticky; top: env(safe-area-inset-top, 0px); }
+#pg-tasks .side h4 { margin: 0 0 4px; padding: 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+#pg-tasks .side ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+#pg-tasks .nav-i { width: 100%; border: 0; background: none; text-align: left; padding: 7px 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+#pg-tasks .nav-i:hover { background: var(--sunken); }
+#pg-tasks .nav-i[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+#pg-tasks .nav-i .c { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+#pg-tasks .nav-i .c.bad { color: var(--bad); font-weight: 600; }
+#pg-tasks .main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+#pg-tasks .main-h { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; }
+#pg-tasks h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 3vw, 28px); margin: 0; }
+#pg-tasks .main-h .sub { color: var(--muted); font-size: 13px; }
+#pg-tasks .filters { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--surface); }
+#pg-tasks .filters button { border: 0; background: none; padding: 4px 12px; font-size: 12.5px; }
+#pg-tasks .filters button[aria-pressed="true"] { background: var(--fg); color: var(--surface); }
+#pg-tasks .qa { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 4px 6px 4px 12px; }
+#pg-tasks .qa:focus-within { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+#pg-tasks .qa form { display: flex; gap: 8px; align-items: center; }
+#pg-tasks .qa input { flex: 1; min-width: 0; border: 0; background: none; padding: 8px 0; outline: none; }
+#pg-tasks .qa .add { border: 0; background: var(--accent); color: var(--surface); border-radius: 6px; padding: 6px 12px; font-weight: 600; font-size: 13px; }
+#pg-tasks .parsed { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 0 8px; }
+#pg-tasks .parsed:empty { display: none; }
+#pg-tasks .pchip { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+#pg-tasks .qa-hint { font-size: 12px; color: var(--muted); padding: 0 2px; }
+#pg-tasks .qa-hint code { font-family: var(--font-data); font-size: 11.5px; background: var(--sunken); padding: 1px 4px; border-radius: 3px; }
+#pg-tasks .group { display: flex; flex-direction: column; }
+#pg-tasks .group h3 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; display: flex; gap: 8px; }
+#pg-tasks .group h3.bad { color: var(--bad); }
+#pg-tasks .group h3 span:last-child { font-weight: 500; }
+#pg-tasks .list { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+#pg-tasks .row { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 12px; border-top: 1px solid var(--line); }
+#pg-tasks .row:first-child { border-top: 0; }
+#pg-tasks .row:hover { background: var(--bg); }
+#pg-tasks .row.sel { background: var(--accent-soft); }
+#pg-tasks .check { width: 19px; height: 19px; border-radius: 5px; border: 1.8px solid var(--line); background: var(--surface); display: grid; place-items: center; padding: 0; }
+#pg-tasks .check.p3 { border-color: var(--p-high); }
+#pg-tasks .check.p2 { border-color: var(--p-med); }
+#pg-tasks .check.p1 { border-color: var(--p-low); }
+#pg-tasks .row.done .check { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+#pg-tasks .body { border: 0; background: none; text-align: left; padding: 0; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#pg-tasks .body .t { font-weight: 500; }
+#pg-tasks .row.done .body .t { color: var(--muted); text-decoration: line-through; }
+#pg-tasks .meta { display: flex; flex-wrap: wrap; gap: 3px 10px; font-size: 12px; color: var(--muted); align-items: center; }
+#pg-tasks .link { color: var(--accent); font-weight: 600; }
+#pg-tasks .link.deal::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 2px; background: currentColor; margin-right: 5px; vertical-align: 1px; }
+#pg-tasks .r { display: flex; align-items: center; gap: 8px; }
+#pg-tasks .due { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+#pg-tasks .due.overdue { color: var(--bad); font-weight: 500; }
+#pg-tasks .av { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 700; background: var(--accent-soft); color: var(--accent); flex: none; }
+#pg-tasks .av.as { background: var(--waive-soft); color: var(--waive); }
+#pg-tasks .empty { color: var(--muted); padding: 18px 14px; text-align: center; background: var(--surface); border: 1px dashed var(--line); border-radius: var(--r); }
+#pg-tasks .touch-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 5px; font-size: 12px; font-weight: 600; padding: 3px 9px; }
+#pg-tasks .detail { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); position: sticky; top: env(safe-area-inset-top, 0px); display: flex; flex-direction: column; max-height: calc(100vh - 40px); overflow: auto; }
+#pg-tasks .detail-h { display: flex; gap: 10px; align-items: flex-start; padding: 14px 14px 10px; border-bottom: 1px solid var(--line); }
+#pg-tasks .detail-h .title { flex: 1; font-weight: 600; font-size: 15px; border: 0; background: none; padding: 0; resize: none; min-width: 0; }
+#pg-tasks .x { border: 0; background: none; color: var(--muted); font-size: 18px; line-height: 1; padding: 2px 4px; }
+#pg-tasks .fields { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px 10px; padding: 12px 14px; font-size: 13px; align-items: center; }
+#pg-tasks .fields label { color: var(--muted); font-weight: 600; font-size: 12px; }
+#pg-tasks .fields select, #pg-tasks .fields input { width: 100%; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+#pg-tasks .from { margin: 0 14px; padding: 10px 12px; border-radius: 6px; background: var(--sunken); font-size: 12.5px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+#pg-tasks .from b { color: var(--fg); }
+#pg-tasks .from .acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+#pg-tasks .btn { border: 1px solid var(--line); background: var(--surface); padding: 5px 10px; border-radius: 6px; font-weight: 600; font-size: 12.5px; }
+#pg-tasks .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+#pg-tasks .sec { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+#pg-tasks .sec h5 { margin: 0; font-size: 12px; color: var(--muted); font-weight: 600; }
+#pg-tasks .sub-i { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+#pg-tasks .sub-i input { width: 15px; height: 15px; accent-color: var(--ok); }
+#pg-tasks .sub-i.done span { color: var(--muted); text-decoration: line-through; }
+#pg-tasks .notes { width: 100%; min-height: 70px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); resize: vertical; font-size: 13px; }
+@media (max-width: 1080px) {#pg-tasks .shell.with-detail { grid-template-columns: 210px minmax(0, 1fr); }
+#pg-tasks .detail { position: fixed; inset: 0 0 0 auto; width: min(380px, 100%); max-height: none; border-radius: 0; z-index: 20; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); box-shadow: -8px 0 24px rgb(0 0 0 / .15); }}
+@media (max-width: 760px) {#pg-tasks .shell, #pg-tasks .shell.with-detail { grid-template-columns: minmax(0, 1fr); }
+#pg-tasks .side { position: static; flex-direction: row; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
+#pg-tasks .side h4 { display: none; }
+#pg-tasks .side ul { flex-direction: row; gap: 6px; }
+#pg-tasks .nav-i { white-space: nowrap; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; }
+#pg-tasks .row { grid-template-columns: 22px minmax(0, 1fr); }
+#pg-tasks .row .r { grid-column: 2; }}
+#pg-tasks .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); z-index: 30; }
+:root {
+  --bg: #f4f6f7; --surface: #ffffff; --sunken: #eaeef0; --line: #d8dee2; --fg: #16222a; --muted: #5b6b75;
+  --accent: #1d6a85; --accent-soft: #dcecf2; --ok: #2f7a4b; --ok-soft: #e0f0e5; --warn: #9a6400; --warn-soft: #fbefd6;
+  --bad: #b3372b; --bad-soft: #f9e1de; --waive: #6b6480; --waive-soft: #ebe8f2;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {:root:not([data-theme="light"]) {
+    --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45; --fg: #e4ecf0; --muted: #93a5b0;
+    --accent: #5fb3d1; --accent-soft: #173a48; --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+    --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840; color-scheme: dark;
+  }}
+:root[data-theme="dark"] {
+  --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45; --fg: #e4ecf0; --muted: #93a5b0;
+  --accent: #5fb3d1; --accent-soft: #173a48; --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+  --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840; color-scheme: dark;
+}
+#pg-messages, #pg-messages * { box-sizing: border-box; }
+#pg-messages { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+#pg-messages button, #pg-messages select, #pg-messages input, #pg-messages textarea { font: inherit; color: inherit; }
+#pg-messages button { cursor: pointer; }
+#pg-messages :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#pg-messages .date, #pg-messages .num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+#pg-messages .mock-bar { background: var(--accent-soft); padding-block: 7px; padding-inline: 16px; font-size: 13px; }
+#pg-messages .topnav { background: var(--surface); border-bottom: 1px solid var(--line); padding-inline: 16px; display: flex; align-items: center; gap: 24px; overflow-x: auto; }
+#pg-messages .brand { font-family: var(--font-display); font-weight: 700; font-size: 17px; padding-block: 12px; white-space: nowrap; }
+#pg-messages .brand span { color: var(--accent); }
+#pg-messages .topnav nav { display: flex; gap: 4px; }
+#pg-messages .topnav nav a { color: var(--muted); text-decoration: none; padding: 14px 10px; border-bottom: 2px solid transparent; white-space: nowrap; }
+#pg-messages .topnav nav a.on { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
+#pg-messages h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 2.6vw, 25px); line-height: 1.15; margin: 0; }
+#pg-messages .muted { color: var(--muted); }
+#pg-messages .sm { font-size: 12.5px; }
+#pg-messages .btn { border: 1px solid var(--line); background: var(--surface); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 13px; text-decoration: none; display: inline-block; }
+#pg-messages .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+#pg-messages .input { padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); width: 100%; }
+#pg-messages .tagchip { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; background: var(--sunken); color: var(--muted); white-space: nowrap; }
+#pg-messages .pill { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+#pg-messages .side-nav { display: flex; flex-direction: column; gap: 12px; }
+#pg-messages .side-nav h4 { margin: 0 0 4px; padding: 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+#pg-messages .side-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+#pg-messages .nav-i { width: 100%; border: 0; background: none; text-align: left; padding: 7px 10px; border-radius: 6px; display: flex; justify-content: space-between; gap: 8px; }
+#pg-messages .nav-i:hover { background: var(--sunken); }
+#pg-messages .nav-i[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+#pg-messages .nav-i .c { font-size: 12px; color: var(--muted); }
+#pg-messages .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); z-index: 40; }
+@media (max-width: 760px) {#pg-messages .side-nav { flex-direction: row; overflow-x: auto; }
+#pg-messages .side-nav h4 { display: none; }
+#pg-messages .side-nav ul { flex-direction: row; gap: 6px; }
+#pg-messages .nav-i { white-space: nowrap; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; }}
+#pg-messages .shell { max-width: 1500px; margin: 0 auto; padding-inline: 16px; padding-block: 14px 24px; display: grid; grid-template-columns: 300px minmax(0, 1fr) 280px; gap: 12px; align-items: start; }
+@media (max-width: 1100px) {#pg-messages .shell { grid-template-columns: 280px minmax(0, 1fr); }
+#pg-messages .info { display: none; }}
+@media (max-width: 760px) {#pg-messages .shell { grid-template-columns: minmax(0, 1fr); }
+#pg-messages .shell.thread-open .convs { display: none; }
+#pg-messages .shell:not(.thread-open) .thread { display: none; }}
+#pg-messages .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+#pg-messages .convs { display: flex; flex-direction: column; }
+#pg-messages .convs .top { padding: 10px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--line); }
+#pg-messages .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; align-self: flex-start; }
+#pg-messages .seg button { border: 0; background: none; padding: 3px 11px; font-size: 12.5px; }
+#pg-messages .seg button[aria-pressed="true"] { background: var(--fg); color: var(--surface); }
+#pg-messages .conv { border: 0; border-top: 1px solid var(--line); background: none; text-align: left; padding: 10px 12px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; width: 100%; }
+#pg-messages .conv:first-of-type { border-top: 0; }
+#pg-messages .conv:hover { background: var(--bg); }
+#pg-messages .conv[aria-current="true"] { background: var(--accent-soft); }
+#pg-messages .conv .n { font-weight: 600; display: flex; gap: 6px; align-items: center; min-width: 0; }
+#pg-messages .conv .n span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#pg-messages .conv.unread .n::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+#pg-messages .conv .t { font-size: 12px; color: var(--muted); }
+#pg-messages .conv .s { grid-column: 1 / -1; font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#pg-messages .conv .s.missed { color: var(--bad); font-weight: 600; }
+#pg-messages .thread { display: flex; flex-direction: column; min-height: 70vh; }
+#pg-messages .th-h { padding: 10px 14px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 8px; align-items: center; flex-wrap: wrap; }
+#pg-messages .th-h b { font-size: 15px; }
+#pg-messages .back { display: none; border: 0; background: none; color: var(--accent); font-weight: 600; padding: 0; }
+@media (max-width: 760px) {#pg-messages .back { display: inline; }}
+#pg-messages .msgs { flex: 1; padding: 14px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; max-height: 62vh; }
+#pg-messages .day { align-self: center; font-size: 11.5px; color: var(--muted); font-weight: 600; margin: 4px 0; }
+#pg-messages .bub { max-width: 72%; padding: 8px 12px; border-radius: 14px; font-size: 13.5px; line-height: 1.4; }
+#pg-messages .bub small { display: block; font-size: 11px; opacity: .7; margin-top: 3px; }
+#pg-messages .bub.in { align-self: flex-start; background: var(--sunken); border-bottom-left-radius: 4px; }
+#pg-messages .bub.out { align-self: flex-end; background: var(--accent); color: var(--surface); border-bottom-right-radius: 4px; }
+#pg-messages .sys { align-self: center; font-size: 12.5px; background: var(--bad-soft); color: var(--bad); padding: 5px 12px; border-radius: 999px; display: flex; gap: 10px; align-items: center; }
+#pg-messages .sys button { border: 0; background: none; color: inherit; font-weight: 700; text-decoration: underline; padding: 0; font-size: 12.5px; }
+#pg-messages .comp { border-top: 1px solid var(--line); padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+#pg-messages .comp textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; resize: vertical; background: var(--bg); }
+#pg-messages .comp .row { display: flex; justify-content: space-between; gap: 8px; align-items: center; flex-wrap: wrap; }
+#pg-messages .comp select { border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; background: var(--surface); max-width: 260px; }
+#pg-messages .info { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+#pg-messages .info h3 { margin: 0; font-size: 13.5px; }
+#pg-messages .kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 5px 10px; margin: 0; font-size: 13px; }
+#pg-messages .kv dt { color: var(--muted); font-weight: 600; font-size: 12.5px; }
+#pg-messages .kv dd { margin: 0; }
+#pg-messages .tags { display: flex; flex-wrap: wrap; gap: 4px; }
+#pg-messages .newc label { font-size: 12px; color: var(--muted); font-weight: 600; display: flex; flex-direction: column; gap: 3px; }
+#pg-messages .newc { display: flex; flex-direction: column; gap: 8px; }
+:root {
+  --bg: #f4f6f7; --surface: #ffffff; --sunken: #eaeef0; --line: #d8dee2; --fg: #16222a; --muted: #5b6b75;
+  --accent: #1d6a85; --accent-soft: #dcecf2; --ok: #2f7a4b; --ok-soft: #e0f0e5; --warn: #9a6400; --warn-soft: #fbefd6;
+  --bad: #b3372b; --bad-soft: #f9e1de; --waive: #6b6480; --waive-soft: #ebe8f2;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {:root:not([data-theme="light"]) {
+    --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45; --fg: #e4ecf0; --muted: #93a5b0;
+    --accent: #5fb3d1; --accent-soft: #173a48; --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+    --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840; color-scheme: dark;
+  }}
+:root[data-theme="dark"] {
+  --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45; --fg: #e4ecf0; --muted: #93a5b0;
+  --accent: #5fb3d1; --accent-soft: #173a48; --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+  --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840; color-scheme: dark;
+}
+#pg-admin, #pg-admin * { box-sizing: border-box; }
+#pg-admin { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+#pg-admin button, #pg-admin select, #pg-admin input, #pg-admin textarea { font: inherit; color: inherit; }
+#pg-admin button { cursor: pointer; }
+#pg-admin :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#pg-admin .date, #pg-admin .num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+#pg-admin .mock-bar { background: var(--accent-soft); padding-block: 7px; padding-inline: 16px; font-size: 13px; }
+#pg-admin .topnav { background: var(--surface); border-bottom: 1px solid var(--line); padding-inline: 16px; display: flex; align-items: center; gap: 24px; overflow-x: auto; }
+#pg-admin .brand { font-family: var(--font-display); font-weight: 700; font-size: 17px; padding-block: 12px; white-space: nowrap; }
+#pg-admin .brand span { color: var(--accent); }
+#pg-admin .topnav nav { display: flex; gap: 4px; }
+#pg-admin .topnav nav a { color: var(--muted); text-decoration: none; padding: 14px 10px; border-bottom: 2px solid transparent; white-space: nowrap; }
+#pg-admin .topnav nav a.on { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
+#pg-admin h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 2.6vw, 25px); line-height: 1.15; margin: 0; }
+#pg-admin .muted { color: var(--muted); }
+#pg-admin .sm { font-size: 12.5px; }
+#pg-admin .btn { border: 1px solid var(--line); background: var(--surface); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 13px; text-decoration: none; display: inline-block; }
+#pg-admin .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+#pg-admin .input { padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); width: 100%; }
+#pg-admin .tagchip { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; background: var(--sunken); color: var(--muted); white-space: nowrap; }
+#pg-admin .pill { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+#pg-admin .side-nav { display: flex; flex-direction: column; gap: 12px; }
+#pg-admin .side-nav h4 { margin: 0 0 4px; padding: 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+#pg-admin .side-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+#pg-admin .nav-i { width: 100%; border: 0; background: none; text-align: left; padding: 7px 10px; border-radius: 6px; display: flex; justify-content: space-between; gap: 8px; }
+#pg-admin .nav-i:hover { background: var(--sunken); }
+#pg-admin .nav-i[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+#pg-admin .nav-i .c { font-size: 12px; color: var(--muted); }
+#pg-admin .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); z-index: 40; }
+@media (max-width: 760px) {#pg-admin .side-nav { flex-direction: row; overflow-x: auto; }
+#pg-admin .side-nav h4 { display: none; }
+#pg-admin .side-nav ul { flex-direction: row; gap: 6px; }
+#pg-admin .nav-i { white-space: nowrap; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; }}
+#pg-admin .shell { max-width: 1300px; margin: 0 auto; padding-inline: 16px; padding-block: 14px 40px; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 760px) {#pg-admin .shell { grid-template-columns: minmax(0, 1fr); }}
+#pg-admin .main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+#pg-admin .main > p { margin: 0; color: var(--muted); }
+#pg-admin .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+#pg-admin .box > h2 { margin: 0; padding: 12px 14px 6px; font-size: 14.5px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+#pg-admin .tbl-wrap { overflow-x: auto; }
+#pg-admin table { border-collapse: collapse; width: 100%; font-size: 13px; }
+#pg-admin th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; padding: 8px 12px; white-space: nowrap; }
+#pg-admin td { padding: 7px 12px; border-top: 1px solid var(--line); vertical-align: middle; }
+#pg-admin td input:not([type=checkbox]), #pg-admin td select { padding: 4px 7px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); font-size: 13px; width: 100%; min-width: 70px; }
+#pg-admin td input.n { width: 60px; min-width: 60px; }
+#pg-admin .timing { display: flex; gap: 4px; align-items: center; min-width: 250px; }
+#pg-admin .rm { border: 0; background: none; color: var(--muted); font-size: 16px; padding: 0 4px; }
+#pg-admin .rm:hover { color: var(--bad); }
+#pg-admin .addrow { padding: 10px 14px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; border-top: 1px solid var(--line); }
+#pg-admin .phase-h td { background: var(--sunken); font-weight: 700; font-size: 12.5px; }
+#pg-admin .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+#pg-admin .toolbar select { padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+#pg-admin .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+#pg-admin .icard { padding: 14px; display: flex; flex-direction: column; gap: 6px; }
+#pg-admin .icard h3 { margin: 0; font-size: 14px; display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+#pg-admin .st { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+#pg-admin .st.on { background: var(--ok-soft); color: var(--ok); }
+#pg-admin .st.off { background: var(--sunken); color: var(--muted); }
+#pg-admin .icard p { margin: 0; font-size: 13px; color: var(--muted); }
+#pg-admin .code { font-family: var(--font-data); font-size: 12px; background: var(--sunken); padding: 6px 8px; border-radius: 5px; overflow-wrap: anywhere; color: var(--fg); }
+#pg-admin .tpl { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 0; }
+@media (max-width: 760px) {#pg-admin .tpl { grid-template-columns: minmax(0, 1fr); }}
+#pg-admin .tpl-list { border-right: 1px solid var(--line); max-height: 520px; overflow-y: auto; }
+#pg-admin .tpl-i { width: 100%; border: 0; border-top: 1px solid var(--line); background: none; text-align: left; padding: 8px 12px; display: flex; flex-direction: column; gap: 1px; font-size: 13px; }
+#pg-admin .tpl-i[aria-current="true"] { background: var(--accent-soft); }
+#pg-admin .tpl-i small { color: var(--muted); font-size: 11.5px; }
+#pg-admin .tpl-ed { padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+#pg-admin .tpl-ed label { font-size: 12px; color: var(--muted); font-weight: 600; display: flex; flex-direction: column; gap: 3px; }
+#pg-admin .tpl-ed textarea { min-height: 160px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); resize: vertical; }
+#pg-admin .merge { display: flex; flex-wrap: wrap; gap: 4px; }
+#pg-admin .merge button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; font-size: 11.5px; padding: 2px 8px; font-family: var(--font-data); }
+#pg-admin .perm td:not(:first-child), #pg-admin .perm th:not(:first-child) { text-align: center; }
+</style>
+<div class="pg" id="pg-people" hidden>
+<div class="mock-bar"><strong>Mockup</strong> · fake data. Click a name to open their contact page. Check boxes for bulk actions.</div>
+<header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html" class="on">People</a><a href="deals.html">Deals</a><a href="tasks.html">Tasks</a><a href="messages.html">Messages</a><a href="admin.html">Admin</a></nav></header>
+<div class="shell">
+  <aside class="side-nav" id="side"></aside>
+  <main class="main" id="main"></main>
+</div>
+<div id="modal"></div>
+<div id="toast" class="toast" hidden></div>
+</div>
+<div class="pg" id="pg-deals" hidden>
+<div class="mock-bar">
+  <span><strong>Mockup</strong> · fake data, "today" is Mon Oct 12, 2026. Click a deal card to open the client. No current deal: <button class="linkbtn" data-opencontact="murphy">Kate Murphy (sphere)</button> · <button class="linkbtn" data-opencontact="d16">Kara Voss (past client)</button></span>
+  <span class="seg" role="group" aria-label="View as">
+    <button id="role-admin" aria-pressed="true">Admin view</button>
+    <button id="role-assistant" aria-pressed="false">Assistant view</button>
+  </span>
+</div>
+
+<header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html" class="on">Deals</a><a href="tasks.html">Tasks</a><a href="messages.html">Messages</a><a href="admin.html">Admin</a></nav></header>
+
+<main class="wrap" id="app"></main>
+<div id="toast" class="toast" hidden></div>
+</div>
+<div class="pg" id="pg-tasks" hidden>
+<div class="mock-bar"><strong>Mockup</strong> · fake data, "today" is Mon Oct 12, 2026. Deal steps come from the same fake deals as the pipeline mockup. Try the quick add box.
+  <span class="seg" role="group" aria-label="Viewing as" style="margin-left:12px"><button id="as-lp" aria-pressed="true">Viewing as Luke</button><button id="as-as" aria-pressed="false">Viewing as assistant</button></span></div>
+
+<header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html">Deals</a><a href="tasks.html" class="on">Tasks</a><a href="messages.html">Messages</a><a href="admin.html">Admin</a></nav></header>
+
+<div class="shell" id="shell">
+  <aside class="side" id="side"></aside>
+  <main class="main" id="main"></main>
+  <aside class="detail" id="detail" hidden></aside>
+</div>
+<div id="toast" class="toast" hidden></div>
+</div>
+<div class="pg" id="pg-messages" hidden>
+<div class="mock-bar"><strong>Mockup</strong> · fake data. Texts and missed calls from your business line (612) 555-0100. Email stays in Gmail.</div>
+<header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html">Deals</a><a href="tasks.html">Tasks</a><a href="messages.html" class="on">Messages</a><a href="admin.html">Admin</a></nav></header>
+<div class="shell" id="shell">
+  <section class="panel convs" id="convs"></section>
+  <section class="panel thread" id="thread"></section>
+  <aside class="panel info" id="info"></aside>
+</div>
+<div id="toast" class="toast" hidden></div>
+</div>
+<div class="pg" id="pg-admin" hidden>
+<div class="mock-bar"><strong>Mockup</strong> · fake data. Changes work on the page but aren't saved.</div>
+<header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html">Deals</a><a href="tasks.html">Tasks</a><a href="messages.html">Messages</a><a href="admin.html" class="on">Admin</a></nav></header>
+<div class="shell">
+  <aside class="side-nav" id="side"></aside>
+  <main class="main" id="main"></main>
+</div>
+<div id="toast" class="toast" hidden></div>
+</div>
+<script>
+const INIT = {}, API = {};
+INIT.people = function (document) {
+
+const TODAY = new Date(2026, 9, 12);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// [cid, name, stage, followDays, lastTouchDaysAgo, source, tags, deal, phone]
+let people = [
+  ["calloway", "Jordan & Priya Calloway", "Under Contract", 30, 1, "Sphere Referral", ["Buyer", "Seller", "A Lead"], "Buyer · Under Contract, Seller · Active", "(612) 555-0148"],
+  ["murphy", "Kate Murphy", "90 Day Sphere", 90, 12, "Sphere", ["Past Client", "Mailers", "Christmas Cards"], "", "(651) 555-0172"],
+  ["d14", "Ruth & Sam Engel", "Under Contract", null, 3, "Sphere", ["Buyer"], "Buyer · Under Contract", "(612) 555-0114"],
+  ["d15", "Dev Raman", "Under Contract", null, 2, "Website", ["Buyer"], "Buyer · Under Contract", "(612) 555-0115"],
+  ["d29", "Wes Halvorsen", "Under Contract", null, 4, "Sphere", ["Seller"], "Seller · Under Contract", "(612) 555-0129"],
+  ["d11", "Owen Pryce", "Lead", null, 1, "Website", ["Buyer", "B Lead"], "Buyer · Offer Out", "(612) 555-0111"],
+  ["d12", "Mia Castellano", "Lead", null, 0, "Zillow Preferred", ["Buyer", "A Lead"], "Buyer · Offer Out", "(612) 555-0112"],
+  ["d7", "Nora Feld", "Lead", null, 6, "Sphere Referral", ["Buyer"], "Buyer · Searching", "(612) 555-0107"],
+  ["d8", "Theo & June Park", "Lead", null, 11, "Sphere", ["Buyer", "C Lead"], "Buyer · Searching", "(612) 555-0108"],
+  ["d9", "Isaac Brandt", "Lead", null, 4, "Website", ["Buyer"], "Buyer · Searching", "(612) 555-0109"],
+  ["d10", "Leah Sandoval", "Lead", null, 15, "Sphere", ["Buyer", "D Lead"], "Buyer · Searching", "(612) 555-0110"],
+  ["d1", "Ethan Moreau", "Lead", null, 3, "Website", [], "Buyer · Lead", "(612) 555-0101"],
+  ["d3", "Ben & Hana Okafor", "Lead", null, 7, "Zillow Preferred", [], "Buyer · Lead", "(612) 555-0103"],
+  ["d4", "Grace Thorsen", "Lead", null, 2, "Sphere", ["Buyer"], "Buyer · Consult", "(612) 555-0104"],
+  ["d24", "Carol & Dean Fisk", "Lead", null, 4, "Sphere Referral", ["Seller", "A Lead"], "Seller · Prep", "(612) 555-0124"],
+  ["d26", "Hugo Bergstrom", "Lead", null, 2, "Sphere", ["Seller"], "Seller · Coming Soon", "(612) 555-0126"],
+  ["d27", "Margaret Ostby", "Lead", null, 5, "Website", ["Seller"], "Seller · Active", "(612) 555-0127"],
+  ["d28", "Greg & Lin Tam", "Lead", null, 8, "Sphere", ["Seller"], "Seller · Active", "(612) 555-0128"],
+  ["d16", "Kara Voss", "30 Day Sphere", 30, 13, "Sphere", ["Past Client", "Email Newsletter"], "", "(612) 555-0116"],
+  ["d17", "Liam Torres", "30 Day Sphere", 30, 20, "Website", ["Past Client"], "", "(612) 555-0117"],
+  ["d18", "Hollis Family", "30 Day Sphere", 30, 47, "Sphere", ["Past Client", "Mailers"], "", "(612) 555-0118"],
+  ["d30", "Irene Dahl", "30 Day Sphere", 30, 10, "Sphere Referral", ["Past Client"], "", "(612) 555-0130"],
+  ["x1", "Marcus & Elle Brandvold", "90 Day Sphere", 90, 98, "Sphere", ["Past Client", "Christmas Cards", "Mailers"], "", "(952) 555-0181"],
+  ["x2", "Rita Okonkwo", "7 Day Sphere", 7, 9, "Sphere Referral", ["A Lead"], "", "(612) 555-0182"],
+  ["x3", "Tom Lindgren", "180 Day Sphere", 180, 40, "Sphere", ["Past Client", "Email Newsletter"], "", "(763) 555-0183"],
+  ["x4", "Sarah Beckett", "Realtor", null, 120, "Industry", ["Realtors"], "", "(612) 555-0184"],
+  ["x5", "Dana Kim", "Industry Partners", null, 3, "Sphere", ["Lender"], "", "(612) 555-0185"],
+  ["x6", "Jake & Mara Holm", "30 Day Sphere", 30, 35, "Website", ["Past Client", "Mailers"], "", "(651) 555-0186"],
+  ["x7", "Lucy Tran", "Lead", null, 2, "Website", ["Buyer", "Email Newsletter"], "", "(612) 555-0187"],
+  ["x8", "Gary Pfeiffer", "Passive Marketing", null, 210, "Zillow Preferred", ["Email Newsletter"], "", "(952) 555-0188"],
+  ["x9", "Nina Sorensen", "60 Day Sphere", 60, 61, "Sphere", ["Past Client", "Christmas Cards"], "", "(612) 555-0189"],
+  ["x10", "Chris Albrecht", "90 Day Sphere", 90, 45, "Sphere Referral", ["Investor"], "", "(651) 555-0190"],
+].map(([cid, name, stage, follow, last, source, tags, deal, phone]) => ({ cid, name, stage, follow, last, source, tags, deal, phone }));
+
+const isSphere = p => /Sphere/.test(p.stage);
+const due = p => p.follow && p.last >= p.follow;
+const LISTS = [
+  ["Everyone", [["all", "All people", () => true], ["due", "Due for a touch", due]]],
+  ["Pipeline", [["leads", "Leads", p => p.stage === "Lead"], ["buyers", "Buyers not under contract", p => /Buyer · (?!Under)/.test(p.deal)], ["sellers", "Sellers not under contract", p => /Seller · (?!Under)/.test(p.deal)], ["uc", "Under contract", p => /Under Contract/.test(p.deal)]]],
+  ["Sphere", [["past", "Past clients", p => p.tags.includes("Past Client")], ["sphere", "Sphere (all frequencies)", isSphere]]],
+  ["Mailing", [["mail", "Mailers", p => p.tags.includes("Mailers")], ["xmas", "Christmas cards", p => p.tags.includes("Christmas Cards")], ["news", "Email newsletter", p => p.tags.includes("Email Newsletter")]]],
+  ["Other", [["partners", "Agents & partners", p => ["Realtor", "Industry Partners"].includes(p.stage)]]],
+];
+const ALLF = Object.fromEntries(LISTS.flatMap(g => g[1]).map(([k, , f]) => [k, f]));
+const NAMES = Object.fromEntries(LISTS.flatMap(g => g[1]).map(([k, n]) => [k, n]));
+let list = "all", q = "", sort = "name", sel = new Set();
+const el = id => document.getElementById(id);
+
+function rows() {
+  let r = people.filter(ALLF[list]);
+  if (q) { const s = q.toLowerCase(); r = r.filter(p => [p.name, p.phone, p.stage, p.source, p.deal, ...p.tags].join(" ").toLowerCase().includes(s)); }
+  r.sort(sort === "name" ? (a, b) => a.name.localeCompare(b.name) : sort === "last" ? (a, b) => b.last - a.last : (a, b) => a.stage.localeCompare(b.stage));
+  return r;
+}
+function render() {
+  el("side").innerHTML = LISTS.map(([g, items]) => `<div><h4>${g}</h4><ul>${items.map(([k, n, f]) => `<li><button class="nav-i" data-list="${k}" aria-current="${list === k}"><span>${n}</span><span class="c">${people.filter(f).length}</span></button></li>`).join("")}</ul></div>`).join("")
+    + `<div><ul><li><button class="nav-i" data-toast="Pick filters (stage, tag, source, last contact) and save them as a list"><span style="color:var(--accent)">+ New smart list</span></button></li></ul></div>`;
+  const r = rows();
+  el("main").innerHTML = `
+    <div class="bar"><div class="l"><h1>${NAMES[list]}</h1><span class="muted">${r.length} people</span></div>
+      <div style="display:flex;gap:8px;flex:1;justify-content:flex-end;min-width:240px"><input class="input search" id="q" placeholder="Search name, phone, tag…" value="${esc(q)}" aria-label="Search people"><button class="btn primary" data-add="1">+ Add person</button></div></div>
+    ${sel.size ? `<div class="bulk"><b>${sel.size} selected</b><button data-toast="Add a tag to ${sel.size} people">Add tag</button><button data-toast="Change stage for ${sel.size} people">Change stage</button><button data-toast="Set follow-up frequency for ${sel.size} people">Set follow-up</button><button data-toast="Assign ${sel.size} people">Assign</button><button data-toast="Download a CSV of ${sel.size} people">Export</button><button data-clear="1">Clear</button></div>` : ""}
+    <div class="tbl-wrap"><table>
+      <thead><tr><th style="width:30px"><input type="checkbox" id="all" aria-label="Select all" ${r.length && r.every(p => sel.has(p.cid)) ? "checked" : ""}></th>
+        <th><button data-sort="name">Name${sort === "name" ? " ↓" : ""}</button></th><th><button data-sort="stage">Stage${sort === "stage" ? " ↓" : ""}</button></th>
+        <th><button data-sort="last">Last contact${sort === "last" ? " ↓" : ""}</button></th><th>Follow up</th><th>Deal</th><th>Tags</th><th>Source</th></tr></thead>
+      <tbody>${r.map(p => `<tr>
+        <td><input type="checkbox" data-sel="${p.cid}" ${sel.has(p.cid) ? "checked" : ""} aria-label="Select ${esc(p.name)}"></td>
+        <td><a class="name" href="deals.html#contact-${p.cid}">${esc(p.name)}</a><div class="muted sm num">${p.phone}</div></td>
+        <td>${esc(p.stage)}</td>
+        <td class="${due(p) ? "due" : ""}">${p.last === 0 ? "Today" : p.last + " days ago"}</td>
+        <td>${p.follow ? `Every ${p.follow}d${due(p) ? ` <span class="pill" style="background:var(--warn-soft);color:var(--warn)">Due</span>` : ""}` : `<span class="muted">—</span>`}</td>
+        <td>${p.deal ? `<span class="sm">${esc(p.deal)}</span>` : `<span class="muted">—</span>`}</td>
+        <td><div class="tags">${p.tags.slice(0, 2).map(t => `<span class="tagchip">${esc(t)}</span>`).join("")}${p.tags.length > 2 ? `<span class="muted sm">+${p.tags.length - 2}</span>` : ""}</div></td>
+        <td class="muted">${esc(p.source)}</td></tr>`).join("") || `<tr><td colspan="8" class="muted" style="text-align:center;padding:24px">No one matches.</td></tr>`}</tbody>
+    </table></div>`;
+  const qi = el("q"); qi.addEventListener("input", () => { q = qi.value; const pos = qi.selectionStart; render(); const n = el("q"); n.focus(); n.setSelectionRange(pos, pos); });
+}
+function modal() {
+  el("modal").innerHTML = `<div class="modal-bg" data-close="1"><form class="modal" id="add-form" autocomplete="off">
+    <h2>Add person</h2>
+    <div class="two"><label>First name<input class="input" id="f-first" required></label><label>Last name<input class="input" id="f-last"></label></div>
+    <label>Phone<input class="input" id="f-phone"></label><label>Email<input class="input" id="f-email"></label>
+    <div class="two"><label>Stage<select class="input" id="f-stage">${["Lead", "7 Day Sphere", "30 Day Sphere", "90 Day Sphere", "180 Day Sphere", "Realtor", "Industry Partners"].map(s => `<option>${s}</option>`).join("")}</select></label>
+    <label>Source<select class="input" id="f-source">${["Sphere", "Sphere Referral", "Website", "Zillow Preferred", "AJ Gimme Lead", "Stacie Rihl"].map(s => `<option>${s}</option>`).join("")}</select></label></div>
+    <div class="foot"><button type="button" class="btn" data-close="1">Cancel</button><button class="btn primary" type="submit">Add person</button></div>
+  </form></div>`;
+  el("f-first").focus();
+  el("add-form").addEventListener("submit", e => {
+    e.preventDefault();
+    const name = (el("f-first").value + " " + el("f-last").value).trim(); const st = el("f-stage").value; const m = st.match(/\d+/);
+    people.push({ cid: "x" + (people.length + 100), name, stage: st, follow: m ? +m[0] : null, last: 0, source: el("f-source").value, tags: [], deal: "", phone: el("f-phone").value || "—" });
+    el("modal").innerHTML = ""; toast(`Added ${name}.`); render();
+  });
+}
+let tt; function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
+document.addEventListener("click", e => {
+  const b = e.target.closest("button, .modal-bg"); if (!b) return;
+  if (b.dataset.close && (e.target === b || b.tagName === "BUTTON")) { el("modal").innerHTML = ""; return; }
+  if (b.dataset.list) { list = b.dataset.list; sel.clear(); render(); return; }
+  if (b.dataset.sort) { sort = b.dataset.sort; render(); return; }
+  if (b.dataset.add) { modal(); return; }
+  if (b.dataset.clear) { sel.clear(); render(); return; }
+  if (b.dataset.toast) { toast(b.dataset.toast); return; }
+});
+document.addEventListener("change", e => {
+  if (e.target.dataset.sel) { const k = e.target.dataset.sel; e.target.checked ? sel.add(k) : sel.delete(k); render(); }
+  if (e.target.id === "all") { rows().forEach(p => e.target.checked ? sel.add(p.cid) : sel.delete(p.cid)); render(); }
+});
+render();
+
+};
+INIT.deals = function (document) {
+
+const TODAY = d("2026-10-12");
+function d(s) { const [y, m, dd] = s.split("-").map(Number); return new Date(y, m - 1, dd); }
+function iso(x) { return x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0") + "-" + String(x.getDate()).padStart(2, "0"); }
+function add(x, n) { const y = new Date(x); y.setDate(y.getDate() + n); return y; }
+function diff(a, b) { return Math.round((a - b) / 86400000); }
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const fmt = x => DOW[x.getDay()] + " " + MON[x.getMonth()] + " " + x.getDate();
+const short = x => MON[x.getMonth()] + " " + x.getDate();
+const money = n => "$" + n.toLocaleString("en-US", Number.isInteger(n) ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+let role = "admin", side = "buyer", editing = null, openMenu = null, editStages = false, customN = 0;
+const expanded = {};
+// Display names for stages. Internal keys never change, so renaming is safe.
+const LABEL = { buyer: {}, seller: {} };
+const label = (s, k) => LABEL[s][k] || k;
+const LOCKED = ["Under Contract", "Closed"];
+
+const STAGES = {
+  buyer: ["Lead", "Consult", "Rep Signed / Searching", "Offer Out", "Under Contract", "Closed"],
+  seller: ["Lead", "Consult", "Listing Signed / Prep", "Coming Soon", "Active", "Under Contract", "Closed"],
+};
+
+// Stage checklists for deals before contract: [title, days after entering stage, who, kind]
+const STAGE_STEPS = {
+  "buyer:Lead": [["Call new lead", 0, "LP"], ["Intro email", 0, "AS", "email"], ["Schedule consult", 2, "LP"]],
+  "buyer:Consult": [["Agency disclosure + more info email", 0, "AS", "email"], ["Consult confirmation text", 1, "LP", "text"], ["Hold consult", 3, "LP"], ["Connect with lender?", 4, "LP"]],
+  "buyer:Rep Signed / Searching": [["Send buyer rep to sign", 0, "AS"], ["Buyer rep signed + saved", 1, "AS"], ["Homespotter app + intro text", 2, "AS", "text"], ["Set up home search", 2, "LP"], ["Check in on showings", 14, "LP"]],
+  "buyer:Offer Out": [["Purchase agreement breakdown email", 0, "AS", "email"], ["Offer sent to sign", 0, "LP", "text"], ["Follow up with listing agent", 1, "LP"]],
+  "seller:Lead": [["Call new lead", 0, "LP"], ["Prep CMA", 2, "LP"], ["Schedule consult", 3, "LP"]],
+  "seller:Consult": [["CMA + net sheet email", 0, "LP", "email"], ["Intro text with assistant", 0, "AS", "text"], ["Hold consult", 3, "LP"]],
+  "seller:Listing Signed / Prep": [["Listing contract signed + saved", 0, "AS"], ["Withhold listing in MLS", 0, "AS"], ["Schedule photos", 1, "AS"], ["Drop off lockbox", 2, "LP"], ["Disclosures + lead paint", 3, "AS"], ["Photos to clients", 6, "AS", "email"], ["Upload to MLS", 7, "AS"]],
+  "seller:Coming Soon": [["Showing instructions", 0, "AS"], ["Coming-soon email", 0, "AS", "email"], ["Sign install", 1, "LP"], ["Social post", 1, "LP"], ["Flyers", 2, "AS"], ["Go active in MLS", 4, "AS"]],
+  "seller:Active": [["Check hit counters", 3, "LP"], ["Weekly seller update", 7, "LP", "email"], ["Open house plan", 9, "LP"]],
+};
+
+// Contract checklists: due = milestone date + offset.
+const CONTRACT = {
+  buyer: [
+    ["Under Contract", "Purchase agreement accepted email", "fa", 0, "AS", "email"],
+    ["Under Contract", "Lender intro email", "fa", 0, "LP", "email"],
+    ["Under Contract", "Request earnest money", "fa", 1, "AS", "text"],
+    ["Under Contract", "Submit docs to brokerage", "fa", 1, "AS"],
+    ["Under Contract", "Title request + listing agent intro", "fa", 1, "AS", "email"],
+    ["Under Contract", "Earnest money receipt saved to file", "fa", 5, "AS"],
+    ["Inspection", "Schedule inspection", "fa", 1, "LP"],
+    ["Inspection", "Day-of-inspection text", "insp", -3, "AS", "text"],
+    ["Inspection", "Review inspection report with clients", "insp", -2, "LP"],
+    ["Inspection", "Draft inspection amendment", "insp", -1, "LP"],
+    ["Inspection", "Signed amendment to lender + title", "insp", 0, "AS", "email"],
+    ["Financing", "Insurance referral", "fa", 5, "AS", "email"],
+    ["Financing", "Confirm appraisal ordered", "fa", 7, "AS"],
+    ["Financing", "Remind lender about written statement", "ws", -2, "AS", "email"],
+    ["Financing", "Written statement received", "ws", 0, "LP"],
+    ["HOA", "Request HOA resale disclosure", "fa", 1, "AS"],
+    ["HOA", "Send HOA docs to clients", "fa", 4, "AS", "email"],
+    ["HOA", "Review rescission window with clients", "hoa", -2, "LP"],
+    ["HOA", "Confirm rescission period ended", "hoa", 0, "AS"],
+    ["Closing", "Repairs amendment needed?", "close", -14, "LP"],
+    ["Closing", "Order closing gift", "close", -14, "LP"],
+    ["Closing", "Final walkthrough scheduling text", "close", -9, "AS", "text"],
+    ["Closing", "Utilities setup email", "close", -9, "AS", "email"],
+    ["Closing", "Confirm cash to close", "close", -7, "AS"],
+    ["Closing", "Review settlement statement", "close", -4, "LP"],
+    ["Closing", "Final walkthrough", "close", -1, "LP"],
+    ["Closing", "Closing day", "close", 0, "LP"],
+    ["Post-Close", "\"How was the move?\" text", "close", 1, "LP", "text"],
+    ["Post-Close", "Thank-you card", "close", 3, "LP"],
+    ["Post-Close", "Zillow review request", "close", 5, "AS", "text"],
+    ["Post-Close", "Google review request", "close", 21, "AS", "email"],
+  ],
+  seller: [
+    ["Under Contract", "Mark contingent in MLS", "fa", 0, "AS"],
+    ["Under Contract", "Purchase agreement accepted email", "fa", 0, "AS", "email"],
+    ["Under Contract", "Submit docs to brokerage", "fa", 1, "AS"],
+    ["Under Contract", "Title intro", "fa", 1, "AS", "email"],
+    ["Inspection", "Day-of-inspection text", "insp", -3, "AS", "text"],
+    ["Inspection", "Review buyer's inspection requests", "insp", 0, "LP"],
+    ["Financing", "Remind buyer's lender about written statement", "ws", -2, "AS", "email"],
+    ["Financing", "Mark pending in MLS", "ws", 1, "AS"],
+    ["Closing", "Repairs needed?", "close", -14, "LP"],
+    ["Closing", "Closing reminder email", "close", -14, "AS", "email"],
+    ["Closing", "Order closing gift", "close", -14, "LP"],
+    ["Closing", "Review settlement statement", "close", -5, "LP"],
+    ["Closing", "Closing day", "close", 0, "LP"],
+    ["Post-Close", "Mark closed in MLS", "close", 0, "AS"],
+    ["Post-Close", "Thank-you card", "close", 3, "LP"],
+    ["Post-Close", "Zillow review request", "close", 7, "AS", "text"],
+  ],
+};
+const MS_NAMES = { fa: "Final Acceptance", insp: "Inspection", hoa: "HOA Rescission", ws: "Written Statement", close: "Closing" };
+
+const deals = [
+  // Buyers
+  { id: 1, side: "buyer", stage: "Lead", name: "Ethan Moreau", line: "Source: Website", since: "2026-10-09" },
+  { id: 2, side: "buyer", stage: "Lead", name: "Sofia Lindqvist", line: "Source: Sphere Referral", since: "2026-10-11" },
+  { id: 3, side: "buyer", stage: "Lead", name: "Ben & Hana Okafor", line: "Source: Zillow Preferred", since: "2026-10-05" },
+  { id: 4, side: "buyer", stage: "Consult", name: "Grace Thorsen", line: "Consult Wed Oct 14", since: "2026-10-10" },
+  { id: 5, side: "buyer", stage: "Consult", name: "Mateo Ruiz", line: "Consult Thu Oct 15", since: "2026-10-12" },
+  { id: 6, side: "buyer", stage: "Consult", name: "Avery Kline", line: "Consult done Oct 8", since: "2026-10-05" },
+  { id: 7, side: "buyer", stage: "Rep Signed / Searching", name: "Nora Feld", line: "SW Minneapolis · $350–400k", since: "2026-09-20" },
+  { id: 8, side: "buyer", stage: "Rep Signed / Searching", name: "Theo & June Park", line: "Edina / Richfield · to $520k", since: "2026-10-01" },
+  { id: 9, side: "buyer", stage: "Rep Signed / Searching", name: "Isaac Brandt", line: "St. Paul · condo", since: "2026-10-08" },
+  { id: 10, side: "buyer", stage: "Rep Signed / Searching", name: "Leah Sandoval", line: "Roseville / Shoreview", since: "2026-09-28" },
+  { id: 11, side: "buyer", stage: "Offer Out", name: "Owen Pryce", line: "2215 Hillside Ave, Golden Valley", price: 389000, since: "2026-10-11" },
+  { id: 12, side: "buyer", stage: "Offer Out", name: "Mia Castellano", line: "845 Osceola Ave, St. Paul", price: 455000, since: "2026-10-12" },
+  { id: 13, side: "buyer", stage: "Under Contract", name: "Jordan & Priya Calloway", cid: "calloway", line: "4127 Upton Ave S #3, Minneapolis", price: 412500, em: 8000, sc: 5000, bac: "2.5%", comm: 10312.5, fin: "Conventional",
+    ms: { fa: "2026-10-02", insp: "2026-10-14", hoa: "2026-10-13", ws: "2026-10-23", close: "2026-10-30" }, msOrig: { insp: "2026-10-09" }, msStatus: { insp: "extended" },
+    openPast: ["Earnest money receipt saved to file", "Insurance referral"], doneEarly: ["Confirm appraisal ordered"],
+    people: [["Jordan Calloway", "Buyer"], ["Priya Calloway", "Buyer"], ["Dana Kim · Northfield Lending", "Lender"], ["Lakeview Title", "Title"], ["Marcus Holt · Bluewater Realty", "Listing agent"]] },
+  { id: 14, side: "buyer", stage: "Under Contract", name: "Ruth & Sam Engel", line: "6012 Xerxes Ave S, Edina", price: 598000, em: 12000, sc: 0, bac: "2.7%", comm: 16146, fin: "Conventional",
+    ms: { fa: "2026-10-09", insp: "2026-10-19", ws: "2026-10-30", close: "2026-11-06" } },
+  { id: 15, side: "buyer", stage: "Under Contract", name: "Dev Raman", line: "1530 Hague Ave, St. Paul", price: 329900, em: 5000, sc: 4000, bac: "2.5%", comm: 8247.5, fin: "FHA",
+    ms: { fa: "2026-09-19", insp: "2026-09-29", ws: "2026-10-09", close: "2026-10-23" } },
+  { id: 16, side: "buyer", stage: "Closed", name: "Kara Voss", line: "3816 Grand Ave S, Minneapolis", price: 376000, closed: "2026-09-29" },
+  { id: 17, side: "buyer", stage: "Closed", name: "Liam Torres", line: "5521 Abbott Ave S, Edina", price: 510000, closed: "2026-09-22" },
+  { id: 18, side: "buyer", stage: "Closed", name: "Hollis Family", line: "2440 Cleveland Ave N, Roseville", price: 289500, closed: "2026-09-18" },
+  // Sellers
+  { id: 21, side: "seller", stage: "Lead", name: "Patricia Wendt", line: "Source: Sphere", since: "2026-10-07" },
+  { id: 22, side: "seller", stage: "Lead", name: "Joel Amundsen", line: "Source: Website", since: "2026-10-11" },
+  { id: 23, side: "seller", stage: "Consult", name: "Erik & Tove Brekke", line: "Consult Fri Oct 16", since: "2026-10-09" },
+  { id: 24, side: "seller", stage: "Listing Signed / Prep", name: "Carol & Dean Fisk", line: "3318 47th Ave S, Minneapolis", price: 365000, since: "2026-10-08" },
+  { id: 25, side: "seller", stage: "Listing Signed / Prep", name: "Ana Ruiz-Hall", line: "1207 Chatsworth St N, Roseville", price: 299000, since: "2026-10-01" },
+  { id: 26, side: "seller", stage: "Coming Soon", name: "Hugo Bergstrom", line: "709 Lincoln Ave, St. Paul", price: 625000, since: "2026-10-10" },
+  { id: 27, side: "seller", stage: "Active", name: "Margaret Ostby", line: "4540 Drew Ave S, Edina", price: 749000, since: "2026-09-30" },
+  { id: 28, side: "seller", stage: "Active", name: "Greg & Lin Tam", line: "2810 Fremont Ave N, Minneapolis", price: 315000, since: "2026-09-12" },
+  { id: 32, side: "seller", stage: "Active", name: "Jordan & Priya Calloway", cid: "calloway", line: "2201 Lyndale Ave S #407, Minneapolis", price: 289000, since: "2026-10-05" },
+  { id: 29, side: "seller", stage: "Under Contract", name: "Wes Halvorsen", line: "1904 Stinson Pkwy NE, Minneapolis", price: 442000, em: 7500, sc: 3000, bac: "2.5%", comm: 11050, fin: "Conventional",
+    ms: { fa: "2026-10-07", insp: "2026-10-17", ws: "2026-10-28", close: "2026-11-13" } },
+  { id: 30, side: "seller", stage: "Closed", name: "Irene Dahl", line: "6125 Morgan Ave S, Richfield", price: 398000, closed: "2026-10-02" },
+  { id: 31, side: "seller", stage: "Closed", name: "Paul Nyberg", line: "880 Ashland Ave, St. Paul", price: 265000, closed: "2026-09-25" },
+];
+
+// Build each deal's checklist once.
+deals.forEach(dl => {
+  dl.tasks = [];
+  if (dl.stage === "Closed") return;
+  if (dl.stage === "Under Contract") {
+    dl.msStatus = dl.msStatus || {};
+    Object.keys(dl.ms).forEach(k => { if (!dl.msStatus[k]) dl.msStatus[k] = d(dl.ms[k]) < TODAY ? "met" : "pending"; });
+    CONTRACT[dl.side].forEach(([phase, t, a, o, who, kind]) => {
+      if (!dl.ms[a]) return; // conditional: e.g. HOA steps only when the deal has an HOA date
+      if (phase === "HOA" && !dl.ms.hoa) return;
+      const task = { phase, t, a, o, who, kind: kind || "task" };
+      const due = add(d(dl.ms[a]), o);
+      task.s = due < TODAY && !(dl.openPast || []).includes(t) ? "done" : "open";
+      if ((dl.doneEarly || []).includes(t)) task.s = "done";
+      dl.tasks.push(task);
+    });
+  } else {
+    (STAGE_STEPS[dl.side + ":" + dl.stage] || []).forEach(([t, o, who, kind], i, arr) => {
+      const task = { phase: dl.stage, t, fixed: iso(add(d(dl.since), o)), who, kind: kind || "task" };
+      task.s = d(task.fixed) < TODAY ? "done" : "open";
+      dl.tasks.push(task);
+    });
+    if (dl.id === 3) dl.tasks[2].s = "open"; // one overdue lead for the demo
+  }
+  dl.tasks.forEach((t, i) => t.id = i);
+});
+
+const dueOf = (dl, t) => t.fixed ? d(t.fixed) : add(d(dl.ms[t.a]), t.o);
+function eff(dl, t) {
+  if (t.s !== "open") return t.s;
+  if (t.a && dl.msStatus[t.a] === "waived") return "waived";
+  return "open";
+}
+const openTasks = dl => dl.tasks.filter(t => eff(dl, t) === "open").sort((a, b) => dueOf(dl, a) - dueOf(dl, b));
+function health(dl) {
+  const od = openTasks(dl).filter(t => dueOf(dl, t) < TODAY).length;
+  return od >= 3 ? "r" : od ? "y" : "g";
+}
+
+const el = id => document.getElementById(id);
+const app = el("app");
+const CHECK = '<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const DASH = '<svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 8h8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+
+/* ---------- Board ---------- */
+function renderBoard() {
+  const list = deals.filter(x => x.side === side);
+  const active = list.filter(x => x.stage !== "Closed");
+  const uc = list.filter(x => x.stage === "Under Contract");
+  app.innerHTML = `
+    <div class="board-head">
+      <div class="left">
+        <h1>Deals</h1>
+        <span class="seg" role="group" aria-label="Pipeline">
+          <button data-side="buyer" aria-pressed="${side === "buyer"}">Buyers</button>
+          <button data-side="seller" aria-pressed="${side === "seller"}">Sellers</button>
+        </span>
+      </div>
+      <span class="left"><span class="board-sum">${active.length} active · ${uc.length} under contract · ${money(uc.reduce((s, x) => s + x.price, 0))} pending volume</span>
+      <button class="btn-ghost" data-editstages="1" aria-pressed="${editStages}">${editStages ? "Done editing" : "Edit stages"}</button></span>
+    </div>
+    ${editStages ? `<div class="edit-note">Rename a stage by typing in its name. Use ← → to reorder, × to remove an empty stage, or add a new one at the end. Under Contract and Closed can be renamed but not removed, because the contract checklist and closed reports depend on them. A new stage starts with an empty checklist you fill in under Admin.</div>` : ""}
+    <div class="board">${STAGES[side].map((st, i) => colHtml(st, i, list.filter(x => x.stage === st))).join("")}${editStages ? `<button class="col add" data-addstage="1">+ Add stage</button>` : ""}</div>`;
+}
+
+function colHtml(stage, i, items) {
+  const vol = items.reduce((s, x) => s + (x.price || 0), 0);
+  const closed = stage === "Closed";
+  const name = label(side, stage);
+  const head = editStages
+    ? `<input data-rename="${esc(stage)}" value="${esc(name)}" aria-label="Stage name">
+       <span class="col-tools">
+         <button data-move="${esc(stage)}" data-dir="-1" aria-label="Move left" ${i === 0 ? "disabled" : ""}>←</button>
+         <button data-move="${esc(stage)}" data-dir="1" aria-label="Move right" ${i === STAGES[side].length - 1 ? "disabled" : ""}>→</button>
+         ${LOCKED.includes(stage) ? "" : `<button data-del="${esc(stage)}" aria-label="Remove stage">×</button>`}
+         <span style="margin-left:auto;font-size:12px;color:var(--muted)">${items.length}</span>
+       </span>`
+    : `<span class="name"><span>${esc(name)}${closed ? " · 30 days" : ""}</span><span>${items.length}</span></span>
+       <span class="vol">${vol ? money(vol) : "&nbsp;"}</span>`;
+  return `<section class="col">
+    <div class="col-h">${head}</div>
+    <div class="cards">${items.map(cardHtml).join("")}</div>
+    ${closed && !editStages ? `<div class="col-foot">View all closed →</div>` : ""}
+  </section>`;
+}
+
+function cardHtml(dl) {
+  let next = "";
+  if (dl.stage === "Closed") {
+    next = `<div class="next"><span>Closed ${short(d(dl.closed))}</span></div>`;
+  } else {
+    const n = openTasks(dl)[0];
+    if (n) { const due = dueOf(dl, n), od = due < TODAY; next = `<div class="next ${od ? "overdue" : ""}"><span>${esc(n.t)}</span><span class="date">${od ? "Overdue" : short(due)}</span></div>`; }
+  }
+  const prog = dl.stage === "Under Contract" ? (() => { const done = dl.tasks.filter(t => eff(dl, t) !== "open").length; return `<div class="mini" title="${done} of ${dl.tasks.length} steps"><i style="width:${Math.round(done / dl.tasks.length * 100)}%"></i></div><div class="addr">Closing ${short(d(dl.ms.close))}</div>`; })() : "";
+  return `<button class="card" data-deal="${dl.id}">
+    <span class="who"><span>${esc(dl.name)}</span>${dl.stage !== "Closed" ? `<span class="dot ${health(dl)}" title="${{ g: "On track", y: "Something overdue", r: "Behind" }[health(dl)]}"></span>` : ""}</span>
+    <span class="addr"><span>${esc(dl.line)}</span>${dl.price ? `<span class="price num">${money(dl.price / 1000)}k</span>` : ""}</span>
+    ${prog}${next}
+  </button>`;
+}
+
+/* ---------- Contacts ---------- */
+const CONTACTS = {
+  calloway: {
+    name: "Jordan & Priya Calloway", stage: "Lead", follow: 30, source: "Sphere Referral", referred: "Kara Voss", mailing: "The Calloways",
+    tags: ["Buyer", "Seller", "A Lead", "Email Newsletter"],
+    phones: [["Jordan", "(612) 555-0148"], ["Priya", "(612) 555-0193"]],
+    emails: [["Jordan", "jordan.calloway@example.com"], ["Priya", "priya.calloway@example.com"]],
+    address: "2201 Lyndale Ave S #407, Minneapolis, MN 55405",
+    household: [["Jordan", "Mar 4"], ["Priya", "Jul 19"], ["Mila (daughter)", "Nov 2"]],
+    tasks: [
+      { t: "Send school district info for Upton Ave", due: "2026-10-13", who: "LP", s: "open" },
+      { t: "Ask about storage unit timing", due: "2026-10-20", who: "AS", s: "open" },
+    ],
+    history: [
+      ["2026-10-11", "note", "Inspection done. Minor items: water heater is 14 years old, deck railing loose. Asking for a $1,500 credit.", "LP"],
+      ["2026-10-11", "text", "Inspector is wrapping up, we'll go over the report Monday at 4.", "LP"],
+      ["2026-10-09", "call", "Talked through the inspection extension. They're fine waiting until Wed.", "LP"],
+      ["2026-10-06", "email", "Gmail · Re: Earnest money wiring instructions", "AS"],
+      ["2026-10-03", "note", "Priya prefers texts after 5pm. Jordan is fine with calls anytime.", "AS"],
+      ["2026-09-30", "note", "Listing their condo too. Want both to close within a week of each other.", "LP"],
+    ],
+  },
+  murphy: {
+    name: "Kate Murphy", stage: "90 Day Sphere", follow: 90, source: "Sphere", referred: "", mailing: "Kate Murphy",
+    tags: ["Past Client", "Mailers", "Christmas Cards", "Email Newsletter", "2026 RE Health Check Needed"],
+    phones: [["Mobile", "(651) 555-0172"]], emails: [["", "kate.murphy@example.com"]], address: "1789 Juliet Ave, St. Paul, MN 55105",
+    household: [["Kate", "Jan 22"], ["Homeiversary", "Jun 18 (2021)"]],
+    tasks: [{ t: "Call Kate about spring listing timing", due: "2026-10-12", who: "LP", s: "open" }, { t: "Send homeiversary card", due: "2027-06-11", who: "AS", s: "open" }],
+    history: [
+      ["2026-09-30", "email", "Gmail · Batch email: Timberwolves season tickets are back!", "AS"],
+      ["2026-09-22", "call", "Quick check-in. Kids back in school, no plans to move before spring.", "LP"],
+      ["2026-09-21", "email", "Gmail · Minnesota Market Update – September", "LP"],
+      ["2026-07-14", "note", "Thinking about selling next spring. Wants a CMA in January.", "LP"],
+      ["2026-06-18", "text", "Happy homeiversary! 5 years on Juliet Ave 🎉", "LP"],
+      ["2026-06-02", "missed", "Missed call from Kate", "LP"],
+    ],
+  },
+};
+const cidOf = dl => dl.cid || "d" + dl.id;
+// People without deals (matches the People mockup): [name, stage, follow, source, tags, phone, days since last touch]
+const EXTRA = {
+  x1: ["Marcus & Elle Brandvold", "90 Day Sphere", 90, "Sphere", ["Past Client", "Christmas Cards", "Mailers"], "(952) 555-0181", 98],
+  x2: ["Rita Okonkwo", "7 Day Sphere", 7, "Sphere Referral", ["A Lead"], "(612) 555-0182", 9],
+  x3: ["Tom Lindgren", "180 Day Sphere", 180, "Sphere", ["Past Client", "Email Newsletter"], "(763) 555-0183", 40],
+  x4: ["Sarah Beckett", "Realtor", null, "Industry", ["Realtors"], "(612) 555-0184", 120],
+  x5: ["Dana Kim", "Industry Partners", null, "Sphere", ["Lender"], "(612) 555-0185", 3],
+  x6: ["Jake & Mara Holm", "30 Day Sphere", 30, "Website", ["Past Client", "Mailers"], "(651) 555-0186", 35],
+  x7: ["Lucy Tran", "Lead", null, "Website", ["Buyer", "Email Newsletter"], "(612) 555-0187", 2],
+  x8: ["Gary Pfeiffer", "Passive Marketing", null, "Zillow Preferred", ["Email Newsletter"], "(952) 555-0188", 210],
+  x9: ["Nina Sorensen", "60 Day Sphere", 60, "Sphere", ["Past Client", "Christmas Cards"], "(612) 555-0189", 61],
+  x10: ["Chris Albrecht", "90 Day Sphere", 90, "Sphere Referral", ["Investor"], "(651) 555-0190", 45],
+};
+function contact(cid) {
+  if (CONTACTS[cid]) return CONTACTS[cid];
+  if (EXTRA[cid]) {
+    const [name, stage, follow, source, tags, phone, last] = EXTRA[cid];
+    const f = name.split(/[ &]/)[0].toLowerCase(), l = name.split(" ").pop().toLowerCase();
+    return CONTACTS[cid] = { name, stage, follow, source, referred: "", mailing: name, tags: [...tags], phones: [["Mobile", phone]], emails: [["", `${f}.${l}@example.com`]],
+      address: "Twin Cities, MN", household: [], tasks: [], history: [[iso(add(TODAY, -last)), "call", "Caught up. Nothing new on their end.", "LP"], [iso(add(TODAY, -last - 30)), "email", "Gmail · Minnesota Market Update", "LP"]] };
+  }
+  const dl = deals.find(x => cidOf(x) === cid);
+  const first = dl.name.split(/[ &]/)[0].toLowerCase(), last = dl.name.split(" ").pop().toLowerCase();
+  const closed = dl.stage === "Closed";
+  const c = {
+    name: dl.name, stage: closed ? "30 Day Sphere" : "Lead", follow: closed ? 30 : null, source: dl.line.startsWith("Source: ") ? dl.line.slice(8) : "Sphere",
+    referred: "", mailing: dl.name, tags: [dl.side === "buyer" ? "Buyer" : "Seller"].concat(closed ? ["Past Client", "Email Newsletter", "Mailers"] : ["Email Newsletter"]),
+    phones: [["Mobile", "(612) 555-01" + String(dl.id).padStart(2, "0")]], emails: [["", `${first}.${last}@example.com`]],
+    address: dl.side === "seller" && dl.price ? dl.line + ", MN" : "Twin Cities, MN", household: [],
+    tasks: [], history: closed ? [
+      [iso(add(d(dl.closed), 7)), "text", "How's the new place? Let us know if you need any vendor recs.", "LP"],
+      [iso(add(d(dl.closed), 1)), "email", "Gmail · Congrats on closing! A few things for your first week", "AS"],
+    ] : [
+      [dl.since || dl.ms.fa, "call", dl.ms ? "Offer accepted! Walked them through next steps." : "Intro call. Next step scheduled.", "LP"],
+      [dl.since || dl.ms.fa, "email", dl.ms ? "Gmail · Purchase agreement accepted" : "Gmail · Intro email", "AS"],
+    ],
+  };
+  CONTACTS[cid] = c; return c;
+}
+let openContact = null, ctab = {}, tlFilter = "all", composer = "note";
+const isActive = dl => dl.stage !== "Closed";
+const WHO = { LP: "Luke", AS: "Alyssa" };
+
+function renderContact() {
+  const c = contact(openContact);
+  const myDeals = deals.filter(x => cidOf(x) === openContact).sort((a, b) => isActive(b) - isActive(a));
+  const active = myDeals.filter(isActive);
+  if (!ctab[openContact]) ctab[openContact] = active.length ? "deal-" + active[0].id : "timeline";
+  const tab = ctab[openContact];
+  const stage = active.some(x => x.stage === "Under Contract") ? "Under Contract" : c.stage;
+  const lastTouch = c.history.filter(h => ["note", "text", "call", "email"].includes(h[1])).map(h => d(h[0])).sort((a, b) => b - a)[0];
+  const ago = lastTouch ? diff(TODAY, lastTouch) : null;
+  const touchDue = c.follow && ago !== null && ago >= c.follow;
+
+  app.innerHTML = `
+    <button class="back" data-back="1">← ${side === "buyer" ? "Buyers" : "Sellers"} pipeline</button>
+    <div class="c3">
+      <aside class="cleft">${leftHtml(c, stage, ago, touchDue)}</aside>
+
+      <section class="ccenter">
+        <div class="ctabs" role="tablist">
+          ${active.map(dl => `<button role="tab" data-ctab="deal-${dl.id}" aria-selected="${tab === "deal-" + dl.id}"><span class="sidechip ${dl.side}">${dl.side === "buyer" ? "Buyer" : "Seller"}</span> ${esc(shortAddr(dl))}</button>`).join("")}
+          <button role="tab" data-ctab="timeline" aria-selected="${tab === "timeline"}">Timeline <span class="muted">${c.history.length}</span></button>
+        </div>
+        ${tab === "timeline" ? timelinePane(c, myDeals) : dealPane(deals.find(x => "deal-" + x.id === tab))}
+      </section>
+
+      <aside class="cright">
+        <div class="card-s">
+          <h3>Tasks <span class="muted">${c.tasks.filter(t => t.s === "open").length}</span><button class="plus" data-toast="Quick add, already linked to ${esc(c.name)}" aria-label="Add task">+</button></h3>
+          ${c.tasks.length ? c.tasks.map((t, i) => ptaskHtml(t, i)).join("") : `<p class="muted sm">No tasks outside their deals.</p>`}
+        </div>
+        <div class="card-s">
+          <h3>Deals <span class="muted">${myDeals.length}</span></h3>
+          ${myDeals.map(dl => `<button class="deal-li" data-ctab="${isActive(dl) ? "deal-" + dl.id : "timeline"}">
+            <span><span class="sidechip ${dl.side}">${dl.side === "buyer" ? "Buyer" : "Seller"}</span> ${esc(shortAddr(dl))}</span>
+            <span class="muted sm">${esc(label(dl.side, dl.stage))}${dl.stage === "Closed" ? " · " + short(d(dl.closed)) : ""}${dl.price ? " · " + money(dl.price / 1000) + "k" : ""}</span>
+          </button>`).join("") || `<p class="muted sm">No deals yet.</p>`}
+          <div class="row-btns"><button class="btn" data-toast="Opens the buyer form: buyer rep dates and BAC, then a purchase agreement when they go under contract">+ Add Buyer</button><button class="btn" data-toast="Opens the seller form: listing agreement dates, list price and commission">+ Add Seller</button></div>
+        </div>
+      </aside>
+    </div>`;
+}
+
+const initials = n => n.split(/\s+|&/).filter(w => /^[A-Z]/.test(w)).slice(0, 2).map(w => w[0]).join("");
+const shortAddr = dl => dl.price ? dl.line.split(",")[0] : dl.stage;
+
+function dealPane(dl) {
+  const uc = dl.stage === "Under Contract", h = health(dl);
+  const open = openTasks(dl), phases = [...new Set(dl.tasks.map(t => t.phase))];
+  if (!expanded[dl.id]) { const f = phases.find(p => dl.tasks.some(t => t.phase === p && eff(dl, t) === "open")); expanded[dl.id] = new Set(f ? [f] : []); }
+  const done = dl.tasks.filter(t => eff(dl, t) !== "open").length;
+  const others = (dl.people || []).filter(p => !["Buyer", "Seller"].includes(p[1]));
+  return `<div class="pane">
+    <div class="pane-h">
+      <div><b>${esc(dl.line)}</b>${dl.price ? ` <span class="num muted">${money(dl.price)}</span>` : ""}</div>
+      <div class="dp-r"><span class="stagepill">${esc(label(dl.side, dl.stage))}</span><span class="dot ${h}"></span><span class="muted sm">${uc ? "Closing " + short(d(dl.ms.close)) : `${dl.tasks.length - done} open steps`}</span></div>
+    </div>
+    ${uc ? `<div class="pad">${datesHtml(dl)}</div><div class="factline">${factsInline(dl)}</div>` : ""}
+    ${others.length ? `<div class="factline">${others.map(([n, r]) => `<span><em>${r}</em> ${esc(n)}</span>`).join("")}</div>` : ""}
+    <div class="subh">Up next</div>
+    ${open.length ? open.slice(0, 3).map(t => rowHtml(dl, t)).join("") : `<p class="empty">All caught up.</p>`}
+    <div class="subh" style="margin-top:6px">Checklist · ${done} of ${dl.tasks.length} done</div>
+    <div class="fullcl">${phases.map(p => phaseHtml(dl, p)).join("")}</div>
+  </div>`;
+}
+
+function factsInline(dl) {
+  return [["Price", money(dl.price)], ["Earnest", money(dl.em)], ["Seller contrib.", money(dl.sc)], ["BAC", dl.bac],
+    ["Commission", role === "admin" ? money(dl.comm) : null], ["Financing", dl.fin]]
+    .map(([k, v]) => `<span><em>${k}</em> ${v === null ? `<i class="hid">hidden</i>` : `<b class="num">${v}</b>`}</span>`).join("");
+}
+
+function ptaskHtml(t, i) {
+  const n = diff(d(t.due), TODAY), done = t.s === "done";
+  return `<div class="ptask ${done ? "done" : ""}">
+    <button class="check" data-ptask="${i}" aria-label="Mark ${done ? "not done" : "done"}: ${esc(t.t)}">${done ? CHECK : ""}</button>
+    <div><div class="title">${esc(t.t)}</div><div class="sm ${!done && n < 0 ? "od" : !done && n === 0 ? "td" : "muted"}">${n === 0 && !done ? "Today" : fmt(d(t.due))} · ${WHO[t.who]}</div></div>
+  </div>`;
+}
+
+const KIND = { note: "Note", text: "Text", call: "Call", missed: "Missed call", email: "Email", stage: "Stage", done: "Step done" };
+function timelinePane(c, myDeals) {
+  const items = c.history.map(([dt, k, txt, who]) => ({ dt, k, txt, who }));
+  myDeals.forEach(dl => {
+    const where = dl.side === "buyer" ? "Buyer" : "Seller";
+    items.push(dl.stage === "Closed" ? { dt: dl.closed, k: "stage", txt: `${where} deal closed · ${dl.line}` } : { dt: dl.ms ? dl.ms.fa : dl.since, k: "stage", txt: `${where} deal moved to ${label(dl.side, dl.stage)}` });
+    dl.tasks.filter(t => t.s === "done").forEach(t => items.push({ dt: iso(dueOf(dl, t) > TODAY ? TODAY : dueOf(dl, t)), k: "done", txt: t.t, who: t.who }));
+  });
+  const F = { all: () => true, note: i => i.k === "note", text: i => i.k === "text", call: i => i.k === "call" || i.k === "missed", email: i => i.k === "email", deal: i => i.k === "stage" || i.k === "done" };
+  const list = items.filter(F[tlFilter]).sort((a, b) => d(b.dt) - d(a.dt));
+  const count = k => items.filter(F[k]).length;
+  return `<div class="pane">
+    <div class="composer">
+      <div class="comp-tabs">${[["note", "Note"], ["text", "Send text"], ["logtext", "Log text"], ["call", "Log call"]].map(([k, l]) => `<button data-comp="${k}" aria-pressed="${composer === k}">${l}</button>`).join("")}</div>
+      ${composer === "call" ? `<div class="comp-row"><select id="call-outcome" aria-label="Call outcome"><option>Talked</option><option>Left voicemail</option><option>No answer</option></select></div>` : ""}
+      <textarea id="comp-text" rows="3" placeholder="${composer === "note" ? "Add a note. Type @alyssa to notify." : composer === "text" ? "Text " + esc((c.phones[0] || ["", "them"])[1]) + " from your business number" : composer === "logtext" ? "What did you text them? For texts sent from your own phone." : "What did you talk about?"}"></textarea>
+      <div class="comp-foot"><span class="muted sm">${composer === "text" ? "Replies show up in Messages and here." : composer === "logtext" ? "Records the text here without sending anything." : "Email stays in Gmail. Sent and received emails show up here automatically."}</span><button class="btn primary" data-save="1">${composer === "note" ? "Save note" : composer === "text" ? "Send text" : composer === "logtext" ? "Log text" : "Log call"}</button></div>
+    </div>
+    <div class="tl-filters">${[["all", "All"], ["note", "Notes"], ["text", "Texts"], ["call", "Calls"], ["email", "Emails"], ["deal", "Deal activity"]].map(([k, l]) => `<button data-tlf="${k}" aria-pressed="${tlFilter === k}">${l} <span>${count(k)}</span></button>`).join("")}</div>
+    ${list.length ? `<ol class="tl">${list.map(i => `<li><span class="tk ${i.k}">${KIND[i.k]}</span><div><div>${esc(i.txt)}</div><div class="muted sm">${fmt(d(i.dt))}${i.who ? " · " + WHO[i.who] : ""}</div></div></li>`).join("")}</ol>` : `<p class="empty">Nothing here yet.</p>`}
+  </div>`;
+}
+
+function datesHtml(dl) {
+  const keys = Object.keys(dl.ms);
+  let html = `<div class="dates">${keys.map(k => {
+    const st = dl.msStatus[k], n = diff(d(dl.ms[k]), TODAY);
+    const txt = st === "met" ? "✓ Met" : st === "waived" ? "Waived" : st === "extended" ? "Extended" : n === 0 ? "Today" : n > 0 ? `In ${n} days` : "Past due";
+    const cls = st !== "pending" ? st : n <= 3 ? "soon" : "";
+    return `<button class="dt" data-dl="${dl.id}" data-ms="${k}" aria-expanded="${editing === dl.id + ":" + k}"><span class="l">${MS_NAMES[k]}</span><span class="v date">${fmt(d(dl.ms[k]))}</span><span class="s ${cls}">${txt}</span></button>`;
+  }).join("")}</div>`;
+  const k = editing && editing.startsWith(dl.id + ":") ? editing.split(":")[1] : null;
+  if (k) {
+    const n = dl.tasks.filter(t => t.a === k && t.s === "open").length;
+    html += `<div class="edit">
+      <label>${MS_NAMES[k]} date<input type="date" data-msdate="${dl.id}:${k}" value="${dl.ms[k]}"></label>
+      <label>Status<select data-msstatus="${dl.id}:${k}">${["pending", "met", "waived", "extended"].map(s => `<option value="${s}" ${s === dl.msStatus[k] ? "selected" : ""}>${s[0].toUpperCase() + s.slice(1)}</option>`).join("")}</select></label>
+      <p>${n} open step${n === 1 ? "" : "s"} move with this date. Waived clears them.</p>
+      <button class="btn" data-close="1">Done</button>
+    </div>`;
+  }
+  return html;
+}
+
+function phaseHtml(dl, p) {
+  const items = dl.tasks.filter(t => t.phase === p).sort((a, b) => dueOf(dl, a) - dueOf(dl, b));
+  const done = items.filter(t => eff(dl, t) !== "open").length;
+  const isOpen = expanded[dl.id].has(p);
+  const od = items.some(t => eff(dl, t) === "open" && dueOf(dl, t) < TODAY);
+  return `<div class="phase">
+    <button class="phase-h" data-dl="${dl.id}" data-phase="${esc(p)}" aria-expanded="${isOpen}">
+      <span class="pn">${esc(p)}</span>
+      <span class="pc">${od ? `<span class="dot y"></span>` : ""}${done === items.length ? `<span class="ok">✓ Done</span>` : `${done}/${items.length}`}</span>
+    </button>
+    ${isOpen ? `<div class="phase-body">${items.map(t => rowHtml(dl, t)).join("")}</div>` : ""}
+  </div>`;
+}
+
+function rowHtml(dl, t) {
+  const st = eff(dl, t), due = dueOf(dl, t), n = diff(due, TODAY);
+  const icon = st === "done" ? CHECK : st === "open" ? "" : DASH;
+  const note = st === "na" ? "N/A" : st === "skip" ? "Skipped" : st === "waived" ? "Waived" : "";
+  const dueCls = st === "open" ? (n < 0 ? "overdue" : n === 0 ? "today" : "") : "";
+  const rule = t.a ? `${MS_NAMES[t.a]} ${t.o === 0 ? "day of" : (t.o > 0 ? "+ " : "− ") + Math.abs(t.o) + "d"}` : "";
+  const key = dl.id + ":" + t.id, A = `data-dl="${dl.id}"`;
+  return `<div class="row ${st}">
+    <button class="check" ${A} data-toggle="${t.id}" aria-label="Mark ${st === "done" ? "not done" : "done"}: ${esc(t.t)}">${icon}</button>
+    <span class="title">${esc(t.t)}${note ? `<small>${note}</small>` : ""}${t.kind !== "task" && st === "open" ? `<button class="draft" ${A} data-draft="${t.id}">Draft ${t.kind}</button>` : ""}</span>
+    <span class="r"><span class="due date ${dueCls}" title="${rule}">${n === 0 && st === "open" ? "Today" : short(due)}</span><span class="av ${t.who === "AS" ? "as" : ""}">${t.who}</span><button class="more" ${A} data-menu="${t.id}" aria-label="More options">⋯</button></span>
+    ${openMenu === key ? `<div class="menu">
+      ${st !== "na" ? `<button ${A} data-set="na" data-id="${t.id}">Mark N/A</button>` : ""}
+      ${st !== "skip" ? `<button ${A} data-set="skip" data-id="${t.id}">Skip</button>` : ""}
+      ${st !== "open" && st !== "waived" ? `<button ${A} data-set="open" data-id="${t.id}">Reopen</button>` : ""}
+      ${rule ? `<span style="font-size:12px;color:var(--muted);align-self:center">Timing: ${rule}</span>` : ""}
+    </div>` : ""}
+  </div>`;
+}
+
+/* ---------- Editable left column ---------- */
+let editCard = null, draft = null, tagAdding = false;
+const OPTS = {
+  stage: ["Lead", "Realtor", "Industry Partners", "FSBO", "Passive Marketing", "Archive/No Direct Contact", "Petty Homes Admin", "180 Day Sphere", "90 Day Sphere", "60 Day Sphere", "30 Day Sphere", "7 Day Sphere", "Closed", "Trash"],
+  follow: ["Not set", "Every 7 days", "Every 30 days", "Every 60 days", "Every 90 days", "Every 180 days"],
+  source: ["Sphere", "Sphere Referral", "Website", "AJ Gimme Lead", "Stacie Rihl", "Zillow Preferred"],
+  assigned: ["Luke Pettersen", "Alyssa Chakiton"],
+};
+const ALL_TAGS = ["A Lead", "B Lead", "C Lead", "D Lead", "Buyer", "Seller", "Past Client", "Email Newsletter", "Mailers", "Christmas Cards", "Petty Homes Event List", "Real Estate Health Check", "2026 RE Health Check Needed", "Google Review Sent", "Investor", "No Bday Needed", "Timberwolves Tickets 2026-2027 NOT RESPONDED"];
+const followTxt = n => n ? `Every ${n} days` : "Not set";
+
+function leftHtml(c, stage, ago, touchDue) { return infoCard(c, ago) + detailsCard(c, stage, touchDue) + tagsCard(c) + householdCard(c); }
+const head = (title, key) => `<h3>${title}${editCard === key ? "" : `<button class="edit-btn" data-editcard="${key}">Edit</button>`}</h3>`;
+const foot = key => `<div class="ed-foot"><button class="btn" data-cancelcard="1">Cancel</button><button class="btn primary" data-savecard="${key}">Save</button></div>`;
+const listRows = (arr, kind, ph) => arr.map(([l, v], i) => `<div class="ed-row"><input class="lbl" data-${kind}l="${i}" value="${esc(l)}" placeholder="Label" aria-label="Label"><input data-${kind}v="${i}" value="${esc(v)}" placeholder="${ph}" aria-label="${ph}"><button class="rm" data-rm="${kind}:${i}" aria-label="Remove">×</button></div>`).join("");
+
+function infoCard(c, ago) {
+  if (editCard === "info") {
+    return `<div class="card-s ed">${head("Contact info", "info")}
+      <label>Name<input data-f="name" value="${esc(draft.name)}"></label>
+      <label>Phones</label>${listRows(draft.phones, "p", "Phone")}<button class="addlink" data-addrow="p">+ Add phone</button>
+      <label>Emails</label>${listRows(draft.emails, "e", "Email")}<button class="addlink" data-addrow="e">+ Add email</button>
+      <label>Address<input data-f="address" value="${esc(draft.address)}"></label>
+      ${foot("info")}</div>`;
+  }
+  return `<div class="card-s">
+    <div class="who-h"><span class="avatar">${esc(initials(c.name))}</span><div style="flex:1;min-width:0"><h1>${esc(c.name)}</h1><div class="muted sm">${ago === null ? "No contact yet" : `Last contact ${ago === 0 ? "today" : ago === 1 ? "yesterday" : ago + " days ago"}`}</div></div><button class="edit-btn" data-editcard="info">Edit</button></div>
+    <ul class="contact-l">
+      ${c.phones.map(([l, v]) => `<li><span class="ic">☎</span><span><span class="lk">${esc(v)}</span> <span class="muted sm">${esc(l)}</span></span></li>`).join("")}
+      ${c.emails.map(([l, v]) => `<li><span class="ic">✉</span><span><span class="lk">${esc(v)}</span> <span class="muted sm">${esc(l)}</span></span></li>`).join("")}
+      <li><span class="ic">⌂</span><span>${esc(c.address)}</span></li>
+    </ul></div>`;
+}
+
+function pick(k, cur) {
+  if (draft.newMode[k]) return `<input data-new="${k}" placeholder="New ${k === "follow" ? "frequency, e.g. Every 45 days" : k}" value="${esc(draft["new_" + k] || "")}">`;
+  return `<select data-f="${k}">${OPTS[k].map(o => `<option ${o === cur ? "selected" : ""}>${esc(o)}</option>`).join("")}<option value="__new">+ New ${k === "follow" ? "frequency" : k}…</option></select>`;
+}
+
+function detailsCard(c, stage, touchDue) {
+  if (editCard === "details") {
+    return `<div class="card-s ed">${head("Details", "details")}
+      <label>Stage${pick("stage", draft.stage)}</label>
+      <label>Follow up${pick("follow", typeof draft.follow === "string" ? draft.follow : followTxt(draft.follow))}</label>
+      <label>Assigned to${pick("assigned", draft.assigned)}</label>
+      <label>Source${pick("source", draft.source)}</label>
+      <label>Referred by<input data-f="referred" value="${esc(draft.referred)}" placeholder="Search people"></label>
+      <label>Mailing name<input data-f="mailing" value="${esc(draft.mailing)}"></label>
+      <p class="muted sm">Stage shows "Under Contract" automatically while a deal is under contract.</p>
+      ${foot("details")}</div>`;
+  }
+  return `<div class="card-s">${head("Details", "details")}
+    <dl class="kv">
+      <dt>Stage</dt><dd>${esc(stage)}${stage === "Under Contract" ? ` <span class="muted sm">(from deal)</span>` : ""}</dd>
+      <dt>Follow up</dt><dd>${c.follow ? `${followTxt(c.follow)}${touchDue ? ` <span class="due-chip">Due now</span>` : ""}` : `<span class="muted">Not set</span>`}</dd>
+      <dt>Assigned to</dt><dd>${esc(c.assigned || "Luke Pettersen")}</dd>
+      <dt>Source</dt><dd>${esc(c.source)}</dd>
+      ${c.referred ? `<dt>Referred by</dt><dd><span class="lk">${esc(c.referred)}</span></dd>` : ""}
+      <dt>Mailing name</dt><dd>${esc(c.mailing)}</dd>
+    </dl></div>`;
+}
+
+function tagsCard(c) {
+  return `<div class="card-s"><h3>Tags</h3>
+    <div class="tags">${c.tags.map((t, i) => `<span class="tagchip">${esc(t)}<button data-rmtag="${i}" aria-label="Remove ${esc(t)}">×</button></span>`).join("")}
+    ${tagAdding ? "" : `<button class="tag-add" data-tagadd="1" aria-label="Add tag">+</button>`}</div>
+    ${tagAdding ? `<div class="ed-row2"><input id="tag-in" list="tag-list" placeholder="Type a tag, new or existing" aria-label="Tag"><button class="btn primary" data-tagsave="1">Add</button><button class="btn" data-tagcancel="1">Cancel</button></div>
+      <datalist id="tag-list">${ALL_TAGS.filter(t => !c.tags.includes(t)).map(t => `<option value="${esc(t)}">`).join("")}</datalist>` : ""}
+  </div>`;
+}
+
+function householdCard(c) {
+  if (editCard === "household") {
+    return `<div class="card-s ed">${head("Household &amp; dates", "household")}
+      ${listRows(draft.household, "h", "Date, e.g. Mar 4")}<button class="addlink" data-addrow="h">+ Add person or date</button>
+      ${foot("household")}</div>`;
+  }
+  return `<div class="card-s">${head("Household &amp; dates", "household")}
+    ${c.household.length ? `<dl class="kv">${c.household.map(([n, b]) => `<dt>${esc(n)}</dt><dd>${esc(b)}</dd>`).join("")}</dl>` : `<p class="muted sm">No birthdays or dates yet.</p>`}</div>`;
+}
+
+function collect() {
+  if (!draft) return;
+  const q = s => [...document.querySelectorAll(s)];
+  q("[data-f]").forEach(i => { if (i.value !== "__new") draft[i.dataset.f] = i.value; });
+  [["p", "phones"], ["e", "emails"], ["h", "household"]].forEach(([k, f]) => {
+    q(`[data-${k}l]`).forEach(i => draft[f][+i.getAttribute(`data-${k}l`)][0] = i.value);
+    q(`[data-${k}v]`).forEach(i => draft[f][+i.getAttribute(`data-${k}v`)][1] = i.value);
+  });
+  q("[data-new]").forEach(i => draft["new_" + i.dataset.new] = i.value);
+}
+
+function saveCard(key) {
+  collect();
+  const c = contact(openContact);
+  if (key === "info") {
+    c.name = draft.name.trim() || c.name; c.address = draft.address;
+    c.phones = draft.phones.filter(r => r[1].trim()); c.emails = draft.emails.filter(r => r[1].trim());
+  }
+  if (key === "details") {
+    ["stage", "follow", "assigned", "source"].forEach(k => {
+      if (draft.newMode[k] && (draft["new_" + k] || "").trim()) { const v = draft["new_" + k].trim(); if (!OPTS[k].includes(v)) OPTS[k].push(v); draft[k] = v; }
+    });
+    c.stage = draft.stage; c.assigned = draft.assigned; c.source = draft.source; c.referred = draft.referred; c.mailing = draft.mailing;
+    const f = typeof draft.follow === "string" ? draft.follow : followTxt(draft.follow);
+    const n = f.match(/\d+/); c.follow = n ? +n[0] : null;
+  }
+  if (key === "household") c.household = draft.household.filter(r => r[0].trim() || r[1].trim());
+  editCard = null; draft = null;
+  toast("Saved.");
+  render();
+}
+
+/* ---------- Events ---------- */
+function render() { openContact ? renderContact() : renderBoard(); }
+let tt;
+function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2800); }
+
+function openCard(dealId) {
+  const dl = deals.find(x => x.id === dealId);
+  openContact = cidOf(dl); side = dl.side; editing = null; editCard = null; draft = null; tagAdding = false; openMenu = null; tlFilter = "all";
+  ctab[openContact] = isActive(dl) ? "deal-" + dl.id : "timeline";
+  render(); window.scrollTo(0, 0);
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const dl = b.dataset.dl ? deals.find(x => x.id === +b.dataset.dl) : null;
+  if (b.dataset.side) { side = b.dataset.side; render(); return; }
+  if (b.dataset.editstages) { editStages = !editStages; render(); return; }
+  if (b.dataset.move) {
+    const arr = STAGES[side], i = arr.indexOf(b.dataset.move), j = i + +b.dataset.dir;
+    if (j < 0 || j >= arr.length) return;
+    [arr[i], arr[j]] = [arr[j], arr[i]]; render(); return;
+  }
+  if (b.dataset.del) {
+    const k = b.dataset.del;
+    if (deals.some(x => x.side === side && x.stage === k)) { toast(`Move the deals out of "${label(side, k)}" before removing it.`); return; }
+    STAGES[side].splice(STAGES[side].indexOf(k), 1); toast(`Removed "${label(side, k)}".`); render(); return;
+  }
+  if (b.dataset.addstage) {
+    const k = "custom-" + (++customN);
+    LABEL[side][k] = "New stage";
+    STAGES[side].splice(STAGES[side].indexOf("Under Contract"), 0, k);
+    render();
+    const inp = document.querySelector(`[data-rename="${k}"]`); if (inp) { inp.focus(); inp.select(); }
+    return;
+  }
+  if (b.dataset.deal) { openCard(+b.dataset.deal); return; }
+  if (b.dataset.editcard) { const c = contact(openContact); editCard = b.dataset.editcard; draft = JSON.parse(JSON.stringify(c)); draft.assigned = draft.assigned || "Luke Pettersen"; draft.newMode = {}; render(); return; }
+  if (b.dataset.cancelcard) { editCard = null; draft = null; render(); return; }
+  if (b.dataset.savecard) { saveCard(b.dataset.savecard); return; }
+  if (b.dataset.addrow) { collect(); const f = { p: "phones", e: "emails", h: "household" }[b.dataset.addrow]; draft[f].push([b.dataset.addrow === "p" ? "Mobile" : "", ""]); render(); return; }
+  if (b.dataset.rm) { collect(); const [k, i] = b.dataset.rm.split(":"); draft[{ p: "phones", e: "emails", h: "household" }[k]].splice(+i, 1); render(); return; }
+  if (b.dataset.rmtag) { const c = contact(openContact); const t = c.tags.splice(+b.dataset.rmtag, 1)[0]; toast(`Removed tag "${t}".`); render(); return; }
+  if (b.dataset.tagadd) { tagAdding = true; render(); const i = el("tag-in"); if (i) i.focus(); return; }
+  if (b.dataset.tagcancel) { tagAdding = false; render(); return; }
+  if (b.dataset.tagsave) { addTag(); return; }
+  if (b.dataset.opencontact) { openContact = b.dataset.opencontact; tlFilter = "all"; editing = null; render(); window.scrollTo(0, 0); return; }
+  if (b.dataset.back) { openContact = null; editing = null; try { history.replaceState(null, "", location.pathname); } catch (_) {} render(); return; }
+  if (b.dataset.ctab) { ctab[openContact] = b.dataset.ctab; editing = null; render(); return; }
+  if (b.dataset.comp) { composer = b.dataset.comp; render(); const t = el("comp-text"); if (t) t.focus(); return; }
+  if (b.dataset.tlf) { tlFilter = b.dataset.tlf; render(); return; }
+  if (b.dataset.save) {
+    const ta = el("comp-text"), txt = ta && ta.value.trim();
+    if (!txt) { toast("Type something first."); return; }
+    const c = contact(openContact);
+    const kind = composer === "call" ? "call" : composer === "logtext" ? "text" : composer;
+    const out = composer === "call" ? el("call-outcome").value + ": " : composer === "logtext" ? "Logged: " : "";
+    c.history.unshift([iso(TODAY), kind, out + txt, "LP"]);
+    toast(composer === "note" ? "Note saved." : composer === "text" ? "Text sent." : composer === "logtext" ? "Text logged." : "Call logged.");
+    render(); return;
+  }
+  if (b.dataset.ptask) { const t = contact(openContact).tasks[+b.dataset.ptask]; t.s = t.s === "open" ? "done" : "open"; render(); return; }
+  if (b.dataset.ms) { const k = dl.id + ":" + b.dataset.ms; editing = editing === k ? null : k; render(); return; }
+  if (b.dataset.close) { editing = null; render(); return; }
+  if (b.dataset.phase) { const s = expanded[dl.id]; s.has(b.dataset.phase) ? s.delete(b.dataset.phase) : s.add(b.dataset.phase); render(); return; }
+  if (b.dataset.toggle) {
+    const t = dl.tasks[+b.dataset.toggle];
+    if (eff(dl, t) === "waived") { toast("Cleared by a waived deadline."); return; }
+    t.s = t.s === "open" ? "done" : "open";
+    if (t.s === "done") toast("Done. Logged to the timeline and cleared from Tasks.");
+    render(); return;
+  }
+  if (b.dataset.menu) { const k = dl.id + ":" + b.dataset.menu; openMenu = openMenu === k ? null : k; render(); return; }
+  if (b.dataset.set) { dl.tasks[+b.dataset.id].s = b.dataset.set; openMenu = null; render(); return; }
+  if (b.dataset.draft) { const t = dl.tasks[+b.dataset.draft]; toast(`Opens a pre-filled ${t.kind}: "${t.t}". You review, then send.`); return; }
+  if (b.dataset.toast) { toast(b.dataset.toast); return; }
+  if (b.id === "role-admin" || b.id === "role-assistant") {
+    role = b.id === "role-admin" ? "admin" : "assistant";
+    el("role-admin").setAttribute("aria-pressed", role === "admin");
+    el("role-assistant").setAttribute("aria-pressed", role === "assistant");
+    render(); return;
+  }
+});
+
+document.addEventListener("change", e => {
+  const ds = e.target.dataset;
+  if (ds.f && e.target.value === "__new") { collect(); draft.newMode[ds.f] = true; render(); const i = document.querySelector(`[data-new="${ds.f}"]`); if (i) i.focus(); return; }
+  if (ds.rename) { const v = e.target.value.trim(); if (v) LABEL[side][ds.rename] = v; render(); return; }
+  if (ds.msdate && e.target.value) {
+    const [id, k] = ds.msdate.split(":"), dl = deals.find(x => x.id === +id);
+    const n = dl.tasks.filter(t => t.a === k && t.s === "open").length;
+    dl.ms[k] = e.target.value;
+    if (dl.msStatus[k] === "pending") dl.msStatus[k] = "extended";
+    toast(`${MS_NAMES[k]} moved to ${fmt(d(e.target.value))}. ${n} step${n === 1 ? "" : "s"} re-dated.`);
+    render(); return;
+  }
+  if (ds.msstatus) { const [id, k] = ds.msstatus.split(":"); deals.find(x => x.id === +id).msStatus[k] = e.target.value; render(); }
+});
+
+function addTag() {
+  const i = el("tag-in"), v = i && i.value.trim(); if (!v) return;
+  const c = contact(openContact);
+  if (!c.tags.includes(v)) c.tags.push(v);
+  const isNew = !ALL_TAGS.includes(v); if (isNew) ALL_TAGS.push(v);
+  tagAdding = false; toast(isNew ? `Created new tag "${v}".` : `Tagged "${v}".`); render();
+}
+document.addEventListener("keydown", e => { if (e.target.id === "tag-in" && e.key === "Enter") { e.preventDefault(); addTag(); } if (e.target.id === "tag-in" && e.key === "Escape") { tagAdding = false; render(); } });
+
+// Deep link from the Tasks mockup: deals.html#contact-calloway
+function fromHash() {
+  const m = location.hash.match(/^#contact-([\w-]+)$/);
+  if (m && (CONTACTS[m[1]] || EXTRA[m[1]] || deals.some(x => cidOf(x) === m[1]))) {
+    openContact = m[1]; tlFilter = "all";
+    const first = deals.find(x => cidOf(x) === m[1] && isActive(x));
+    if (first) side = first.side;
+    render(); window.scrollTo(0, 0);
+  }
+}
+window.addEventListener("hashchange", fromHash);
+render();
+fromHash();
+
+return { open(h) { try { history.replaceState(null, "", h); } catch (_) {}
+  const m = (h || "").match(/^#contact-([\w-]+)$/);
+  if (m) { openContact = m[1]; tlFilter = "all"; editCard = null; draft = null; render(); window.scrollTo(0, 0); } } };
+};
+INIT.tasks = function (document) {
+
+const TODAY = d("2026-10-12");
+function d(s) { const [y, m, dd] = s.split("-").map(Number); return new Date(y, m - 1, dd); }
+function iso(x) { return x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0") + "-" + String(x.getDate()).padStart(2, "0"); }
+function add(x, n) { const y = new Date(x); y.setDate(y.getDate() + n); return y; }
+function diff(a, b) { return Math.round((a - b) / 86400000); }
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], DOWL = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const fmt = x => DOW[x.getDay()] + " " + MON[x.getMonth()] + " " + x.getDate();
+const short = x => MON[x.getMonth()] + " " + x.getDate();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+const PEOPLE = { LP: "Luke", AS: "Alyssa (assistant)" };
+// Links a task can point to. Deals match the pipeline mockup.
+const LINKS = {
+  calloway: { kind: "deal", label: "Calloway", full: "Jordan & Priya Calloway · Buyer, Under Contract" },
+  engel: { kind: "deal", label: "Engel", full: "Ruth & Sam Engel · Buyer, Under Contract" },
+  raman: { kind: "deal", label: "Raman", full: "Dev Raman · Buyer, Under Contract" },
+  halvorsen: { kind: "deal", label: "Halvorsen", full: "Wes Halvorsen · Seller, Under Contract" },
+  okafor: { kind: "deal", label: "Okafor", full: "Ben & Hana Okafor · Buyer, Lead" },
+  thorsen: { kind: "deal", label: "Thorsen", full: "Grace Thorsen · Buyer, Consult" },
+  fisk: { kind: "deal", label: "Fisk", full: "Carol & Dean Fisk · Seller, Prep" },
+  murphy: { kind: "person", label: "Kate Murphy", full: "Kate Murphy · 90 Day Sphere" },
+  dana: { kind: "person", label: "Dana Kim", full: "Dana Kim · Lender, Northfield Lending" },
+};
+
+// Contact page each link opens in the pipeline mockup.
+const CID = { calloway: "calloway", engel: "d14", raman: "d15", halvorsen: "d29", okafor: "d3", thorsen: "d4", fisk: "d24", murphy: "murphy", dana: "calloway" };
+// p: priority 0 none, 1 low, 2 med, 3 high. step: deal checklist info.
+let tasks = [
+  { t: "Earnest money receipt saved to file", due: "2026-10-07", who: "AS", link: "calloway", step: { phase: "Under Contract", rule: "Final Acceptance + 5d" } },
+  { t: "Insurance referral", due: "2026-10-07", who: "AS", link: "calloway", kind: "email", step: { phase: "Financing", rule: "Final Acceptance + 5d" } },
+  { t: "Schedule consult", due: "2026-10-07", who: "LP", link: "okafor", step: { phase: "Lead", rule: "Lead + 2d" } },
+  { t: "Replace furnace filter, Lake St duplex", due: "2026-10-10", who: "LP", p: 1 },
+  { t: "Review inspection report with clients", due: "2026-10-12", time: "4:00pm", who: "LP", link: "calloway", p: 3, step: { phase: "Inspection", rule: "Inspection − 2d" } },
+  { t: "Check October rent payments", due: "2026-10-12", who: "LP", repeat: "Monthly" },
+  { t: "Call Kate about spring listing timing", due: "2026-10-12", time: "11:00am", who: "LP", link: "murphy", p: 2 },
+  { t: "Draft inspection amendment", due: "2026-10-13", who: "LP", link: "calloway", p: 3, step: { phase: "Inspection", rule: "Inspection − 1d" } },
+  { t: "Order fall trifold mailers", due: "2026-10-13", who: "AS", repeat: "Yearly", subs: [["Pull mailing list", true], ["Approve proof", false], ["Submit print order", false]] },
+  { t: "Signed amendment to lender + title", due: "2026-10-14", who: "AS", link: "calloway", kind: "email", step: { phase: "Inspection", rule: "Inspection day of" } },
+  { t: "Final walkthrough scheduling text", due: "2026-10-14", who: "AS", link: "raman", kind: "text", step: { phase: "Closing", rule: "Closing − 9d" } },
+  { t: "Day-of-inspection text", due: "2026-10-14", who: "AS", link: "halvorsen", kind: "text", step: { phase: "Inspection", rule: "Inspection − 3d" } },
+  { t: "Hold consult", due: "2026-10-14", time: "6:30pm", who: "LP", link: "thorsen", step: { phase: "Consult", rule: "Consult + 3d" } },
+  { t: "Dentist", due: "2026-10-14", time: "2:00pm", who: "LP" },
+  { t: "Record podcast ep. 38 with lender guest", due: "2026-10-15", who: "LP", p: 2, subs: [["Confirm guest", true], ["Outline questions", false], ["Book studio", false]] },
+  { t: "Schedule listing photos", due: "2026-10-15", who: "AS", link: "fisk", step: { phase: "Listing Signed / Prep", rule: "Prep + 1d" } },
+  { t: "Confirm cash to close", due: "2026-10-16", who: "AS", link: "raman", step: { phase: "Closing", rule: "Closing − 7d" } },
+  { t: "Day-of-inspection text", due: "2026-10-16", who: "AS", link: "engel", kind: "text", step: { phase: "Inspection", rule: "Inspection − 3d" } },
+  { t: "Review buyer's inspection requests", due: "2026-10-17", who: "LP", link: "halvorsen", step: { phase: "Inspection", rule: "Inspection day of" } },
+  { t: "Weekly task report email", due: "2026-10-18", who: "AS", repeat: "Weekly" },
+  { t: "Plan next week's social posts", due: "2026-10-16", who: "AS", repeat: "Weekly" },
+  { t: "Send New Year's postcard", due: "2026-12-28", who: "AS", repeat: "Yearly" },
+  { t: "Send spring postcard", due: "2027-03-15", who: "AS", repeat: "Yearly" },
+  { t: "Quarterly market update email", due: "2027-01-05", who: "LP", repeat: "Quarterly" },
+  { t: "Review settlement statement", due: "2026-10-19", who: "LP", link: "raman", step: { phase: "Closing", rule: "Closing − 4d" } },
+  { t: "Finish MN license CE credits", due: "2026-10-30", who: "LP", p: 3 },
+  { t: "Get appraisal date from lender", due: "2026-10-13", who: "AS", link: "calloway" },
+];
+tasks.forEach((t, i) => { t.id = i; t.done = false; t.p = t.p || 0; t.kind = t.kind || "task"; });
+let nextId = tasks.length;
+
+const touches = [
+  { n: "Kara Voss", f: "30 days", last: "Sep 9" },
+  { n: "Marcus & Elle Brandvold", f: "90 days", last: "Jul 6" },
+  { n: "Hollis Family", f: "30 days", last: "Sep 10" },
+  { n: "Rita Okonkwo", f: "7 days", last: "Oct 3" },
+];
+
+let view = "today", filter = "all", sel = null, me = "LP", whoF = "everyone";
+const el = id => document.getElementById(id);
+
+const VIEWS = [
+  ["today", "Today"], ["tomorrow", "Tomorrow"], ["overdue", "Overdue"],
+  ["touch", "Due for a touch"],
+];
+function inView(t, v) {
+  const n = diff(d(t.due), TODAY);
+  if (v === "today") return n <= 0;
+  if (v === "tomorrow") return n === 1;
+  if (v === "overdue") return n < 0;
+  if (v === "recurring") return !!t.repeat;
+  return false;
+}
+const visible = v => tasks.filter(t => !t.done || t.justDone).filter(t => whoF === "everyone" || t.who === me).filter(t => inView(t, v));
+function applyFilter(list) {
+  if (filter === "general") return list.filter(t => !t.step);
+  if (filter === "deal") return list.filter(t => t.step);
+  return list;
+}
+const sortT = (a, b) => d(a.due) - d(b.due) || (b.p - a.p) || ((a.time || "z") > (b.time || "z") ? 1 : -1);
+
+function renderSide() {
+  const cnt = v => v === "touch" ? touches.length : visible(v).filter(t => !t.done).length;
+  const od = cnt("overdue");
+  el("side").innerHTML = `
+    <div><h4>Views</h4><ul>${VIEWS.map(([k, l]) => `<li><button class="nav-i" data-view="${k}" aria-current="${view === k}"><span>${l}</span><span class="c ${k === "overdue" && od ? "bad" : ""}">${cnt(k) || ""}</span></button></li>`).join("")}</ul></div>
+    <div><h4>List</h4><ul><li><button class="nav-i" data-view="recurring" aria-current="${view === "recurring"}"><span>Recurring</span><span class="c">${cnt("recurring") || ""}</span></button></li></ul></div>`;
+}
+
+function rowHtml(t) {
+  const n = diff(d(t.due), TODAY);
+  const L = t.link && LINKS[t.link];
+  const meta = [];
+  if (L) meta.push(`<span class="link ${L.kind}">${esc(L.label)}</span>`);
+  if (t.subs) meta.push(`<span>☐ ${t.subs.filter(s => s[1]).length}/${t.subs.length}</span>`);
+  if (t.repeat) meta.push(`<span>↻ ${t.repeat}</span>`);
+  const dueTxt = (n === 0 ? "Today" : n === 1 ? "Tomorrow" : n < 0 ? short(d(t.due)) : fmt(d(t.due))) + (t.time ? " " + t.time : "");
+  return `<div class="row ${t.done ? "done" : ""} ${sel === t.id ? "sel" : ""}">
+    <button class="check p${t.p}" data-done="${t.id}" aria-label="Complete: ${esc(t.t)}">${t.done ? '<svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ""}</button>
+    <button class="body" data-open="${t.id}"><span class="t">${esc(t.t)}</span>${meta.length ? `<span class="meta">${meta.join("")}</span>` : ""}</button>
+    <span class="r"><span class="due date ${n < 0 && !t.done ? "overdue" : ""}">${dueTxt}</span><span class="av ${t.who === "AS" ? "as" : ""}" title="${PEOPLE[t.who]}">${t.who}</span></span>
+  </div>`;
+}
+
+function groupsFor(list) {
+  if (view === "today") return [["Overdue", list.filter(t => diff(d(t.due), TODAY) < 0), true], ["Today", list.filter(t => diff(d(t.due), TODAY) === 0)]];
+  if (view === "recurring") return [[null, list]];
+  return [[null, list]];
+}
+
+function renderMain() {
+  const title = view === "recurring" ? "Recurring" : VIEWS.find(v => v[0] === view)[1];
+  if (view === "touch") {
+    el("main").innerHTML = `<div class="main-h"><div><h1>Due for a touch</h1><div class="sub">People past their follow-up frequency</div></div></div>
+      <div class="list">${touches.map((p, i) => `<div class="row"><span></span><span class="body"><span class="t">${p.n}</span><span class="meta"><span>Every ${p.f}</span><span>Last touch ${p.last}</span></span></span><span class="r"><button class="touch-btn" data-touch="${i}">Log touch</button></span></div>`).join("") || ""}</div>
+      ${touches.length ? "" : `<div class="empty">Everyone is up to date.</div>`}`;
+    return;
+  }
+  const list = applyFilter(visible(view)).sort(sortT);
+  const open = list.filter(t => !t.done).length;
+  const groups = groupsFor(list).filter(g => g[1].length);
+  el("main").innerHTML = `
+    <div class="main-h">
+      <div><h1>${title}</h1><div class="sub">${view === "recurring" ? "Each one shows up in Today when it's due, then schedules the next" : open + " open" + (view === "today" ? " · " + fmt(TODAY) : "")}</div></div>
+      <span class="tools"><span class="filters" role="group" aria-label="Whose tasks">
+        <button data-who="mine" aria-pressed="${whoF === "mine"}">Mine</button>
+        <button data-who="everyone" aria-pressed="${whoF === "everyone"}">Everyone</button>
+      </span>
+      <span class="filters" role="group" aria-label="Show">
+        <button data-filter="all" aria-pressed="${filter === "all"}">All</button>
+        <button data-filter="general" aria-pressed="${filter === "general"}">General</button>
+        <button data-filter="deal" aria-pressed="${filter === "deal"}">Deal steps</button>
+      </span></span>
+    </div>
+    <div class="qa">
+      <form id="qa-form" autocomplete="off">
+        <input id="qa-input" placeholder='Add a task, e.g. "call lender re Murphy Fri 9am" or "rent check every month"' aria-label="Quick add task">
+        <button class="add" type="submit">Add</button>
+      </form>
+      <div class="parsed" id="parsed"></div>
+    </div>
+    ${groups.length ? groups.map(([h, items, bad]) => `<section class="group">${h ? `<h3 class="${bad ? "bad" : ""}"><span>${h}</span><span>${items.filter(t => !t.done).length}</span></h3>` : ""}<div class="list">${items.map(rowHtml).join("")}</div></section>`).join("") : `<div class="empty">Nothing here. Enjoy it.</div>`}`;
+  const inp = el("qa-input");
+  inp.addEventListener("input", () => showParsed(parse(inp.value)));
+  el("qa-form").addEventListener("submit", e => { e.preventDefault(); addTask(inp.value); });
+}
+
+function renderDetail() {
+  const box = el("detail"), shell = el("shell");
+  const t = tasks.find(x => x.id === sel);
+  if (!t) { box.hidden = true; shell.classList.remove("with-detail"); return; }
+  box.hidden = false; shell.classList.add("with-detail");
+  const L = t.link && LINKS[t.link];
+  box.innerHTML = `
+    <div class="detail-h">
+      <button class="check p${t.p}" data-done="${t.id}" aria-label="Complete">${t.done ? "✓" : ""}</button>
+      <textarea class="title" id="d-title" rows="2" aria-label="Title">${esc(t.t)}</textarea>
+      <button class="x" data-close="1" aria-label="Close">×</button>
+    </div>
+    ${t.step ? `<div class="from" style="margin-top:12px">
+      <span>From the <b>${esc(L.label)}</b> deal checklist · ${esc(t.step.phase)}</span>
+      <span>Timing: ${esc(t.step.rule)}. Moves automatically if that date changes.</span>
+      <span class="acts"><a class="btn" href="deals.html#contact-${CID[t.link]}" style="text-decoration:none">Open contact</a>${t.kind !== "task" ? `<button class="btn primary" data-toast="Opens a pre-filled ${t.kind} to review and send">Draft ${t.kind}</button>` : ""}</span>
+    </div>` : ""}
+    <div class="fields">
+      <label for="d-due">Due</label><input type="date" id="d-due" value="${t.due}">
+      <label for="d-time">Time</label><input id="d-time" value="${t.time || ""}" placeholder="None">
+      <label for="d-repeat">Repeat</label><select id="d-repeat">${["", "Daily", "Weekly", "Monthly", "Yearly"].map(r => `<option value="${r}" ${t.repeat === r || (!t.repeat && !r) ? "selected" : ""}>${r || "Never"}</option>`).join("")}</select>
+      <label for="d-p">Priority</label><select id="d-p">${["None", "Low", "Medium", "High"].map((p, i) => `<option value="${i}" ${t.p === i ? "selected" : ""}>${p}</option>`).join("")}</select>
+      <label for="d-who">Assignee</label><select id="d-who">${Object.entries(PEOPLE).map(([k, v]) => `<option value="${k}" ${t.who === k ? "selected" : ""}>${v}</option>`).join("")}</select>
+      <label>Linked to</label><span>${L ? `<a class="link ${L.kind}" href="deals.html#contact-${CID[t.link]}" style="text-decoration:none">${esc(L.full)}</a>` : `<span style="color:var(--muted)">Nothing (general task)</span>`}</span>
+    </div>
+    <div class="sec"><h5>Subtasks</h5>
+      ${(t.subs || []).map((s, i) => `<label class="sub-i ${s[1] ? "done" : ""}"><input type="checkbox" data-sub="${i}" ${s[1] ? "checked" : ""}><span>${esc(s[0])}</span></label>`).join("") || `<span style="font-size:12.5px;color:var(--muted)">None yet</span>`}
+      <button class="btn" style="align-self:flex-start" data-toast="Adds a subtask">+ Add subtask</button>
+    </div>
+    <div class="sec"><h5>Notes</h5><textarea class="notes" id="d-notes" placeholder="Add notes"></textarea></div>`;
+}
+
+function render() { renderSide(); renderMain(); renderDetail(); }
+
+/* ---------- Quick add parsing ---------- */
+function parse(text) {
+  let s = " " + text + " ", out = {};
+  const take = re => { const m = s.match(re); if (m) s = s.replace(m[0], " "); return m; };
+  let m;
+  if ((m = take(/\s(every\s+(day|week|month|year)|daily|weekly|monthly|yearly)\s/i))) {
+    const w = m[1].toLowerCase(); out.repeat = { day: "Daily", daily: "Daily", week: "Weekly", weekly: "Weekly", month: "Monthly", monthly: "Monthly", year: "Yearly", yearly: "Yearly" }[m[2] ? m[2].toLowerCase() : w];
+  }
+  if ((m = take(/\s(\d{1,2})(?::(\d{2}))?\s*(am|pm)\s/i))) out.time = `${+m[1]}:${m[2] || "00"}${m[3].toLowerCase()}`;
+  if ((m = take(/\s(today|tonight)\s/i))) out.due = iso(TODAY);
+  else if ((m = take(/\s(tomorrow|tmrw)\s/i))) out.due = iso(add(TODAY, 1));
+  else if ((m = take(/\s(next week)\s/i))) out.due = iso(add(TODAY, 7));
+  else if ((m = take(/\s(sun|mon|tue|tues|wed|thu|thur|thurs|fri|sat)(day|nesday|rsday|urday)?\s/i))) {
+    const k = DOWL.findIndex(x => x.startsWith(m[1].toLowerCase().slice(0, 3)));
+    let n = (k - TODAY.getDay() + 7) % 7; if (n === 0) n = 7;
+    out.due = iso(add(TODAY, n));
+  }
+  if ((m = take(/\s!(high|h|3|med|medium|m|2|low|l|1)\s/i))) out.p = { high: 3, h: 3, 3: 3, med: 2, medium: 2, m: 2, 2: 2, low: 1, l: 1, 1: 1 }[m[1].toLowerCase()];
+  if ((m = take(/\s@(assistant|alyssa|luke|me)\s/i))) out.who = /luke|me/i.test(m[1]) ? "LP" : "AS";
+  if ((m = s.match(/\s(?:re|for|with)\s+([a-z]+)/i))) {
+    const word = m[1].toLowerCase();
+    const key = Object.keys(LINKS).find(k => k === word || LINKS[k].label.toLowerCase().split(" ").includes(word));
+    if (key) { out.link = key; s = s.replace(m[0], " "); }
+  }
+  out.t = s.replace(/\s+/g, " ").trim();
+  return out;
+}
+function showParsed(p) {
+  const chips = [];
+  if (p.due) chips.push(fmt(d(p.due)));
+  if (p.time) chips.push(p.time);
+  if (p.link) chips.push((LINKS[p.link].kind === "deal" ? "Deal: " : "Person: ") + LINKS[p.link].label);
+  if (p.who) chips.push("Assignee: " + PEOPLE[p.who]);
+  if (p.p) chips.push(["", "Low", "Medium", "High"][p.p] + " priority");
+  if (p.repeat) chips.push("↻ " + p.repeat);
+  el("parsed").innerHTML = chips.map(c => `<span class="pchip">${esc(c)}</span>`).join("");
+}
+function addTask(text) {
+  const p = parse(text); if (!p.t) return;
+  const t = { id: nextId++, t: p.t, due: p.due || iso(TODAY), time: p.time, who: p.who || me, link: p.link, p: p.p || 0, repeat: p.repeat, kind: "task", done: false };
+  tasks.push(t);
+  toast(`Added "${t.t}" for ${fmt(d(t.due))}${inView(t, view) ? "" : ". It's in a different view."}`);
+  render();
+  const i = el("qa-input"); if (i) i.focus();
+}
+
+/* ---------- Events ---------- */
+let tt;
+function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2800); }
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.view) { view = b.dataset.view; sel = null; render(); return; }
+  if (b.dataset.filter) { filter = b.dataset.filter; render(); return; }
+  if (b.dataset.who) { whoF = b.dataset.who; render(); return; }
+  if (b.id === "as-lp" || b.id === "as-as") {
+    me = b.id === "as-lp" ? "LP" : "AS";
+    whoF = me === "LP" ? "everyone" : "mine";
+    el("as-lp").setAttribute("aria-pressed", me === "LP");
+    el("as-as").setAttribute("aria-pressed", me === "AS");
+    sel = null; render(); return;
+  }
+  if (b.dataset.open) { sel = +b.dataset.open; render(); return; }
+  if (b.dataset.close) { sel = null; render(); return; }
+  if (b.dataset.done) {
+    const t = tasks.find(x => x.id === +b.dataset.done);
+    t.done = !t.done; t.justDone = t.done;
+    if (t.done && t.repeat) toast(`Done. Next one created (${t.repeat.toLowerCase()}).`);
+    else if (t.done && t.step) toast(`Done. Also checked off on the ${LINKS[t.link].label} checklist and logged to the timeline.`);
+    render(); return;
+  }
+  if (b.dataset.touch) { const p = touches.splice(+b.dataset.touch, 1)[0]; toast(`Touch logged for ${p.n}. Next one due in ${p.f}.`); render(); return; }
+  if (b.dataset.toast) { toast(b.dataset.toast); return; }
+});
+document.addEventListener("change", e => {
+  const t = tasks.find(x => x.id === sel); if (!t) return;
+  const id = e.target.id, v = e.target.value;
+  if (e.target.dataset.sub !== undefined) { t.subs[+e.target.dataset.sub][1] = e.target.checked; render(); return; }
+  if (id === "d-due" && v) t.due = v;
+  if (id === "d-time") t.time = v;
+  if (id === "d-repeat") t.repeat = v || undefined;
+  if (id === "d-p") t.p = +v;
+  if (id === "d-who") t.who = v;
+  if (id === "d-list") t.list = v || undefined;
+  if (id === "d-title") t.t = v;
+  render();
+});
+
+render();
+
+};
+INIT.messages = function (document) {
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// m: [dir in/out/missed, text, time, day]
+let convs = [
+  { id: 1, name: "Priya Calloway", cid: "calloway", phone: "(612) 555-0193", unread: true, stage: "Under Contract", deal: "Buyer · 4127 Upton Ave S #3", next: "Review inspection report · Today 4pm", tags: ["Buyer", "Seller", "A Lead"],
+    m: [["out", "Inspector is wrapping up, we'll go over the report Monday at 4.", "3:12 PM", "Sat Oct 10"], ["in", "Perfect. Can you send the report before so we can read it?", "3:20 PM", "Sat Oct 10"], ["out", "Yep, it'll come straight from the inspector tonight.", "3:22 PM", "Sat Oct 10"], ["in", "Got it, thanks! Is the water heater thing a big deal?", "8:41 AM", "Today"]] },
+  { id: 2, name: "(763) 555-0110", cid: null, phone: "(763) 555-0110", unread: true, m: [["missed", "Missed call · no voicemail", "9:02 AM", "Today"], ["in", "Hi, saw your sign on Lincoln Ave. Is it still available? Could we see it this week?", "9:05 AM", "Today"]] },
+  { id: 3, name: "Owen Pryce", cid: "d11", phone: "(612) 555-0111", unread: false, stage: "Lead", deal: "Buyer · Offer Out", next: "Follow up with listing agent · Today", tags: ["Buyer", "B Lead"],
+    m: [["out", "Offer is in on Hillside Ave. Response deadline is tomorrow at 5pm.", "6:15 PM", "Sun Oct 11"], ["in", "Fingers crossed 🤞", "6:20 PM", "Sun Oct 11"]] },
+  { id: 4, name: "Kate Murphy", cid: "murphy", phone: "(651) 555-0172", unread: false, stage: "90 Day Sphere", deal: "", next: "Call Kate about spring listing timing · Today", tags: ["Past Client", "Mailers"],
+    m: [["missed", "Missed call · 0:42 voicemail", "5:48 PM", "Fri Oct 9"]] },
+  { id: 5, name: "Marcus Holt", cid: null, phone: "(612) 555-0177", unread: false, known: "Listing agent on Calloway deal",
+    m: [["in", "Sellers are open to a credit on the water heater. Send over the amendment when ready.", "11:30 AM", "Today"]] },
+  { id: 6, name: "Dev Raman", cid: "d15", phone: "(612) 555-0115", unread: false, stage: "Under Contract", deal: "Buyer · 1530 Hague Ave", next: "Final walkthrough scheduling text · Wed", tags: ["Buyer"],
+    m: [["in", "Lender says we're clear to close!", "4:02 PM", "Thu Oct 8"], ["out", "Huge! 🎉 Closing is still Oct 23 at Lakeview Title.", "4:10 PM", "Thu Oct 8"]] },
+  { id: 7, name: "Hugo Bergstrom", cid: "d26", phone: "(612) 555-0126", unread: false, stage: "Lead", deal: "Seller · Coming Soon", next: "Sign install · Tue", tags: ["Seller"],
+    m: [["out", "Photos are in! Sending the link now.", "1:15 PM", "Fri Oct 9"], ["in", "These look amazing", "1:40 PM", "Fri Oct 9"]] },
+  { id: 8, name: "Rita Okonkwo", cid: "x2", phone: "(612) 555-0182", unread: false, stage: "7 Day Sphere", deal: "", next: "", tags: ["A Lead"],
+    m: [["in", "Any new condos near the lakes this week?", "7:55 PM", "Thu Oct 8"]] },
+];
+const TEMPLATES = [
+  ["", "Insert template…"],
+  ["Hi {first}, just checking in! Anything I can help with?", "Check-in"],
+  ["Hi {first}, the inspection is scheduled for {date}. I'll meet you there.", "BUC · Day-of-inspection text"],
+  ["Hi {first}, earnest money is due by {date}. Wiring instructions are in your email.", "BUC · Earnest money"],
+  ["Hi {first}! Thanks for reaching out. I'm Luke with Petty Homes. What's the best time to talk?", "Lead · First reply"],
+  ["Hi {first}, it's Alyssa from Luke's team. I'll be helping with paperwork and scheduling.", "SPC · Intro with assistant"],
+];
+let cur = 1, filt = "all", q = "";
+const el = id => document.getElementById(id);
+const first = c => c.name.startsWith("(") ? "there" : c.name.split(" ")[0];
+const last = c => c.m[c.m.length - 1];
+
+function renderList() {
+  let list = convs.filter(c => filt === "all" || (filt === "unread" ? c.unread : c.m.some(m => m[0] === "missed")));
+  if (q) list = list.filter(c => (c.name + c.phone + c.m.map(m => m[1]).join(" ")).toLowerCase().includes(q.toLowerCase()));
+  el("convs").innerHTML = `<div class="top"><input class="input" id="q" placeholder="Search messages" value="${esc(q)}" aria-label="Search messages">
+    <span class="seg" role="group" aria-label="Filter">${[["all", "All"], ["unread", "Unread"], ["missed", "Missed calls"]].map(([k, l]) => `<button data-filt="${k}" aria-pressed="${filt === k}">${l}</button>`).join("")}</span>
+    <button class="btn" data-toast="Start a text to anyone in People, or a new number">+ New message</button></div>
+    ${list.map(c => { const l = last(c); return `<button class="conv ${c.unread ? "unread" : ""}" data-conv="${c.id}" aria-current="${cur === c.id}"><span class="n"><span>${esc(c.name)}</span></span><span class="t">${l[3] === "Today" ? l[2] : l[3].replace(/^\w+ /, "")}</span><span class="s ${l[0] === "missed" ? "missed" : ""}">${l[0] === "out" ? "You: " : ""}${esc(l[1])}</span></button>`; }).join("") || `<p class="muted" style="padding:14px">No conversations.</p>`}`;
+  const qi = el("q"); qi.addEventListener("input", () => { q = qi.value; const p = qi.selectionStart; renderList(); const n = el("q"); n.focus(); n.setSelectionRange(p, p); });
+}
+function renderThread() {
+  const c = convs.find(x => x.id === cur); c.unread = false;
+  let day = "";
+  const body = c.m.map(([dir, txt, time, d]) => {
+    const dh = d !== day ? `<div class="day">${d}</div>` : ""; day = d;
+    if (dir === "missed") return dh + `<div class="sys">📞 ${esc(txt)} · ${time}<button data-toast="Calls ${esc(c.phone)} from your business line">Call back</button><button data-toast="Creates a task: Call back ${esc(c.name)}">Make task</button></div>`;
+    return dh + `<div class="bub ${dir}">${esc(txt)}<small>${time}</small></div>`;
+  }).join("");
+  el("thread").innerHTML = `<div class="th-h"><div><button class="back" data-back="1">← All</button> <b>${esc(c.name)}</b> <span class="muted sm num">${c.cid || c.name.startsWith("(") ? "" : c.phone}</span>${c.known ? ` <span class="muted sm">· ${esc(c.known)}</span>` : ""}</div>
+    <div style="display:flex;gap:6px">${c.cid ? `<a class="btn" href="deals.html#contact-${c.cid}">Open contact</a>` : ""}<button class="btn" data-toast="Calls ${esc(c.phone)} from your business line">Call</button></div></div>
+    <div class="msgs" id="msgs">${body}</div>
+    <div class="comp"><textarea id="txt" rows="2" placeholder="Text ${esc(first(c))}…"></textarea>
+      <div class="row"><select id="tpl" aria-label="Insert template">${TEMPLATES.map(([v, l]) => `<option value="${esc(v)}">${l}</option>`).join("")}</select>
+      <span style="display:flex;gap:8px;align-items:center"><span class="muted sm">Logged to their timeline</span><button class="btn primary" data-send="1">Send</button></span></div></div>`;
+  const m = el("msgs"); m.scrollTop = m.scrollHeight;
+  el("shell").classList.add("thread-open");
+}
+function renderInfo() {
+  const c = convs.find(x => x.id === cur);
+  if (!c.cid) {
+    el("info").innerHTML = `<h3>${c.known ? "Not in People yet" : "New number"}</h3>
+      <p class="muted sm" style="margin:0">${c.known ? esc(c.known) + "." : "Not linked to anyone. Add them as a lead or link to an existing person."}</p>
+      <div class="newc"><label>Name<input class="input" id="nc-name" placeholder="Full name" value="${c.known ? esc(c.name) : ""}"></label>
+      <label>Stage<select class="input" id="nc-stage">${(c.known ? ["Realtor", "Industry Partners", "Lead"] : ["Lead", "Realtor", "Industry Partners"]).map(s => `<option>${s}</option>`).join("")}</select></label>
+      <label>Source<select class="input">${["Sign call", "Website", "Sphere Referral", "Zillow Preferred"].map(s => `<option>${s}</option>`).join("")}</select></label>
+      <button class="btn primary" data-create="1">Create contact</button><button class="btn" data-toast="Search People and attach this number">Link to existing person</button></div>`;
+    return;
+  }
+  el("info").innerHTML = `<h3>${esc(c.name)}</h3>
+    <dl class="kv"><dt>Stage</dt><dd>${esc(c.stage)}</dd>${c.deal ? `<dt>Deal</dt><dd>${esc(c.deal)}</dd>` : ""}${c.next ? `<dt>Next up</dt><dd>${esc(c.next)}</dd>` : ""}<dt>Phone</dt><dd class="num">${c.phone}</dd></dl>
+    <div class="tags">${c.tags.map(t => `<span class="tagchip">${esc(t)}</span>`).join("")}</div>
+    <a class="btn" href="deals.html#contact-${c.cid}">Open contact page</a>
+    <button class="btn" data-toast="Quick add a task linked to ${esc(c.name)}">+ Task</button>`;
+}
+function render() { renderList(); renderThread(); renderInfo(); }
+let tt; function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.conv) { cur = +b.dataset.conv; render(); return; }
+  if (b.dataset.filt) { filt = b.dataset.filt; renderList(); return; }
+  if (b.dataset.back) { el("shell").classList.remove("thread-open"); return; }
+  if (b.dataset.send) {
+    const t = el("txt"), v = t.value.trim(); if (!v) return;
+    convs.find(x => x.id === cur).m.push(["out", v, "Now", "Today"]); render(); toast("Sent and logged to their timeline."); return;
+  }
+  if (b.dataset.create) {
+    const c = convs.find(x => x.id === cur), n = el("nc-name").value.trim(); if (!n) { toast("Add a name first."); return; }
+    Object.assign(c, { name: n, cid: "x2", stage: el("nc-stage").value, deal: "", next: "Follow up on new lead · Today", tags: [] });
+    toast(`Created ${n}. A follow-up task was added.`); render(); return;
+  }
+  if (b.dataset.toast) { toast(b.dataset.toast); return; }
+});
+document.addEventListener("change", e => {
+  if (e.target.id === "tpl" && e.target.value) {
+    const c = convs.find(x => x.id === cur);
+    el("txt").value = e.target.value.replace("{first}", first(c)).replace("{date}", "Wed Oct 14"); e.target.value = ""; el("txt").focus();
+  }
+});
+render();
+el("shell").classList.remove("thread-open");
+
+};
+INIT.admin = function (document) {
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const el = id => document.getElementById(id);
+const SECTIONS = [
+  ["Team", [["users", "Users & roles"]]],
+  ["Deals", [["pipelines", "Pipelines & stages"], ["checklists", "Checklist templates"]]],
+  ["People", [["fields", "Custom fields"], ["tags", "Tags"], ["lists", "Stages, sources & follow-up"]]],
+  ["Messaging", [["templates", "Text & email templates"]]],
+  ["Connections", [["integrations", "Integrations"]]],
+];
+let sec = "checklists";
+
+const state = {
+  users: [["Luke Pettersen", "luke@pettyhomes.com", "Admin", "Active"], ["Alyssa Chakiton", "assistant@pettyhomes.com", "Assistant", "Active"]],
+  roles: ["Admin", "Assistant"],
+  perms: [["See commissions", true, false], ["Delete people and deals", true, false], ["Manage users and roles", true, false], ["Edit checklist templates", true, true], ["Edit text and email templates", true, true], ["Export data", true, false], ["Send texts", true, true]],
+  pipes: { Buyer: ["Lead", "Consult", "Rep Signed / Searching", "Offer Out", "Under Contract", "Closed"], Seller: ["Lead", "Consult", "Listing Signed / Prep", "Coming Soon", "Active", "Under Contract", "Closed"] },
+  tpl: "Buyer · Under Contract",
+  checklists: {
+    "Buyer · Under Contract": [
+      ["Under Contract", "Purchase agreement accepted email", "Final Acceptance", 0, "Alyssa", "Email", "Always", ""],
+      ["Under Contract", "Lender intro email", "Final Acceptance", 0, "Luke", "Email", "Always", ""],
+      ["Under Contract", "Request earnest money", "Final Acceptance", 1, "Alyssa", "Text", "Always", ""],
+      ["Under Contract", "Lead-paint pamphlet email", "Final Acceptance", 1, "Alyssa", "Email", "Built before 1978", ""],
+      ["Inspection", "Schedule inspection", "Final Acceptance", 1, "Luke", "Task", "Always", ""],
+      ["Inspection", "Review inspection report with clients", "Inspection", -2, "Luke", "Task", "Always", ""],
+      ["Inspection", "Signed amendment to lender + title", "Inspection", 0, "Alyssa", "Email", "Always", ""],
+      ["Financing", "Remind lender about written statement", "Written Statement", -2, "Alyssa", "Email", "Always", ""],
+      ["HOA", "Send HOA docs to clients", "Final Acceptance", 4, "Alyssa", "Email", "HOA property", ""],
+      ["HOA", "Confirm rescission period ended", "HOA Rescission", 0, "Alyssa", "Task", "HOA property", ""],
+      ["Closing", "Order closing gift", "Closing", -14, "Luke", "Task", "Always", ""],
+      ["Closing", "Final walkthrough", "Closing", -1, "Luke", "Task", "Always", ""],
+      ["Closing", "Closing day", "Closing", 0, "Luke", "Task", "Always", "Moves deal to Closed"],
+      ["Post-Close", "Zillow review request", "Closing", 5, "Alyssa", "Text", "Always", ""],
+    ],
+    "Buyer · Rep Signed / Searching": [
+      ["Rep Signed", "Send buyer rep to sign", "Stage start", 0, "Alyssa", "Task", "Always", ""],
+      ["Rep Signed", "Buyer rep signed + saved", "Stage start", 1, "Alyssa", "Task", "Always", "Moves deal to Rep Signed / Searching"],
+      ["Searching", "Homespotter app + intro text", "Stage start", 2, "Alyssa", "Text", "Always", ""],
+      ["Searching", "Set up home search", "Stage start", 2, "Luke", "Task", "Always", ""],
+    ],
+    "Seller · Listing Signed / Prep": [
+      ["Prep", "Withhold listing in MLS", "Stage start", 0, "Alyssa", "Task", "Always", ""],
+      ["Prep", "Schedule photos", "Stage start", 1, "Alyssa", "Task", "Always", ""],
+      ["Prep", "Drop off lockbox", "Stage start", 2, "Luke", "Task", "Always", ""],
+      ["Prep", "Disclosures + lead paint", "Stage start", 3, "Alyssa", "Task", "Built before 1978", ""],
+      ["Media", "Photos to clients", "Photos taken", 1, "Alyssa", "Email", "Always", ""],
+      ["Media", "Upload to MLS", "Photos taken", 2, "Alyssa", "Task", "Always", "Moves deal to Coming Soon"],
+    ],
+  },
+  fields: [["Mailing name", "Text", "People"], ["Referred by", "Person", "People"], ["Homeiversary", "Date", "People"], ["Preferred contact time", "Dropdown", "People"], ["Pre-approval amount", "Number", "Deals"], ["Lender", "Person", "Deals"], ["New construction", "Checkbox", "Deals"]],
+  tags: [["Past Client", 218], ["Email Newsletter", 436], ["Petty Homes Event List", 284], ["Mailers", 260], ["Christmas Cards", 216], ["Real Estate Health Check", 200], ["Timberwolves Tickets 2026-2027 NOT RESPONDED", 178], ["2026 RE Health Check Needed", 160], ["Google Review Sent", 84], ["Buyer", 58], ["Bounced", 54], ["A Lead", 29], ["B Lead", 8], ["C Lead", 21], ["D Lead", 19], ["Seller", 22], ["Investor", 5]],
+  stages: ["Lead", "Realtor", "Industry Partners", "FSBO", "Passive Marketing", "Archive/No Direct Contact", "Petty Homes Admin", "Closed", "Trash"],
+  sources: ["Sphere", "Sphere Referral", "Website", "AJ Gimme Lead", "Stacie Rihl", "Zillow Preferred"],
+  follow: ["7", "30", "60", "90", "180"],
+  templates: [
+    ["Text", "BPC", "Intro + Homespotter + legal name", "Hi {first}! Great meeting you. Download Homespotter here: {link}. Can you confirm your full legal names for the buyer rep?"],
+    ["Email", "BPC", "Buyer rep breakdown", "Hi {first},\n\nAttached is the buyer representation agreement. Here's a quick breakdown of what it covers…"],
+    ["Email", "BUC", "Purchase agreement accepted", "Hi {first},\n\nCongratulations! Your offer on {address} was accepted. Here are your key dates:\n\nInspection: {inspection_date}\nClosing: {closing_date}"],
+    ["Text", "BUC", "Day-of-inspection", "Hi {first}, the inspection at {address} is today. I'll meet you there!"],
+    ["Text", "BUC", "Earnest money", "Hi {first}, earnest money of {earnest_money} is due by {em_due}. Wiring instructions are in your email."],
+    ["Email", "SPC", "CMA + net sheet", "Hi {first},\n\nAttached is the market analysis and estimated net sheet for {address}."],
+    ["Text", "SUC", "We're pending", "Great news {first}, we're officially pending on {address}! 🎉"],
+    ["Email", "Leads", "Website sign-up welcome", "Hi {first},\n\nThanks for signing up on pettyhomes.com…"],
+  ],
+  tplSel: 2, tplFilter: "All",
+};
+const ANCHORS = ["Final Acceptance", "Inspection", "Written Statement", "HOA Rescission", "Closing", "Stage start", "Photos taken"];
+const CONDS = ["Always", "HOA property", "New construction", "Built before 1978", "FHA / VA loan", "Well / septic", "Referral partner"];
+
+function side() {
+  el("side").innerHTML = SECTIONS.map(([g, items]) => `<div><h4>${g}</h4><ul>${items.map(([k, l]) => `<li><button class="nav-i" data-sec="${k}" aria-current="${sec === k}"><span>${l}</span></button></li>`).join("")}</ul></div>`).join("");
+}
+const V = {
+  users() {
+    return `<h1>Users &amp; roles</h1><p>Roles decide what each person can see and do. Commissions are hidden from anyone without "See commissions".</p>
+    <div class="box"><h2>Users <button class="btn primary" data-invite="1">+ Invite user</button></h2><div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead><tbody>
+      ${state.users.map(([n, e, r, s], i) => `<tr><td><input data-u="${i}:0" value="${esc(n)}"></td><td><input data-u="${i}:1" value="${esc(e)}"></td><td><select data-u="${i}:2">${state.roles.map(x => `<option ${x === r ? "selected" : ""}>${x}</option>`).join("")}</select></td><td><span class="pill" style="${s === "Invited" ? "background:var(--warn-soft);color:var(--warn)" : ""}">${s}</span></td></tr>`).join("")}
+    </tbody></table></div></div>
+    <div class="box"><h2>Role permissions <button class="btn" data-newrole="1">+ New role</button></h2><div class="tbl-wrap"><table class="perm"><thead><tr><th>Permission</th>${state.roles.map(r => `<th>${esc(r)}</th>`).join("")}</tr></thead><tbody>
+      ${state.perms.map((p, i) => `<tr><td>${p[0]}</td>${state.roles.map((r, j) => `<td><input type="checkbox" data-perm="${i}:${j}" ${p[j + 1] ? "checked" : ""} ${j === 0 ? "disabled" : ""} aria-label="${esc(r)}: ${p[0]}"></td>`).join("")}</tr>`).join("")}
+    </tbody></table></div></div>`;
+  },
+  pipelines() {
+    return `<h1>Pipelines &amp; stages</h1><p>The columns on the Deals board. You can also edit these from the board with "Edit stages". Under Contract and Closed can be renamed but not removed.</p>
+    <div class="cards">${Object.entries(state.pipes).map(([p, st]) => `<div class="box"><h2>${p} pipeline</h2><div class="tbl-wrap"><table><tbody>
+      ${st.map((s, i) => `<tr><td class="muted" style="width:28px">${i + 1}</td><td><input data-stage="${p}:${i}" value="${esc(s)}"></td><td style="width:90px;white-space:nowrap"><button class="rm" data-up="${p}:${i}" aria-label="Move up">↑</button><button class="rm" data-down="${p}:${i}" aria-label="Move down">↓</button>${["Under Contract", "Closed"].includes(s) ? "" : `<button class="rm" data-rmstage="${p}:${i}" aria-label="Remove">×</button>`}</td></tr>`).join("")}
+    </tbody></table></div><div class="addrow"><button class="btn" data-addstage="${p}">+ Add stage</button></div></div>`).join("")}</div>`;
+  },
+  checklists() {
+    const rows = state.checklists[state.tpl]; let ph = "";
+    return `<h1>Checklist templates</h1><p>Each stage has a checklist that's added to a deal when it enters that stage. Due dates are counted from a contract date or the day the stage started, so they move when dates change.</p>
+    <div class="toolbar"><select id="tpl-pick" aria-label="Template">${Object.keys(state.checklists).map(k => `<option ${k === state.tpl ? "selected" : ""}>${k}</option>`).join("")}</select><button class="btn" data-toast="Pick a pipeline and stage to start a new checklist">+ New checklist</button><span class="muted sm">${rows.length} steps</span></div>
+    <div class="box"><div class="tbl-wrap"><table style="min-width:980px"><thead><tr><th>Step</th><th>Due</th><th>Assignee</th><th>Type</th><th>Only when</th><th>When done</th><th></th></tr></thead><tbody>
+      ${rows.map((r, i) => { const h = r[0] !== ph ? `<tr class="phase-h"><td colspan="7">${esc(r[0])}</td></tr>` : ""; ph = r[0]; return h + `<tr>
+        <td><input data-c="${i}:1" value="${esc(r[1])}"></td>
+        <td><div class="timing"><input class="n" type="number" data-c="${i}:3" value="${Math.abs(r[3])}" aria-label="Days"><select data-dir="${i}" aria-label="Before or after"><option ${r[3] < 0 ? "selected" : ""}>days before</option><option ${r[3] >= 0 ? "selected" : ""}>days after</option></select><select data-c="${i}:2" aria-label="Anchor">${ANCHORS.map(a => `<option ${a === r[2] ? "selected" : ""}>${a}</option>`).join("")}</select></div></td>
+        <td><select data-c="${i}:4">${["Luke", "Alyssa"].map(a => `<option ${a === r[4] ? "selected" : ""}>${a}</option>`).join("")}</select></td>
+        <td><select data-c="${i}:5">${["Task", "Email", "Text"].map(a => `<option ${a === r[5] ? "selected" : ""}>${a}</option>`).join("")}</select></td>
+        <td><select data-c="${i}:6">${CONDS.map(a => `<option ${a === r[6] ? "selected" : ""}>${a}</option>`).join("")}</select></td>
+        <td class="muted sm">${r[7] ? esc(r[7]) : "—"}</td>
+        <td><button class="rm" data-rmstep="${i}" aria-label="Remove step">×</button></td></tr>`; }).join("")}
+    </tbody></table></div><div class="addrow"><select id="new-phase" aria-label="Phase">${[...new Set(rows.map(r => r[0]))].map(p => `<option>${esc(p)}</option>`).join("")}</select><input class="input" id="new-step" placeholder="New step name" style="max-width:280px"><button class="btn primary" data-addstep="1">+ Add step</button></div></div>`;
+  },
+  fields() {
+    return `<h1>Custom fields</h1><p>Extra fields on people or deals. Built-in fields (name, phones, stage, deal dates) aren't listed here.</p>
+    <div class="box"><div class="tbl-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Shows on</th><th></th></tr></thead><tbody>
+      ${state.fields.map(([n, t, on], i) => `<tr><td><input data-fd="${i}:0" value="${esc(n)}"></td><td><select data-fd="${i}:1">${["Text", "Number", "Date", "Dropdown", "Checkbox", "Person"].map(x => `<option ${x === t ? "selected" : ""}>${x}</option>`).join("")}</select></td><td><select data-fd="${i}:2">${["People", "Deals"].map(x => `<option ${x === on ? "selected" : ""}>${x}</option>`).join("")}</select></td><td><button class="rm" data-rmfield="${i}" aria-label="Remove">×</button></td></tr>`).join("")}
+    </tbody></table></div><div class="addrow"><input class="input" id="nf-name" placeholder="Field name" style="max-width:240px"><select class="input" id="nf-type" style="max-width:140px">${["Text", "Number", "Date", "Dropdown", "Checkbox", "Person"].map(x => `<option>${x}</option>`).join("")}</select><select class="input" id="nf-on" style="max-width:120px"><option>People</option><option>Deals</option></select><button class="btn primary" data-addfield="1">+ Add field</button></div></div>`;
+  },
+  tags() {
+    return `<h1>Tags</h1><p>Rename a tag and it updates everywhere. Removing a tag takes it off everyone who has it.</p>
+    <div class="box"><div class="tbl-wrap"><table><thead><tr><th>Tag</th><th>People</th><th></th></tr></thead><tbody>
+      ${state.tags.map(([t, n], i) => `<tr><td><input data-tag="${i}" value="${esc(t)}"></td><td class="num">${n}</td><td><button class="rm" data-rmtag="${i}" aria-label="Remove">×</button></td></tr>`).join("")}
+    </tbody></table></div><div class="addrow"><input class="input" id="nt" placeholder="New tag" style="max-width:280px"><button class="btn primary" data-addtag="1">+ Add tag</button></div></div>`;
+  },
+  lists() {
+    const blk = (title, key, note, fmt) => `<div class="box"><h2>${title}</h2><p class="muted sm" style="margin:0;padding:0 14px 6px">${note}</p><div class="tbl-wrap"><table><tbody>
+      ${state[key].map((v, i) => `<tr><td>${fmt ? `<span style="display:flex;gap:6px;align-items:center">Every <input class="n" data-li="${key}:${i}" value="${esc(v)}"> days</span>` : `<input data-li="${key}:${i}" value="${esc(v)}">`}</td><td style="width:36px"><button class="rm" data-rmli="${key}:${i}" aria-label="Remove">×</button></td></tr>`).join("")}
+    </tbody></table></div><div class="addrow"><button class="btn" data-addli="${key}">+ Add</button></div></div>`;
+    return `<h1>Stages, sources &amp; follow-up</h1><div class="cards">${blk("Lead stages", "stages", "Where someone is overall. Under Contract and Past Client are set from their deals.")}${blk("Sources", "sources", "Where people came from.")}${blk("Follow-up frequencies", "follow", "Options for how often to touch base. People past due show up in Due for a touch.", true)}</div>`;
+  },
+  templates() {
+    const list = state.templates.map((t, i) => [t, i]).filter(([t]) => state.tplFilter === "All" || t[1] === state.tplFilter || t[0] === state.tplFilter);
+    const t = state.templates[state.tplSel];
+    return `<h1>Text &amp; email templates</h1><p>Used by checklist steps (one-click drafts) and in Messages. Merge fields fill in from the person and deal.</p>
+    <div class="toolbar"><select id="tpl-filter" aria-label="Filter">${["All", "Text", "Email", "BPC", "BUC", "SPC", "SUC", "Leads"].map(f => `<option ${f === state.tplFilter ? "selected" : ""}>${f}</option>`).join("")}</select><button class="btn primary" data-newtpl="1">+ New template</button></div>
+    <div class="box tpl"><div class="tpl-list">${list.map(([x, i]) => `<button class="tpl-i" data-tsel="${i}" aria-current="${i === state.tplSel}">${esc(x[2])}<small>${x[0]} · ${x[1]}</small></button>`).join("")}</div>
+      <div class="tpl-ed"><div style="display:flex;gap:8px;flex-wrap:wrap"><label style="flex:1;min-width:180px">Name<input class="input" data-tf="2" value="${esc(t[2])}"></label><label>Type<select class="input" data-tf="0">${["Text", "Email"].map(x => `<option ${x === t[0] ? "selected" : ""}>${x}</option>`).join("")}</select></label><label>Folder<select class="input" data-tf="1">${["BPC", "BUC", "SPC", "SUC", "Leads"].map(x => `<option ${x === t[1] ? "selected" : ""}>${x}</option>`).join("")}</select></label></div>
+        <label>Message<textarea id="tpl-body" data-tf="3">${esc(t[3])}</textarea></label>
+        <div class="merge">${["{first}", "{address}", "{inspection_date}", "{closing_date}", "{earnest_money}", "{em_due}", "{lender}", "{link}"].map(m => `<button data-merge="${m}">${m}</button>`).join("")}</div>
+        <div style="display:flex;justify-content:flex-end;gap:6px"><button class="btn" data-toast="Used by 2 checklist steps">Where it's used</button><button class="btn primary" data-toast="Saved">Save</button></div></div></div>`;
+  },
+  integrations() {
+    return `<h1>Integrations</h1>
+    <div class="cards">
+      <div class="box icard"><h3>Google Workspace <span class="st on">Connected</span></h3><p>Sign-in, Gmail and Calendar for pettyhomes.com. Emails show on contact timelines; deal deadlines go to Calendar.</p><div class="sm">luke@pettyhomes.com, assistant@pettyhomes.com</div><button class="btn" data-toast="Choose which calendar gets deal deadlines">Calendar settings</button></div>
+      <div class="box icard"><h3>Business texting <span class="st on">Connected</span></h3><p>Texts and missed calls in Messages.</p><div class="sm num">(612) 555-0100 · Twilio</div><button class="btn" data-toast="Set office hours and the missed-call auto-reply">Texting settings</button></div>
+      <div class="box icard"><h3>Website leads <span class="st off">Not connected</span></h3><p>Send WordPress form submissions to HQ. Each one creates a person (source Website) and a follow-up task.</p><div class="code">https://hq.pettyhomes.com/api/leads/wp_7f3a…</div><button class="btn" data-toast="Copied. Paste it into your form plugin's webhook setting.">Copy webhook URL</button></div>
+      <div class="box icard"><h3>Follow Up Boss import <span class="st off">Not started</span></h3><p>Bring over people, notes, tags and templates when you're ready. Nothing moves until you start it.</p><button class="btn" data-toast="Import is planned for after the build is approved">Start import</button></div>
+    </div>`;
+  },
+};
+function render() { side(); el("main").innerHTML = V[sec](); }
+let tt; function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
+const pair = s => s.split(":");
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
+  if (ds.sec) { sec = ds.sec; render(); return; }
+  if (ds.invite) { state.users.push(["New user", "name@pettyhomes.com", "Assistant", "Invited"]); render(); toast("Invite added. They sign in with Google."); return; }
+  if (ds.newrole) { state.roles.push("New role"); state.perms.forEach(p => p.push(false)); render(); toast("Added a role. Rename it in the Users table's role list later."); return; }
+  if (ds.up || ds.down) { const [p, i] = pair(ds.up || ds.down), a = state.pipes[p], j = +i + (ds.up ? -1 : 1); if (j >= 0 && j < a.length) [a[i], a[j]] = [a[j], a[i]]; render(); return; }
+  if (ds.rmstage) { const [p, i] = pair(ds.rmstage); state.pipes[p].splice(+i, 1); render(); return; }
+  if (ds.addstage) { const a = state.pipes[ds.addstage]; a.splice(a.indexOf("Under Contract"), 0, "New stage"); render(); return; }
+  if (ds.rmstep) { state.checklists[state.tpl].splice(+ds.rmstep, 1); render(); return; }
+  if (ds.addstep) { const n = el("new-step").value.trim(); if (!n) { toast("Name the step first."); return; } const ph = el("new-phase").value, rows = state.checklists[state.tpl]; let at = rows.map(r => r[0]).lastIndexOf(ph) + 1; rows.splice(at, 0, [ph, n, rows[at - 1][2], 0, "Alyssa", "Task", "Always", ""]); render(); toast("Step added. New deals get it; open deals can be updated too."); return; }
+  if (ds.rmfield) { state.fields.splice(+ds.rmfield, 1); render(); return; }
+  if (ds.addfield) { const n = el("nf-name").value.trim(); if (!n) return; state.fields.push([n, el("nf-type").value, el("nf-on").value]); render(); return; }
+  if (ds.rmtag) { const t = state.tags.splice(+ds.rmtag, 1)[0]; render(); toast(`Removed "${t[0]}" from ${t[1]} people.`); return; }
+  if (ds.addtag) { const n = el("nt").value.trim(); if (!n) return; state.tags.unshift([n, 0]); render(); return; }
+  if (ds.rmli) { const [k, i] = pair(ds.rmli); state[k].splice(+i, 1); render(); return; }
+  if (ds.addli) { state[ds.addli].push(ds.addli === "follow" ? "45" : "New"); render(); return; }
+  if (ds.tsel) { state.tplSel = +ds.tsel; render(); return; }
+  if (ds.newtpl) { state.templates.unshift(["Text", "Leads", "New template", ""]); state.tplSel = 0; render(); return; }
+  if (ds.merge) { const ta = el("tpl-body"); const p = ta.selectionStart; ta.value = ta.value.slice(0, p) + ds.merge + ta.value.slice(ta.selectionEnd); state.templates[state.tplSel][3] = ta.value; ta.focus(); return; }
+  if (ds.toast) { toast(ds.toast); return; }
+});
+document.addEventListener("change", e => {
+  const t = e.target, ds = t.dataset;
+  if (t.id === "tpl-pick") { state.tpl = t.value; render(); return; }
+  if (t.id === "tpl-filter") { state.tplFilter = t.value; render(); return; }
+  if (ds.u) { const [i, j] = pair(ds.u); state.users[i][j] = t.value; return; }
+  if (ds.perm) { const [i, j] = pair(ds.perm); state.perms[i][+j + 1] = t.checked; return; }
+  if (ds.stage) { const [p, i] = pair(ds.stage); state.pipes[p][i] = t.value; return; }
+  if (ds.c) { const [i, j] = pair(ds.c), r = state.checklists[state.tpl][i]; r[j] = j === "3" ? Math.abs(+t.value) * (r[3] < 0 ? -1 : 1) : t.value; if (j === "3" || j === "2") toast("Open deals using this template will re-date this step."); return; }
+  if (ds.dir) { const r = state.checklists[state.tpl][ds.dir]; r[3] = Math.abs(r[3]) * (t.value === "days before" ? -1 : 1); return; }
+  if (ds.fd) { const [i, j] = pair(ds.fd); state.fields[i][j] = t.value; return; }
+  if (ds.tag) { state.tags[ds.tag][0] = t.value; toast("Renamed everywhere."); return; }
+  if (ds.li) { const [k, i] = pair(ds.li); state[k][i] = t.value; return; }
+  if (ds.tf) { state.templates[state.tplSel][ds.tf] = t.value; if (ds.tf !== "3") render(); return; }
+});
+render();
+
+};
+function scopedDoc(root) {
+  return {
+    getElementById: id => root.querySelector("#" + CSS.escape(id)),
+    querySelector: s => root.querySelector(s),
+    querySelectorAll: s => root.querySelectorAll(s),
+    addEventListener: (t, f, o) => root.addEventListener(t, f, o),
+    createElement: (...a) => document.createElement(...a),
+  };
+}
+function show(key, hash) {
+  document.querySelectorAll(".pg").forEach(p => p.hidden = p.id !== "pg-" + key);
+  if (!API[key]) API[key] = INIT[key](scopedDoc(document.getElementById("pg-" + key))) || {};
+  if (hash && API[key].open) API[key].open(hash);
+  window.scrollTo(0, 0);
+}
+document.addEventListener("click", e => {
+  const a = e.target.closest("a[href]"); if (!a) return;
+  const m = a.getAttribute("href").match(/^(people|deals|tasks|messages|admin)\.html(#[\w-]+)?$/);
+  if (!m) return;
+  e.preventDefault(); show(m[1], m[2]);
+}, true);
+const start = location.hash.replace("#", "");
+show(INIT[start] ? start : "deals", /^#contact-/.test(location.hash) ? location.hash : null);
+</script>

@@ -288,7 +288,7 @@ function diff(a, b) { return Math.round((a - b) / 86400000); }
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const fmt = x => DOW[x.getDay()] + " " + MON[x.getMonth()] + " " + x.getDate();
 const short = x => MON[x.getMonth()] + " " + x.getDate();
-const money = n => "$" + n.toLocaleString("en-US");
+const money = n => "$" + n.toLocaleString("en-US", Number.isInteger(n) ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 let role = "admin", side = "buyer", editing = null, openMenu = null, editStages = false, customN = 0;
@@ -779,7 +779,7 @@ function infoCard(c, ago) {
       ${foot("info")}</div>`;
   }
   return `<div class="card-s">
-    <div class="who-h"><span class="avatar">${esc(initials(c.name))}</span><div style="flex:1;min-width:0"><h1>${esc(c.name)}</h1><div class="muted sm">${ago === null ? "No contact yet" : `Last contact ${ago === 0 ? "today" : ago + " days ago"}`}</div></div><button class="edit-btn" data-editcard="info">Edit</button></div>
+    <div class="who-h"><span class="avatar">${esc(initials(c.name))}</span><div style="flex:1;min-width:0"><h1>${esc(c.name)}</h1><div class="muted sm">${ago === null ? "No contact yet" : `Last contact ${ago === 0 ? "today" : ago === 1 ? "yesterday" : ago + " days ago"}`}</div></div><button class="edit-btn" data-editcard="info">Edit</button></div>
     <ul class="contact-l">
       ${c.phones.map(([l, v]) => `<li><span class="ic">☎</span><span><span class="lk">${esc(v)}</span> <span class="muted sm">${esc(l)}</span></span></li>`).join("")}
       ${c.emails.map(([l, v]) => `<li><span class="ic">✉</span><span><span class="lk">${esc(v)}</span> <span class="muted sm">${esc(l)}</span></span></li>`).join("")}
