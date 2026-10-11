@@ -302,8 +302,18 @@ archive one-offs and dated notices.
 - Text messages only, plus missed calls. **No email** — all email stays in Gmail.
 
 ### Tasks
-- FUB's Tasks page is too basic. Owner wants a real task-system approach, not just a list
-  (details below as they're decided).
+- FUB's Tasks page is too basic. Owner wants a real task-system approach, not just a list.
+- **Reference app: TickTick** (owner likes it; open to better ideas). Model HQ Tasks on it:
+  - Smart views: Today, Tomorrow, Next 7 Days, Overdue, plus "Waiting on" and "Assigned to
+    assistant".
+  - Lists grouped in folders for non-deal work (e.g. Rentals, Podcast, Marketing, Admin,
+    Personal); deal checklist tasks appear in the same views.
+  - Natural-language quick add ("call lender re Murphy Fri 9am").
+  - Priority, tags, subtasks, recurring tasks (yearly mailers, weekly reports).
+  - Views per list: list, board (kanban), and calendar.
+  - CRM extras TickTick doesn't have: optional link to a person/deal, assignee, and
+    delegation status.
+  - Skip TickTick's habits and focus timer.
 
 ### Yearly mailers
 - Confirmed: the mailer date fields are a workaround. In HQ they become recurring general tasks.
