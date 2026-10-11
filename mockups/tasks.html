@@ -1,0 +1,462 @@
+<title>Tasks Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: top nav; sidebar of smart views + flat lists | task list with quick add | detail panel when a task is open. Phones: sidebar becomes a chip row, detail becomes a full-screen sheet. */
+:root {
+  --bg: #f4f6f7;
+  --surface: #ffffff;
+  --sunken: #eaeef0;
+  --line: #d8dee2;
+  --fg: #16222a;
+  --muted: #5b6b75;
+  --accent: #1d6a85;
+  --accent-soft: #dcecf2;
+  --ok: #2f7a4b;
+  --ok-soft: #e0f0e5;
+  --warn: #9a6400;
+  --warn-soft: #fbefd6;
+  --bad: #b3372b;
+  --bad-soft: #f9e1de;
+  --waive: #6b6480;
+  --waive-soft: #ebe8f2;
+  --p-high: #c2410c;
+  --p-med: #b7860b;
+  --p-low: #2f6fb3;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45;
+    --fg: #e4ecf0; --muted: #93a5b0; --accent: #5fb3d1; --accent-soft: #173a48;
+    --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+    --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840;
+    --p-high: #fb923c; --p-med: #e2b04f; --p-low: #6aa8e8;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45;
+  --fg: #e4ecf0; --muted: #93a5b0; --accent: #5fb3d1; --accent-soft: #173a48;
+  --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+  --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840;
+  --p-high: #fb923c; --p-med: #e2b04f; --p-low: #6aa8e8;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+button, select, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.date { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+
+.mock-bar { background: var(--accent-soft); padding-block: 7px; padding-inline: 16px; font-size: 13px; }
+.topnav { background: var(--surface); border-bottom: 1px solid var(--line); padding-inline: 16px; display: flex; align-items: center; gap: 24px; overflow-x: auto; }
+.brand { font-family: var(--font-display); font-weight: 700; font-size: 17px; padding-block: 12px; white-space: nowrap; }
+.brand span { color: var(--accent); }
+.topnav nav { display: flex; gap: 4px; }
+.topnav nav a { color: var(--muted); text-decoration: none; padding: 14px 10px; border-bottom: 2px solid transparent; white-space: nowrap; }
+.topnav nav a.on { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
+
+.shell { max-width: 1320px; margin: 0 auto; padding-inline: 16px; padding-block: 18px 48px; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 20px; align-items: start; }
+.shell.with-detail { grid-template-columns: 210px minmax(0, 1fr) 340px; }
+
+/* Sidebar */
+.side { display: flex; flex-direction: column; gap: 14px; position: sticky; top: env(safe-area-inset-top, 0px); }
+.side h4 { margin: 0 0 4px; padding: 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+.side ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.nav-i { width: 100%; border: 0; background: none; text-align: left; padding: 7px 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.nav-i:hover { background: var(--sunken); }
+.nav-i[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.nav-i .c { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.nav-i .c.bad { color: var(--bad); font-weight: 600; }
+
+/* Main */
+.main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.main-h { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 3vw, 28px); margin: 0; }
+.main-h .sub { color: var(--muted); font-size: 13px; }
+.filters { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--surface); }
+.filters button { border: 0; background: none; padding: 4px 12px; font-size: 12.5px; }
+.filters button[aria-pressed="true"] { background: var(--fg); color: var(--surface); }
+
+.qa { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 4px 6px 4px 12px; }
+.qa:focus-within { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.qa form { display: flex; gap: 8px; align-items: center; }
+.qa input { flex: 1; min-width: 0; border: 0; background: none; padding: 8px 0; outline: none; }
+.qa .add { border: 0; background: var(--accent); color: var(--surface); border-radius: 6px; padding: 6px 12px; font-weight: 600; font-size: 13px; }
+.parsed { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 0 8px; }
+.parsed:empty { display: none; }
+.pchip { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.qa-hint { font-size: 12px; color: var(--muted); padding: 0 2px; }
+.qa-hint code { font-family: var(--font-data); font-size: 11.5px; background: var(--sunken); padding: 1px 4px; border-radius: 3px; }
+
+.group { display: flex; flex-direction: column; }
+.group h3 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; display: flex; gap: 8px; }
+.group h3.bad { color: var(--bad); }
+.group h3 span:last-child { font-weight: 500; }
+.list { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.row { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 12px; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.row:hover { background: var(--bg); }
+.row.sel { background: var(--accent-soft); }
+.check { width: 19px; height: 19px; border-radius: 5px; border: 1.8px solid var(--line); background: var(--surface); display: grid; place-items: center; padding: 0; }
+.check.p3 { border-color: var(--p-high); } .check.p2 { border-color: var(--p-med); } .check.p1 { border-color: var(--p-low); }
+.row.done .check { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+.body { border: 0; background: none; text-align: left; padding: 0; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.body .t { font-weight: 500; }
+.row.done .body .t { color: var(--muted); text-decoration: line-through; }
+.meta { display: flex; flex-wrap: wrap; gap: 3px 10px; font-size: 12px; color: var(--muted); align-items: center; }
+.link { color: var(--accent); font-weight: 600; }
+.link.deal::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 2px; background: currentColor; margin-right: 5px; vertical-align: 1px; }
+.wait { color: var(--waive); font-weight: 600; }
+.r { display: flex; align-items: center; gap: 8px; }
+.due { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.due.overdue { color: var(--bad); font-weight: 500; }
+.av { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 700; background: var(--accent-soft); color: var(--accent); flex: none; }
+.av.as { background: var(--waive-soft); color: var(--waive); }
+.empty { color: var(--muted); padding: 18px 14px; text-align: center; background: var(--surface); border: 1px dashed var(--line); border-radius: var(--r); }
+.touch-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 5px; font-size: 12px; font-weight: 600; padding: 3px 9px; }
+
+/* Detail */
+.detail { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); position: sticky; top: env(safe-area-inset-top, 0px); display: flex; flex-direction: column; max-height: calc(100vh - 40px); overflow: auto; }
+.detail-h { display: flex; gap: 10px; align-items: flex-start; padding: 14px 14px 10px; border-bottom: 1px solid var(--line); }
+.detail-h .title { flex: 1; font-weight: 600; font-size: 15px; border: 0; background: none; padding: 0; resize: none; min-width: 0; }
+.x { border: 0; background: none; color: var(--muted); font-size: 18px; line-height: 1; padding: 2px 4px; }
+.fields { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px 10px; padding: 12px 14px; font-size: 13px; align-items: center; }
+.fields label { color: var(--muted); font-weight: 600; font-size: 12px; }
+.fields select, .fields input { width: 100%; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+.from { margin: 0 14px; padding: 10px 12px; border-radius: 6px; background: var(--sunken); font-size: 12.5px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+.from b { color: var(--fg); }
+.from .acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 5px 10px; border-radius: 6px; font-weight: 600; font-size: 12.5px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.sec { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.sec h5 { margin: 0; font-size: 12px; color: var(--muted); font-weight: 600; }
+.sub-i { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.sub-i input { width: 15px; height: 15px; accent-color: var(--ok); }
+.sub-i.done span { color: var(--muted); text-decoration: line-through; }
+.notes { width: 100%; min-height: 70px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); resize: vertical; font-size: 13px; }
+
+@media (max-width: 1080px) {
+  .shell.with-detail { grid-template-columns: 210px minmax(0, 1fr); }
+  .detail { position: fixed; inset: 0 0 0 auto; width: min(380px, 100%); max-height: none; border-radius: 0; z-index: 20; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); box-shadow: -8px 0 24px rgb(0 0 0 / .15); }
+}
+@media (max-width: 760px) {
+  .shell, .shell.with-detail { grid-template-columns: minmax(0, 1fr); }
+  .side { position: static; flex-direction: row; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
+  .side h4 { display: none; }
+  .side ul { flex-direction: row; gap: 6px; }
+  .nav-i { white-space: nowrap; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; }
+  .row { grid-template-columns: 22px minmax(0, 1fr); }
+  .row .r { grid-column: 2; }
+}
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); z-index: 30; }
+</style>
+
+<div class="mock-bar"><strong>Mockup</strong> · fake data, "today" is Mon Oct 12, 2026. Deal steps come from the same fake deals as the pipeline mockup. Try the quick add box.</div>
+
+<header class="topnav">
+  <div class="brand">Petty Homes <span>HQ</span></div>
+  <nav aria-label="Main">
+    <a href="#" title="Not mocked yet">People</a><a href="deals.html">Deals</a><a href="tasks.html" class="on">Tasks</a><a href="#" title="Not mocked yet">Messages</a><a href="#" title="Not mocked yet">Admin</a>
+  </nav>
+</header>
+
+<div class="shell" id="shell">
+  <aside class="side" id="side"></aside>
+  <main class="main" id="main"></main>
+  <aside class="detail" id="detail" hidden></aside>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+const TODAY = d("2026-10-12");
+function d(s) { const [y, m, dd] = s.split("-").map(Number); return new Date(y, m - 1, dd); }
+function iso(x) { return x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0") + "-" + String(x.getDate()).padStart(2, "0"); }
+function add(x, n) { const y = new Date(x); y.setDate(y.getDate() + n); return y; }
+function diff(a, b) { return Math.round((a - b) / 86400000); }
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], DOWL = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const fmt = x => DOW[x.getDay()] + " " + MON[x.getMonth()] + " " + x.getDate();
+const short = x => MON[x.getMonth()] + " " + x.getDate();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+const PEOPLE = { LP: "Luke", AS: "Alyssa (assistant)" };
+// Links a task can point to. Deals match the pipeline mockup.
+const LINKS = {
+  calloway: { kind: "deal", label: "Calloway", full: "Jordan & Priya Calloway · Buyer, Under Contract" },
+  engel: { kind: "deal", label: "Engel", full: "Ruth & Sam Engel · Buyer, Under Contract" },
+  raman: { kind: "deal", label: "Raman", full: "Dev Raman · Buyer, Under Contract" },
+  halvorsen: { kind: "deal", label: "Halvorsen", full: "Wes Halvorsen · Seller, Under Contract" },
+  okafor: { kind: "deal", label: "Okafor", full: "Ben & Hana Okafor · Buyer, Lead" },
+  thorsen: { kind: "deal", label: "Thorsen", full: "Grace Thorsen · Buyer, Consult" },
+  fisk: { kind: "deal", label: "Fisk", full: "Carol & Dean Fisk · Seller, Prep" },
+  murphy: { kind: "person", label: "Kate Murphy", full: "Kate Murphy · 90 Day Sphere" },
+  dana: { kind: "person", label: "Dana Kim", full: "Dana Kim · Lender, Northfield Lending" },
+};
+
+// p: priority 0 none, 1 low, 2 med, 3 high. step: deal checklist info. wait: who it's waiting on.
+let tasks = [
+  { t: "Earnest money receipt saved to file", due: "2026-10-07", who: "AS", link: "calloway", step: { phase: "Under Contract", rule: "Final Acceptance + 5d" } },
+  { t: "Insurance referral", due: "2026-10-07", who: "AS", link: "calloway", kind: "email", step: { phase: "Financing", rule: "Final Acceptance + 5d" } },
+  { t: "Schedule consult", due: "2026-10-07", who: "LP", link: "okafor", step: { phase: "Lead", rule: "Lead + 2d" } },
+  { t: "Replace furnace filter, Lake St duplex", due: "2026-10-10", who: "LP", p: 1 },
+  { t: "Review inspection report with clients", due: "2026-10-12", time: "4:00pm", who: "LP", link: "calloway", p: 3, step: { phase: "Inspection", rule: "Inspection − 2d" } },
+  { t: "Check October rent payments", due: "2026-10-12", who: "LP", repeat: "Monthly" },
+  { t: "Call Kate about spring listing timing", due: "2026-10-12", time: "11:00am", who: "LP", link: "murphy", p: 2 },
+  { t: "Draft inspection amendment", due: "2026-10-13", who: "LP", link: "calloway", p: 3, step: { phase: "Inspection", rule: "Inspection − 1d" } },
+  { t: "Order fall trifold mailers", due: "2026-10-13", who: "AS", repeat: "Yearly", subs: [["Pull mailing list", true], ["Approve proof", false], ["Submit print order", false]] },
+  { t: "Signed amendment to lender + title", due: "2026-10-14", who: "AS", link: "calloway", kind: "email", step: { phase: "Inspection", rule: "Inspection day of" } },
+  { t: "Final walkthrough scheduling text", due: "2026-10-14", who: "AS", link: "raman", kind: "text", step: { phase: "Closing", rule: "Closing − 9d" } },
+  { t: "Day-of-inspection text", due: "2026-10-14", who: "AS", link: "halvorsen", kind: "text", step: { phase: "Inspection", rule: "Inspection − 3d" } },
+  { t: "Hold consult", due: "2026-10-14", time: "6:30pm", who: "LP", link: "thorsen", step: { phase: "Consult", rule: "Consult + 3d" } },
+  { t: "Dentist", due: "2026-10-14", time: "2:00pm", who: "LP" },
+  { t: "Record podcast ep. 38 with lender guest", due: "2026-10-15", who: "LP", p: 2, subs: [["Confirm guest", true], ["Outline questions", false], ["Book studio", false]] },
+  { t: "Schedule listing photos", due: "2026-10-15", who: "AS", link: "fisk", step: { phase: "Listing Signed / Prep", rule: "Prep + 1d" } },
+  { t: "Confirm cash to close", due: "2026-10-16", who: "AS", link: "raman", step: { phase: "Closing", rule: "Closing − 7d" } },
+  { t: "Day-of-inspection text", due: "2026-10-16", who: "AS", link: "engel", kind: "text", step: { phase: "Inspection", rule: "Inspection − 3d" } },
+  { t: "Review buyer's inspection requests", due: "2026-10-17", who: "LP", link: "halvorsen", step: { phase: "Inspection", rule: "Inspection day of" } },
+  { t: "Weekly task report email", due: "2026-10-18", who: "AS", repeat: "Weekly" },
+  { t: "Plan next week's social posts", due: "2026-10-16", who: "AS", repeat: "Weekly" },
+  { t: "Send New Year's postcard", due: "2026-12-28", who: "AS", repeat: "Yearly" },
+  { t: "Send spring postcard", due: "2027-03-15", who: "AS", repeat: "Yearly" },
+  { t: "Quarterly market update email", due: "2027-01-05", who: "LP", repeat: "Quarterly" },
+  { t: "Review settlement statement", due: "2026-10-19", who: "LP", link: "raman", step: { phase: "Closing", rule: "Closing − 4d" } },
+  { t: "Finish MN license CE credits", due: "2026-10-30", who: "LP", p: 3 },
+  { t: "Appraisal date from lender", due: "2026-10-13", who: "AS", link: "calloway", wait: "Dana Kim (lender)" },
+  { t: "HOA move-in rules", due: "2026-10-15", who: "AS", link: "calloway", wait: "Lakeview HOA manager" },
+  { t: "Podcast intro music license", due: "2026-10-20", who: "LP", wait: "Studio" },
+];
+tasks.forEach((t, i) => { t.id = i; t.done = false; t.p = t.p || 0; t.kind = t.kind || "task"; });
+let nextId = tasks.length;
+
+const touches = [
+  { n: "Kara Voss", f: "30 days", last: "Sep 9" },
+  { n: "Marcus & Elle Brandvold", f: "90 days", last: "Jul 6" },
+  { n: "Hollis Family", f: "30 days", last: "Sep 10" },
+  { n: "Rita Okonkwo", f: "7 days", last: "Oct 3" },
+];
+
+let view = "today", filter = "all", sel = null;
+const el = id => document.getElementById(id);
+
+const VIEWS = [
+  ["today", "Today"], ["tomorrow", "Tomorrow"], ["week", "Next 7 Days"], ["overdue", "Overdue"],
+  ["waiting", "Waiting on"], ["assistant", "Assigned to assistant"], ["touch", "Due for a touch"],
+];
+function inView(t, v) {
+  const n = diff(d(t.due), TODAY);
+  if (v === "today") return n <= 0 && !t.wait;
+  if (v === "tomorrow") return n === 1 && !t.wait;
+  if (v === "week") return n <= 7 && !t.wait;
+  if (v === "overdue") return n < 0 && !t.wait;
+  if (v === "waiting") return !!t.wait;
+  if (v === "assistant") return t.who === "AS" && n <= 7;
+  if (v === "recurring") return !!t.repeat;
+  return false;
+}
+const visible = v => tasks.filter(t => !t.done || t.justDone).filter(t => inView(t, v));
+function applyFilter(list) {
+  if (filter === "general") return list.filter(t => !t.step);
+  if (filter === "deal") return list.filter(t => t.step);
+  return list;
+}
+const sortT = (a, b) => d(a.due) - d(b.due) || (b.p - a.p) || ((a.time || "z") > (b.time || "z") ? 1 : -1);
+
+function renderSide() {
+  const cnt = v => v === "touch" ? touches.length : visible(v).filter(t => !t.done).length;
+  const od = cnt("overdue");
+  el("side").innerHTML = `
+    <div><h4>Views</h4><ul>${VIEWS.map(([k, l]) => `<li><button class="nav-i" data-view="${k}" aria-current="${view === k}"><span>${l}</span><span class="c ${k === "overdue" && od ? "bad" : ""}">${cnt(k) || ""}</span></button></li>`).join("")}</ul></div>
+    <div><h4>List</h4><ul><li><button class="nav-i" data-view="recurring" aria-current="${view === "recurring"}"><span>Recurring</span><span class="c">${cnt("recurring") || ""}</span></button></li></ul></div>`;
+}
+
+function rowHtml(t) {
+  const n = diff(d(t.due), TODAY);
+  const L = t.link && LINKS[t.link];
+  const meta = [];
+  if (L) meta.push(`<span class="link ${L.kind}">${esc(L.label)}</span>`);
+  if (t.wait) meta.push(`<span class="wait">Waiting on ${esc(t.wait)}</span>`);
+  if (t.subs) meta.push(`<span>☐ ${t.subs.filter(s => s[1]).length}/${t.subs.length}</span>`);
+  if (t.repeat) meta.push(`<span>↻ ${t.repeat}</span>`);
+  const dueTxt = (n === 0 ? "Today" : n === 1 ? "Tomorrow" : n < 0 ? short(d(t.due)) : fmt(d(t.due))) + (t.time ? " " + t.time : "");
+  return `<div class="row ${t.done ? "done" : ""} ${sel === t.id ? "sel" : ""}">
+    <button class="check p${t.p}" data-done="${t.id}" aria-label="Complete: ${esc(t.t)}">${t.done ? '<svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ""}</button>
+    <button class="body" data-open="${t.id}"><span class="t">${t.wait ? "Waiting: " : ""}${esc(t.t)}</span>${meta.length ? `<span class="meta">${meta.join("")}</span>` : ""}</button>
+    <span class="r"><span class="due date ${n < 0 && !t.done ? "overdue" : ""}">${dueTxt}</span><span class="av ${t.who === "AS" ? "as" : ""}" title="${PEOPLE[t.who]}">${t.who}</span></span>
+  </div>`;
+}
+
+function groupsFor(list) {
+  if (view === "today") return [["Overdue", list.filter(t => diff(d(t.due), TODAY) < 0), true], ["Today", list.filter(t => diff(d(t.due), TODAY) === 0)]];
+  if (view === "recurring") return [[null, list]];
+  if (view === "week" || view === "assistant" || view === "waiting") {
+    const out = [], od = list.filter(t => diff(d(t.due), TODAY) < 0);
+    if (od.length && view !== "waiting") out.push(["Overdue", od, true]);
+    const rest = view === "waiting" ? list : list.filter(t => diff(d(t.due), TODAY) >= 0);
+    const days = [...new Set(rest.map(t => t.due))].sort();
+    days.forEach(k => { const n = diff(d(k), TODAY); out.push([(view === "waiting" ? "Expected " : "") + (n === 0 ? "Today · " : n === 1 ? "Tomorrow · " : "") + fmt(d(k)), rest.filter(t => t.due === k)]); });
+    return out;
+  }
+  return [[null, list]];
+}
+
+function renderMain() {
+  const title = view === "recurring" ? "Recurring" : VIEWS.find(v => v[0] === view)[1];
+  if (view === "touch") {
+    el("main").innerHTML = `<div class="main-h"><div><h1>Due for a touch</h1><div class="sub">People past their follow-up frequency</div></div></div>
+      <div class="list">${touches.map((p, i) => `<div class="row"><span></span><span class="body"><span class="t">${p.n}</span><span class="meta"><span>Every ${p.f}</span><span>Last touch ${p.last}</span></span></span><span class="r"><button class="touch-btn" data-touch="${i}">Log touch</button></span></div>`).join("") || ""}</div>
+      ${touches.length ? "" : `<div class="empty">Everyone is up to date.</div>`}`;
+    return;
+  }
+  const list = applyFilter(visible(view)).sort(sortT);
+  const open = list.filter(t => !t.done).length;
+  const groups = groupsFor(list).filter(g => g[1].length);
+  el("main").innerHTML = `
+    <div class="main-h">
+      <div><h1>${title}</h1><div class="sub">${view === "recurring" ? "Each one shows up in Today when it's due, then schedules the next" : open + " open" + (view === "today" ? " · " + fmt(TODAY) : "")}</div></div>
+      <span class="filters" role="group" aria-label="Show">
+        <button data-filter="all" aria-pressed="${filter === "all"}">All</button>
+        <button data-filter="general" aria-pressed="${filter === "general"}">General</button>
+        <button data-filter="deal" aria-pressed="${filter === "deal"}">Deal steps</button>
+      </span>
+    </div>
+    <div class="qa">
+      <form id="qa-form" autocomplete="off">
+        <input id="qa-input" placeholder='Add a task, e.g. "call lender re Murphy Fri 9am" or "rent check every month"' aria-label="Quick add task">
+        <button class="add" type="submit">Add</button>
+      </form>
+      <div class="parsed" id="parsed"></div>
+    </div>
+    ${groups.length ? groups.map(([h, items, bad]) => `<section class="group">${h ? `<h3 class="${bad ? "bad" : ""}"><span>${h}</span><span>${items.filter(t => !t.done).length}</span></h3>` : ""}<div class="list">${items.map(rowHtml).join("")}</div></section>`).join("") : `<div class="empty">Nothing here. Enjoy it.</div>`}`;
+  const inp = el("qa-input");
+  inp.addEventListener("input", () => showParsed(parse(inp.value)));
+  el("qa-form").addEventListener("submit", e => { e.preventDefault(); addTask(inp.value); });
+}
+
+function renderDetail() {
+  const box = el("detail"), shell = el("shell");
+  const t = tasks.find(x => x.id === sel);
+  if (!t) { box.hidden = true; shell.classList.remove("with-detail"); return; }
+  box.hidden = false; shell.classList.add("with-detail");
+  const L = t.link && LINKS[t.link];
+  box.innerHTML = `
+    <div class="detail-h">
+      <button class="check p${t.p}" data-done="${t.id}" aria-label="Complete">${t.done ? "✓" : ""}</button>
+      <textarea class="title" id="d-title" rows="2" aria-label="Title">${esc(t.t)}</textarea>
+      <button class="x" data-close="1" aria-label="Close">×</button>
+    </div>
+    ${t.step ? `<div class="from" style="margin-top:12px">
+      <span>From the <b>${esc(L.label)}</b> checklist · ${esc(t.step.phase)}</span>
+      <span>Timing: ${esc(t.step.rule)}. Moves automatically if that date changes.</span>
+      <span class="acts"><button class="btn" data-toast="Opens the ${esc(L.label)} deal page">Open deal</button>${t.kind !== "task" ? `<button class="btn primary" data-toast="Opens a pre-filled ${t.kind} to review and send">Draft ${t.kind}</button>` : ""}</span>
+    </div>` : ""}
+    <div class="fields">
+      <label for="d-due">Due</label><input type="date" id="d-due" value="${t.due}">
+      <label for="d-time">Time</label><input id="d-time" value="${t.time || ""}" placeholder="None">
+      <label for="d-repeat">Repeat</label><select id="d-repeat">${["", "Daily", "Weekly", "Monthly", "Yearly"].map(r => `<option value="${r}" ${t.repeat === r || (!t.repeat && !r) ? "selected" : ""}>${r || "Never"}</option>`).join("")}</select>
+      <label for="d-p">Priority</label><select id="d-p">${["None", "Low", "Medium", "High"].map((p, i) => `<option value="${i}" ${t.p === i ? "selected" : ""}>${p}</option>`).join("")}</select>
+      <label for="d-who">Assignee</label><select id="d-who">${Object.entries(PEOPLE).map(([k, v]) => `<option value="${k}" ${t.who === k ? "selected" : ""}>${v}</option>`).join("")}</select>
+      <label for="d-status">Status</label><select id="d-status"><option value="">Open</option><option value="w" ${t.wait ? "selected" : ""}>Waiting on someone</option></select>
+      ${t.wait ? `<label for="d-wait">Waiting on</label><input id="d-wait" value="${esc(t.wait)}">` : ""}
+      <label>Linked to</label><span>${L ? `<span class="link ${L.kind}">${esc(L.full)}</span>` : `<span style="color:var(--muted)">Nothing (general task)</span>`}</span>
+    </div>
+    <div class="sec"><h5>Subtasks</h5>
+      ${(t.subs || []).map((s, i) => `<label class="sub-i ${s[1] ? "done" : ""}"><input type="checkbox" data-sub="${i}" ${s[1] ? "checked" : ""}><span>${esc(s[0])}</span></label>`).join("") || `<span style="font-size:12.5px;color:var(--muted)">None yet</span>`}
+      <button class="btn" style="align-self:flex-start" data-toast="Adds a subtask">+ Add subtask</button>
+    </div>
+    <div class="sec"><h5>Notes</h5><textarea class="notes" id="d-notes" placeholder="Add notes"></textarea></div>`;
+}
+
+function render() { renderSide(); renderMain(); renderDetail(); }
+
+/* ---------- Quick add parsing ---------- */
+function parse(text) {
+  let s = " " + text + " ", out = {};
+  const take = re => { const m = s.match(re); if (m) s = s.replace(m[0], " "); return m; };
+  let m;
+  if ((m = take(/\s(every\s+(day|week|month|year)|daily|weekly|monthly|yearly)\s/i))) {
+    const w = m[1].toLowerCase(); out.repeat = { day: "Daily", daily: "Daily", week: "Weekly", weekly: "Weekly", month: "Monthly", monthly: "Monthly", year: "Yearly", yearly: "Yearly" }[m[2] ? m[2].toLowerCase() : w];
+  }
+  if ((m = take(/\s(\d{1,2})(?::(\d{2}))?\s*(am|pm)\s/i))) out.time = `${+m[1]}:${m[2] || "00"}${m[3].toLowerCase()}`;
+  if ((m = take(/\s(today|tonight)\s/i))) out.due = iso(TODAY);
+  else if ((m = take(/\s(tomorrow|tmrw)\s/i))) out.due = iso(add(TODAY, 1));
+  else if ((m = take(/\s(next week)\s/i))) out.due = iso(add(TODAY, 7));
+  else if ((m = take(/\s(sun|mon|tue|tues|wed|thu|thur|thurs|fri|sat)(day|nesday|rsday|urday)?\s/i))) {
+    const k = DOWL.findIndex(x => x.startsWith(m[1].toLowerCase().slice(0, 3)));
+    let n = (k - TODAY.getDay() + 7) % 7; if (n === 0) n = 7;
+    out.due = iso(add(TODAY, n));
+  }
+  if ((m = take(/\s!(high|h|3|med|medium|m|2|low|l|1)\s/i))) out.p = { high: 3, h: 3, 3: 3, med: 2, medium: 2, m: 2, 2: 2, low: 1, l: 1, 1: 1 }[m[1].toLowerCase()];
+  if ((m = take(/\s@(assistant|alyssa|luke|me)\s/i))) out.who = /luke|me/i.test(m[1]) ? "LP" : "AS";
+  if ((m = s.match(/\s(?:re|for|with)\s+([a-z]+)/i))) {
+    const word = m[1].toLowerCase();
+    const key = Object.keys(LINKS).find(k => k === word || LINKS[k].label.toLowerCase().split(" ").includes(word));
+    if (key) { out.link = key; s = s.replace(m[0], " "); }
+  }
+  out.t = s.replace(/\s+/g, " ").trim();
+  return out;
+}
+function showParsed(p) {
+  const chips = [];
+  if (p.due) chips.push(fmt(d(p.due)));
+  if (p.time) chips.push(p.time);
+  if (p.link) chips.push((LINKS[p.link].kind === "deal" ? "Deal: " : "Person: ") + LINKS[p.link].label);
+  if (p.who) chips.push("Assignee: " + PEOPLE[p.who]);
+  if (p.p) chips.push(["", "Low", "Medium", "High"][p.p] + " priority");
+  if (p.repeat) chips.push("↻ " + p.repeat);
+  el("parsed").innerHTML = chips.map(c => `<span class="pchip">${esc(c)}</span>`).join("");
+}
+function addTask(text) {
+  const p = parse(text); if (!p.t) return;
+  const t = { id: nextId++, t: p.t, due: p.due || iso(TODAY), time: p.time, who: p.who || "LP", link: p.link, p: p.p || 0, repeat: p.repeat, kind: "task", done: false };
+  tasks.push(t);
+  toast(`Added "${t.t}" for ${fmt(d(t.due))}${inView(t, view) ? "" : ". It's in a different view."}`);
+  render();
+  const i = el("qa-input"); if (i) i.focus();
+}
+
+/* ---------- Events ---------- */
+let tt;
+function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2800); }
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.view) { view = b.dataset.view; sel = null; render(); return; }
+  if (b.dataset.filter) { filter = b.dataset.filter; render(); return; }
+  if (b.dataset.open) { sel = +b.dataset.open; render(); return; }
+  if (b.dataset.close) { sel = null; render(); return; }
+  if (b.dataset.done) {
+    const t = tasks.find(x => x.id === +b.dataset.done);
+    t.done = !t.done; t.justDone = t.done;
+    if (t.done && t.repeat) toast(`Done. Next one created (${t.repeat.toLowerCase()}).`);
+    else if (t.done && t.step) toast(`Done. Also checked off on the ${LINKS[t.link].label} checklist and logged to the timeline.`);
+    render(); return;
+  }
+  if (b.dataset.touch) { const p = touches.splice(+b.dataset.touch, 1)[0]; toast(`Touch logged for ${p.n}. Next one due in ${p.f}.`); render(); return; }
+  if (b.dataset.toast) { toast(b.dataset.toast); return; }
+});
+document.addEventListener("change", e => {
+  const t = tasks.find(x => x.id === sel); if (!t) return;
+  const id = e.target.id, v = e.target.value;
+  if (e.target.dataset.sub !== undefined) { t.subs[+e.target.dataset.sub][1] = e.target.checked; render(); return; }
+  if (id === "d-due" && v) t.due = v;
+  if (id === "d-time") t.time = v;
+  if (id === "d-repeat") t.repeat = v || undefined;
+  if (id === "d-p") t.p = +v;
+  if (id === "d-who") t.who = v;
+  if (id === "d-list") t.list = v || undefined;
+  if (id === "d-status") t.wait = v ? (t.wait || "Someone") : undefined;
+  if (id === "d-wait") t.wait = v || "Someone";
+  if (id === "d-title") t.t = v;
+  render();
+});
+
+render();
+</script>

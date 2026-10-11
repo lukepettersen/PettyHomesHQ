@@ -61,26 +61,36 @@ button { cursor: pointer; }
 .topnav nav a { color: var(--muted); text-decoration: none; padding: 14px 10px; border-bottom: 2px solid transparent; white-space: nowrap; }
 .topnav nav a.on { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
 
-.wrap { max-width: 1400px; margin: 0 auto; padding-inline: 16px; padding-block: 18px 48px; display: flex; flex-direction: column; gap: 16px; }
-h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 3vw, 28px); line-height: 1.15; margin: 0; text-wrap: balance; }
+.wrap { max-width: 1600px; margin: 0 auto; padding-inline: 16px; padding-block: 12px 40px; display: flex; flex-direction: column; gap: 12px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 2.6vw, 25px); line-height: 1.15; margin: 0; text-wrap: balance; }
+.btn-ghost { border: 1px solid var(--line); background: var(--surface); padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+.btn-ghost[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
 
 /* Board */
 .board-head { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
 .board-head .left { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
 .board-sum { color: var(--muted); font-size: 13px; }
-.board { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; align-items: flex-start; }
-.col { flex: 0 0 248px; background: var(--sunken); border-radius: var(--r); display: flex; flex-direction: column; max-height: none; }
-.col-h { padding: 10px 12px 8px; display: flex; flex-direction: column; gap: 1px; }
-.col-h .name { font-weight: 700; font-size: 13.5px; display: flex; justify-content: space-between; }
+.board { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; align-items: flex-start; }
+.col { flex: 1 0 172px; min-width: 172px; background: var(--sunken); border-radius: var(--r); display: flex; flex-direction: column; }
+.col-h { padding: 8px 9px 6px; display: flex; flex-direction: column; gap: 1px; }
+.col-h .name { font-weight: 700; font-size: 13px; display: flex; justify-content: space-between; gap: 6px; }
 .col-h .name span:last-child { color: var(--muted); font-weight: 600; }
-.col-h .vol { font-size: 12px; color: var(--muted); }
-.cards { display: flex; flex-direction: column; gap: 8px; padding: 0 8px 10px; }
-.card { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 10px 11px; display: flex; flex-direction: column; gap: 5px; width: 100%; }
+.col-h .vol { font-size: 11.5px; color: var(--muted); }
+.col-h input { width: 100%; font-weight: 700; font-size: 13px; padding: 3px 6px; border: 1px solid var(--accent); border-radius: 5px; background: var(--surface); }
+.col-tools { display: flex; gap: 4px; margin-top: 4px; }
+.col-tools button { border: 1px solid var(--line); background: var(--surface); border-radius: 4px; font-size: 12px; padding: 1px 7px; color: var(--muted); }
+.col-tools button:hover { color: var(--fg); border-color: var(--muted); }
+.col.add { flex: 0 0 150px; min-width: 150px; background: none; border: 2px dashed var(--line); color: var(--accent); font-weight: 600; padding: 14px; align-self: stretch; justify-content: center; align-items: center; }
+.col.add:hover { border-color: var(--accent); }
+.edit-note { font-size: 12.5px; color: var(--muted); background: var(--accent-soft); border-radius: 6px; padding: 8px 12px; }
+.cards { display: flex; flex-direction: column; gap: 5px; padding: 0 6px 8px; }
+.card { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; display: flex; flex-direction: column; gap: 2px; width: 100%; font-size: 13px; }
 .card:hover { border-color: var(--accent); }
-.card .who { font-weight: 600; display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
-.card .addr { font-size: 12.5px; color: var(--muted); }
-.card .price { font-size: 12.5px; }
-.card .next { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 5px; display: flex; justify-content: space-between; gap: 6px; }
+.card .who { font-weight: 600; display: flex; justify-content: space-between; gap: 6px; align-items: center; }
+.card .addr { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 6px; }
+.card .addr span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card .price { font-size: 12px; color: var(--fg); white-space: nowrap; }
+.card .next { font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 3px; margin-top: 2px; display: flex; justify-content: space-between; gap: 6px; }
 .card .next.overdue { color: var(--bad); }
 .card .next span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; }
@@ -110,7 +120,8 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 
 .edit p { margin: 0; flex: 1 1 220px; color: var(--muted); font-size: 13px; }
 .btn { border: 1px solid var(--line); background: var(--surface); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 13px; }
 
-.dgrid { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 16px; align-items: start; }
+.dgrid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 14px; align-items: start; }
+.dgrid > .stack:last-child .row { padding-inline: 12px; }
 @media (max-width: 880px) { .dgrid { grid-template-columns: minmax(0, 1fr); } }
 .stack { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
@@ -181,7 +192,7 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 
 <header class="topnav">
   <div class="brand">Petty Homes <span>HQ</span></div>
   <nav aria-label="Main">
-    <a href="#">People</a><a href="#" class="on">Deals</a><a href="#">Tasks</a><a href="#">Messages</a><a href="#">Admin</a>
+    <a href="#" title="Not mocked yet">People</a><a href="deals.html" class="on">Deals</a><a href="tasks.html">Tasks</a><a href="#" title="Not mocked yet">Messages</a><a href="#" title="Not mocked yet">Admin</a>
   </nav>
 </header>
 
@@ -200,8 +211,12 @@ const short = x => MON[x.getMonth()] + " " + x.getDate();
 const money = n => "$" + n.toLocaleString("en-US");
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-let role = "admin", side = "buyer", openDeal = null, editing = null, openMenu = null;
+let role = "admin", side = "buyer", openDeal = null, editing = null, openMenu = null, editStages = false, customN = 0;
 const expanded = {};
+// Display names for stages. Internal keys never change, so renaming is safe.
+const LABEL = { buyer: {}, seller: {} };
+const label = (s, k) => LABEL[s][k] || k;
+const LOCKED = ["Under Contract", "Closed"];
 
 const STAGES = {
   buyer: ["Lead", "Consult", "Rep Signed / Searching", "Offer Out", "Under Contract", "Closed"],
@@ -375,19 +390,31 @@ function renderBoard() {
           <button data-side="seller" aria-pressed="${side === "seller"}">Sellers</button>
         </span>
       </div>
-      <span class="board-sum">${active.length} active · ${uc.length} under contract · ${money(uc.reduce((s, x) => s + x.price, 0))} pending volume</span>
+      <span class="left"><span class="board-sum">${active.length} active · ${uc.length} under contract · ${money(uc.reduce((s, x) => s + x.price, 0))} pending volume</span>
+      <button class="btn-ghost" data-editstages="1" aria-pressed="${editStages}">${editStages ? "Done editing" : "Edit stages"}</button></span>
     </div>
-    <div class="board">${STAGES[side].map(st => colHtml(st, list.filter(x => x.stage === st))).join("")}</div>`;
+    ${editStages ? `<div class="edit-note">Rename a stage by typing in its name. Use ← → to reorder, × to remove an empty stage, or add a new one at the end. Under Contract and Closed can be renamed but not removed, because the contract checklist and closed reports depend on them. A new stage starts with an empty checklist you fill in under Admin.</div>` : ""}
+    <div class="board">${STAGES[side].map((st, i) => colHtml(st, i, list.filter(x => x.stage === st))).join("")}${editStages ? `<button class="col add" data-addstage="1">+ Add stage</button>` : ""}</div>`;
 }
 
-function colHtml(stage, items) {
+function colHtml(stage, i, items) {
   const vol = items.reduce((s, x) => s + (x.price || 0), 0);
   const closed = stage === "Closed";
+  const name = label(side, stage);
+  const head = editStages
+    ? `<input data-rename="${esc(stage)}" value="${esc(name)}" aria-label="Stage name">
+       <span class="col-tools">
+         <button data-move="${esc(stage)}" data-dir="-1" aria-label="Move left" ${i === 0 ? "disabled" : ""}>←</button>
+         <button data-move="${esc(stage)}" data-dir="1" aria-label="Move right" ${i === STAGES[side].length - 1 ? "disabled" : ""}>→</button>
+         ${LOCKED.includes(stage) ? "" : `<button data-del="${esc(stage)}" aria-label="Remove stage">×</button>`}
+         <span style="margin-left:auto;font-size:12px;color:var(--muted)">${items.length}</span>
+       </span>`
+    : `<span class="name"><span>${esc(name)}${closed ? " · 30 days" : ""}</span><span>${items.length}</span></span>
+       <span class="vol">${vol ? money(vol) : "&nbsp;"}</span>`;
   return `<section class="col">
-    <div class="col-h"><span class="name"><span>${closed ? "Closed · last 30 days" : stage}</span><span>${items.length}</span></span>
-      <span class="vol">${vol ? money(vol) : "&nbsp;"}</span></div>
+    <div class="col-h">${head}</div>
     <div class="cards">${items.map(cardHtml).join("")}</div>
-    ${closed ? `<div class="col-foot">View all closed deals →</div>` : ""}
+    ${closed && !editStages ? `<div class="col-foot">View all closed →</div>` : ""}
   </section>`;
 }
 
@@ -402,8 +429,7 @@ function cardHtml(dl) {
   const prog = dl.stage === "Under Contract" ? (() => { const done = dl.tasks.filter(t => eff(dl, t) !== "open").length; return `<div class="mini" title="${done} of ${dl.tasks.length} steps"><i style="width:${Math.round(done / dl.tasks.length * 100)}%"></i></div><div class="addr">Closing ${short(d(dl.ms.close))}</div>`; })() : "";
   return `<button class="card" data-deal="${dl.id}">
     <span class="who"><span>${esc(dl.name)}</span>${dl.stage !== "Closed" ? `<span class="dot ${health(dl)}" title="${{ g: "On track", y: "Something overdue", r: "Behind" }[health(dl)]}"></span>` : ""}</span>
-    <span class="addr">${esc(dl.line)}</span>
-    ${dl.price ? `<span class="price num">${money(dl.price)}</span>` : ""}
+    <span class="addr"><span>${esc(dl.line)}</span>${dl.price ? `<span class="price num">${money(dl.price / 1000)}k</span>` : ""}</span>
     ${prog}${next}
   </button>`;
 }
@@ -427,7 +453,7 @@ function renderDeal() {
     <div class="dhead">
       <div>
         <h1>${esc(dl.name)}</h1>
-        <div class="sub"><span class="stagepill">${dl.stage}</span><span>${esc(dl.line)}</span>${dl.price ? `<span class="num">${money(dl.price)}</span>` : ""}</div>
+        <div class="sub"><span class="stagepill">${esc(label(dl.side, dl.stage))}</span><span>${esc(dl.line)}</span>${dl.price ? `<span class="num">${money(dl.price)}</span>` : ""}</div>
       </div>
       ${dl.stage !== "Closed" ? `<span class="health"><span class="dot ${h}"></span>${{ g: "On track", y: "Something overdue", r: "Behind" }[h]}</span>` : ""}
     </div>
@@ -436,16 +462,16 @@ function renderDeal() {
       <div class="stack">
         ${dl.stage === "Closed" ? `<div class="box"><h2>Closed ${fmt(d(dl.closed))}</h2><p class="empty">Closed deals keep their history and drop off the board after 30 days.</p></div>` : `
         <div class="box">
-          <h2>Up next <small>${open.length} open</small></h2>
-          ${nextMs ? `<div class="nextms">Next deadline: <b>${MS_NAMES[nextMs]}</b>, ${fmt(d(dl.ms[nextMs]))}</div>` : ""}
-          ${upNext.length ? upNext.map(t => rowHtml(dl, t)).join("") : `<p class="empty">All caught up.</p>`}
-        </div>
-        <div class="box">
           <h2>${uc ? "Checklist" : "Stage checklist"} <small>${dl.tasks.filter(t => eff(dl, t) !== "open").length} of ${dl.tasks.length} done</small></h2>
           ${phases.map(p => phaseHtml(dl, p)).join("")}
         </div>`}
       </div>
       <div class="stack">
+        ${dl.stage !== "Closed" ? `<div class="box">
+          <h2>Up next <small>${open.length} open</small></h2>
+          ${nextMs ? `<div class="nextms">Next deadline: <b>${MS_NAMES[nextMs]}</b>, ${fmt(d(dl.ms[nextMs]))}</div>` : ""}
+          ${upNext.length ? upNext.map(t => rowHtml(dl, t)).join("") : `<p class="empty">All caught up.</p>`}
+        </div>` : ""}
         ${uc ? `<div class="box"><h2>Details</h2><dl class="facts">${factsHtml(dl)}</dl></div>` : ""}
         <div class="box"><h2>People</h2><div class="people">${(dl.people || [[dl.name, dl.side === "buyer" ? "Buyer" : "Seller"]]).map(([n, r]) => `<div><span>${esc(n)}</span><span>${r}</span></div>`).join("")}</div></div>
       </div>
@@ -522,6 +548,25 @@ document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   const dl = deals.find(x => x.id === openDeal);
   if (b.dataset.side) { side = b.dataset.side; render(); return; }
+  if (b.dataset.editstages) { editStages = !editStages; render(); return; }
+  if (b.dataset.move) {
+    const arr = STAGES[side], i = arr.indexOf(b.dataset.move), j = i + +b.dataset.dir;
+    if (j < 0 || j >= arr.length) return;
+    [arr[i], arr[j]] = [arr[j], arr[i]]; render(); return;
+  }
+  if (b.dataset.del) {
+    const k = b.dataset.del;
+    if (deals.some(x => x.side === side && x.stage === k)) { toast(`Move the deals out of "${label(side, k)}" before removing it.`); return; }
+    STAGES[side].splice(STAGES[side].indexOf(k), 1); toast(`Removed "${label(side, k)}".`); render(); return;
+  }
+  if (b.dataset.addstage) {
+    const k = "custom-" + (++customN);
+    LABEL[side][k] = "New stage";
+    STAGES[side].splice(STAGES[side].indexOf("Under Contract"), 0, k);
+    render();
+    const inp = document.querySelector(`[data-rename="${k}"]`); if (inp) { inp.focus(); inp.select(); }
+    return;
+  }
   if (b.dataset.deal) { openDeal = +b.dataset.deal; editing = null; openMenu = null; render(); window.scrollTo(0, 0); return; }
   if (b.dataset.back) { openDeal = null; editing = null; render(); return; }
   if (b.dataset.ms) { editing = editing === b.dataset.ms ? null : b.dataset.ms; render(); return; }
@@ -544,6 +589,11 @@ document.addEventListener("click", e => {
 });
 
 document.addEventListener("change", e => {
+  if (e.target.dataset.rename) {
+    const v = e.target.value.trim();
+    if (v) LABEL[side][e.target.dataset.rename] = v;
+    render(); return;
+  }
   const dl = deals.find(x => x.id === openDeal); if (!dl || !editing) return;
   if (e.target.id === "ms-date" && e.target.value) {
     const n = dl.tasks.filter(t => t.a === editing && t.s === "open").length;
