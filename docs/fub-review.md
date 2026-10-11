@@ -116,8 +116,8 @@ Zillow Preferred. (Full list to confirm at import time.)
 - Mailing Name (269), Referred By (20), Homeiversary (191)
 - Birthday 1–7 (193 / 132 / 4 / 2 / 1 / 1 / 0) — one per household member
 - Yearly mailer date fields (1 person each): Send Spring Postcard, Send Fall Postcard,
-  Create/Send Fall Trifold, Create/Send Spring Trifold, Send New Years Postcard — these appear
-  to exist only to trigger yearly reminder tasks (see Automations).
+  Create/Send Fall Trifold, Create/Send Spring Trifold, Send New Years Postcard — set on a
+  placeholder contact only to trigger yearly reminder tasks (owner confirmed).
 
 **HQ implications:** BUY/SELL fields become purchase-agreement fields (proper number/date
 types). Birthdays become a household-members child table. Yearly mailer fields become
@@ -179,8 +179,9 @@ Legend: `Task(type → assignee)`. Stage numbers resolved to names.
 - **Closing in 14 days** (date trigger on BUY Close Date; 21 runs, **14 stopped**) → repairs
   amendment?; order closing gift; +5d final walkthrough text, utilities email; +2d cash to close;
   +3d settlement statement to title
-- **Inspection Deadline Reminder** (date trigger on a field named `customInspectionDeadline`,
-  which isn't in the current field list — **verify; may be broken**)
+- **Inspection Deadline Reminder** (date trigger, day before) → Email task: reminder to Luke.
+  Owner confirms it works. (Its trigger field is named `customInspectionDeadline`, which
+  doesn't match the visible field list — check at import time.)
 - **Inspection Period Ends Today** (BUY Inspection Deadline) → note
 - **Closed** (21 runs) → remove `Buyer`/`Under contract`; move lead stage to Closed-equivalent;
   add Past Client, Event List, Newsletter, Mailers, RE Health Check tags; add birthdays and
@@ -295,6 +296,17 @@ archive one-offs and dated notices.
 ### Sphere follow-up
 - Make follow-up frequency (7/30/60/90/180 days) its own contact field, separate from stage,
   with a "due for a touch" list.
+
+### Messages (replaces FUB Inbox)
+- Call it **Messages**, not Inbox.
+- Text messages only, plus missed calls. **No email** — all email stays in Gmail.
+
+### Tasks
+- FUB's Tasks page is too basic. Owner wants a real task-system approach, not just a list
+  (details below as they're decided).
+
+### Yearly mailers
+- Confirmed: the mailer date fields are a workaround. In HQ they become recurring general tasks.
 
 ### Data import
 - **Wait.** No FUB data moves into HQ yet; build and review with seed data first. The
