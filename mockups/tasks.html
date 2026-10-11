@@ -55,7 +55,11 @@ button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .date { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
 
-.mock-bar { background: var(--accent-soft); padding-block: 7px; padding-inline: 16px; font-size: 13px; }
+.mock-bar { background: var(--accent-soft); padding-block: 7px; padding-inline: 16px; font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: none; padding: 4px 12px; font-size: 12.5px; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.main-h .tools { display: flex; flex-wrap: wrap; gap: 8px; }
 .topnav { background: var(--surface); border-bottom: 1px solid var(--line); padding-inline: 16px; display: flex; align-items: center; gap: 24px; overflow-x: auto; }
 .brand { font-family: var(--font-display); font-weight: 700; font-size: 17px; padding-block: 12px; white-space: nowrap; }
 .brand span { color: var(--accent); }
@@ -114,7 +118,6 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 
 .meta { display: flex; flex-wrap: wrap; gap: 3px 10px; font-size: 12px; color: var(--muted); align-items: center; }
 .link { color: var(--accent); font-weight: 600; }
 .link.deal::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 2px; background: currentColor; margin-right: 5px; vertical-align: 1px; }
-.wait { color: var(--waive); font-weight: 600; }
 .r { display: flex; align-items: center; gap: 8px; }
 .due { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
 .due.overdue { color: var(--bad); font-weight: 500; }
@@ -159,7 +162,8 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); z-index: 30; }
 </style>
 
-<div class="mock-bar"><strong>Mockup</strong> · fake data, "today" is Mon Oct 12, 2026. Deal steps come from the same fake deals as the pipeline mockup. Try the quick add box.</div>
+<div class="mock-bar"><strong>Mockup</strong> · fake data, "today" is Mon Oct 12, 2026. Deal steps come from the same fake deals as the pipeline mockup. Try the quick add box.
+  <span class="seg" role="group" aria-label="Viewing as" style="margin-left:12px"><button id="as-lp" aria-pressed="true">Viewing as Luke</button><button id="as-as" aria-pressed="false">Viewing as assistant</button></span></div>
 
 <header class="topnav">
   <div class="brand">Petty Homes <span>HQ</span></div>
@@ -201,7 +205,7 @@ const LINKS = {
   dana: { kind: "person", label: "Dana Kim", full: "Dana Kim · Lender, Northfield Lending" },
 };
 
-// p: priority 0 none, 1 low, 2 med, 3 high. step: deal checklist info. wait: who it's waiting on.
+// p: priority 0 none, 1 low, 2 med, 3 high. step: deal checklist info.
 let tasks = [
   { t: "Earnest money receipt saved to file", due: "2026-10-07", who: "AS", link: "calloway", step: { phase: "Under Contract", rule: "Final Acceptance + 5d" } },
   { t: "Insurance referral", due: "2026-10-07", who: "AS", link: "calloway", kind: "email", step: { phase: "Financing", rule: "Final Acceptance + 5d" } },
@@ -229,9 +233,7 @@ let tasks = [
   { t: "Quarterly market update email", due: "2027-01-05", who: "LP", repeat: "Quarterly" },
   { t: "Review settlement statement", due: "2026-10-19", who: "LP", link: "raman", step: { phase: "Closing", rule: "Closing − 4d" } },
   { t: "Finish MN license CE credits", due: "2026-10-30", who: "LP", p: 3 },
-  { t: "Appraisal date from lender", due: "2026-10-13", who: "AS", link: "calloway", wait: "Dana Kim (lender)" },
-  { t: "HOA move-in rules", due: "2026-10-15", who: "AS", link: "calloway", wait: "Lakeview HOA manager" },
-  { t: "Podcast intro music license", due: "2026-10-20", who: "LP", wait: "Studio" },
+  { t: "Get appraisal date from lender", due: "2026-10-13", who: "AS", link: "calloway" },
 ];
 tasks.forEach((t, i) => { t.id = i; t.done = false; t.p = t.p || 0; t.kind = t.kind || "task"; });
 let nextId = tasks.length;
@@ -243,25 +245,22 @@ const touches = [
   { n: "Rita Okonkwo", f: "7 days", last: "Oct 3" },
 ];
 
-let view = "today", filter = "all", sel = null;
+let view = "today", filter = "all", sel = null, me = "LP", whoF = "everyone";
 const el = id => document.getElementById(id);
 
 const VIEWS = [
-  ["today", "Today"], ["tomorrow", "Tomorrow"], ["week", "Next 7 Days"], ["overdue", "Overdue"],
-  ["waiting", "Waiting on"], ["assistant", "Assigned to assistant"], ["touch", "Due for a touch"],
+  ["today", "Today"], ["tomorrow", "Tomorrow"], ["overdue", "Overdue"],
+  ["touch", "Due for a touch"],
 ];
 function inView(t, v) {
   const n = diff(d(t.due), TODAY);
-  if (v === "today") return n <= 0 && !t.wait;
-  if (v === "tomorrow") return n === 1 && !t.wait;
-  if (v === "week") return n <= 7 && !t.wait;
-  if (v === "overdue") return n < 0 && !t.wait;
-  if (v === "waiting") return !!t.wait;
-  if (v === "assistant") return t.who === "AS" && n <= 7;
+  if (v === "today") return n <= 0;
+  if (v === "tomorrow") return n === 1;
+  if (v === "overdue") return n < 0;
   if (v === "recurring") return !!t.repeat;
   return false;
 }
-const visible = v => tasks.filter(t => !t.done || t.justDone).filter(t => inView(t, v));
+const visible = v => tasks.filter(t => !t.done || t.justDone).filter(t => whoF === "everyone" || t.who === me).filter(t => inView(t, v));
 function applyFilter(list) {
   if (filter === "general") return list.filter(t => !t.step);
   if (filter === "deal") return list.filter(t => t.step);
@@ -282,13 +281,12 @@ function rowHtml(t) {
   const L = t.link && LINKS[t.link];
   const meta = [];
   if (L) meta.push(`<span class="link ${L.kind}">${esc(L.label)}</span>`);
-  if (t.wait) meta.push(`<span class="wait">Waiting on ${esc(t.wait)}</span>`);
   if (t.subs) meta.push(`<span>☐ ${t.subs.filter(s => s[1]).length}/${t.subs.length}</span>`);
   if (t.repeat) meta.push(`<span>↻ ${t.repeat}</span>`);
   const dueTxt = (n === 0 ? "Today" : n === 1 ? "Tomorrow" : n < 0 ? short(d(t.due)) : fmt(d(t.due))) + (t.time ? " " + t.time : "");
   return `<div class="row ${t.done ? "done" : ""} ${sel === t.id ? "sel" : ""}">
     <button class="check p${t.p}" data-done="${t.id}" aria-label="Complete: ${esc(t.t)}">${t.done ? '<svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ""}</button>
-    <button class="body" data-open="${t.id}"><span class="t">${t.wait ? "Waiting: " : ""}${esc(t.t)}</span>${meta.length ? `<span class="meta">${meta.join("")}</span>` : ""}</button>
+    <button class="body" data-open="${t.id}"><span class="t">${esc(t.t)}</span>${meta.length ? `<span class="meta">${meta.join("")}</span>` : ""}</button>
     <span class="r"><span class="due date ${n < 0 && !t.done ? "overdue" : ""}">${dueTxt}</span><span class="av ${t.who === "AS" ? "as" : ""}" title="${PEOPLE[t.who]}">${t.who}</span></span>
   </div>`;
 }
@@ -296,14 +294,6 @@ function rowHtml(t) {
 function groupsFor(list) {
   if (view === "today") return [["Overdue", list.filter(t => diff(d(t.due), TODAY) < 0), true], ["Today", list.filter(t => diff(d(t.due), TODAY) === 0)]];
   if (view === "recurring") return [[null, list]];
-  if (view === "week" || view === "assistant" || view === "waiting") {
-    const out = [], od = list.filter(t => diff(d(t.due), TODAY) < 0);
-    if (od.length && view !== "waiting") out.push(["Overdue", od, true]);
-    const rest = view === "waiting" ? list : list.filter(t => diff(d(t.due), TODAY) >= 0);
-    const days = [...new Set(rest.map(t => t.due))].sort();
-    days.forEach(k => { const n = diff(d(k), TODAY); out.push([(view === "waiting" ? "Expected " : "") + (n === 0 ? "Today · " : n === 1 ? "Tomorrow · " : "") + fmt(d(k)), rest.filter(t => t.due === k)]); });
-    return out;
-  }
   return [[null, list]];
 }
 
@@ -321,11 +311,15 @@ function renderMain() {
   el("main").innerHTML = `
     <div class="main-h">
       <div><h1>${title}</h1><div class="sub">${view === "recurring" ? "Each one shows up in Today when it's due, then schedules the next" : open + " open" + (view === "today" ? " · " + fmt(TODAY) : "")}</div></div>
+      <span class="tools"><span class="filters" role="group" aria-label="Whose tasks">
+        <button data-who="mine" aria-pressed="${whoF === "mine"}">Mine</button>
+        <button data-who="everyone" aria-pressed="${whoF === "everyone"}">Everyone</button>
+      </span>
       <span class="filters" role="group" aria-label="Show">
         <button data-filter="all" aria-pressed="${filter === "all"}">All</button>
         <button data-filter="general" aria-pressed="${filter === "general"}">General</button>
         <button data-filter="deal" aria-pressed="${filter === "deal"}">Deal steps</button>
-      </span>
+      </span></span>
     </div>
     <div class="qa">
       <form id="qa-form" autocomplete="off">
@@ -363,8 +357,6 @@ function renderDetail() {
       <label for="d-repeat">Repeat</label><select id="d-repeat">${["", "Daily", "Weekly", "Monthly", "Yearly"].map(r => `<option value="${r}" ${t.repeat === r || (!t.repeat && !r) ? "selected" : ""}>${r || "Never"}</option>`).join("")}</select>
       <label for="d-p">Priority</label><select id="d-p">${["None", "Low", "Medium", "High"].map((p, i) => `<option value="${i}" ${t.p === i ? "selected" : ""}>${p}</option>`).join("")}</select>
       <label for="d-who">Assignee</label><select id="d-who">${Object.entries(PEOPLE).map(([k, v]) => `<option value="${k}" ${t.who === k ? "selected" : ""}>${v}</option>`).join("")}</select>
-      <label for="d-status">Status</label><select id="d-status"><option value="">Open</option><option value="w" ${t.wait ? "selected" : ""}>Waiting on someone</option></select>
-      ${t.wait ? `<label for="d-wait">Waiting on</label><input id="d-wait" value="${esc(t.wait)}">` : ""}
       <label>Linked to</label><span>${L ? `<span class="link ${L.kind}">${esc(L.full)}</span>` : `<span style="color:var(--muted)">Nothing (general task)</span>`}</span>
     </div>
     <div class="sec"><h5>Subtasks</h5>
@@ -415,7 +407,7 @@ function showParsed(p) {
 }
 function addTask(text) {
   const p = parse(text); if (!p.t) return;
-  const t = { id: nextId++, t: p.t, due: p.due || iso(TODAY), time: p.time, who: p.who || "LP", link: p.link, p: p.p || 0, repeat: p.repeat, kind: "task", done: false };
+  const t = { id: nextId++, t: p.t, due: p.due || iso(TODAY), time: p.time, who: p.who || me, link: p.link, p: p.p || 0, repeat: p.repeat, kind: "task", done: false };
   tasks.push(t);
   toast(`Added "${t.t}" for ${fmt(d(t.due))}${inView(t, view) ? "" : ". It's in a different view."}`);
   render();
@@ -430,6 +422,14 @@ document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.view) { view = b.dataset.view; sel = null; render(); return; }
   if (b.dataset.filter) { filter = b.dataset.filter; render(); return; }
+  if (b.dataset.who) { whoF = b.dataset.who; render(); return; }
+  if (b.id === "as-lp" || b.id === "as-as") {
+    me = b.id === "as-lp" ? "LP" : "AS";
+    whoF = me === "LP" ? "everyone" : "mine";
+    el("as-lp").setAttribute("aria-pressed", me === "LP");
+    el("as-as").setAttribute("aria-pressed", me === "AS");
+    sel = null; render(); return;
+  }
   if (b.dataset.open) { sel = +b.dataset.open; render(); return; }
   if (b.dataset.close) { sel = null; render(); return; }
   if (b.dataset.done) {
@@ -452,8 +452,6 @@ document.addEventListener("change", e => {
   if (id === "d-p") t.p = +v;
   if (id === "d-who") t.who = v;
   if (id === "d-list") t.list = v || undefined;
-  if (id === "d-status") t.wait = v ? (t.wait || "Someone") : undefined;
-  if (id === "d-wait") t.wait = v || "Someone";
   if (id === "d-title") t.t = v;
   render();
 });
