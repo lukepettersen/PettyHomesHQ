@@ -99,33 +99,78 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 .mini i { display: block; height: 100%; background: var(--ok); }
 .col-foot { font-size: 12px; color: var(--accent); padding: 0 12px 10px; }
 
-/* Contact page */
-.actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.tagchip { font-size: 11.5px; padding: 1px 8px; border-radius: 999px; background: var(--sunken); color: var(--muted); }
-.dpanel.open { border-color: var(--accent); }
-.dp-h { width: 100%; border: 0; background: none; text-align: left; padding: 10px 14px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; align-items: center; }
-.dp-h:hover { background: var(--bg); }
-.dp-l, .dp-r { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; min-width: 0; }
-.dp-t { font-weight: 600; }
-.dp-r .muted { color: var(--muted); font-size: 12.5px; }
-.sidechip { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 2px 7px; border-radius: 4px; }
+/* Contact page: three columns like FUB. Left = who they are, center = deal or timeline, right = tasks + deals. */
+.muted { color: var(--muted); }
+.linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; text-decoration: underline; font-size: inherit; }
+.sm { font-size: 12.5px; }
+.od { color: var(--bad); font-size: 12.5px; } .td { color: var(--accent); font-size: 12.5px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.c3 { display: grid; grid-template-columns: 290px minmax(0, 1fr) 300px; gap: 12px; align-items: start; }
+@media (max-width: 1100px) { .c3 { grid-template-columns: 270px minmax(0, 1fr); } .cright { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; } }
+@media (max-width: 760px) { .c3 { grid-template-columns: minmax(0, 1fr); } .cright { grid-column: auto; } }
+.cleft, .cright { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ccenter { min-width: 0; display: flex; flex-direction: column; gap: 0; }
+.card-s { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.card-s h3 { margin: 0; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.card-s p { margin: 0; }
+.who-h { display: flex; gap: 12px; align-items: center; }
+.who-h h1 { font-size: 19px; }
+.avatar { width: 46px; height: 46px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-weight: 700; font-size: 16px; flex: none; }
+.contact-l { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.contact-l li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 6px; overflow-wrap: anywhere; }
+.ic { color: var(--muted); text-align: center; }
+.lk { color: var(--accent); }
+.kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 5px 10px; margin: 0; font-size: 13px; }
+.kv dt { color: var(--muted); font-weight: 600; font-size: 12.5px; }
+.kv dd { margin: 0; }
+.due-chip { font-size: 11px; font-weight: 700; background: var(--warn-soft); color: var(--warn); padding: 1px 6px; border-radius: 4px; margin-left: 4px; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tagchip { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; background: var(--sunken); color: var(--muted); }
+.tag-add, .plus { width: 22px; height: 22px; border-radius: 50%; border: 0; background: var(--accent); color: var(--surface); font-weight: 700; line-height: 1; padding: 0; }
+.plus { margin-left: auto; }
+
+.ctabs { display: flex; gap: 2px; overflow-x: auto; }
+.ctabs button { border: 1px solid var(--line); border-bottom: 0; background: var(--sunken); padding: 8px 14px; border-radius: var(--r) var(--r) 0 0; font-size: 13px; font-weight: 600; white-space: nowrap; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+.ctabs button[aria-selected="true"] { background: var(--surface); color: var(--fg); }
+.pane { background: var(--surface); border: 1px solid var(--line); border-radius: 0 var(--r) var(--r) var(--r); padding-bottom: 6px; }
+.pane-h { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; align-items: center; padding: 12px 14px 10px; }
+.dp-r { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.sidechip { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 1px 6px; border-radius: 4px; }
 .sidechip.buyer { background: var(--accent-soft); color: var(--accent); }
 .sidechip.seller { background: var(--ok-soft); color: var(--ok); }
 .pad { padding: 0 14px 8px; display: flex; flex-direction: column; gap: 8px; }
 .factline { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 0 14px 8px; font-size: 12.5px; }
 .factline em { font-style: normal; color: var(--muted); margin-right: 3px; }
 .factline .hid { color: var(--muted); }
-.subh { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 4px 14px 2px; }
-.morelink { border: 0; border-top: 1px solid var(--line); background: none; width: 100%; text-align: left; color: var(--accent); font-weight: 600; font-size: 13px; padding: 9px 14px; }
-.morelink:hover { background: var(--bg); }
-.fullcl { border-top: 1px solid var(--line); }
-.facts.info dd { text-align: right; overflow-wrap: anywhere; }
-.tl { list-style: none; margin: 0; padding: 4px 14px 12px; display: flex; flex-direction: column; }
-.tl li { display: grid; grid-template-columns: 50px 52px minmax(0, 1fr); gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 13px; align-items: baseline; }
-.tl li:first-child { border-top: 0; }
-.tl .date { color: var(--muted); font-size: 12px; }
-.tk { font-size: 11px; font-weight: 600; color: var(--muted); }
-.tk.note { color: var(--accent); } .tk.done { color: var(--ok); } .tk.stage { color: var(--warn); }
+.subh { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 6px 14px 2px; }
+.fullcl { border-top: 1px solid var(--line); margin-top: 4px; }
+
+.composer { margin: 12px 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--bg); padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; }
+.comp-tabs { display: flex; gap: 4px; }
+.comp-tabs button { border: 0; background: none; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 13px; color: var(--muted); }
+.comp-tabs button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 0 0 1px var(--line); }
+.composer textarea, .composer select { width: 100%; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 8px; resize: vertical; }
+.composer select { width: auto; padding: 5px 8px; }
+.comp-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.tl-filters { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 14px 8px; }
+.tl-filters button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 3px 10px; font-size: 12.5px; }
+.tl-filters button span { color: var(--muted); }
+.tl-filters button[aria-pressed="true"] { background: var(--fg); color: var(--surface); border-color: var(--fg); }
+.tl-filters button[aria-pressed="true"] span { color: inherit; opacity: .7; }
+.tl { list-style: none; margin: 0; padding: 0 14px 8px; display: flex; flex-direction: column; }
+.tl li { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.tk { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding-top: 2px; }
+.tk.note { color: var(--accent); } .tk.text { color: var(--ok); } .tk.call { color: var(--waive); } .tk.missed { color: var(--bad); } .tk.email { color: var(--warn); } .tk.done { color: var(--ok); }
+
+.ptask { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; align-items: start; font-size: 13px; padding-top: 6px; border-top: 1px solid var(--line); }
+.ptask:first-of-type { border-top: 0; }
+.ptask.done .title { color: var(--muted); text-decoration: line-through; }
+.ptask .check { width: 18px; height: 18px; }
+.ptask.done .check { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+.deal-li { border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 7px 9px; text-align: left; display: flex; flex-direction: column; gap: 2px; font-size: 13px; font-weight: 600; }
+.deal-li:hover { border-color: var(--accent); }
+.deal-li .muted { font-weight: 400; }
+.row-btns { display: flex; flex-wrap: wrap; gap: 6px; }
 
 /* Deal panel parts */
 .back { border: 0; background: none; color: var(--accent); font-weight: 600; padding: 0; align-self: flex-start; }
@@ -210,7 +255,7 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 </style>
 
 <div class="mock-bar">
-  <span><strong>Mockup</strong> · fake data, "today" is Mon Oct 12, 2026. Click any deal card to open the client.</span>
+  <span><strong>Mockup</strong> · fake data, "today" is Mon Oct 12, 2026. Click a deal card to open the client. No current deal: <button class="linkbtn" data-opencontact="murphy">Kate Murphy (sphere)</button> · <button class="linkbtn" data-opencontact="d16">Kara Voss (past client)</button></span>
   <span class="seg" role="group" aria-label="View as">
     <button id="role-admin" aria-pressed="true">Admin view</button>
     <button id="role-assistant" aria-pressed="false">Assistant view</button>
@@ -466,28 +511,41 @@ function cardHtml(dl) {
 /* ---------- Contacts ---------- */
 const CONTACTS = {
   calloway: {
-    name: "Jordan & Priya Calloway", follow: "Every 30 days", source: "Sphere Referral", referred: "Kara Voss", mailing: "The Calloways",
+    name: "Jordan & Priya Calloway", stage: "Lead", follow: 30, source: "Sphere Referral", referred: "Kara Voss", mailing: "The Calloways",
     tags: ["Buyer", "Seller", "A Lead", "Email Newsletter"],
     phones: [["Jordan", "(612) 555-0148"], ["Priya", "(612) 555-0193"]],
     emails: [["Jordan", "jordan.calloway@example.com"], ["Priya", "priya.calloway@example.com"]],
     address: "2201 Lyndale Ave S #407, Minneapolis, MN 55405",
     household: [["Jordan", "Mar 4"], ["Priya", "Jul 19"], ["Mila (daughter)", "Nov 2"]],
+    background: "First-time buyers in 2019. Moving up for more space and a yard for Mila. Both work from home two days a week.",
     tasks: [
       { t: "Send school district info for Upton Ave", due: "2026-10-13", who: "LP", s: "open" },
       { t: "Ask about storage unit timing", due: "2026-10-20", who: "AS", s: "open" },
     ],
-    notes: [
-      ["2026-10-11", "Note", "Inspection done. Minor items: water heater is 14 years old, deck railing loose. Asking for a $1,500 credit."],
-      ["2026-10-03", "Note", "Priya prefers texts after 5pm. Jordan is fine with calls anytime."],
-      ["2026-09-30", "Note", "Listing their condo too. Want both to close within a week of each other."],
+    history: [
+      ["2026-10-11", "note", "Inspection done. Minor items: water heater is 14 years old, deck railing loose. Asking for a $1,500 credit.", "LP"],
+      ["2026-10-11", "text", "Inspector is wrapping up, we'll go over the report Monday at 4.", "LP"],
+      ["2026-10-09", "call", "Talked through the inspection extension. They're fine waiting until Wed.", "LP"],
+      ["2026-10-06", "email", "Gmail · Re: Earnest money wiring instructions", "AS"],
+      ["2026-10-03", "note", "Priya prefers texts after 5pm. Jordan is fine with calls anytime.", "AS"],
+      ["2026-09-30", "note", "Listing their condo too. Want both to close within a week of each other.", "LP"],
     ],
   },
   murphy: {
-    name: "Kate Murphy", follow: "Every 90 days", source: "Sphere", referred: "", mailing: "Kate Murphy", tags: ["Past Client", "Mailers"],
+    name: "Kate Murphy", stage: "90 Day Sphere", follow: 90, source: "Sphere", referred: "", mailing: "Kate Murphy",
+    tags: ["Past Client", "Mailers", "Christmas Cards", "Email Newsletter", "2026 RE Health Check Needed"],
     phones: [["Mobile", "(651) 555-0172"]], emails: [["", "kate.murphy@example.com"]], address: "1789 Juliet Ave, St. Paul, MN 55105",
-    household: [["Kate", "Jan 22"]],
-    tasks: [{ t: "Call Kate about spring listing timing", due: "2026-10-12", who: "LP", s: "open" }],
-    notes: [["2026-07-14", "Note", "Thinking about selling next spring. Wants a CMA in January."]],
+    household: [["Kate", "Jan 22"], ["Homeiversary", "Jun 18 (2021)"]],
+    background: "Bought on Juliet Ave in 2021. Teacher at Highland Park. Thinking about downsizing in a couple of years.",
+    tasks: [{ t: "Call Kate about spring listing timing", due: "2026-10-12", who: "LP", s: "open" }, { t: "Send homeiversary card", due: "2027-06-11", who: "AS", s: "open" }],
+    history: [
+      ["2026-09-30", "email", "Gmail · Batch email: Timberwolves season tickets are back!", "AS"],
+      ["2026-09-22", "call", "Quick check-in. Kids back in school, no plans to move before spring.", "LP"],
+      ["2026-09-21", "email", "Gmail · Minnesota Market Update – September", "LP"],
+      ["2026-07-14", "note", "Thinking about selling next spring. Wants a CMA in January.", "LP"],
+      ["2026-06-18", "text", "Happy homeiversary! 5 years on Juliet Ave 🎉", "LP"],
+      ["2026-06-02", "missed", "Missed call from Kate", "LP"],
+    ],
   },
 };
 const cidOf = dl => dl.cid || "d" + dl.id;
@@ -495,75 +553,114 @@ function contact(cid) {
   if (CONTACTS[cid]) return CONTACTS[cid];
   const dl = deals.find(x => cidOf(x) === cid);
   const first = dl.name.split(/[ &]/)[0].toLowerCase(), last = dl.name.split(" ").pop().toLowerCase();
+  const closed = dl.stage === "Closed";
   const c = {
-    name: dl.name, follow: dl.stage === "Closed" ? "Every 30 days" : "Not set", source: dl.line.startsWith("Source: ") ? dl.line.slice(8) : "Sphere",
-    referred: "", mailing: dl.name, tags: [dl.side === "buyer" ? "Buyer" : "Seller"].concat(dl.stage === "Closed" ? ["Past Client"] : []),
+    name: dl.name, stage: closed ? "30 Day Sphere" : "Lead", follow: closed ? 30 : null, source: dl.line.startsWith("Source: ") ? dl.line.slice(8) : "Sphere",
+    referred: "", mailing: dl.name, tags: [dl.side === "buyer" ? "Buyer" : "Seller"].concat(closed ? ["Past Client", "Email Newsletter", "Mailers"] : ["Email Newsletter"]),
     phones: [["Mobile", "(612) 555-01" + String(dl.id).padStart(2, "0")]], emails: [["", `${first}.${last}@example.com`]],
-    address: dl.side === "seller" && dl.price ? dl.line : "Twin Cities, MN", household: [], tasks: [], notes: [],
+    address: dl.side === "seller" && dl.price ? dl.line + ", MN" : "Twin Cities, MN", household: [], background: "",
+    tasks: [], history: closed ? [
+      [iso(add(d(dl.closed), 7)), "text", "How's the new place? Let us know if you need any vendor recs.", "LP"],
+      [iso(add(d(dl.closed), 1)), "email", "Gmail · Congrats on closing! A few things for your first week", "AS"],
+    ] : [
+      [dl.since || dl.ms.fa, "call", dl.ms ? "Offer accepted! Walked them through next steps." : "Intro call. Next step scheduled.", "LP"],
+      [dl.since || dl.ms.fa, "email", dl.ms ? "Gmail · Purchase agreement accepted" : "Gmail · Intro email", "AS"],
+    ],
   };
   CONTACTS[cid] = c; return c;
 }
-
-let openContact = null, openPanels = new Set(), fullList = new Set();
+let openContact = null, ctab = {}, tlFilter = "all", composer = "note";
+const isActive = dl => dl.stage !== "Closed";
+const WHO = { LP: "Luke", AS: "Alyssa" };
 
 function renderContact() {
   const c = contact(openContact);
-  const myDeals = deals.filter(x => cidOf(x) === openContact).sort((a, b) => (a.stage === "Closed") - (b.stage === "Closed"));
-  const lead = myDeals.find(x => x.stage === "Under Contract") ? "Under Contract" : myDeals.some(x => x.stage === "Closed") ? "Past Client" : myDeals.length ? "Lead" : "90 Day Sphere";
+  const myDeals = deals.filter(x => cidOf(x) === openContact).sort((a, b) => isActive(b) - isActive(a));
+  const active = myDeals.filter(isActive);
+  if (!ctab[openContact]) ctab[openContact] = active.length ? "deal-" + active[0].id : "timeline";
+  const tab = ctab[openContact];
+  const stage = active.some(x => x.stage === "Under Contract") ? "Under Contract" : c.stage;
+  const lastTouch = c.history.filter(h => ["note", "text", "call", "email"].includes(h[1])).map(h => d(h[0])).sort((a, b) => b - a)[0];
+  const ago = lastTouch ? diff(TODAY, lastTouch) : null;
+  const touchDue = c.follow && ago !== null && ago >= c.follow;
+
   app.innerHTML = `
     <button class="back" data-back="1">← ${side === "buyer" ? "Buyers" : "Sellers"} pipeline</button>
-    <div class="dhead">
-      <div>
-        <h1>${esc(c.name)}</h1>
-        <div class="sub"><span class="stagepill" title="${lead === "Under Contract" ? "Set automatically from the deal" : "Lead stage"}">${lead}</span><span>${esc(c.follow)}</span><span>Source: ${esc(c.source)}</span>${c.tags.map(t => `<span class="tagchip">${esc(t)}</span>`).join("")}</div>
-      </div>
-      <div class="actions">
-        <button class="btn" data-toast="Opens the buyer form: buyer rep dates and BAC, then a purchase agreement when they're under contract">+ Add Buyer</button>
-        <button class="btn" data-toast="Opens the seller form: listing agreement dates, list price and commission">+ Add Seller</button>
-        <button class="btn" data-toast="Adds a note to the timeline">Add note</button>
-      </div>
-    </div>
-    <div class="dgrid">
-      <div class="stack">
-        ${myDeals.length ? myDeals.map(panelHtml).join("") : `<div class="box"><p class="empty" style="padding-top:12px">No deals yet. Use + Add Buyer or + Add Seller to start one.</p></div>`}
-        <div class="box"><h2>Timeline</h2>${timelineHtml(c, myDeals)}</div>
-      </div>
-      <div class="stack">
-        <div class="box"><h2>Contact</h2><dl class="facts info">${infoHtml(c)}</dl></div>
-        <div class="box"><h2>Tasks <small>${c.tasks.filter(t => t.s === "open").length} open</small></h2>
-          ${c.tasks.length ? c.tasks.map((t, i) => ptaskHtml(t, i)).join("") : `<p class="empty">No tasks outside their deals.</p>`}
-          <div style="padding:8px 12px 12px"><button class="btn" data-toast="Quick add, already linked to ${esc(c.name)}">+ Add task</button></div>
+    <div class="c3">
+      <aside class="cleft">
+        <div class="card-s">
+          <div class="who-h"><span class="avatar">${esc(initials(c.name))}</span><div><h1>${esc(c.name)}</h1><div class="muted sm">${ago === null ? "No contact yet" : `Last contact ${ago === 0 ? "today" : ago + " days ago"}`}</div></div></div>
+          <ul class="contact-l">
+            ${c.phones.map(([l, v]) => `<li><span class="ic">☎</span><span><span class="lk">${v}</span> <span class="muted sm">${esc(l)}</span></span></li>`).join("")}
+            ${c.emails.map(([l, v]) => `<li><span class="ic">✉</span><span><span class="lk">${v}</span> <span class="muted sm">${esc(l)}</span></span></li>`).join("")}
+            <li><span class="ic">⌂</span><span>${esc(c.address)}</span></li>
+          </ul>
         </div>
-      </div>
+        <div class="card-s">
+          <h3>Details</h3>
+          <dl class="kv">
+            <dt>Stage</dt><dd>${esc(stage)}${stage === "Under Contract" ? ` <span class="muted sm">(from deal)</span>` : ""}</dd>
+            <dt>Follow up</dt><dd>${c.follow ? `Every ${c.follow} days${touchDue ? ` <span class="due-chip">Due now</span>` : ""}` : `<span class="muted">Not set</span>`}</dd>
+            <dt>Assigned to</dt><dd>Luke Pettersen</dd>
+            <dt>Source</dt><dd>${esc(c.source)}</dd>
+            ${c.referred ? `<dt>Referred by</dt><dd><span class="lk">${esc(c.referred)}</span></dd>` : ""}
+            <dt>Mailing name</dt><dd>${esc(c.mailing)}</dd>
+          </dl>
+          <div class="tags">${c.tags.map(t => `<span class="tagchip">${esc(t)}</span>`).join("")}<button class="tag-add" data-toast="Add a tag" aria-label="Add tag">+</button></div>
+        </div>
+        <div class="card-s">
+          <h3>Household &amp; dates</h3>
+          ${c.household.length ? `<dl class="kv">${c.household.map(([n, b]) => `<dt>${esc(n)}</dt><dd>${esc(b)}</dd>`).join("")}</dl>` : `<p class="muted sm">No birthdays added.</p>`}
+        </div>
+        <div class="card-s"><h3>Background</h3>${c.background ? `<p class="sm">${esc(c.background)}</p>` : `<p class="muted sm">Add background</p>`}</div>
+      </aside>
+
+      <section class="ccenter">
+        <div class="ctabs" role="tablist">
+          ${active.map(dl => `<button role="tab" data-ctab="deal-${dl.id}" aria-selected="${tab === "deal-" + dl.id}"><span class="sidechip ${dl.side}">${dl.side === "buyer" ? "Buyer" : "Seller"}</span> ${esc(shortAddr(dl))}</button>`).join("")}
+          <button role="tab" data-ctab="timeline" aria-selected="${tab === "timeline"}">Timeline <span class="muted">${c.history.length}</span></button>
+        </div>
+        ${tab === "timeline" ? timelinePane(c, myDeals) : dealPane(deals.find(x => "deal-" + x.id === tab))}
+      </section>
+
+      <aside class="cright">
+        <div class="card-s">
+          <h3>Tasks <span class="muted">${c.tasks.filter(t => t.s === "open").length}</span><button class="plus" data-toast="Quick add, already linked to ${esc(c.name)}" aria-label="Add task">+</button></h3>
+          ${c.tasks.length ? c.tasks.map((t, i) => ptaskHtml(t, i)).join("") : `<p class="muted sm">No tasks outside their deals.</p>`}
+        </div>
+        <div class="card-s">
+          <h3>Deals <span class="muted">${myDeals.length}</span></h3>
+          ${myDeals.map(dl => `<button class="deal-li" data-ctab="${isActive(dl) ? "deal-" + dl.id : "timeline"}">
+            <span><span class="sidechip ${dl.side}">${dl.side === "buyer" ? "Buyer" : "Seller"}</span> ${esc(shortAddr(dl))}</span>
+            <span class="muted sm">${esc(label(dl.side, dl.stage))}${dl.stage === "Closed" ? " · " + short(d(dl.closed)) : ""}${dl.price ? " · " + money(dl.price / 1000) + "k" : ""}</span>
+          </button>`).join("") || `<p class="muted sm">No deals yet.</p>`}
+          <div class="row-btns"><button class="btn" data-toast="Opens the buyer form: buyer rep dates and BAC, then a purchase agreement when they go under contract">+ Add Buyer</button><button class="btn" data-toast="Opens the seller form: listing agreement dates, list price and commission">+ Add Seller</button></div>
+        </div>
+      </aside>
     </div>`;
 }
 
-function panelHtml(dl) {
-  const isOpen = openPanels.has(dl.id), uc = dl.stage === "Under Contract", closed = dl.stage === "Closed";
-  const h = health(dl), done = dl.tasks.filter(t => eff(dl, t) !== "open").length;
-  const right = closed ? `Closed ${short(d(dl.closed))}` : uc ? `Closing ${short(d(dl.ms.close))}` : `${dl.tasks.length - done} open steps`;
-  let body = "";
-  if (isOpen && !closed) {
-    const open = openTasks(dl);
-    const phases = [...new Set(dl.tasks.map(t => t.phase))];
-    if (!expanded[dl.id]) { const f = phases.find(p => dl.tasks.some(t => t.phase === p && eff(dl, t) === "open")); expanded[dl.id] = new Set(f ? [f] : []); }
-    const others = (dl.people || []).filter(p => !["Buyer", "Seller"].includes(p[1]));
-    body = `
-      ${uc ? `<div class="pad">${datesHtml(dl)}</div>` : ""}
-      ${uc ? `<div class="factline">${factsInline(dl)}</div>` : ""}
-      ${others.length ? `<div class="factline">${others.map(([n, r]) => `<span><em>${r}</em> ${esc(n)}</span>`).join("")}</div>` : ""}
-      <div class="subh">Up next</div>
-      ${open.length ? open.slice(0, 3).map(t => rowHtml(dl, t)).join("") : `<p class="empty">All caught up.</p>`}
-      <button class="morelink" data-full="${dl.id}" aria-expanded="${fullList.has(dl.id)}">${fullList.has(dl.id) ? "Hide" : "Show"} full checklist · ${done} of ${dl.tasks.length} done</button>
-      ${fullList.has(dl.id) ? `<div class="fullcl">${phases.map(p => phaseHtml(dl, p)).join("")}</div>` : ""}`;
-  }
-  return `<section class="box dpanel ${isOpen ? "open" : ""}" id="deal-${dl.id}">
-    <button class="dp-h" data-panel="${dl.id}" aria-expanded="${isOpen}">
-      <span class="dp-l"><span class="sidechip ${dl.side}">${dl.side === "buyer" ? "Buyer" : "Seller"}</span><span class="dp-t">${esc(dl.line)}</span>${dl.price ? `<span class="num">${money(dl.price)}</span>` : ""}</span>
-      <span class="dp-r"><span class="stagepill">${esc(label(dl.side, dl.stage))}</span>${closed ? "" : `<span class="dot ${h}"></span>`}<span class="muted">${right}</span></span>
-    </button>
-    ${body}
-  </section>`;
+const initials = n => n.split(/\s+|&/).filter(w => /^[A-Z]/.test(w)).slice(0, 2).map(w => w[0]).join("");
+const shortAddr = dl => dl.price ? dl.line.split(",")[0] : dl.stage;
+
+function dealPane(dl) {
+  const uc = dl.stage === "Under Contract", h = health(dl);
+  const open = openTasks(dl), phases = [...new Set(dl.tasks.map(t => t.phase))];
+  if (!expanded[dl.id]) { const f = phases.find(p => dl.tasks.some(t => t.phase === p && eff(dl, t) === "open")); expanded[dl.id] = new Set(f ? [f] : []); }
+  const done = dl.tasks.filter(t => eff(dl, t) !== "open").length;
+  const others = (dl.people || []).filter(p => !["Buyer", "Seller"].includes(p[1]));
+  return `<div class="pane">
+    <div class="pane-h">
+      <div><b>${esc(dl.line)}</b>${dl.price ? ` <span class="num muted">${money(dl.price)}</span>` : ""}</div>
+      <div class="dp-r"><span class="stagepill">${esc(label(dl.side, dl.stage))}</span><span class="dot ${h}"></span><span class="muted sm">${uc ? "Closing " + short(d(dl.ms.close)) : `${dl.tasks.length - done} open steps`}</span></div>
+    </div>
+    ${uc ? `<div class="pad">${datesHtml(dl)}</div><div class="factline">${factsInline(dl)}</div>` : ""}
+    ${others.length ? `<div class="factline">${others.map(([n, r]) => `<span><em>${r}</em> ${esc(n)}</span>`).join("")}</div>` : ""}
+    <div class="subh">Up next</div>
+    ${open.length ? open.slice(0, 3).map(t => rowHtml(dl, t)).join("") : `<p class="empty">All caught up.</p>`}
+    <div class="subh" style="margin-top:6px">Checklist · ${done} of ${dl.tasks.length} done</div>
+    <div class="fullcl">${phases.map(p => phaseHtml(dl, p)).join("")}</div>
+  </div>`;
 }
 
 function factsInline(dl) {
@@ -572,38 +669,35 @@ function factsInline(dl) {
     .map(([k, v]) => `<span><em>${k}</em> ${v === null ? `<i class="hid">hidden</i>` : `<b class="num">${v}</b>`}</span>`).join("");
 }
 
-function infoHtml(c) {
-  const rows = [];
-  c.phones.forEach(([l, v]) => rows.push([`Phone${l && c.phones.length > 1 ? " · " + l : ""}`, v]));
-  c.emails.forEach(([l, v]) => rows.push([`Email${l && c.emails.length > 1 ? " · " + l : ""}`, v]));
-  rows.push(["Address", c.address]);
-  if (c.mailing) rows.push(["Mailing name", c.mailing]);
-  if (c.referred) rows.push(["Referred by", c.referred]);
-  c.household.forEach(([n, b]) => rows.push(["Birthday · " + n, b]));
-  return rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
-}
-
 function ptaskHtml(t, i) {
   const n = diff(d(t.due), TODAY), done = t.s === "done";
-  return `<div class="row ${done ? "done" : ""}">
+  return `<div class="ptask ${done ? "done" : ""}">
     <button class="check" data-ptask="${i}" aria-label="Mark ${done ? "not done" : "done"}: ${esc(t.t)}">${done ? CHECK : ""}</button>
-    <span class="title">${esc(t.t)}</span>
-    <span class="r"><span class="due date ${!done && n < 0 ? "overdue" : !done && n === 0 ? "today" : ""}">${n === 0 && !done ? "Today" : short(d(t.due))}</span><span class="av ${t.who === "AS" ? "as" : ""}">${t.who}</span></span>
+    <div><div class="title">${esc(t.t)}</div><div class="sm ${!done && n < 0 ? "od" : !done && n === 0 ? "td" : "muted"}">${n === 0 && !done ? "Today" : fmt(d(t.due))} · ${WHO[t.who]}</div></div>
   </div>`;
 }
 
-function timelineHtml(c, myDeals) {
-  const items = c.notes.map(([dt, k, txt]) => ({ dt, k, txt }));
+const KIND = { note: "Note", text: "Text", call: "Call", missed: "Missed call", email: "Email", stage: "Stage", done: "Step done" };
+function timelinePane(c, myDeals) {
+  const items = c.history.map(([dt, k, txt, who]) => ({ dt, k, txt, who }));
   myDeals.forEach(dl => {
     const where = dl.side === "buyer" ? "Buyer" : "Seller";
-    if (dl.stage === "Closed") items.push({ dt: dl.closed, k: "Stage", txt: `${where} deal closed · ${dl.line}` });
-    else items.push({ dt: dl.ms ? dl.ms.fa : dl.since, k: "Stage", txt: `${where} deal moved to ${label(dl.side, dl.stage)}` });
-    dl.tasks.filter(t => t.s === "done").forEach(t => items.push({ dt: iso(dueOf(dl, t) > TODAY ? TODAY : dueOf(dl, t)), k: "Done", txt: `${t.t} · ${t.who === "AS" ? "Alyssa" : "Luke"}` }));
+    items.push(dl.stage === "Closed" ? { dt: dl.closed, k: "stage", txt: `${where} deal closed · ${dl.line}` } : { dt: dl.ms ? dl.ms.fa : dl.since, k: "stage", txt: `${where} deal moved to ${label(dl.side, dl.stage)}` });
+    dl.tasks.filter(t => t.s === "done").forEach(t => items.push({ dt: iso(dueOf(dl, t) > TODAY ? TODAY : dueOf(dl, t)), k: "done", txt: t.t, who: t.who }));
   });
-  items.sort((a, b) => d(b.dt) - d(a.dt));
-  if (!items.length) return `<p class="empty">Nothing yet.</p>`;
-  return `<ol class="tl">${items.slice(0, 9).map(i => `<li><span class="date">${short(d(i.dt))}</span><span class="tk ${i.k.toLowerCase()}">${i.k}</span><span>${esc(i.txt)}</span></li>`).join("")}</ol>
-    ${items.length > 9 ? `<p class="empty">${items.length - 9} older entries</p>` : ""}`;
+  const F = { all: () => true, note: i => i.k === "note", text: i => i.k === "text", call: i => i.k === "call" || i.k === "missed", email: i => i.k === "email", deal: i => i.k === "stage" || i.k === "done" };
+  const list = items.filter(F[tlFilter]).sort((a, b) => d(b.dt) - d(a.dt));
+  const count = k => items.filter(F[k]).length;
+  return `<div class="pane">
+    <div class="composer">
+      <div class="comp-tabs">${[["note", "Note"], ["text", "Text"], ["call", "Log call"]].map(([k, l]) => `<button data-comp="${k}" aria-pressed="${composer === k}">${l}</button>`).join("")}</div>
+      ${composer === "call" ? `<div class="comp-row"><select id="call-outcome" aria-label="Call outcome"><option>Talked</option><option>Left voicemail</option><option>No answer</option></select></div>` : ""}
+      <textarea id="comp-text" rows="3" placeholder="${composer === "note" ? "Add a note. Type @alyssa to notify." : composer === "text" ? "Text " + esc(c.phones[0][1]) + " from your business number" : "What did you talk about?"}"></textarea>
+      <div class="comp-foot"><span class="muted sm">${composer === "text" ? "Replies show up in Messages and here." : "Email stays in Gmail. Sent and received emails show up here automatically."}</span><button class="btn primary" data-save="1">${composer === "note" ? "Save note" : composer === "text" ? "Send text" : "Log call"}</button></div>
+    </div>
+    <div class="tl-filters">${[["all", "All"], ["note", "Notes"], ["text", "Texts"], ["call", "Calls"], ["email", "Emails"], ["deal", "Deal activity"]].map(([k, l]) => `<button data-tlf="${k}" aria-pressed="${tlFilter === k}">${l} <span>${count(k)}</span></button>`).join("")}</div>
+    ${list.length ? `<ol class="tl">${list.map(i => `<li><span class="tk ${i.k}">${KIND[i.k]}</span><div><div>${esc(i.txt)}</div><div class="muted sm">${fmt(d(i.dt))}${i.who ? " · " + WHO[i.who] : ""}</div></div></li>`).join("")}</ol>` : `<p class="empty">Nothing here yet.</p>`}
+  </div>`;
 }
 
 function datesHtml(dl) {
@@ -668,12 +762,9 @@ function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; 
 
 function openCard(dealId) {
   const dl = deals.find(x => x.id === dealId);
-  openContact = cidOf(dl); side = dl.side; editing = null; openMenu = null;
-  openPanels = new Set([dl.id]);
-  render();
-  const p = document.getElementById("deal-" + dl.id);
-  window.scrollTo(0, 0);
-  if (p && deals.filter(x => cidOf(x) === openContact).length > 1) p.scrollIntoView({ block: "start" });
+  openContact = cidOf(dl); side = dl.side; editing = null; openMenu = null; tlFilter = "all";
+  ctab[openContact] = isActive(dl) ? "deal-" + dl.id : "timeline";
+  render(); window.scrollTo(0, 0);
 }
 
 document.addEventListener("click", e => {
@@ -700,9 +791,21 @@ document.addEventListener("click", e => {
     return;
   }
   if (b.dataset.deal) { openCard(+b.dataset.deal); return; }
+  if (b.dataset.opencontact) { openContact = b.dataset.opencontact; tlFilter = "all"; editing = null; render(); window.scrollTo(0, 0); return; }
   if (b.dataset.back) { openContact = null; editing = null; try { history.replaceState(null, "", location.pathname); } catch (_) {} render(); return; }
-  if (b.dataset.panel) { const id = +b.dataset.panel; openPanels.has(id) ? openPanels.delete(id) : openPanels.add(id); render(); return; }
-  if (b.dataset.full) { const id = +b.dataset.full; fullList.has(id) ? fullList.delete(id) : fullList.add(id); render(); return; }
+  if (b.dataset.ctab) { ctab[openContact] = b.dataset.ctab; editing = null; render(); return; }
+  if (b.dataset.comp) { composer = b.dataset.comp; render(); const t = el("comp-text"); if (t) t.focus(); return; }
+  if (b.dataset.tlf) { tlFilter = b.dataset.tlf; render(); return; }
+  if (b.dataset.save) {
+    const ta = el("comp-text"), txt = ta && ta.value.trim();
+    if (!txt) { toast("Type something first."); return; }
+    const c = contact(openContact);
+    const kind = composer === "call" ? "call" : composer;
+    const out = composer === "call" ? el("call-outcome").value + ": " : "";
+    c.history.unshift([iso(TODAY), kind, out + txt, "LP"]);
+    toast(composer === "note" ? "Note saved." : composer === "text" ? "Text sent." : "Call logged.");
+    render(); return;
+  }
   if (b.dataset.ptask) { const t = contact(openContact).tasks[+b.dataset.ptask]; t.s = t.s === "open" ? "done" : "open"; render(); return; }
   if (b.dataset.ms) { const k = dl.id + ":" + b.dataset.ms; editing = editing === k ? null : k; render(); return; }
   if (b.dataset.close) { editing = null; render(); return; }
@@ -744,10 +847,10 @@ document.addEventListener("change", e => {
 function fromHash() {
   const m = location.hash.match(/^#contact-([\w-]+)$/);
   if (m && (CONTACTS[m[1]] || deals.some(x => cidOf(x) === m[1]))) {
-    openContact = m[1];
-    const first = deals.find(x => cidOf(x) === m[1] && x.stage !== "Closed");
-    if (first) { side = first.side; openPanels = new Set([first.id]); }
-    render();
+    openContact = m[1]; tlFilter = "all";
+    const first = deals.find(x => cidOf(x) === m[1] && isActive(x));
+    if (first) side = first.side;
+    render(); window.scrollTo(0, 0);
   }
 }
 window.addEventListener("hashchange", fromHash);
