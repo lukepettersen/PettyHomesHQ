@@ -274,4 +274,28 @@ archive one-offs and dated notices.
 
 ## Owner feedback
 
-*(Filled in during the walkthrough.)*
+### Deals
+- **Dislikes:** deal data lives in three places (deal card, BUY/SELL custom fields, Master
+  File); the Closed column clutters the board.
+- **Direction:** owner agrees the stage-per-step setup is clunky and prefers a
+  transaction-coordination approach.
+- **Recommendation (pending owner sign-off on mockups):** fewer stages, with the step-by-step
+  work moved into the checklist. Stages mark real status changes; the checklist carries
+  everything in between and shows progress on the card.
+  - Buyer: Lead → Consult → Rep Signed / Searching → Offer Out → Under Contract → Closed.
+    "BC Sent to Sign", "Showing Homes" become checklist steps; "Pending" becomes the
+    Inspection milestone being Met/Waived (shown on the card), not a separate column.
+  - Seller: Lead → Consult → Listing Signed / Prep → Coming Soon → Active → Under Contract →
+    Closed. "Withheld", "Media Scheduled/Complete", "Coming Soon Prep" become checklist
+    phases under Prep. Coming Soon and Active stay as stages because they mirror MLS status.
+  - Stage changes happen automatically when the key checklist step is done (e.g. marking
+    "Buyer rep signed" moves the deal), replacing the "Change Deal Stage to…" tasks.
+  - Closed deals drop off the board after ~30 days into a Closed list/report.
+
+### Sphere follow-up
+- Make follow-up frequency (7/30/60/90/180 days) its own contact field, separate from stage,
+  with a "due for a touch" list.
+
+### Data import
+- **Wait.** No FUB data moves into HQ yet; build and review with seed data first. The
+  8,000-contact agent database decision is deferred to import time.
