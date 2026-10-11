@@ -220,6 +220,9 @@ body { background: var(--bg); }
 #pg-deals .tagchip { display: inline-flex; align-items: center; }
 #pg-deals .tagchip button { border: 0; background: none; color: inherit; padding: 0 0 0 5px; font-size: 13px; line-height: 1; }
 #pg-deals .tagchip button:hover { color: var(--bad); }
+#pg-deals .member { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; border-top: 1px solid var(--line); }
+#pg-deals .member:first-of-type { border-top: 0; padding-top: 0; }
+#pg-deals .member-n { font-weight: 700; font-size: 13px; }
 #pg-deals .linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; text-decoration: underline; font-size: inherit; }
 #pg-deals .sm { font-size: 12.5px; }
 #pg-deals .od { color: var(--bad); font-size: 12.5px; }
@@ -985,20 +988,35 @@ function personModal() {
   el("modal").innerHTML = `<div class="modal-bg" data-close="1"><form class="modal" id="add-form" autocomplete="off">
     <h2>Add person</h2>
     <div class="two"><label>First name<input class="input" id="f-first" required></label><label>Last name<input class="input" id="f-last"></label></div>
-    <label>Phone<input class="input" id="f-phone"></label><label>Email<input class="input" id="f-email"></label>
+    <div class="two"><label>Phone<input class="input" id="f-phone"></label><label>Email<input class="input" id="f-email"></label></div>
+    <div id="p2" hidden>
+      <p style="margin:4px 0 6px;font-weight:600;color:var(--fg)">Second person</p>
+      <div class="two"><label>First name<input class="input" id="g-first"></label><label>Last name<input class="input" id="g-last" placeholder="Leave blank if the same"></label></div>
+      <div class="two"><label>Phone<input class="input" id="g-phone"></label><label>Email<input class="input" id="g-email"></label></div>
+    </div>
+    <button type="button" class="btn" id="p2-toggle" data-p2="1">+ Add a second person (spouse, partner, co-buyer)</button>
+    <p id="p-preview"></p>
     <div class="two"><label>Stage<select class="input" id="f-stage">${["Lead", "7 Day Sphere", "30 Day Sphere", "90 Day Sphere", "180 Day Sphere", "Realtor", "Industry Partners"].map(s => `<option>${s}</option>`).join("")}</select></label>
     <label>Source<select class="input" id="f-source">${["Sphere", "Sphere Referral", "Website", "Zillow Preferred", "AJ Gimme Lead", "Stacie Rihl"].map(s => `<option>${s}</option>`).join("")}</select></label></div>
-    <div class="foot"><button type="button" class="btn" data-close="1">Cancel</button><button class="btn primary" type="submit">Add person</button></div>
+    <div class="foot"><button type="button" class="btn" data-close="1">Cancel</button><button class="btn primary" type="submit">Add</button></div>
   </form></div>`;
   el("f-first").focus();
+  const v = id => el(id).value.trim();
+  const display = () => {
+    const a = [v("f-first"), v("f-last")].filter(Boolean).join(" ");
+    if (el("p2").hidden || !v("g-first")) return a;
+    const gl = v("g-last") || v("f-last");
+    return gl === v("f-last") ? `${v("f-first")} & ${v("g-first")} ${gl}`.trim() : `${a} & ${v("g-first")} ${gl}`;
+  };
+  const preview = () => { el("p-preview").textContent = !el("p2").hidden && v("g-first") ? `Shows as "${display()}". Both names, phones and emails are searchable, and texts from either phone land on this contact.` : ""; };
+  el("add-form").addEventListener("input", preview);
   el("add-form").addEventListener("submit", e => {
     e.preventDefault();
-    const name = (el("f-first").value + " " + el("f-last").value).trim(), st = el("f-stage").value, m = st.match(/\d+/);
-    people.push({ cid: "x" + (people.length + 100), name, stage: st, follow: m ? +m[0] : null, last: 0, source: el("f-source").value, tags: [], deal: "", phone: el("f-phone").value || "—", assigned: "Luke Pettersen", dealStatus: "No active deal" });
+    const name = display(), st = el("f-stage").value, m = st.match(/\d+/);
+    people.push({ cid: "x" + (people.length + 100), name, stage: st, follow: m ? +m[0] : null, last: 0, source: el("f-source").value, tags: [], deal: "", phone: v("f-phone") || "—", assigned: "Luke Pettersen", dealStatus: "No active deal" });
     el("modal").innerHTML = ""; toast(`Added ${name}.`); render();
   });
 }
-
 let tt; function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
 
 document.addEventListener("click", e => {
@@ -1020,6 +1038,7 @@ document.addEventListener("click", e => {
   if (ds.saveas) { saveModal(saveTarget || (cur ? findList(cur)[0].id : collections[0].id)); return; }
   if (ds.sort) { sort = ds.sort; renderMain(); return; }
   if (ds.add) { personModal(); return; }
+  if (ds.p2) { el("p2").hidden = false; b.remove(); el("g-first").focus(); return; }
   if (ds.clear) { sel.clear(); renderMain(); return; }
   if (ds.toast) { toast(ds.toast); return; }
 });
@@ -1278,7 +1297,7 @@ const CONTACTS = {
     phones: [["Jordan", "(612) 555-0148"], ["Priya", "(612) 555-0193"]],
     emails: [["Jordan", "jordan.calloway@example.com"], ["Priya", "priya.calloway@example.com"]],
     address: "2201 Lyndale Ave S #407, Minneapolis, MN 55405",
-    household: [["Jordan", "Mar 4"], ["Priya", "Jul 19"], ["Mila (daughter)", "Nov 2"]],
+    birthdays: [["Jordan", "Mar 4"], ["Priya", "Jul 19"], ["Mila (daughter)", "Nov 2"]], homeiversary: "Aug 16, 2019 (Lyndale condo)",
     tasks: [
       { t: "Send school district info for Upton Ave", due: "2026-10-13", who: "LP", s: "open" },
       { t: "Ask about storage unit timing", due: "2026-10-20", who: "AS", s: "open" },
@@ -1296,7 +1315,7 @@ const CONTACTS = {
     name: "Kate Murphy", stage: "90 Day Sphere", follow: 90, source: "Sphere", referred: "", mailing: "Kate Murphy",
     tags: ["Past Client", "Mailers", "Christmas Cards", "Email Newsletter", "2026 RE Health Check Needed"],
     phones: [["Mobile", "(651) 555-0172"]], emails: [["", "kate.murphy@example.com"]], address: "1789 Juliet Ave, St. Paul, MN 55105",
-    household: [["Kate", "Jan 22"], ["Homeiversary", "Jun 18 (2021)"]],
+    birthdays: [["Kate", "Jan 22"]], homeiversary: "Jun 18, 2021",
     tasks: [{ t: "Call Kate about spring listing timing", due: "2026-10-12", who: "LP", s: "open" }, { t: "Send homeiversary card", due: "2027-06-11", who: "AS", s: "open" }],
     history: [
       ["2026-09-30", "email", "Gmail · Batch email: Timberwolves season tickets are back!", "AS"],
@@ -1328,16 +1347,18 @@ function contact(cid) {
     const [name, stage, follow, source, tags, phone, last] = EXTRA[cid];
     const f = name.split(/[ &]/)[0].toLowerCase(), l = name.split(" ").pop().toLowerCase();
     return CONTACTS[cid] = { name, stage, follow, source, referred: "", mailing: name, tags: [...tags], phones: [["Mobile", phone]], emails: [["", `${f}.${l}@example.com`]],
-      address: "Twin Cities, MN", household: [], tasks: [], history: [[iso(add(TODAY, -last)), "call", "Caught up. Nothing new on their end.", "LP"], [iso(add(TODAY, -last - 30)), "email", "Gmail · Minnesota Market Update", "LP"]] };
+      address: "Twin Cities, MN", birthdays: [], homeiversary: "", tasks: [], history: [[iso(add(TODAY, -last)), "call", "Caught up. Nothing new on their end.", "LP"], [iso(add(TODAY, -last - 30)), "email", "Gmail · Minnesota Market Update", "LP"]] };
   }
   const dl = deals.find(x => cidOf(x) === cid);
   const first = dl.name.split(/[ &]/)[0].toLowerCase(), last = dl.name.split(" ").pop().toLowerCase();
   const closed = dl.stage === "Closed";
+  const pair = memberNames(dl.name);
   const c = {
     name: dl.name, stage: closed ? "30 Day Sphere" : "Lead", follow: closed ? 30 : null, source: dl.line.startsWith("Source: ") ? dl.line.slice(8) : "Sphere",
     referred: "", mailing: dl.name, tags: [dl.side === "buyer" ? "Buyer" : "Seller"].concat(closed ? ["Past Client", "Email Newsletter", "Mailers"] : ["Email Newsletter"]),
-    phones: [["Mobile", "(612) 555-01" + String(dl.id).padStart(2, "0")]], emails: [["", `${first}.${last}@example.com`]],
-    address: dl.side === "seller" && dl.price ? dl.line + ", MN" : "Twin Cities, MN", household: [],
+    phones: pair ? pair.map((n, i) => [n.split(" ")[0], "(612) 555-01" + String(dl.id + i * 40).padStart(2, "0")]) : [["Mobile", "(612) 555-01" + String(dl.id).padStart(2, "0")]],
+    emails: pair ? pair.map(n => [n.split(" ")[0], n.toLowerCase().replace(" ", ".") + "@example.com"]) : [["", `${first}.${last}@example.com`]],
+    address: dl.side === "seller" && dl.price ? dl.line + ", MN" : "Twin Cities, MN", birthdays: [], homeiversary: closed ? fmt(d(dl.closed)).replace(/^\w+ /, "") + ", 2026" : "",
     tasks: [], history: closed ? [
       [iso(add(d(dl.closed), 7)), "text", "How's the new place? Let us know if you need any vendor recs.", "LP"],
       [iso(add(d(dl.closed), 1)), "email", "Gmail · Congrats on closing! A few things for your first week", "AS"],
@@ -1519,7 +1540,7 @@ const OPTS = {
 const ALL_TAGS = ["A Lead", "B Lead", "C Lead", "D Lead", "Buyer", "Seller", "Past Client", "Email Newsletter", "Mailers", "Christmas Cards", "Petty Homes Event List", "Real Estate Health Check", "2026 RE Health Check Needed", "Google Review Sent", "Investor", "No Bday Needed", "Timberwolves Tickets 2026-2027 NOT RESPONDED"];
 const followTxt = n => n ? `Every ${n} days` : "Not set";
 
-function leftHtml(c, stage, ago, touchDue) { return infoCard(c, ago) + detailsCard(c, stage, touchDue) + tagsCard(c) + householdCard(c); }
+function leftHtml(c, stage, ago, touchDue) { return infoCard(c, ago) + detailsCard(c, stage, touchDue) + tagsCard(c) + datesCard(c); }
 const head = (title, key) => `<h3>${title}${editCard === key ? "" : `<button class="edit-btn" data-editcard="${key}">Edit</button>`}</h3>`;
 const foot = key => `<div class="ed-foot"><button class="btn" data-cancelcard="1">Cancel</button><button class="btn primary" data-savecard="${key}">Save</button></div>`;
 const listRows = (arr, kind, ph) => arr.map(([l, v], i) => `<div class="ed-row"><input class="lbl" data-${kind}l="${i}" value="${esc(l)}" placeholder="Label" aria-label="Label"><input data-${kind}v="${i}" value="${esc(v)}" placeholder="${ph}" aria-label="${ph}"><button class="rm" data-rm="${kind}:${i}" aria-label="Remove">×</button></div>`).join("");
@@ -1535,11 +1556,29 @@ function infoCard(c, ago) {
   }
   return `<div class="card-s">
     <div class="who-h"><span class="avatar">${esc(initials(c.name))}</span><div style="flex:1;min-width:0"><h1>${esc(c.name)}</h1><div class="muted sm">${ago === null ? "No contact yet" : `Last contact ${ago === 0 ? "today" : ago === 1 ? "yesterday" : ago + " days ago"}`}</div></div><button class="edit-btn" data-editcard="info">Edit</button></div>
-    <ul class="contact-l">
-      ${c.phones.map(([l, v]) => `<li><span class="ic">☎</span><span><span class="lk">${esc(v)}</span> <span class="muted sm">${esc(l)}</span></span></li>`).join("")}
-      ${c.emails.map(([l, v]) => `<li><span class="ic">✉</span><span><span class="lk">${esc(v)}</span> <span class="muted sm">${esc(l)}</span></span></li>`).join("")}
-      <li><span class="ic">⌂</span><span>${esc(c.address)}</span></li>
-    </ul></div>`;
+    ${contactLines(c)}
+    <ul class="contact-l"><li><span class="ic">⌂</span><span>${esc(c.address)}</span></li></ul></div>`;
+}
+
+// Two people on one contact: "Jordan & Priya Calloway" or "Carol Fisk & Dean Moreno".
+function memberNames(name) {
+  const parts = name.split(" & ");
+  if (parts.length !== 2) return null;
+  let [a, b] = parts.map(x => x.trim());
+  if (!a.includes(" ")) a += " " + b.split(" ").slice(1).join(" ");
+  return [a, b];
+}
+function contactLines(c) {
+  const names = memberNames(c.name);
+  const li = (ic, v, l) => `<li><span class="ic">${ic}</span><span><span class="lk">${esc(v)}</span>${l ? ` <span class="muted sm">${esc(l)}</span>` : ""}</span></li>`;
+  if (!names) return `<ul class="contact-l">${c.phones.map(([l, v]) => li("☎", v, l)).join("")}${c.emails.map(([l, v]) => li("✉", v, l)).join("")}</ul>`;
+  return names.map(full => {
+    const first = full.split(" ")[0];
+    const mine = r => r[0] === first;
+    return `<div class="member"><div class="member-n">${esc(full)}</div><ul class="contact-l">
+      ${c.phones.filter(mine).map(([, v]) => li("☎", v)).join("") || `<li class="muted sm">No phone yet</li>`}
+      ${c.emails.filter(mine).map(([, v]) => li("✉", v)).join("")}</ul></div>`;
+  }).join("");
 }
 
 function pick(k, cur) {
@@ -1579,21 +1618,23 @@ function tagsCard(c) {
   </div>`;
 }
 
-function householdCard(c) {
-  if (editCard === "household") {
-    return `<div class="card-s ed">${head("Household &amp; dates", "household")}
-      ${listRows(draft.household, "h", "Date, e.g. Mar 4")}<button class="addlink" data-addrow="h">+ Add person or date</button>
-      ${foot("household")}</div>`;
+function datesCard(c) {
+  if (editCard === "dates") {
+    return `<div class="card-s ed">${head("Birthdays &amp; homeiversary", "dates")}
+      <label>Birthdays</label>${listRows(draft.birthdays, "h", "Date, e.g. Mar 4")}<button class="addlink" data-addrow="h">+ Add birthday</button>
+      <label>Homeiversary<input data-f="homeiversary" value="${esc(draft.homeiversary || "")}" placeholder="Fills in when a deal closes"></label>
+      ${foot("dates")}</div>`;
   }
-  return `<div class="card-s">${head("Household &amp; dates", "household")}
-    ${c.household.length ? `<dl class="kv">${c.household.map(([n, b]) => `<dt>${esc(n)}</dt><dd>${esc(b)}</dd>`).join("")}</dl>` : `<p class="muted sm">No birthdays or dates yet.</p>`}</div>`;
+  return `<div class="card-s">${head("Birthdays &amp; homeiversary", "dates")}
+    <dl class="kv">${c.birthdays.map(([n, b]) => `<dt>${esc(n)}</dt><dd>${esc(b)}</dd>`).join("") || `<dt>Birthdays</dt><dd class="muted">None added</dd>`}
+    <dt>Homeiversary</dt><dd>${c.homeiversary ? esc(c.homeiversary) : `<span class="muted">Fills in when a deal closes</span>`}</dd></dl></div>`;
 }
 
 function collect() {
   if (!draft) return;
   const q = s => [...document.querySelectorAll(s)];
   q("[data-f]").forEach(i => { if (i.value !== "__new") draft[i.dataset.f] = i.value; });
-  [["p", "phones"], ["e", "emails"], ["h", "household"]].forEach(([k, f]) => {
+  [["p", "phones"], ["e", "emails"], ["h", "birthdays"]].forEach(([k, f]) => {
     q(`[data-${k}l]`).forEach(i => draft[f][+i.getAttribute(`data-${k}l`)][0] = i.value);
     q(`[data-${k}v]`).forEach(i => draft[f][+i.getAttribute(`data-${k}v`)][1] = i.value);
   });
@@ -1615,7 +1656,7 @@ function saveCard(key) {
     const f = typeof draft.follow === "string" ? draft.follow : followTxt(draft.follow);
     const n = f.match(/\d+/); c.follow = n ? +n[0] : null;
   }
-  if (key === "household") c.household = draft.household.filter(r => r[0].trim() || r[1].trim());
+  if (key === "dates") { c.birthdays = draft.birthdays.filter(r => r[0].trim() || r[1].trim()); c.homeiversary = draft.homeiversary; }
   editCard = null; draft = null;
   toast("Saved.");
   render();
@@ -1660,8 +1701,8 @@ document.addEventListener("click", e => {
   if (b.dataset.editcard) { const c = contact(openContact); editCard = b.dataset.editcard; draft = JSON.parse(JSON.stringify(c)); draft.assigned = draft.assigned || "Luke Pettersen"; draft.newMode = {}; render(); return; }
   if (b.dataset.cancelcard) { editCard = null; draft = null; render(); return; }
   if (b.dataset.savecard) { saveCard(b.dataset.savecard); return; }
-  if (b.dataset.addrow) { collect(); const f = { p: "phones", e: "emails", h: "household" }[b.dataset.addrow]; draft[f].push([b.dataset.addrow === "p" ? "Mobile" : "", ""]); render(); return; }
-  if (b.dataset.rm) { collect(); const [k, i] = b.dataset.rm.split(":"); draft[{ p: "phones", e: "emails", h: "household" }[k]].splice(+i, 1); render(); return; }
+  if (b.dataset.addrow) { collect(); const f = { p: "phones", e: "emails", h: "birthdays" }[b.dataset.addrow]; draft[f].push([b.dataset.addrow === "p" ? "Mobile" : "", ""]); render(); return; }
+  if (b.dataset.rm) { collect(); const [k, i] = b.dataset.rm.split(":"); draft[{ p: "phones", e: "emails", h: "birthdays" }[k]].splice(+i, 1); render(); return; }
   if (b.dataset.rmtag) { const c = contact(openContact); const t = c.tags.splice(+b.dataset.rmtag, 1)[0]; toast(`Removed tag "${t}".`); render(); return; }
   if (b.dataset.tagadd) { tagAdding = true; render(); const i = el("tag-in"); if (i) i.focus(); return; }
   if (b.dataset.tagcancel) { tagAdding = false; render(); return; }

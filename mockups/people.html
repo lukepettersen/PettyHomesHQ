@@ -313,20 +313,35 @@ function personModal() {
   el("modal").innerHTML = `<div class="modal-bg" data-close="1"><form class="modal" id="add-form" autocomplete="off">
     <h2>Add person</h2>
     <div class="two"><label>First name<input class="input" id="f-first" required></label><label>Last name<input class="input" id="f-last"></label></div>
-    <label>Phone<input class="input" id="f-phone"></label><label>Email<input class="input" id="f-email"></label>
+    <div class="two"><label>Phone<input class="input" id="f-phone"></label><label>Email<input class="input" id="f-email"></label></div>
+    <div id="p2" hidden>
+      <p style="margin:4px 0 6px;font-weight:600;color:var(--fg)">Second person</p>
+      <div class="two"><label>First name<input class="input" id="g-first"></label><label>Last name<input class="input" id="g-last" placeholder="Leave blank if the same"></label></div>
+      <div class="two"><label>Phone<input class="input" id="g-phone"></label><label>Email<input class="input" id="g-email"></label></div>
+    </div>
+    <button type="button" class="btn" id="p2-toggle" data-p2="1">+ Add a second person (spouse, partner, co-buyer)</button>
+    <p id="p-preview"></p>
     <div class="two"><label>Stage<select class="input" id="f-stage">${["Lead", "7 Day Sphere", "30 Day Sphere", "90 Day Sphere", "180 Day Sphere", "Realtor", "Industry Partners"].map(s => `<option>${s}</option>`).join("")}</select></label>
     <label>Source<select class="input" id="f-source">${["Sphere", "Sphere Referral", "Website", "Zillow Preferred", "AJ Gimme Lead", "Stacie Rihl"].map(s => `<option>${s}</option>`).join("")}</select></label></div>
-    <div class="foot"><button type="button" class="btn" data-close="1">Cancel</button><button class="btn primary" type="submit">Add person</button></div>
+    <div class="foot"><button type="button" class="btn" data-close="1">Cancel</button><button class="btn primary" type="submit">Add</button></div>
   </form></div>`;
   el("f-first").focus();
+  const v = id => el(id).value.trim();
+  const display = () => {
+    const a = [v("f-first"), v("f-last")].filter(Boolean).join(" ");
+    if (el("p2").hidden || !v("g-first")) return a;
+    const gl = v("g-last") || v("f-last");
+    return gl === v("f-last") ? `${v("f-first")} & ${v("g-first")} ${gl}`.trim() : `${a} & ${v("g-first")} ${gl}`;
+  };
+  const preview = () => { el("p-preview").textContent = !el("p2").hidden && v("g-first") ? `Shows as "${display()}". Both names, phones and emails are searchable, and texts from either phone land on this contact.` : ""; };
+  el("add-form").addEventListener("input", preview);
   el("add-form").addEventListener("submit", e => {
     e.preventDefault();
-    const name = (el("f-first").value + " " + el("f-last").value).trim(), st = el("f-stage").value, m = st.match(/\d+/);
-    people.push({ cid: "x" + (people.length + 100), name, stage: st, follow: m ? +m[0] : null, last: 0, source: el("f-source").value, tags: [], deal: "", phone: el("f-phone").value || "—", assigned: "Luke Pettersen", dealStatus: "No active deal" });
+    const name = display(), st = el("f-stage").value, m = st.match(/\d+/);
+    people.push({ cid: "x" + (people.length + 100), name, stage: st, follow: m ? +m[0] : null, last: 0, source: el("f-source").value, tags: [], deal: "", phone: v("f-phone") || "—", assigned: "Luke Pettersen", dealStatus: "No active deal" });
     el("modal").innerHTML = ""; toast(`Added ${name}.`); render();
   });
 }
-
 let tt; function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
 
 document.addEventListener("click", e => {
@@ -348,6 +363,7 @@ document.addEventListener("click", e => {
   if (ds.saveas) { saveModal(saveTarget || (cur ? findList(cur)[0].id : collections[0].id)); return; }
   if (ds.sort) { sort = ds.sort; renderMain(); return; }
   if (ds.add) { personModal(); return; }
+  if (ds.p2) { el("p2").hidden = false; b.remove(); el("g-first").focus(); return; }
   if (ds.clear) { sel.clear(); renderMain(); return; }
   if (ds.toast) { toast(ds.toast); return; }
 });
