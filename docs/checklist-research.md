@@ -41,63 +41,36 @@ and vendor documentation for Follow Up Boss, Open To Close, ListedKit and Paperl
   updates at big milestones; contingencies are where deals fail, so each one needs a tracked
   deadline.
 
-## Recommendation for HQ
+## Recommendation for HQ (simple version, approved direction)
 
-One system, three building blocks. This keeps FUB's flexibility and adds TC-style date logic.
+Keep it straightforward. Most of the value comes from a few rules.
 
-### 1. Templates with four ways to start
-Every template is a set of steps that become tasks. A template starts in one of four ways:
+**A template is a list of steps.** Each step has a name, who does it, a due date written as
+"X days before/after a date" (start date or a contract date), a type (task, call, email, text)
+and, for email/text, a message template that opens as a draft to review.
 
-| Starts when | Example | Replaces in FUB |
-|---|---|---|
-| A deal enters a stage | Buyer → Under Contract | Deal Stage Changed automations |
-| A date comes around | 7 days before a birthday; homeiversary; 14 days before closing | Calendar Date automations, yearly mailer fields |
-| A tag is added | `Offer` tag → offer checklist | Tag Added automations |
-| You apply it by hand | Open house follow-up, mid-deal "Repair negotiation" | Manual automations |
+**A template starts one of two ways:** a deal enters a stage, or you apply it by hand from a
+contact.
 
-Templates can also start other templates (Open To Close) so big flows stay small and reusable,
-for example "Under Contract" starts "HOA review" only when the property has an HOA.
+**Four rules make it work like transaction coordination software:**
+1. When a date changes, the steps move with it. Nothing is ever "stopped".
+2. When a date isn't set yet, the step says "waits for inspection date" and gets a due date as
+   soon as the date is entered (Paperless Pipeline's behavior).
+3. Steps can be done in any order, or marked N/A / skipped.
+4. "Only when" (HOA, built before 1978, new construction, FHA/VA, condo) keeps one template
+   instead of duplicates (Open To Close's conditional logic).
 
-### 2. Steps that stay correct when dates move
-- Due date = a named date ± days. Named dates: start date, any contract date, any person date
-  (birthday, homeiversary) or custom date field.
-- **Recalculate on every date change.** No step is ever "stopped" because a date moved.
-- **No date yet means no due date yet** (Paperless). The step appears with "waiting on
-  inspection date" and gets a date as soon as one is entered.
-- Per step: calendar or **business days**, and "skip weekends and holidays", since many MN
-  purchase agreement deadlines are counted in business days.
-- **Conditions** at the template and step level (HOA, new construction, built before 1978,
-  financing type, cash, condo, referral partner). One template, no duplicates.
-- Steps can be marked Done, N/A or Skipped, in any order. Waiving a contract date resolves its
-  steps.
+One optional step action: "When done, move the deal to [stage]" (replaces FUB's
+"Change deal stage to…" tasks).
 
-### 3. Steps that do things
-- Type: task, call, email, text. Email and text steps link to a message template.
-- **Send mode per step:** "Draft for review" (default) or "Send automatically" for low-risk
-  messages like birthday texts or a weekly update. Matches how you already work (tasks that
-  say "send template X") without blind auto-sending.
-- **When done:** move the deal to a stage, start another template, notify someone, and/or
-  send a message. Replaces FUB's "Change deal stage to…" tasks.
-- **Past-due alerts** to the assignee (and to you for anything client-facing).
+**Birthdays and homeiversaries are not templates.** Admin → Date reminders sets what happens
+for each Important Date (e.g. text on the day, card 7 days before for past clients), and HQ
+adds those as yearly recurring tasks automatically. This replaces FUB's contact automations
+and the yearly-mailer custom field workaround.
 
-### 4. Built-in communication rhythm (TC practice)
-- A **weekly client update** template that drafts itself every Monday for each deal under
-  contract, filled from live data: what happened, what's next, upcoming deadlines.
-- Milestone messages at acceptance, inspection result, appraisal, clear to close, closing.
-
-### 5. Person-level automations stay simple
-Birthdays, homeiversaries, yearly mailers, follow-up frequency touches and lead drips run from
-date triggers and recurring tasks on the person, not on deals.
-
-## What changes in the mockup
-1. Template "Starts" gets the four trigger types (stage, date, tag, by hand) instead of
-   stage-or-manual only.
-2. Template-level "Only for" conditions, and "start another template" as a step action.
-3. Step options: business days / skip weekends, send mode (draft vs auto-send), and multiple
-   "when done" actions.
-4. Deal checklist shows "waiting on [date]" for steps whose date isn't set yet.
-5. A seeded "Weekly client update" template and person-level templates (birthday,
-   homeiversary, yearly mailers) to replace the FUB contact automations.
+**Deferred until needed:** tag triggers, templates that start other templates, multiple
+"when done" actions, auto-sending messages, business-day counting and holiday skipping, and a
+self-drafting weekly client update (can be a weekly step on the Under Contract template).
 
 ## Sources
 - Follow Up Boss Help Center: Automations 2.0 triggers and migration —

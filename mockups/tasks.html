@@ -214,6 +214,11 @@ let tasks = [
   { t: "Signed amendment to lender + title", due: "2026-10-14", who: "AS", link: "calloway", kind: "email", step: { phase: "Inspection", rule: "Inspection day of" } },
   { t: "Schedule listing photos", due: "2026-10-15", who: "AS", link: "fisk", step: { phase: "Prep", rule: "Start date + 1d" } },
   { t: "Send home value update", due: "2026-10-27", who: "AS", link: "voss", repeat: "Yearly" },
+  { t: "Send birthday card", due: "2027-01-15", who: "AS", link: "murphy", repeat: "Yearly", auto: "Kate's birthday, Jan 22" },
+  { t: "Text happy birthday", due: "2027-01-22", who: "LP", link: "murphy", repeat: "Yearly", auto: "Kate's birthday, Jan 22" },
+  { t: "Text happy birthday", due: "2027-03-04", who: "LP", link: "calloway", repeat: "Yearly", auto: "Jordan's birthday, Mar 4" },
+  { t: "Send homeiversary card", due: "2027-06-11", who: "AS", link: "murphy", repeat: "Yearly", auto: "Homeiversary, Jun 18" },
+  { t: "Text happy homeiversary", due: "2027-09-29", who: "LP", link: "voss", repeat: "Yearly", auto: "Homeiversary, Sep 29" },
 ];
 tasks.forEach((t, i) => { t.id = i; t.done = false; t.p = t.p || 0; t.kind = t.kind || "task"; });
 let nextId = tasks.length;
@@ -262,6 +267,7 @@ function rowHtml(t) {
   if (L) meta.push(`<span class="link ${L.kind}">${esc(L.label)}</span>`);
   if (t.subs) meta.push(`<span>☐ ${t.subs.filter(s => s[1]).length}/${t.subs.length}</span>`);
   if (t.repeat) meta.push(`<span>↻ ${t.repeat}</span>`);
+  if (t.auto) meta.push(`<span class="listtag">From Important Dates</span>`);
   if (t.list && !view.startsWith("list:")) meta.push(`<span class="listtag">${esc(t.list)}</span>`);
   const dueTxt = (n === 0 ? "Today" : n === 1 ? "Tomorrow" : n < 0 ? short(d(t.due)) : fmt(d(t.due))) + (t.time ? " " + t.time : "");
   return `<div class="row ${t.done ? "done" : ""} ${sel === t.id ? "sel" : ""}">

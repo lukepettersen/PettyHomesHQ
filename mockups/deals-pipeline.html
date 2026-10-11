@@ -119,6 +119,8 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 .member-n { font-weight: 700; font-size: 13px; }
 .apply { display: flex; gap: 6px; flex-wrap: wrap; }
 .apply select { flex: 1; min-width: 0; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+.row .due.waiting { color: var(--waive); font-style: italic; }
+.dt.unset .v { color: var(--muted); }
 .linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; text-decoration: underline; font-size: inherit; }
 .sm { font-size: 12.5px; }
 .od { color: var(--bad); font-size: 12.5px; } .td { color: var(--accent); font-size: 12.5px; }
@@ -383,7 +385,7 @@ const deals = [
   // Buyers
   { id: 11, side: "buyer", stage: "Offer Out", name: "Owen Pryce", line: "2215 Hillside Ave, Golden Valley", price: 389000, since: "2026-10-11" },
   { id: 13, side: "buyer", stage: "Under Contract", name: "Jordan & Priya Calloway", cid: "calloway", line: "4127 Upton Ave S #3, Minneapolis", price: 412500, em: 8000, sc: 5000, bac: "2.5%", comm: 10312.5, fin: "Conventional",
-    ms: { fa: "2026-10-02", insp: "2026-10-14", hoa: "2026-10-13", ws: "2026-10-23", close: "2026-10-30" }, msOrig: { insp: "2026-10-09" }, msStatus: { insp: "extended" },
+    ms: { fa: "2026-10-02", insp: "2026-10-14", hoa: "2026-10-13", ws: null, close: "2026-10-30" }, msOrig: { insp: "2026-10-09" }, msStatus: { insp: "extended" },
     openPast: ["Earnest money receipt saved to file", "Insurance referral"], doneEarly: ["Confirm appraisal ordered"],
     people: [["Jordan Calloway", "Buyer"], ["Priya Calloway", "Buyer"], ["Dana Kim · Northfield Lending", "Lender"], ["Lakeview Title", "Title"], ["Marcus Holt · Bluewater Realty", "Listing agent"]] },
   { id: 16, side: "buyer", stage: "Closed", name: "Kara Voss", line: "3816 Grand Ave S, Minneapolis", price: 376000, closed: "2026-09-29" },
@@ -398,13 +400,13 @@ deals.forEach(dl => {
   if (dl.stage === "Closed") return;
   if (dl.stage === "Under Contract") {
     dl.msStatus = dl.msStatus || {};
-    Object.keys(dl.ms).forEach(k => { if (!dl.msStatus[k]) dl.msStatus[k] = d(dl.ms[k]) < TODAY ? "met" : "pending"; });
+    Object.keys(dl.ms).forEach(k => { if (!dl.msStatus[k]) dl.msStatus[k] = dl.ms[k] && d(dl.ms[k]) < TODAY ? "met" : "pending"; });
     CONTRACT[dl.side].forEach(([phase, t, a, o, who, kind]) => {
-      if (!dl.ms[a]) return; // conditional: e.g. HOA steps only when the deal has an HOA date
+      if (!(a in dl.ms)) return; // conditional: e.g. HOA steps only when the deal has an HOA date (a null date means "not set yet")
       if (phase === "HOA" && !dl.ms.hoa) return;
       const task = { phase, t, a, o, who, kind: kind || "task" };
-      const due = add(d(dl.ms[a]), o);
-      task.s = due < TODAY && !(dl.openPast || []).includes(t) ? "done" : "open";
+      const due = dl.ms[a] ? add(d(dl.ms[a]), o) : null;
+      task.s = due && due < TODAY && !(dl.openPast || []).includes(t) ? "done" : "open";
       if ((dl.doneEarly || []).includes(t)) task.s = "done";
       dl.tasks.push(task);
     });
@@ -419,15 +421,17 @@ deals.forEach(dl => {
   dl.tasks.forEach((t, i) => t.id = i);
 });
 
-const dueOf = (dl, t) => t.fixed ? d(t.fixed) : add(d(dl.ms[t.a]), t.o);
+const dueOf = (dl, t) => t.fixed ? d(t.fixed) : dl.ms[t.a] ? add(d(dl.ms[t.a]), t.o) : null;
+const byDue = dl => (a, b) => (dueOf(dl, a) || 8.64e15) - (dueOf(dl, b) || 8.64e15);
+const isOverdue = (dl, t) => { const x = dueOf(dl, t); return !!x && x < TODAY; };
 function eff(dl, t) {
   if (t.s !== "open") return t.s;
   if (t.a && dl.msStatus[t.a] === "waived") return "waived";
   return "open";
 }
-const openTasks = dl => dl.tasks.filter(t => eff(dl, t) === "open").sort((a, b) => dueOf(dl, a) - dueOf(dl, b));
+const openTasks = dl => dl.tasks.filter(t => eff(dl, t) === "open").sort(byDue(dl));
 function health(dl) {
-  const od = openTasks(dl).filter(t => dueOf(dl, t) < TODAY).length;
+  const od = openTasks(dl).filter(t => isOverdue(dl, t)).length;
   return od >= 3 ? "r" : od ? "y" : "g";
 }
 
@@ -484,7 +488,7 @@ function cardHtml(dl) {
     next = `<div class="next"><span>Closed ${short(d(dl.closed))}</span></div>`;
   } else {
     const n = openTasks(dl)[0];
-    if (n) { const due = dueOf(dl, n), od = due < TODAY; next = `<div class="next ${od ? "overdue" : ""}"><span>${esc(n.t)}</span><span class="date">${od ? "Overdue" : short(due)}</span></div>`; }
+    if (n) { const due = dueOf(dl, n), od = isOverdue(dl, n); next = `<div class="next ${od ? "overdue" : ""}"><span>${esc(n.t)}</span><span class="date">${od ? "Overdue" : due ? short(due) : "Waiting"}</span></div>`; }
   }
   const prog = dl.stage === "Under Contract" ? (() => { const done = dl.tasks.filter(t => eff(dl, t) !== "open").length; return `<div class="mini" title="${done} of ${dl.tasks.length} steps"><i style="width:${Math.round(done / dl.tasks.length * 100)}%"></i></div><div class="addr">Closing ${short(d(dl.ms.close))}</div>`; })() : "";
   return `<button class="card" data-deal="${dl.id}">
@@ -521,7 +525,7 @@ const CONTACTS = {
     tags: ["Past Client", "Mailers", "Christmas Cards", "Email Newsletter", "2026 RE Health Check Needed"],
     phones: [["Mobile", "(651) 555-0172"]], emails: [["", "kate.murphy@example.com"]], address: "1789 Juliet Ave, St. Paul, MN 55105",
     birthdays: [["Kate", "Jan 22"]], homeiversary: "Jun 18, 2021",
-    tasks: [{ t: "Call Kate about spring listing timing", due: "2026-10-12", who: "LP", s: "open" }, { t: "Send homeiversary card", due: "2027-06-11", who: "AS", s: "open" }],
+    tasks: [{ t: "Call Kate about spring listing timing", due: "2026-10-12", who: "LP", s: "open" }],
     history: [
       ["2026-09-30", "email", "Gmail · Batch email: Timberwolves season tickets are back!", "AS"],
       ["2026-09-22", "call", "Quick check-in. Kids back in school, no plans to move before spring.", "LP"],
@@ -640,7 +644,7 @@ function factsInline(dl) {
 }
 
 function ptaskHtml(t, i) {
-  if (!t.due) return `<div class="ptask ${t.s === "done" ? "done" : ""}"><button class="check" data-ptask="${i}" aria-label="Mark done: ${esc(t.t)}">${t.s === "done" ? CHECK : ""}</button><div><div class="title">${esc(t.t)}</div><div class="sm muted">No due date · ${WHO[t.who]}</div></div></div>`;
+  if (!t.due) return `<div class="ptask ${t.s === "done" ? "done" : ""}"><button class="check" data-ptask="${i}" aria-label="Mark done: ${esc(t.t)}">${t.s === "done" ? CHECK : ""}</button><div><div class="title">${esc(t.t)}</div><div class="sm muted">${t.waiting ? "Waits for " + esc(t.waiting) + " date" : "No due date"} · ${WHO[t.who]}</div></div></div>`;
   const n = diff(d(t.due), TODAY), done = t.s === "done";
   return `<div class="ptask ${done ? "done" : ""}">
     <button class="check" data-ptask="${i}" aria-label="Mark ${done ? "not done" : "done"}: ${esc(t.t)}">${done ? CHECK : ""}</button>
@@ -654,7 +658,7 @@ function timelinePane(c, myDeals) {
   myDeals.forEach(dl => {
     const where = dl.side === "buyer" ? "Buyer" : "Seller";
     items.push(dl.stage === "Closed" ? { dt: dl.closed, k: "stage", txt: `${where} deal closed · ${dl.line}` } : { dt: dl.ms ? dl.ms.fa : dl.since, k: "stage", txt: `${where} deal moved to ${label(dl.side, dl.stage)}` });
-    dl.tasks.filter(t => t.s === "done").forEach(t => items.push({ dt: iso(dueOf(dl, t) > TODAY ? TODAY : dueOf(dl, t)), k: "done", txt: t.t, who: t.who }));
+    dl.tasks.filter(t => t.s === "done" && dueOf(dl, t)).forEach(t => items.push({ dt: iso(dueOf(dl, t) > TODAY ? TODAY : dueOf(dl, t)), k: "done", txt: t.t, who: t.who }));
   });
   const F = { all: () => true, note: i => i.k === "note", text: i => i.k === "text", call: i => i.k === "call" || i.k === "missed", email: i => i.k === "email", deal: i => i.k === "stage" || i.k === "done" };
   const list = items.filter(F[tlFilter]).sort((a, b) => d(b.dt) - d(a.dt));
@@ -674,6 +678,7 @@ function timelinePane(c, myDeals) {
 function datesHtml(dl) {
   const keys = Object.keys(dl.ms);
   let html = `<div class="dates">${keys.map(k => {
+    if (!dl.ms[k]) return `<button class="dt unset" data-dl="${dl.id}" data-ms="${k}" aria-expanded="${editing === dl.id + ":" + k}"><span class="l">${MS_NAMES[k]}</span><span class="v">Not set</span><span class="s soon">+ Add date</span></button>`;
     const st = dl.msStatus[k], n = diff(d(dl.ms[k]), TODAY);
     const txt = st === "met" ? "✓ Met" : st === "waived" ? "Waived" : st === "extended" ? "Extended" : n === 0 ? "Today" : n > 0 ? `In ${n} day${n === 1 ? "" : "s"}` : "Past due";
     const cls = st !== "pending" ? st : n <= 3 ? "soon" : "";
@@ -683,7 +688,7 @@ function datesHtml(dl) {
   if (k) {
     const n = dl.tasks.filter(t => t.a === k && t.s === "open").length;
     html += `<div class="edit">
-      <label>${MS_NAMES[k]} date<input type="date" data-msdate="${dl.id}:${k}" value="${dl.ms[k]}"></label>
+      <label>${MS_NAMES[k]} date<input type="date" data-msdate="${dl.id}:${k}" value="${dl.ms[k] || ""}"></label>
       <label>Status<select data-msstatus="${dl.id}:${k}">${["pending", "met", "waived", "extended"].map(s => `<option value="${s}" ${s === dl.msStatus[k] ? "selected" : ""}>${s[0].toUpperCase() + s.slice(1)}</option>`).join("")}</select></label>
       <p>${n} open step${n === 1 ? "" : "s"} move with this date. Waived clears them.</p>
       <button class="btn" data-close="1">Done</button>
@@ -693,10 +698,10 @@ function datesHtml(dl) {
 }
 
 function phaseHtml(dl, p) {
-  const items = dl.tasks.filter(t => t.phase === p).sort((a, b) => dueOf(dl, a) - dueOf(dl, b));
+  const items = dl.tasks.filter(t => t.phase === p).sort(byDue(dl));
   const done = items.filter(t => eff(dl, t) !== "open").length;
   const isOpen = expanded[dl.id].has(p);
-  const od = items.some(t => eff(dl, t) === "open" && dueOf(dl, t) < TODAY);
+  const od = items.some(t => eff(dl, t) === "open" && isOverdue(dl, t));
   return `<div class="phase">
     <button class="phase-h" data-dl="${dl.id}" data-phase="${esc(p)}" aria-expanded="${isOpen}">
       <span class="pn">${esc(p)}</span>
@@ -707,16 +712,16 @@ function phaseHtml(dl, p) {
 }
 
 function rowHtml(dl, t) {
-  const st = eff(dl, t), due = dueOf(dl, t), n = diff(due, TODAY);
+  const st = eff(dl, t), due = dueOf(dl, t), n = due ? diff(due, TODAY) : null;
   const icon = st === "done" ? CHECK : st === "open" ? "" : DASH;
   const note = st === "na" ? "N/A" : st === "skip" ? "Skipped" : st === "waived" ? "Waived" : "";
-  const dueCls = st === "open" ? (n < 0 ? "overdue" : n === 0 ? "today" : "") : "";
+  const dueCls = !due ? "waiting" : st === "open" ? (n < 0 ? "overdue" : n === 0 ? "today" : "") : "";
   const rule = t.a ? `${MS_NAMES[t.a]} ${t.o === 0 ? "day of" : (t.o > 0 ? "+ " : "− ") + Math.abs(t.o) + "d"}` : "";
   const key = dl.id + ":" + t.id, A = `data-dl="${dl.id}"`;
   return `<div class="row ${st}">
     <button class="check" ${A} data-toggle="${t.id}" aria-label="Mark ${st === "done" ? "not done" : "done"}: ${esc(t.t)}">${icon}</button>
     <span class="title">${esc(t.t)}${note ? `<small>${note}</small>` : ""}${t.kind !== "task" && st === "open" ? `<button class="draft" ${A} data-draft="${t.id}">Draft ${t.kind}</button>` : ""}</span>
-    <span class="r"><span class="due date ${dueCls}" title="${rule}">${n === 0 && st === "open" ? "Today" : short(due)}</span><span class="av ${t.who === "AS" ? "as" : ""}">${t.who}</span><button class="more" ${A} data-menu="${t.id}" aria-label="More options">⋯</button></span>
+    <span class="r"><span class="due date ${dueCls}" title="${rule}">${!due ? "Waits for " + MS_NAMES[t.a] : n === 0 && st === "open" ? "Today" : short(due)}</span><span class="av ${t.who === "AS" ? "as" : ""}">${t.who}</span><button class="more" ${A} data-menu="${t.id}" aria-label="More options">⋯</button></span>
     ${openMenu === key ? `<div class="menu">
       ${st !== "na" ? `<button ${A} data-set="na" data-id="${t.id}">Mark N/A</button>` : ""}
       ${st !== "skip" ? `<button ${A} data-set="skip" data-id="${t.id}">Skip</button>` : ""}
@@ -823,7 +828,8 @@ function datesCard(c) {
   }
   return `<div class="card-s">${head("Important Dates", "dates")}
     <dl class="kv">${c.birthdays.map(([n, b]) => `<dt>${esc(n)}</dt><dd>${esc(b)}</dd>`).join("") || `<dt>Birthdays</dt><dd class="muted">None added</dd>`}
-    <dt>Homeiversary</dt><dd>${c.homeiversary ? esc(c.homeiversary) : `<span class="muted">Fills in when a deal closes</span>`}</dd></dl></div>`;
+    <dt>Homeiversary</dt><dd>${c.homeiversary ? esc(c.homeiversary) : `<span class="muted">Fills in when a deal closes</span>`}</dd></dl>
+    <p class="muted sm">Reminders for these dates are added to Tasks every year (Admin → Date reminders).</p></div>`;
 }
 
 function collect() {
@@ -898,10 +904,11 @@ document.addEventListener("click", e => {
   if (b.dataset.applycancel) { applyOpen = false; render(); return; }
   if (b.dataset.applytpl) {
     const tpl = HQ.templates.find(x => x.id === el("apply-tpl").value), c = contact(openContact);
-    const made = HQ.expand(tpl, TODAY).map(x => ({ t: x.t, due: x.due ? iso(x.due) : null, who: x.who === "Alyssa" ? "AS" : "LP", s: "open" }));
+    const made = HQ.expand(tpl, TODAY).map(x => ({ t: x.t, due: x.due ? iso(x.due) : null, waiting: x.waiting, who: x.who === "Alyssa" ? "AS" : "LP", s: "open" }));
     c.tasks.push(...made);
-    HQ.newTasks.push(...made.map(x => Object.assign({ cid: openContact, name: c.name }, x)));
-    applyOpen = false; render(); toast(`Added ${made.length} tasks from "${tpl.name}". They're on the Tasks page too.`); return;
+    HQ.newTasks.push(...made.filter(x => x.due || !x.waiting).map(x => Object.assign({ cid: openContact, name: c.name }, x)));
+    const w = made.filter(x => x.waiting).length;
+    applyOpen = false; render(); toast(`Added ${made.length} tasks from "${tpl.name}".${w ? ` ${w} wait for a contract date.` : ""} Dated ones are on the Tasks page too.`); return;
   }
   if (b.dataset.editcard) { const c = contact(openContact); editCard = b.dataset.editcard; draft = JSON.parse(JSON.stringify(c)); draft.assigned = draft.assigned || "Luke Pettersen"; draft.newMode = {}; render(); return; }
   if (b.dataset.cancelcard) { editCard = null; draft = null; render(); return; }
@@ -956,10 +963,10 @@ document.addEventListener("change", e => {
   if (ds.rename) { const v = e.target.value.trim(); if (v) LABEL[side][ds.rename] = v; render(); return; }
   if (ds.msdate && e.target.value) {
     const [id, k] = ds.msdate.split(":"), dl = deals.find(x => x.id === +id);
-    const n = dl.tasks.filter(t => t.a === k && t.s === "open").length;
+    const n = dl.tasks.filter(t => t.a === k && t.s === "open").length, wasSet = !!dl.ms[k];
     dl.ms[k] = e.target.value;
-    if (dl.msStatus[k] === "pending") dl.msStatus[k] = "extended";
-    toast(`${MS_NAMES[k]} moved to ${fmt(d(e.target.value))}. ${n} step${n === 1 ? "" : "s"} re-dated.`);
+    if (wasSet && dl.msStatus[k] === "pending") dl.msStatus[k] = "extended";
+    toast(wasSet ? `${MS_NAMES[k]} moved to ${fmt(d(e.target.value))}. ${n} step${n === 1 ? "" : "s"} re-dated.` : `${MS_NAMES[k]} set. ${n} waiting step${n === 1 ? " has" : "s have"} due dates now.`);
     render(); return;
   }
   if (ds.msstatus) { const [id, k] = ds.msstatus.split(":"); deals.find(x => x.id === +id).msStatus[k] = e.target.value; render(); }

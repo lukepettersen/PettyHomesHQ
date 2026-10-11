@@ -156,7 +156,7 @@ const el = id => document.getElementById(id);
 const SECTIONS = [
   ["Team", [["users", "Users & roles"]]],
   ["Deals", [["pipelines", "Pipelines & stages"], ["checklists", "Task templates"]]],
-  ["People", [["fields", "Custom fields"], ["tags", "Tags"], ["lists", "Stages, sources & follow-up"]]],
+  ["People", [["reminders", "Date reminders"], ["fields", "Custom fields"], ["tags", "Tags"], ["lists", "Stages, sources & follow-up"]]],
   ["Messaging", [["texttpl", "Text templates"], ["emailtpl", "Email templates"]]],
   ["Connections", [["integrations", "Integrations"]]],
 ];
@@ -168,6 +168,12 @@ const state = {
   perms: [["See commissions", true, false], ["Delete people and deals", true, false], ["Manage users and roles", true, false], ["Edit checklist templates", true, true], ["Edit text and email templates", true, true], ["Export data", true, false], ["Send texts", true, true]],
   pipes: { Buyer: ["Lead", "Consult", "Rep Signed / Searching", "Offer Out", "Under Contract", "Closed"], Seller: ["Lead", "Consult", "Listing Signed / Prep", "Coming Soon", "Active", "Under Contract", "Closed"] },
   tplId: "t4", ckApply: true, ckPending: null,
+  reminders: [
+    ["Birthday", "Text happy birthday", 0, "on", "Luke", "Text", "Everyone"],
+    ["Birthday", "Send birthday card", 7, "before", "Alyssa", "Task", "Past clients"],
+    ["Homeiversary", "Text happy homeiversary", 0, "on", "Luke", "Text", "Everyone"],
+    ["Homeiversary", "Send homeiversary card", 7, "before", "Alyssa", "Task", "Past clients"],
+  ],
   fields: [["Mailing name", "Text", "People"], ["Referred by", "Person", "People"], ["Homeiversary", "Date", "People"], ["Preferred contact time", "Dropdown", "People"], ["Pre-approval amount", "Number", "Deals"], ["Lender", "Person", "Deals"], ["New construction", "Checkbox", "Deals"]],
   tags: [["Past Client", 2], ["Buyer", 2], ["Seller", 2], ["A Lead", 2], ["B Lead", 1], ["Mailers", 1], ["Christmas Cards", 1], ["Email Newsletter", 1]],
   stages: ["Sphere", "Past Client", "Lead", "Industry Partners", "Passive Marketing", "Archive", "Trash"],
@@ -185,7 +191,7 @@ const state = {
   ],
   tplSel: 2, tplFilter: "All",
 };
-const ANCHORS = ["Start date", "Consult date", "Buyer rep signed", "Buyer rep expiration", "Listing agreement signed", "Listing expiration", "Photos taken", "Active date", "Final Acceptance", "Inspection", "Written Statement", "HOA Rescission", "Closing"];
+const ANCHORS = ["Start date", "Final Acceptance", "Inspection", "Written Statement", "HOA Rescission", "Closing"];
 const TODAY_A = new Date(2026, 9, 12);
 const TPLS = () => HQ.templates;
 const curCk = () => TPLS().find(x => x.id === state.tplId) || TPLS()[0];
@@ -194,7 +200,7 @@ const trigOptions = () => Object.entries(state.pipes).flatMap(([p, st]) => st.ma
 const blankStep = () => ({ name: "New step", anchor: "Start date", days: 1, dir: "after", who: "Alyssa", type: "Task", tpl: "", cond: "Always", advance: "" });
 const applied = () => { const x = curCk(); if (state.ckApply && x.trigger) toast(`Open deals in ${x.trigger} get this change too.`); };
 let tplN = 100;
-const CONDS = ["Always", "HOA property", "No HOA", "New construction", "Built before 1978", "Condo / townhome", "FHA / VA loan", "Cash purchase", "Well / septic", "Referral partner", "Out of town client"];
+const CONDS = ["Always", "HOA property", "Built before 1978", "New construction", "FHA / VA loan", "Condo / townhome"];
 
 function msgTpl(type) {
   const folders = ["BPC", "BUC", "SPC", "SUC", "Leads", "Past clients"];
@@ -247,7 +253,7 @@ const V = {
         <div class="st-l1">
           <span class="mv"><button class="rm" data-sup="${id}" aria-label="Move up" ${si === 0 ? "disabled" : ""}>↑</button><button class="rm" data-sdown="${id}" aria-label="Move down" ${si === n - 1 ? "disabled" : ""}>↓</button></span>
           <input class="st-name" data-s="${id}:name" value="${esc(st.name)}" aria-label="Step name">
-          <label>Assignee<select data-s="${id}:who">${["Luke", "Alyssa", "Deal owner"].map(a => `<option ${a === st.who ? "selected" : ""}>${a}</option>`).join("")}</select></label>
+          <label>Assignee<select data-s="${id}:who">${["Luke", "Alyssa"].map(a => `<option ${a === st.who ? "selected" : ""}>${a}</option>`).join("")}</select></label>
           <label>Type<select data-s="${id}:type">${["Task", "Call", "Email", "Text"].map(a => `<option ${a === st.type ? "selected" : ""}>${a}</option>`).join("")}</select></label>
           ${st.type === "Email" || st.type === "Text" ? `<label>Message template<select data-s="${id}:tpl"><option value="">None</option>${tplOpts(st.type).map(x => `<option ${x === st.tpl ? "selected" : ""}>${esc(x)}</option>`).join("")}</select></label>` : ""}
           <span class="mv end"><button class="rm" data-sdup="${id}" aria-label="Duplicate step" title="Duplicate">⧉</button><button class="rm" data-sdel="${id}" aria-label="Delete step" title="Delete">×</button></span>
@@ -264,7 +270,7 @@ const V = {
     };
     const preview = HQ.expand(t, TODAY_A).slice(0, 8);
     return `<h1>Task templates</h1>
-    <p>A template is a set of steps that turn into tasks. Set it to start when a deal reaches a stage, or leave it manual and apply it from a contact. Edit any template here; new and existing ones work the same way.</p>
+    <p>A template is a list of steps that become tasks. It starts when a deal enters a stage, or when you apply it from a contact. Due dates count from the start date or a contract date, and move when that date changes. If the date isn't set yet, the task waits for it.</p>
     <div class="tgrid">
       <aside class="box tlist">
         <div class="tl-top"><button class="btn primary" data-newck="1">+ New template</button></div>
@@ -290,11 +296,24 @@ const V = {
         </div>`).join("") || `<div class="box" style="padding:18px 14px"><b>No steps yet.</b><p class="muted sm" style="margin:4px 0 0">Add a phase, or copy steps from another template and edit them.</p></div>`}
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-addphase="1">+ Add phase</button>${steps ? `<button class="btn" data-ckclear="1">${state.ckPending === "clear" ? "Click again to remove all steps" : "Remove all steps"}</button>` : ""}</div>
         ${steps ? `<div class="box prev"><h2>Tasks it creates if it starts today <span class="muted sm" style="font-weight:400">${steps} total</span></h2>
-          ${preview.map(p => `<div class="prow"><span>${esc(p.t)}</span><span class="muted sm">${p.due ? p.due.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "No due date"} · ${esc(p.who)}</span></div>`).join("")}
+          ${preview.map(p => `<div class="prow"><span>${esc(p.t)}</span><span class="muted sm">${p.due ? p.due.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : p.waiting ? "Waits for " + esc(p.waiting) + " date" : "No due date"} · ${esc(p.who)}</span></div>`).join("")}
           ${steps > 8 ? `<p class="muted sm" style="margin:0;padding:6px 14px 10px">and ${steps - 8} more.</p>` : ""}
-          <p class="muted sm" style="margin:0;padding:6px 14px 12px">Steps timed from contract dates use the deal's real dates.</p></div>` : ""}
+          <p class="muted sm" style="margin:0;padding:6px 14px 12px">On a real deal, contract-date steps use that deal's dates.</p></div>` : ""}
       </div>
     </div>`;
+  },
+  reminders() {
+    return `<h1>Date reminders</h1><p>Every birthday and homeiversary in a contact's Important Dates creates these tasks each year, automatically. No template needed.</p>
+    <div class="box"><div class="tbl-wrap"><table style="min-width:760px"><thead><tr><th>Date</th><th>Task</th><th>When</th><th>Assignee</th><th>Type</th><th>Who gets it</th><th></th></tr></thead><tbody>
+      ${state.reminders.map((r, i) => `<tr>
+        <td><select data-rm="${i}:0">${["Birthday", "Homeiversary"].map(x => `<option ${x === r[0] ? "selected" : ""}>${x}</option>`).join("")}</select></td>
+        <td><input data-rm="${i}:1" value="${esc(r[1])}"></td>
+        <td><div class="timing" style="min-width:200px"><input class="n" type="number" min="0" data-rm="${i}:2" value="${r[2]}" ${r[3] === "on" ? "disabled" : ""}><select data-rm="${i}:3">${[["before", "days before"], ["on", "on the day"]].map(([v, l]) => `<option value="${v}" ${v === r[3] ? "selected" : ""}>${l}</option>`).join("")}</select></div></td>
+        <td><select data-rm="${i}:4">${["Luke", "Alyssa"].map(x => `<option ${x === r[4] ? "selected" : ""}>${x}</option>`).join("")}</select></td>
+        <td><select data-rm="${i}:5">${["Task", "Call", "Text", "Email"].map(x => `<option ${x === r[5] ? "selected" : ""}>${x}</option>`).join("")}</select></td>
+        <td><select data-rm="${i}:6">${["Everyone", "Past clients", "Sphere"].map(x => `<option ${x === r[6] ? "selected" : ""}>${x}</option>`).join("")}</select></td>
+        <td><button class="rm" data-rmrem="${i}" aria-label="Remove">×</button></td></tr>`).join("")}
+    </tbody></table></div><div class="addrow"><button class="btn" data-addrem="1">+ Add reminder</button></div></div>`;
   },
   fields() {
     return `<h1>Custom fields</h1><p>Extra fields on people or deals. Built-in fields (name, phones, stage, deal dates) aren't listed here.</p>
@@ -350,6 +369,8 @@ document.addEventListener("click", e => {
   if (ds.sdup) { const [pi, si] = ds.sdup.split(":").map(Number), a = curCk().phases[pi].steps; a.splice(si + 1, 0, Object.assign({}, a[si], { name: a[si].name + " (copy)" })); render(); applied(); return; }
   if (ds.sdel) { const [pi, si] = ds.sdel.split(":").map(Number); curCk().phases[pi].steps.splice(si, 1); render(); applied(); return; }
   if (ds.ckclear) { if (state.ckPending !== "clear") { state.ckPending = "clear"; render(); return; } curCk().phases = []; state.ckPending = null; render(); return; }
+  if (ds.rmrem) { state.reminders.splice(+ds.rmrem, 1); render(); return; }
+  if (ds.addrem) { state.reminders.push(["Birthday", "New reminder", 1, "before", "Alyssa", "Task", "Everyone"]); render(); return; }
   if (ds.rmfield) { state.fields.splice(+ds.rmfield, 1); render(); return; }
   if (ds.addfield) { const n = el("nf-name").value.trim(); if (!n) return; state.fields.push([n, el("nf-type").value, el("nf-on").value]); render(); return; }
   if (ds.rmtag) { const t = state.tags.splice(+ds.rmtag, 1)[0]; render(); toast(`Removed "${t[0]}" from ${t[1]} people.`); return; }
@@ -374,6 +395,7 @@ document.addEventListener("change", e => {
   if (ds.u) { const [i, j] = pair(ds.u); state.users[i][j] = t.value; return; }
   if (ds.perm) { const [i, j] = pair(ds.perm); state.perms[i][+j + 1] = t.checked; return; }
   if (ds.stage) { const [p, i] = pair(ds.stage), old = state.pipes[p][i]; state.pipes[p][i] = t.value; TPLS().forEach(x => { if (x.trigger === p + " · " + old) x.trigger = p + " · " + t.value; }); toast("Renamed. Templates that start at this stage moved with it."); return; }
+  if (ds.rm && t.closest("table")) { const [i, j] = pair(ds.rm); state.reminders[i][j] = j === "2" ? +t.value : t.value; if (j === "3") render(); return; }
   if (ds.fd) { const [i, j] = pair(ds.fd); state.fields[i][j] = t.value; return; }
   if (ds.tag) { state.tags[ds.tag][0] = t.value; toast("Renamed everywhere."); return; }
   if (ds.li) { const [k, i] = pair(ds.li); state[k][i] = t.value; return; }
