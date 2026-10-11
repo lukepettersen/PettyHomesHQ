@@ -1,0 +1,559 @@
+<title>Deals Pipeline Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: top nav; view 1 = pipeline board (stage columns side by side, horizontal scroll); view 2 = simple deal page (up next + collapsible checklist, details on the side). */
+:root {
+  --bg: #f4f6f7;
+  --surface: #ffffff;
+  --sunken: #eaeef0;
+  --line: #d8dee2;
+  --fg: #16222a;
+  --muted: #5b6b75;
+  --accent: #1d6a85;
+  --accent-soft: #dcecf2;
+  --ok: #2f7a4b;
+  --ok-soft: #e0f0e5;
+  --warn: #9a6400;
+  --warn-soft: #fbefd6;
+  --bad: #b3372b;
+  --bad-soft: #f9e1de;
+  --waive: #6b6480;
+  --waive-soft: #ebe8f2;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45;
+    --fg: #e4ecf0; --muted: #93a5b0; --accent: #5fb3d1; --accent-soft: #173a48;
+    --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+    --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171c; --surface: #16212a; --sunken: #1c2a34; --line: #2a3a45;
+  --fg: #e4ecf0; --muted: #93a5b0; --accent: #5fb3d1; --accent-soft: #173a48;
+  --ok: #6cc28c; --ok-soft: #173a26; --warn: #e2b04f; --warn-soft: #3d2f12;
+  --bad: #f0857a; --bad-soft: #43201c; --waive: #b3abcc; --waive-soft: #2c2840;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.date, .num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+
+.mock-bar { background: var(--accent-soft); padding-block: 7px; padding-inline: 16px; font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; justify-content: space-between; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: none; padding: 4px 12px; font-size: 13px; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+
+.topnav { background: var(--surface); border-bottom: 1px solid var(--line); padding-inline: 16px; display: flex; align-items: center; gap: 24px; overflow-x: auto; }
+.brand { font-family: var(--font-display); font-weight: 700; font-size: 17px; padding-block: 12px; white-space: nowrap; }
+.brand span { color: var(--accent); }
+.topnav nav { display: flex; gap: 4px; }
+.topnav nav a { color: var(--muted); text-decoration: none; padding: 14px 10px; border-bottom: 2px solid transparent; white-space: nowrap; }
+.topnav nav a.on { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
+
+.wrap { max-width: 1400px; margin: 0 auto; padding-inline: 16px; padding-block: 18px 48px; display: flex; flex-direction: column; gap: 16px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 3vw, 28px); line-height: 1.15; margin: 0; text-wrap: balance; }
+
+/* Board */
+.board-head { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.board-head .left { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.board-sum { color: var(--muted); font-size: 13px; }
+.board { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; align-items: flex-start; }
+.col { flex: 0 0 248px; background: var(--sunken); border-radius: var(--r); display: flex; flex-direction: column; max-height: none; }
+.col-h { padding: 10px 12px 8px; display: flex; flex-direction: column; gap: 1px; }
+.col-h .name { font-weight: 700; font-size: 13.5px; display: flex; justify-content: space-between; }
+.col-h .name span:last-child { color: var(--muted); font-weight: 600; }
+.col-h .vol { font-size: 12px; color: var(--muted); }
+.cards { display: flex; flex-direction: column; gap: 8px; padding: 0 8px 10px; }
+.card { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 10px 11px; display: flex; flex-direction: column; gap: 5px; width: 100%; }
+.card:hover { border-color: var(--accent); }
+.card .who { font-weight: 600; display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+.card .addr { font-size: 12.5px; color: var(--muted); }
+.card .price { font-size: 12.5px; }
+.card .next { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 5px; display: flex; justify-content: space-between; gap: 6px; }
+.card .next.overdue { color: var(--bad); }
+.card .next span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; }
+.dot.g { background: var(--ok); } .dot.y { background: var(--warn); } .dot.r { background: var(--bad); }
+.mini { height: 4px; border-radius: 2px; background: var(--sunken); overflow: hidden; }
+.mini i { display: block; height: 100%; background: var(--ok); }
+.col-foot { font-size: 12px; color: var(--accent); padding: 0 12px 10px; }
+
+/* Deal page */
+.back { border: 0; background: none; color: var(--accent); font-weight: 600; padding: 0; align-self: flex-start; }
+.dhead { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: flex-end; }
+.dhead .sub { color: var(--muted); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.stagepill { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.health { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; }
+
+.dates { display: flex; flex-wrap: wrap; gap: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.dt { flex: 1 1 130px; text-align: left; border: 0; border-right: 1px solid var(--line); background: none; padding: 9px 12px; display: flex; flex-direction: column; gap: 1px; }
+.dt:last-child { border-right: 0; }
+.dt:hover, .dt[aria-expanded="true"] { background: var(--accent-soft); }
+.dt .l { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.dt .v { font-size: 13px; }
+.dt .s { font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.dt .s.met { color: var(--ok); } .dt .s.waived { color: var(--waive); } .dt .s.extended { color: var(--warn); } .dt .s.soon { color: var(--accent); }
+.edit { background: var(--surface); border: 1px solid var(--accent); border-radius: var(--r); padding: 12px; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; }
+.edit label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 600; }
+.edit input, .edit select { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+.edit p { margin: 0; flex: 1 1 220px; color: var(--muted); font-size: 13px; }
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 13px; }
+
+.dgrid { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 16px; align-items: start; }
+@media (max-width: 880px) { .dgrid { grid-template-columns: minmax(0, 1fr); } }
+.stack { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.box > h2 { font-family: var(--font-display); font-size: 15px; margin: 0; padding: 12px 14px 4px; display: flex; justify-content: space-between; align-items: baseline; }
+.box > h2 small { font-family: var(--font-body); font-size: 12.5px; color: var(--muted); font-weight: 500; }
+
+.row { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 14px; border-top: 1px solid var(--line); }
+.box > .row:first-of-type, .phase-body > .row:first-child { border-top: 0; }
+.check { width: 20px; height: 20px; border-radius: 5px; border: 1.5px solid var(--line); background: var(--surface); display: grid; place-items: center; padding: 0; }
+.check:hover { border-color: var(--ok); }
+.row.done .check { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+.row.na .check, .row.skip .check, .row.waived .check { background: var(--sunken); color: var(--muted); }
+.row .title { min-width: 0; }
+.row.done .title, .row.na .title, .row.skip .title, .row.waived .title { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+.row .title small { color: var(--muted); text-decoration: none; display: inline-block; margin-left: 6px; font-size: 11.5px; }
+.row .title .draft { border: 0; background: none; color: var(--accent); font-size: 12px; font-weight: 600; padding: 0 0 0 6px; }
+.row .r { display: flex; align-items: center; gap: 8px; }
+.row .due { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.row .due.overdue { color: var(--bad); font-weight: 500; }
+.row .due.today { color: var(--accent); font-weight: 500; }
+.av { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 700; background: var(--accent-soft); color: var(--accent); flex: none; }
+.av.as { background: var(--waive-soft); color: var(--waive); }
+.more { border: 0; background: none; color: var(--muted); padding: 0 2px; font-size: 16px; line-height: 1; }
+.menu { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 4px; }
+.menu button { border: 1px solid var(--line); background: var(--surface); border-radius: 5px; font-size: 12px; padding: 2px 8px; }
+.nextms { margin: 6px 14px 4px; font-size: 13px; color: var(--muted); }
+.nextms b { color: var(--fg); }
+
+.phase { border-top: 1px solid var(--line); }
+.phase:first-of-type { border-top: 0; }
+.phase-h { width: 100%; border: 0; background: none; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left; }
+.phase-h:hover { background: var(--sunken); }
+.phase-h .pn { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.phase-h .pn::before { content: "›"; display: inline-block; width: 10px; color: var(--muted); transition: transform .15s; }
+.phase-h[aria-expanded="true"] .pn::before { transform: rotate(90deg); }
+.phase-h .pc { font-size: 12.5px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.phase-h .pc .ok { color: var(--ok); font-weight: 600; }
+.phase-body { background: var(--bg); }
+.phase-body .row { padding-left: 32px; }
+
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 13px; padding: 6px 14px 14px; margin: 0; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; text-align: right; }
+.facts .hid { color: var(--muted); font-style: italic; font-family: var(--font-body); font-size: 12px; }
+.people { padding: 6px 14px 14px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.people div { display: flex; justify-content: space-between; gap: 8px; }
+.people span:last-child { color: var(--muted); }
+.empty { color: var(--muted); font-size: 13px; padding: 4px 14px 12px; }
+
+@media (max-width: 520px) {
+  .row { grid-template-columns: 22px minmax(0, 1fr); }
+  .row .r { grid-column: 2; }
+  .phase-body .row { padding-left: 14px; }
+  .dt { flex-basis: 50%; border-bottom: 1px solid var(--line); }
+}
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); }
+@media (prefers-reduced-motion: reduce) { .phase-h .pn::before { transition: none; } }
+</style>
+
+<div class="mock-bar">
+  <span><strong>Mockup</strong> · fake data, "today" is Mon Oct 12, 2026. Click any deal card to open it.</span>
+  <span class="seg" role="group" aria-label="View as">
+    <button id="role-admin" aria-pressed="true">Admin view</button>
+    <button id="role-assistant" aria-pressed="false">Assistant view</button>
+  </span>
+</div>
+
+<header class="topnav">
+  <div class="brand">Petty Homes <span>HQ</span></div>
+  <nav aria-label="Main">
+    <a href="#">People</a><a href="#" class="on">Deals</a><a href="#">Tasks</a><a href="#">Messages</a><a href="#">Admin</a>
+  </nav>
+</header>
+
+<main class="wrap" id="app"></main>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+const TODAY = d("2026-10-12");
+function d(s) { const [y, m, dd] = s.split("-").map(Number); return new Date(y, m - 1, dd); }
+function iso(x) { return x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0") + "-" + String(x.getDate()).padStart(2, "0"); }
+function add(x, n) { const y = new Date(x); y.setDate(y.getDate() + n); return y; }
+function diff(a, b) { return Math.round((a - b) / 86400000); }
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const fmt = x => DOW[x.getDay()] + " " + MON[x.getMonth()] + " " + x.getDate();
+const short = x => MON[x.getMonth()] + " " + x.getDate();
+const money = n => "$" + n.toLocaleString("en-US");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+let role = "admin", side = "buyer", openDeal = null, editing = null, openMenu = null;
+const expanded = {};
+
+const STAGES = {
+  buyer: ["Lead", "Consult", "Rep Signed / Searching", "Offer Out", "Under Contract", "Closed"],
+  seller: ["Lead", "Consult", "Listing Signed / Prep", "Coming Soon", "Active", "Under Contract", "Closed"],
+};
+
+// Stage checklists for deals before contract: [title, days after entering stage, who, kind]
+const STAGE_STEPS = {
+  "buyer:Lead": [["Call new lead", 0, "LP"], ["Intro email", 0, "AS", "email"], ["Schedule consult", 2, "LP"]],
+  "buyer:Consult": [["Agency disclosure + more info email", 0, "AS", "email"], ["Consult confirmation text", 1, "LP", "text"], ["Hold consult", 3, "LP"], ["Connect with lender?", 4, "LP"]],
+  "buyer:Rep Signed / Searching": [["Send buyer rep to sign", 0, "AS"], ["Buyer rep signed + saved", 1, "AS"], ["Homespotter app + intro text", 2, "AS", "text"], ["Set up home search", 2, "LP"], ["Check in on showings", 14, "LP"]],
+  "buyer:Offer Out": [["Purchase agreement breakdown email", 0, "AS", "email"], ["Offer sent to sign", 0, "LP", "text"], ["Follow up with listing agent", 1, "LP"]],
+  "seller:Lead": [["Call new lead", 0, "LP"], ["Prep CMA", 2, "LP"], ["Schedule consult", 3, "LP"]],
+  "seller:Consult": [["CMA + net sheet email", 0, "LP", "email"], ["Intro text with assistant", 0, "AS", "text"], ["Hold consult", 3, "LP"]],
+  "seller:Listing Signed / Prep": [["Listing contract signed + saved", 0, "AS"], ["Withhold listing in MLS", 0, "AS"], ["Schedule photos", 1, "AS"], ["Drop off lockbox", 2, "LP"], ["Disclosures + lead paint", 3, "AS"], ["Photos to clients", 6, "AS", "email"], ["Upload to MLS", 7, "AS"]],
+  "seller:Coming Soon": [["Showing instructions", 0, "AS"], ["Coming-soon email", 0, "AS", "email"], ["Sign install", 1, "LP"], ["Social post", 1, "LP"], ["Flyers", 2, "AS"], ["Go active in MLS", 4, "AS"]],
+  "seller:Active": [["Check hit counters", 3, "LP"], ["Weekly seller update", 7, "LP", "email"], ["Open house plan", 9, "LP"]],
+};
+
+// Contract checklists: due = milestone date + offset.
+const CONTRACT = {
+  buyer: [
+    ["Under Contract", "Purchase agreement accepted email", "fa", 0, "AS", "email"],
+    ["Under Contract", "Lender intro email", "fa", 0, "LP", "email"],
+    ["Under Contract", "Request earnest money", "fa", 1, "AS", "text"],
+    ["Under Contract", "Submit docs to brokerage", "fa", 1, "AS"],
+    ["Under Contract", "Title request + listing agent intro", "fa", 1, "AS", "email"],
+    ["Under Contract", "Earnest money receipt saved to file", "fa", 5, "AS"],
+    ["Inspection", "Schedule inspection", "fa", 1, "LP"],
+    ["Inspection", "Day-of-inspection text", "insp", -3, "AS", "text"],
+    ["Inspection", "Review inspection report with clients", "insp", -2, "LP"],
+    ["Inspection", "Draft inspection amendment", "insp", -1, "LP"],
+    ["Inspection", "Signed amendment to lender + title", "insp", 0, "AS", "email"],
+    ["Financing", "Insurance referral", "fa", 5, "AS", "email"],
+    ["Financing", "Confirm appraisal ordered", "fa", 7, "AS"],
+    ["Financing", "Remind lender about written statement", "ws", -2, "AS", "email"],
+    ["Financing", "Written statement received", "ws", 0, "LP"],
+    ["HOA", "Request HOA resale disclosure", "fa", 1, "AS"],
+    ["HOA", "Send HOA docs to clients", "fa", 4, "AS", "email"],
+    ["HOA", "Review rescission window with clients", "hoa", -2, "LP"],
+    ["HOA", "Confirm rescission period ended", "hoa", 0, "AS"],
+    ["Closing", "Repairs amendment needed?", "close", -14, "LP"],
+    ["Closing", "Order closing gift", "close", -14, "LP"],
+    ["Closing", "Final walkthrough scheduling text", "close", -9, "AS", "text"],
+    ["Closing", "Utilities setup email", "close", -9, "AS", "email"],
+    ["Closing", "Confirm cash to close", "close", -7, "AS"],
+    ["Closing", "Review settlement statement", "close", -4, "LP"],
+    ["Closing", "Final walkthrough", "close", -1, "LP"],
+    ["Closing", "Closing day", "close", 0, "LP"],
+    ["Post-Close", "\"How was the move?\" text", "close", 1, "LP", "text"],
+    ["Post-Close", "Thank-you card", "close", 3, "LP"],
+    ["Post-Close", "Zillow review request", "close", 5, "AS", "text"],
+    ["Post-Close", "Google review request", "close", 21, "AS", "email"],
+  ],
+  seller: [
+    ["Under Contract", "Mark contingent in MLS", "fa", 0, "AS"],
+    ["Under Contract", "Purchase agreement accepted email", "fa", 0, "AS", "email"],
+    ["Under Contract", "Submit docs to brokerage", "fa", 1, "AS"],
+    ["Under Contract", "Title intro", "fa", 1, "AS", "email"],
+    ["Inspection", "Day-of-inspection text", "insp", -3, "AS", "text"],
+    ["Inspection", "Review buyer's inspection requests", "insp", 0, "LP"],
+    ["Financing", "Remind buyer's lender about written statement", "ws", -2, "AS", "email"],
+    ["Financing", "Mark pending in MLS", "ws", 1, "AS"],
+    ["Closing", "Repairs needed?", "close", -14, "LP"],
+    ["Closing", "Closing reminder email", "close", -14, "AS", "email"],
+    ["Closing", "Order closing gift", "close", -14, "LP"],
+    ["Closing", "Review settlement statement", "close", -5, "LP"],
+    ["Closing", "Closing day", "close", 0, "LP"],
+    ["Post-Close", "Mark closed in MLS", "close", 0, "AS"],
+    ["Post-Close", "Thank-you card", "close", 3, "LP"],
+    ["Post-Close", "Zillow review request", "close", 7, "AS", "text"],
+  ],
+};
+const MS_NAMES = { fa: "Final Acceptance", insp: "Inspection", hoa: "HOA Rescission", ws: "Written Statement", close: "Closing" };
+
+const deals = [
+  // Buyers
+  { id: 1, side: "buyer", stage: "Lead", name: "Ethan Moreau", line: "Source: Website", since: "2026-10-09" },
+  { id: 2, side: "buyer", stage: "Lead", name: "Sofia Lindqvist", line: "Source: Sphere Referral", since: "2026-10-11" },
+  { id: 3, side: "buyer", stage: "Lead", name: "Ben & Hana Okafor", line: "Source: Zillow Preferred", since: "2026-10-05" },
+  { id: 4, side: "buyer", stage: "Consult", name: "Grace Thorsen", line: "Consult Wed Oct 14", since: "2026-10-10" },
+  { id: 5, side: "buyer", stage: "Consult", name: "Mateo Ruiz", line: "Consult Thu Oct 15", since: "2026-10-12" },
+  { id: 6, side: "buyer", stage: "Consult", name: "Avery Kline", line: "Consult done Oct 8", since: "2026-10-05" },
+  { id: 7, side: "buyer", stage: "Rep Signed / Searching", name: "Nora Feld", line: "SW Minneapolis · $350–400k", since: "2026-09-20" },
+  { id: 8, side: "buyer", stage: "Rep Signed / Searching", name: "Theo & June Park", line: "Edina / Richfield · to $520k", since: "2026-10-01" },
+  { id: 9, side: "buyer", stage: "Rep Signed / Searching", name: "Isaac Brandt", line: "St. Paul · condo", since: "2026-10-08" },
+  { id: 10, side: "buyer", stage: "Rep Signed / Searching", name: "Leah Sandoval", line: "Roseville / Shoreview", since: "2026-09-28" },
+  { id: 11, side: "buyer", stage: "Offer Out", name: "Owen Pryce", line: "2215 Hillside Ave, Golden Valley", price: 389000, since: "2026-10-11" },
+  { id: 12, side: "buyer", stage: "Offer Out", name: "Mia Castellano", line: "845 Osceola Ave, St. Paul", price: 455000, since: "2026-10-12" },
+  { id: 13, side: "buyer", stage: "Under Contract", name: "Jordan & Priya Calloway", line: "4127 Upton Ave S #3, Minneapolis", price: 412500, em: 8000, sc: 5000, bac: "2.5%", comm: 10312.5, fin: "Conventional",
+    ms: { fa: "2026-10-02", insp: "2026-10-14", hoa: "2026-10-13", ws: "2026-10-23", close: "2026-10-30" }, msOrig: { insp: "2026-10-09" }, msStatus: { insp: "extended" },
+    openPast: ["Earnest money receipt saved to file", "Insurance referral"], doneEarly: ["Confirm appraisal ordered"],
+    people: [["Jordan Calloway", "Buyer"], ["Priya Calloway", "Buyer"], ["Dana Kim · Northfield Lending", "Lender"], ["Lakeview Title", "Title"], ["Marcus Holt · Bluewater Realty", "Listing agent"]] },
+  { id: 14, side: "buyer", stage: "Under Contract", name: "Ruth & Sam Engel", line: "6012 Xerxes Ave S, Edina", price: 598000, em: 12000, sc: 0, bac: "2.7%", comm: 16146, fin: "Conventional",
+    ms: { fa: "2026-10-09", insp: "2026-10-19", ws: "2026-10-30", close: "2026-11-06" } },
+  { id: 15, side: "buyer", stage: "Under Contract", name: "Dev Raman", line: "1530 Hague Ave, St. Paul", price: 329900, em: 5000, sc: 4000, bac: "2.5%", comm: 8247.5, fin: "FHA",
+    ms: { fa: "2026-09-19", insp: "2026-09-29", ws: "2026-10-09", close: "2026-10-23" } },
+  { id: 16, side: "buyer", stage: "Closed", name: "Kara Voss", line: "3816 Grand Ave S, Minneapolis", price: 376000, closed: "2026-09-29" },
+  { id: 17, side: "buyer", stage: "Closed", name: "Liam Torres", line: "5521 Abbott Ave S, Edina", price: 510000, closed: "2026-09-22" },
+  { id: 18, side: "buyer", stage: "Closed", name: "Hollis Family", line: "2440 Cleveland Ave N, Roseville", price: 289500, closed: "2026-09-18" },
+  // Sellers
+  { id: 21, side: "seller", stage: "Lead", name: "Patricia Wendt", line: "Source: Sphere", since: "2026-10-07" },
+  { id: 22, side: "seller", stage: "Lead", name: "Joel Amundsen", line: "Source: Website", since: "2026-10-11" },
+  { id: 23, side: "seller", stage: "Consult", name: "Erik & Tove Brekke", line: "Consult Fri Oct 16", since: "2026-10-09" },
+  { id: 24, side: "seller", stage: "Listing Signed / Prep", name: "Carol & Dean Fisk", line: "3318 47th Ave S, Minneapolis", price: 365000, since: "2026-10-08" },
+  { id: 25, side: "seller", stage: "Listing Signed / Prep", name: "Ana Ruiz-Hall", line: "1207 Chatsworth St N, Roseville", price: 299000, since: "2026-10-01" },
+  { id: 26, side: "seller", stage: "Coming Soon", name: "Hugo Bergstrom", line: "709 Lincoln Ave, St. Paul", price: 625000, since: "2026-10-10" },
+  { id: 27, side: "seller", stage: "Active", name: "Margaret Ostby", line: "4540 Drew Ave S, Edina", price: 749000, since: "2026-09-30" },
+  { id: 28, side: "seller", stage: "Active", name: "Greg & Lin Tam", line: "2810 Fremont Ave N, Minneapolis", price: 315000, since: "2026-09-12" },
+  { id: 29, side: "seller", stage: "Under Contract", name: "Wes Halvorsen", line: "1904 Stinson Pkwy NE, Minneapolis", price: 442000, em: 7500, sc: 3000, bac: "2.5%", comm: 11050, fin: "Conventional",
+    ms: { fa: "2026-10-07", insp: "2026-10-17", ws: "2026-10-28", close: "2026-11-13" } },
+  { id: 30, side: "seller", stage: "Closed", name: "Irene Dahl", line: "6125 Morgan Ave S, Richfield", price: 398000, closed: "2026-10-02" },
+  { id: 31, side: "seller", stage: "Closed", name: "Paul Nyberg", line: "880 Ashland Ave, St. Paul", price: 265000, closed: "2026-09-25" },
+];
+
+// Build each deal's checklist once.
+deals.forEach(dl => {
+  dl.tasks = [];
+  if (dl.stage === "Closed") return;
+  if (dl.stage === "Under Contract") {
+    dl.msStatus = dl.msStatus || {};
+    Object.keys(dl.ms).forEach(k => { if (!dl.msStatus[k]) dl.msStatus[k] = d(dl.ms[k]) < TODAY ? "met" : "pending"; });
+    CONTRACT[dl.side].forEach(([phase, t, a, o, who, kind]) => {
+      if (!dl.ms[a]) return; // conditional: e.g. HOA steps only when the deal has an HOA date
+      if (phase === "HOA" && !dl.ms.hoa) return;
+      const task = { phase, t, a, o, who, kind: kind || "task" };
+      const due = add(d(dl.ms[a]), o);
+      task.s = due < TODAY && !(dl.openPast || []).includes(t) ? "done" : "open";
+      if ((dl.doneEarly || []).includes(t)) task.s = "done";
+      dl.tasks.push(task);
+    });
+  } else {
+    (STAGE_STEPS[dl.side + ":" + dl.stage] || []).forEach(([t, o, who, kind], i, arr) => {
+      const task = { phase: dl.stage, t, fixed: iso(add(d(dl.since), o)), who, kind: kind || "task" };
+      task.s = d(task.fixed) < TODAY ? "done" : "open";
+      dl.tasks.push(task);
+    });
+    if (dl.id === 3) dl.tasks[2].s = "open"; // one overdue lead for the demo
+  }
+  dl.tasks.forEach((t, i) => t.id = i);
+});
+
+const dueOf = (dl, t) => t.fixed ? d(t.fixed) : add(d(dl.ms[t.a]), t.o);
+function eff(dl, t) {
+  if (t.s !== "open") return t.s;
+  if (t.a && dl.msStatus[t.a] === "waived") return "waived";
+  return "open";
+}
+const openTasks = dl => dl.tasks.filter(t => eff(dl, t) === "open").sort((a, b) => dueOf(dl, a) - dueOf(dl, b));
+function health(dl) {
+  const od = openTasks(dl).filter(t => dueOf(dl, t) < TODAY).length;
+  return od >= 3 ? "r" : od ? "y" : "g";
+}
+
+const el = id => document.getElementById(id);
+const app = el("app");
+const CHECK = '<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const DASH = '<svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 8h8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+
+/* ---------- Board ---------- */
+function renderBoard() {
+  const list = deals.filter(x => x.side === side);
+  const active = list.filter(x => x.stage !== "Closed");
+  const uc = list.filter(x => x.stage === "Under Contract");
+  app.innerHTML = `
+    <div class="board-head">
+      <div class="left">
+        <h1>Deals</h1>
+        <span class="seg" role="group" aria-label="Pipeline">
+          <button data-side="buyer" aria-pressed="${side === "buyer"}">Buyers</button>
+          <button data-side="seller" aria-pressed="${side === "seller"}">Sellers</button>
+        </span>
+      </div>
+      <span class="board-sum">${active.length} active · ${uc.length} under contract · ${money(uc.reduce((s, x) => s + x.price, 0))} pending volume</span>
+    </div>
+    <div class="board">${STAGES[side].map(st => colHtml(st, list.filter(x => x.stage === st))).join("")}</div>`;
+}
+
+function colHtml(stage, items) {
+  const vol = items.reduce((s, x) => s + (x.price || 0), 0);
+  const closed = stage === "Closed";
+  return `<section class="col">
+    <div class="col-h"><span class="name"><span>${closed ? "Closed · last 30 days" : stage}</span><span>${items.length}</span></span>
+      <span class="vol">${vol ? money(vol) : "&nbsp;"}</span></div>
+    <div class="cards">${items.map(cardHtml).join("")}</div>
+    ${closed ? `<div class="col-foot">View all closed deals →</div>` : ""}
+  </section>`;
+}
+
+function cardHtml(dl) {
+  let next = "";
+  if (dl.stage === "Closed") {
+    next = `<div class="next"><span>Closed ${short(d(dl.closed))}</span></div>`;
+  } else {
+    const n = openTasks(dl)[0];
+    if (n) { const due = dueOf(dl, n), od = due < TODAY; next = `<div class="next ${od ? "overdue" : ""}"><span>${esc(n.t)}</span><span class="date">${od ? "Overdue" : short(due)}</span></div>`; }
+  }
+  const prog = dl.stage === "Under Contract" ? (() => { const done = dl.tasks.filter(t => eff(dl, t) !== "open").length; return `<div class="mini" title="${done} of ${dl.tasks.length} steps"><i style="width:${Math.round(done / dl.tasks.length * 100)}%"></i></div><div class="addr">Closing ${short(d(dl.ms.close))}</div>`; })() : "";
+  return `<button class="card" data-deal="${dl.id}">
+    <span class="who"><span>${esc(dl.name)}</span>${dl.stage !== "Closed" ? `<span class="dot ${health(dl)}" title="${{ g: "On track", y: "Something overdue", r: "Behind" }[health(dl)]}"></span>` : ""}</span>
+    <span class="addr">${esc(dl.line)}</span>
+    ${dl.price ? `<span class="price num">${money(dl.price)}</span>` : ""}
+    ${prog}${next}
+  </button>`;
+}
+
+/* ---------- Deal page ---------- */
+function renderDeal() {
+  const dl = deals.find(x => x.id === openDeal);
+  const uc = dl.stage === "Under Contract";
+  const h = health(dl);
+  const open = openTasks(dl);
+  const upNext = open.slice(0, 4);
+  const phases = [...new Set(dl.tasks.map(t => t.phase))];
+  if (!expanded[dl.id]) {
+    const firstOpen = phases.find(p => dl.tasks.some(t => t.phase === p && eff(dl, t) === "open"));
+    expanded[dl.id] = new Set(firstOpen ? [firstOpen] : []);
+  }
+  const nextMs = uc ? Object.keys(dl.ms).filter(k => ["pending", "extended"].includes(dl.msStatus[k]) && d(dl.ms[k]) >= TODAY).sort((a, b) => d(dl.ms[a]) - d(dl.ms[b]))[0] : null;
+
+  app.innerHTML = `
+    <button class="back" data-back="1">← ${side === "buyer" ? "Buyers" : "Sellers"} pipeline</button>
+    <div class="dhead">
+      <div>
+        <h1>${esc(dl.name)}</h1>
+        <div class="sub"><span class="stagepill">${dl.stage}</span><span>${esc(dl.line)}</span>${dl.price ? `<span class="num">${money(dl.price)}</span>` : ""}</div>
+      </div>
+      ${dl.stage !== "Closed" ? `<span class="health"><span class="dot ${h}"></span>${{ g: "On track", y: "Something overdue", r: "Behind" }[h]}</span>` : ""}
+    </div>
+    ${uc ? datesHtml(dl) : ""}
+    <div class="dgrid">
+      <div class="stack">
+        ${dl.stage === "Closed" ? `<div class="box"><h2>Closed ${fmt(d(dl.closed))}</h2><p class="empty">Closed deals keep their history and drop off the board after 30 days.</p></div>` : `
+        <div class="box">
+          <h2>Up next <small>${open.length} open</small></h2>
+          ${nextMs ? `<div class="nextms">Next deadline: <b>${MS_NAMES[nextMs]}</b>, ${fmt(d(dl.ms[nextMs]))}</div>` : ""}
+          ${upNext.length ? upNext.map(t => rowHtml(dl, t)).join("") : `<p class="empty">All caught up.</p>`}
+        </div>
+        <div class="box">
+          <h2>${uc ? "Checklist" : "Stage checklist"} <small>${dl.tasks.filter(t => eff(dl, t) !== "open").length} of ${dl.tasks.length} done</small></h2>
+          ${phases.map(p => phaseHtml(dl, p)).join("")}
+        </div>`}
+      </div>
+      <div class="stack">
+        ${uc ? `<div class="box"><h2>Details</h2><dl class="facts">${factsHtml(dl)}</dl></div>` : ""}
+        <div class="box"><h2>People</h2><div class="people">${(dl.people || [[dl.name, dl.side === "buyer" ? "Buyer" : "Seller"]]).map(([n, r]) => `<div><span>${esc(n)}</span><span>${r}</span></div>`).join("")}</div></div>
+      </div>
+    </div>`;
+}
+
+function datesHtml(dl) {
+  const keys = Object.keys(dl.ms);
+  let html = `<div class="dates">${keys.map(k => {
+    const st = dl.msStatus[k], n = diff(d(dl.ms[k]), TODAY);
+    const label = st === "met" ? "✓ Met" : st === "waived" ? "Waived" : st === "extended" ? "Extended" : n === 0 ? "Today" : n > 0 ? `In ${n} days` : "Past due";
+    const cls = st !== "pending" ? st : n <= 3 ? "soon" : "";
+    return `<button class="dt" data-ms="${k}" aria-expanded="${editing === k}"><span class="l">${MS_NAMES[k]}</span><span class="v date">${fmt(d(dl.ms[k]))}</span><span class="s ${cls}">${label}</span></button>`;
+  }).join("")}</div>`;
+  if (editing && dl.ms[editing]) {
+    const st = dl.msStatus[editing];
+    const n = dl.tasks.filter(t => t.a === editing && t.s === "open").length;
+    html += `<div class="edit">
+      <label>${MS_NAMES[editing]} date<input type="date" id="ms-date" value="${dl.ms[editing]}"></label>
+      <label>Status<select id="ms-status">${["pending", "met", "waived", "extended"].map(s => `<option value="${s}" ${s === st ? "selected" : ""}>${s[0].toUpperCase() + s.slice(1)}</option>`).join("")}</select></label>
+      <p>${n} open step${n === 1 ? "" : "s"} move with this date. Waived clears them.</p>
+      <button class="btn" data-close="1">Done</button>
+    </div>`;
+  }
+  return html;
+}
+
+function factsHtml(dl) {
+  return [["Price", money(dl.price)], ["Earnest money", money(dl.em)], ["Seller contributions", money(dl.sc)], ["BAC", dl.bac],
+    ["Commission", role === "admin" ? money(dl.comm) : null], ["Financing", dl.fin]]
+    .map(([k, v]) => `<dt>${k}</dt><dd class="num">${v === null ? `<span class="hid">Hidden for assistant</span>` : v}</dd>`).join("");
+}
+
+function phaseHtml(dl, p) {
+  const items = dl.tasks.filter(t => t.phase === p).sort((a, b) => dueOf(dl, a) - dueOf(dl, b));
+  const done = items.filter(t => eff(dl, t) !== "open").length;
+  const isOpen = expanded[dl.id].has(p);
+  const od = items.some(t => eff(dl, t) === "open" && dueOf(dl, t) < TODAY);
+  return `<div class="phase">
+    <button class="phase-h" data-phase="${esc(p)}" aria-expanded="${isOpen}">
+      <span class="pn">${esc(p)}</span>
+      <span class="pc">${od ? `<span class="dot y"></span>` : ""}${done === items.length ? `<span class="ok">✓ Done</span>` : `${done}/${items.length}`}</span>
+    </button>
+    ${isOpen ? `<div class="phase-body">${items.map(t => rowHtml(dl, t)).join("")}</div>` : ""}
+  </div>`;
+}
+
+function rowHtml(dl, t) {
+  const st = eff(dl, t), due = dueOf(dl, t), n = diff(due, TODAY);
+  const icon = st === "done" ? CHECK : st === "open" ? "" : DASH;
+  const note = st === "na" ? "N/A" : st === "skip" ? "Skipped" : st === "waived" ? "Waived" : "";
+  const dueCls = st === "open" ? (n < 0 ? "overdue" : n === 0 ? "today" : "") : "";
+  const rule = t.a ? `${MS_NAMES[t.a]} ${t.o === 0 ? "day of" : (t.o > 0 ? "+ " : "− ") + Math.abs(t.o) + "d"}` : "";
+  const key = dl.id + ":" + t.id;
+  return `<div class="row ${st}">
+    <button class="check" data-toggle="${t.id}" aria-label="Mark ${st === "done" ? "not done" : "done"}: ${esc(t.t)}">${icon}</button>
+    <span class="title">${esc(t.t)}${note ? `<small>${note}</small>` : ""}${t.kind !== "task" && st === "open" ? `<button class="draft" data-draft="${t.id}">Draft ${t.kind}</button>` : ""}</span>
+    <span class="r"><span class="due date ${dueCls}" title="${rule}">${n === 0 && st === "open" ? "Today" : short(due)}</span><span class="av ${t.who === "AS" ? "as" : ""}">${t.who}</span><button class="more" data-menu="${t.id}" aria-label="More options">⋯</button></span>
+    ${openMenu === key ? `<div class="menu">
+      ${st !== "na" ? `<button data-set="na" data-id="${t.id}">Mark N/A</button>` : ""}
+      ${st !== "skip" ? `<button data-set="skip" data-id="${t.id}">Skip</button>` : ""}
+      ${st !== "open" && st !== "waived" ? `<button data-set="open" data-id="${t.id}">Reopen</button>` : ""}
+      ${rule ? `<span style="font-size:12px;color:var(--muted);align-self:center">Timing: ${rule}</span>` : ""}
+    </div>` : ""}
+  </div>`;
+}
+
+/* ---------- Events ---------- */
+function render() { openDeal ? renderDeal() : renderBoard(); }
+let tt;
+function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const dl = deals.find(x => x.id === openDeal);
+  if (b.dataset.side) { side = b.dataset.side; render(); return; }
+  if (b.dataset.deal) { openDeal = +b.dataset.deal; editing = null; openMenu = null; render(); window.scrollTo(0, 0); return; }
+  if (b.dataset.back) { openDeal = null; editing = null; render(); return; }
+  if (b.dataset.ms) { editing = editing === b.dataset.ms ? null : b.dataset.ms; render(); return; }
+  if (b.dataset.close) { editing = null; render(); return; }
+  if (b.dataset.phase) { const s = expanded[dl.id]; s.has(b.dataset.phase) ? s.delete(b.dataset.phase) : s.add(b.dataset.phase); render(); return; }
+  if (b.dataset.toggle) {
+    const t = dl.tasks[+b.dataset.toggle];
+    if (eff(dl, t) === "waived") { toast("Cleared by a waived deadline."); return; }
+    t.s = t.s === "open" ? "done" : "open"; render(); return;
+  }
+  if (b.dataset.menu) { const k = dl.id + ":" + b.dataset.menu; openMenu = openMenu === k ? null : k; render(); return; }
+  if (b.dataset.set) { dl.tasks[+b.dataset.id].s = b.dataset.set; openMenu = null; render(); return; }
+  if (b.dataset.draft) { const t = dl.tasks[+b.dataset.draft]; toast(`Opens a pre-filled ${t.kind}: "${t.t}". You review, then send.`); return; }
+  if (b.id === "role-admin" || b.id === "role-assistant") {
+    role = b.id === "role-admin" ? "admin" : "assistant";
+    el("role-admin").setAttribute("aria-pressed", role === "admin");
+    el("role-assistant").setAttribute("aria-pressed", role === "assistant");
+    render(); return;
+  }
+});
+
+document.addEventListener("change", e => {
+  const dl = deals.find(x => x.id === openDeal); if (!dl || !editing) return;
+  if (e.target.id === "ms-date" && e.target.value) {
+    const n = dl.tasks.filter(t => t.a === editing && t.s === "open").length;
+    dl.ms[editing] = e.target.value;
+    if (dl.msStatus[editing] === "pending") dl.msStatus[editing] = "extended";
+    toast(`${MS_NAMES[editing]} moved to ${fmt(d(e.target.value))}. ${n} step${n === 1 ? "" : "s"} re-dated.`);
+    render();
+  }
+  if (e.target.id === "ms-status") { dl.msStatus[editing] = e.target.value; render(); }
+});
+
+render();
+</script>
