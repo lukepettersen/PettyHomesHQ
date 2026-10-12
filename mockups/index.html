@@ -1884,8 +1884,15 @@ const followTxt = n => n ? `Every ${n} days` : "Not set";
 function leftHtml(c, stage, ago, touchDue) { return infoCard(c, ago) + detailsCard(c, stage, touchDue) + tagsCard(c) + datesCard(c) + `<button class="linkbtn danger" data-delperson="1">${confirmDel === "person" ? "Click again to delete this person and their files" : "Delete person"}</button>`; }
 const head = (title, key) => `<h3>${title}${editCard === key ? "" : `<button class="edit-btn" data-editcard="${key}">Edit</button>`}</h3>`;
 const foot = key => `<div class="ed-foot"><button class="btn" data-cancelcard="1">Cancel</button><button class="btn primary" data-savecard="${key}">Save</button></div>`;
-const listRows = (arr, kind, ph) => arr.map(([l, v], i) => `<div class="ed-row"><input class="lbl" data-${kind}l="${i}" value="${esc(l)}" placeholder="Label" aria-label="Label"><input data-${kind}v="${i}" value="${esc(v)}" placeholder="${ph}" aria-label="${ph}"><button class="rm" data-rm="${kind}:${i}" aria-label="Remove">×</button></div>`).join("");
+const listRows = (arr, kind, ph, type = "text", lph = "Label") => arr.map(([l, v], i) => `<div class="ed-row"><input class="lbl" data-${kind}l="${i}" value="${esc(l)}" placeholder="${lph}" aria-label="${lph}"><input type="${type}" data-${kind}v="${i}" value="${esc(v)}" placeholder="${ph}" aria-label="${ph}"><button class="rm" data-rm="${kind}:${i}" aria-label="Remove">×</button></div>`).join("");
 
+// Important Dates are stored as real dates (YYYY-MM-DD) so reminders can be timed from them.
+function niceDate(v, withYear) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ""); if (!m) return esc(v || "");
+  const dt = new Date(+m[1], +m[2] - 1, +m[3]), next = new Date(TODAY.getFullYear(), dt.getMonth(), dt.getDate()); if (next < TODAY) next.setFullYear(next.getFullYear() + 1);
+  const n = diff(next, TODAY);
+  return `${MON[dt.getMonth()]} ${dt.getDate()}${withYear ? ", " + m[1] : ""} <span class="muted sm">${n === 0 ? "· today" : n <= 30 ? `· in ${n} day${n === 1 ? "" : "s"}` : ""}</span>`;
+}
 function infoCard(c, ago) {
   if (editCard === "info") {
     return `<div class="card-s ed">${head("Contact info", "info")}
@@ -1961,13 +1968,14 @@ function tagsCard(c) {
 function datesCard(c) {
   if (editCard === "dates") {
     return `<div class="card-s ed">${head("Important Dates", "dates")}
-      <label>Birthdays</label>${listRows(draft.birthdays, "h", "Birthday, e.g. Mar 4")}<button class="addlink" data-addrow="h">+ Add birthday</button>
-      <label>Homeiversary<input data-f="homeiversary" value="${esc(draft.homeiversary || "")}" placeholder="Fills in when a deal closes"></label>
+      <label>Birthdays</label>${listRows(draft.birthdays, "h", "Birthday", "date", "Whose")}<button class="addlink" data-addrow="h">+ Add birthday</button>
+      <label>Homeiversary<input type="date" data-f="homeiversary" value="${esc(draft.homeiversary || "")}"></label>
+      <p class="muted sm" style="margin:0">Pick the date so HQ can send the birthday and homeiversary tasks (Admin → Date reminders). The year is optional for birthdays, any year works.</p>
       ${foot("dates")}</div>`;
   }
   return `<div class="card-s">${head("Important Dates", "dates")}
-    <dl class="kv">${c.birthdays.map(([n, b]) => `<dt>${esc(n.replace(/^(\S+)( \(.*\))?$/, "$1's birthday$2"))}</dt><dd>${esc(b)}</dd>`).join("") || `<dt>Birthdays</dt><dd class="muted">None added</dd>`}
-    <dt>Homeiversary</dt><dd>${c.homeiversary ? esc(c.homeiversary) : `<span class="muted">Fills in when a deal closes</span>`}</dd></dl>
+    <dl class="kv">${c.birthdays.map(([n, b]) => `<dt>${esc(n.replace(/^(\S+)( \(.*\))?$/, "$1's birthday$2"))}</dt><dd>${niceDate(b)}</dd>`).join("") || `<dt>Birthdays</dt><dd class="muted">None added</dd>`}
+    <dt>Homeiversary</dt><dd>${c.homeiversary ? niceDate(c.homeiversary, true) : `<span class="muted">Fills in when a deal closes</span>`}</dd></dl>
     <p class="muted sm">Reminders for these dates are added to Tasks every year (Admin → Date reminders).</p></div>`;
 }
 
@@ -2235,7 +2243,7 @@ document.addEventListener("click", e => {
   if (b.dataset.paclose) {
     const pa = deals.find(x => x.id === +b.dataset.paclose), eng = deals.find(x => x.id === pa.parent), c = contact(pa.cid);
     pa.status = "Closed"; pa.closed = iso(TODAY); eng.status = "Closed"; c.stage = "Past Client";
-    if (pa.side === "buyer") c.homeiversary = fmt(TODAY).replace(/^\w+ /, "") + ", 2026";
+    if (pa.side === "buyer") c.homeiversary = iso(TODAY);
     const post = stepsFor(`${pa.side === "buyer" ? "Buyer" : "Seller"} · Closed`, pa.facts, TODAY).tasks.map(t => ({ t: t.t, due: t.fixed, who: t.who, s: "open" }));
     c.tasks.push(...post);
     ctab[openContact] = "timeline"; render(); toast(`Closed! ${c.name} is now a Past Client.${post.length ? ` ${post.length} post-close tasks added.` : ""}`); return;
@@ -2255,7 +2263,7 @@ document.addEventListener("click", e => {
   if (b.dataset.editcard) { const c = contact(openContact); editCard = b.dataset.editcard; draft = JSON.parse(JSON.stringify(c)); draft.assigned = draft.assigned || "Luke Pettersen"; draft.newMode = {}; render(); return; }
   if (b.dataset.cancelcard) { editCard = null; draft = null; render(); return; }
   if (b.dataset.savecard) { saveCard(b.dataset.savecard); return; }
-  if (b.dataset.addrow) { collect(); const f = { p: "phones", e: "emails", h: "birthdays" }[b.dataset.addrow]; draft[f].push([b.dataset.addrow === "p" ? "Mobile" : "", ""]); render(); return; }
+  if (b.dataset.addrow) { collect(); const f = { p: "phones", e: "emails", h: "birthdays" }[b.dataset.addrow]; draft[f].push([b.dataset.addrow === "p" ? "Mobile" : b.dataset.addrow === "h" ? (draft.birthdays.length ? "" : draft.name.split(" ")[0]) : "", ""]); render(); return; }
   if (b.dataset.rm) { collect(); const [k, i] = b.dataset.rm.split(":"); draft[{ p: "phones", e: "emails", h: "birthdays" }[k]].splice(+i, 1); render(); return; }
   if (b.dataset.rmtag) { const c = contact(openContact); const t = c.tags.splice(+b.dataset.rmtag, 1)[0]; toast(`Removed tag "${t}".`); render(); return; }
   if (b.dataset.tagadd) { tagAdding = true; render(); const i = el("tag-in"); if (i) i.focus(); return; }
