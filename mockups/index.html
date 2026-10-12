@@ -1359,18 +1359,18 @@ function renderActive() {
   if (pview === "uc") cols = UC_PHASES.map(([, l]) => { const ps = pas.filter(p => ucPhase(p) === l); return [l, ps.map(p => pItem(p)), ps.reduce((t, p) => t + p.price, 0)]; });
   else {
     const kind = pview === "buyers" ? "buyer" : "listing", list = pview === "buyers" ? buyers : listings;
-    cols = STATUS[kind].map(st => { const es = list.filter(e => !activePA(e) && e.status === st); return [st, es.map(e => pItem(e, e)), es.reduce((t, e) => t + (e.price || 0), 0)]; })
-      .concat([["Under contract", list.filter(activePA).map(e => pItem(activePA(e), e)), list.filter(activePA).reduce((t, e) => t + activePA(e).price, 0)]]);
+    // Clients under contract live on the Under contract tab, not here.
+    cols = STATUS[kind].map(st => { const es = list.filter(e => !activePA(e) && e.status === st); return [st, es.map(e => pItem(e, e)), es.reduce((t, e) => t + (e.price || 0), 0)]; });
   }
   const vol = pas.reduce((s, x) => s + (x.price || 0), 0);
-  const tabs = [["buyers", "Buyers", buyers.length], ["sellers", "Sellers", listings.length], ["uc", "Under contract", pas.length]];
+  const tabs = [["buyers", "Buyers", buyers.filter(e => !activePA(e)).length], ["sellers", "Sellers", listings.filter(e => !activePA(e)).length], ["uc", "Under contract", pas.length]];
   app.innerHTML = `
     <div class="board-head">
       <div class="left"><h1>Pipeline</h1><span class="board-sum">${money(vol)} under contract</span></div>
     </div>
     <div class="ptabs" role="tablist">${tabs.map(([k, l, n]) => `<button role="tab" data-pview="${k}" aria-selected="${pview === k}">${l} <span>${n}</span></button>`).join("")}</div>
     <p class="muted sm" style="margin:0">${pview === "uc" ? "Grouped by the next contract date still open. " : ""}Shows where each client is. To change a status, open the client.</p>
-    <div class="pcols" style="--n:${cols.length}">${cols.map(([l, items, total], i) => `<section class="pcol"><div class="pcol-h" style="--bar:${i === cols.length - 1 && pview !== "uc" ? "var(--coral)" : ["var(--mint)", "var(--moss)", "var(--misty)", "var(--mint)", "var(--moss)"][i % 5]}"><b>${esc(l)}</b><span class="muted sm">${items.length} · ${total ? kprice(total) : "$0"}</span></div><div class="pcol-b">${items.join("") || `<span class="pcol-e">None</span>`}</div></section>`).join("")}</div>
+    <div class="pcols" style="--n:${cols.length}">${cols.map(([l, items, total], i) => `<section class="pcol"><div class="pcol-h" style="--bar:${pview === "uc" ? "var(--coral)" : ["var(--mint)", "var(--moss)", "var(--misty)", "var(--mint)", "var(--moss)"][i % 5]}"><b>${esc(l)}</b><span class="muted sm">${items.length} · ${total ? kprice(total) : "$0"}</span></div><div class="pcol-b">${items.join("") || `<span class="pcol-e">None</span>`}</div></section>`).join("")}</div>
     <div class="closed-row"><button class="linkbtn" data-showclosed="1">${showClosed ? "Hide" : "Show"} closed in the last 30 days (${closed.length})</button>
       ${showClosed ? `<div class="pclosed">${closed.map(dl => `<button class="pitem" data-deal="${dl.id}"><span class="pi-t"><span class="sidechip ${dl.side}">${dl.side === "buyer" ? "Buyer" : "Seller"}</span><b>${esc(dl.line.split(",")[0])}</b></span><span class="muted sm">${esc(dl.name)} · ${kprice(dl.price)}</span><span class="pi-n">Closed ${short(d(dl.closed))}</span></button>`).join("")}</div>` : ""}</div>`;
 }
