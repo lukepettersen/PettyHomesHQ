@@ -373,7 +373,7 @@ let role = "admin", editing = null, openMenu = null, ucFilter = "all", showClose
 const expanded = {}, engOpen = {};
 
 // Client files: a buyer representation or a listing, plus purchase agreements ("pa") under one of them.
-const STATUS = { buyer: ["Phone call scheduled", "Consult scheduled", "Consult complete", "Rep signed", "Showing homes", "Submitting offers"], listing: ["Phone call scheduled", "Consult scheduled", "Consult complete", "Listing signed / Prep", "Coming soon", "Active"] };
+const STATUS = { buyer: ["Consult scheduled", "Consult complete", "Rep signed", "Showing homes", "Submitting offers"], listing: ["Consult scheduled", "Consult complete", "Listing signed / Prep", "Coming soon", "Active"] };
 const MS_NAMES = { fa: "Final Acceptance", insp: "Inspection", hoa: "HOA Rescission", ws: "Written Statement", close: "Closing" };
 const ANCHOR_KEY = { "Final Acceptance": "fa", "Inspection": "insp", "Written Statement": "ws", "HOA Rescission": "hoa", "Closing": "close" };
 
@@ -957,11 +957,11 @@ function formGroups() {
   if (f.mode === "buyer") {
     const i = STATUS.buyer.indexOf(f.status), g = [["What they're looking for", F.search]];
     if (f.status === "Consult scheduled") g.push(["Consult", F.consult]);
-    if (i >= 3) g.push(["Buyer rep", F.rep]);
+    if (i >= 2) g.push(["Buyer rep", F.rep]);
     if (f.status === "Submitting offers") g.push(["The offer", F.offer]);
     return g;
   }
-  if (STATUS.listing.indexOf(f.status) < 3) return [["The home", [["address", "Property address", "text", "Street, city", true], ["price", "Estimated value", "money"], ["timeframe", "Timeframe", TF]]]].concat(f.status === "Consult scheduled" ? [["Consult", F.consult]] : []);
+  if (STATUS.listing.indexOf(f.status) < 2) return [["The home", [["address", "Property address", "text", "Street, city", true], ["price", "Estimated value", "money"], ["timeframe", "Timeframe", TF]]]].concat(f.status === "Consult scheduled" ? [["Consult", F.consult]] : []);
   return [["The listing", F.listing], ["The property", F.facts]];
 }
 const formTrigger = () => dealForm.mode === "pa" ? `${sideOf(deals.find(x => x.id === dealForm.engId)) === "buyer" ? "Buyer" : "Seller"} · Under contract` : `${dealForm.mode === "buyer" ? "Buyer" : "Listing"} · ${dealForm.status}`;
@@ -1005,7 +1005,7 @@ function dealModalHtml() {
 }
 function openForm(mode, opts = {}) {
   const base = { fin: "Conventional", ptype: "Single family", hoa: "No", newc: "No", timeframe: "0–3 months", preapproved: "Not yet" };
-  dealForm = { mode, cid: opts.cid || openContact || allContacts()[0][0], status: mode === "buyer" ? "Phone call scheduled" : mode === "listing" ? "Phone call scheduled" : null, engId: opts.engId, v: Object.assign(base, opts.v || {}) };
+  dealForm = { mode, cid: opts.cid || openContact || allContacts()[0][0], status: mode === "buyer" ? "Consult scheduled" : mode === "listing" ? "Consult scheduled" : null, engId: opts.engId, v: Object.assign(base, opts.v || {}) };
   renderDealModal();
 }
 function editForm(dl) {
