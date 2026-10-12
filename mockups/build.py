@@ -164,8 +164,14 @@ function scopedDoc(root) {{
     createElement: (...a) => document.createElement(...a),
   }};
 }}
+let cur = null;
 function show(key, hash) {{
+  // A contact opened from People/Tasks/Messages remembers where you came from.
+  if (key === "deals") HQ.from = !hash ? "deals" : cur && cur !== "deals" ? cur : (HQ.from || "deals");
+  cur = key;
   document.querySelectorAll(".pg").forEach(p => p.hidden = p.id !== "pg-" + key);
+  const navKey = key === "deals" ? HQ.from : key;
+  document.querySelectorAll("#pg-" + key + " .topnav nav a").forEach(a => a.classList.toggle("on", a.getAttribute("href").startsWith(navKey + ".html")));
   if (!API[key]) API[key] = INIT[key](scopedDoc(document.getElementById("pg-" + key))) || {{}};
   if (hash && API[key].open) API[key].open(hash);
   if (API[key].onShow) API[key].onShow(hash);

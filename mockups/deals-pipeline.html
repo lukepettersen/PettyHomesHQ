@@ -548,7 +548,7 @@ function renderContact() {
   const touchDue = c.follow && ago !== null && ago >= c.follow;
   const fileLabel = dl => dl.kind === "pa" ? `${dl.line.split(",")[0]} · ${dl.status === "Active" ? "under contract" : dl.status.toLowerCase()}${dl.closed ? " " + short(d(dl.closed)) : ""}` : dl.kind === "buyer" ? `Buyer · ${dl.status === "Closed" ? "closed" : activePA(dl) ? "under contract" : dl.status.toLowerCase()}` : `${dl.line.split(",")[0]} · ${dl.status === "Closed" ? "closed" : activePA(dl) ? "under contract" : dl.status.toLowerCase()}`;
   app.innerHTML = `
-    <button class="back" data-back="1">← Pipeline</button>
+    <button class="back" data-back="1">← ${{ people: "People", tasks: "Tasks", messages: "Messages" }[HQ.from] || "Pipeline"}</button>
     <div class="c3">
       <aside class="cleft">${leftHtml(c, stage, ago, touchDue)}</aside>
       <section class="ccenter">
@@ -879,9 +879,10 @@ const F = {
   facts: [["ptype", "Property type", ["Single family", "Townhome", "Condo", "Twin home", "Multi-family"]], ["year", "Year built", "number"], ["hoa", "HOA?", ["No", "Yes"]], ["newc", "New construction?", ["No", "Yes"]]],
   dates: [["fa", "Final Acceptance", "date"], ["insp", "Inspection deadline", "date"], ["ws", "Written Statement (lender)", "date"], ["hoa_d", "HOA doc rescission", "date"], ["close", "Closing", "date"]],
   buyerPA: [
-    ["The contract", [["address", "Address", "text", "Street, city", true], ["price", "Purchase price", "money", "", true], ["em", "Earnest money", "money"], ["sc", "Seller contributions", "money"], ["comm", "Commission %", "pct", "e.g. 2.7"], ["bac", "BAC", "money", "e.g. 695"]]],
+    ["The property", [["address", "Address", "text", "Street, city", true], ["ptype", "Property type", ["Single family", "Townhome", "Condo", "Twin home", "Multi-family"]], ["year", "Year built", "number"], ["newc", "New construction?", ["No", "Yes"]]]],
+    ["The contract", [["price", "Purchase price", "money", "", true], ["em", "Earnest money", "money"], ["sc", "Seller contributions", "money"], ["comm", "Commission %", "pct", "e.g. 2.7"], ["bac", "BAC", "money", "e.g. 695"]]],
     ["Key dates (leave blank if you don't know yet)", [["close", "Close date", "date"], ["fa", "Final Acceptance", "date"], ["insp", "Inspection deadline", "date"], ["ws", "Written Statement", "date-na"], ["hoa_d", "HOA doc rescission", "date-na"]]],
-    ["Notes", [["inspAt", "Inspection appointment", "datetime"], ["referral", "Referral fee", "text", "None, or who and how much"], ["emTo", "Earnest money to", "text", "Who holds it"], ["mdc", "Material defect clause?", "text", "None, or details"], ["newc", "New construction?", ["No", "Yes"]]]],
+    ["Notes", [["inspAt", "Inspection appointment", "datetime"], ["referral", "Referral fee", "text", "None, or who and how much"], ["emTo", "Earnest money to", "text", "Who holds it"], ["mdc", "Material defect clause?", "text", "None, or details"]]],
     ["Buyer's lender", [["lenderName", "Name", "text"], ["lenderEmail", "Email", "text"], ["lenderCo", "Company", "text"]]],
     ["Buyer's title", [["btitleCo", "Title company", "text"], ["btitleContact", "Contact name", "text"], ["btitleInfo", "Email / phone", "text"]]],
     ["Seller's side", [["saName", "Seller's agent", "text", "Name"], ["saEmail", "Seller's agent email", "text"], ["stcName", "Seller's TC", "text", "Name"], ["stcInfo", "Seller's TC email / phone", "text"], ["stitleCo", "Seller's title company", "text"], ["stitleContact", "Seller's title contact", "text", "Name, email / phone"]]],
@@ -903,8 +904,8 @@ function formGroups() {
   if (f.mode === "pa") {
     const side = sideOf(deals.find(x => x.id === f.engId));
     if (side === "buyer") return F.buyerPA;
-    return [["The contract", F.contract.map(x => x[0] === "bac" ? [x[0], side === "buyer" ? "BAC received" : "BAC paid", x[2], x[3]] : x)],
-      ["Key dates (leave blank if you don't know yet)", F.dates], ["The property", F.facts], ["Other people on the deal", F.people[side].map(([k, l]) => [k, l, "text", "Name and company"])]];
+    return [["The property", [F.contract[0]].concat(F.facts)], ["The contract", F.contract.slice(1).map(x => x[0] === "bac" ? [x[0], "BAC paid", x[2], x[3]] : x)],
+      ["Key dates (leave blank if you don't know yet)", F.dates], ["Other people on the deal", F.people[side].map(([k, l]) => [k, l, "text", "Name and company"])]];
   }
   if (f.mode === "buyer") {
     const i = STATUS.buyer.indexOf(f.status), g = [["What they're looking for", F.search]];
@@ -1120,7 +1121,7 @@ document.addEventListener("click", e => {
   if (b.dataset.tagcancel) { tagAdding = false; render(); return; }
   if (b.dataset.tagsave) { addTag(); return; }
   if (b.dataset.opencontact) { openContact = b.dataset.opencontact; tlFilter = "all"; editing = null; render(); window.scrollTo(0, 0); return; }
-  if (b.dataset.back) { openContact = null; editing = null; try { history.replaceState(null, "", location.pathname); } catch (_) {} render(); return; }
+  if (b.dataset.back) { if (HQ.from && HQ.from !== "deals" && typeof show === "function") { show(HQ.from); return; } openContact = null; editing = null; try { history.replaceState(null, "", location.pathname); } catch (_) {} render(); return; }
   if (b.dataset.ctab) { ctab[openContact] = b.dataset.ctab; editing = null; render(); return; }
   if (b.dataset.comp) { composer = b.dataset.comp; render(); const t = el("comp-text"); if (t) t.focus(); return; }
   if (b.dataset.tlf) { tlFilter = b.dataset.tlf; render(); return; }
