@@ -23,6 +23,13 @@ DEFAULT = "deals"
 # Applied on top of every page so the page sources stay untouched.
 FONTS = "https://fonts.googleapis.com/css2?family=Mukta+Mahee:wght@400;500;600;700;800&display=swap"
 BRAND_CSS = """
+/* Side menus follow the page as you scroll, on every tab. */
+@media (min-width: 761px) {
+  :is(#pg-people, #pg-admin) .side-nav, #pg-tasks .side { position: sticky; top: 12px; align-self: start; max-height: calc(100vh - 24px); overflow-y: auto; }
+}
+@media (min-width: 1101px) {
+  #pg-deals .cleft, #pg-deals .cright { position: sticky; top: 12px; align-self: start; max-height: calc(100vh - 24px); overflow-y: auto; }
+}
 :root {
   --bg: #fbf6f2; --surface: #ffffff; --sunken: #f2ece4; --line: #e2dbcf; --fg: #383232; --muted: #6f6863;
   --accent: #5f6447; --accent-soft: #e8ede2; --ok: #4c7642; --ok-soft: #e3eedd; --warn: #a3552d; --warn-soft: #f8e5da;

@@ -40,6 +40,8 @@ window.HQ.settings = window.HQ.settings || {
   sources: ["Sphere", "Sphere Referral", "Website", "Zillow Preferred", "Open House", "Sign Call"],
   follow: ["7", "30", "60", "90", "180"],
   tags: ["Buyer", "Seller", "Past Client", "A Lead", "B Lead", "C Lead", "Email Newsletter", "Mailers", "Christmas Cards"],
+  // Under Contract/Pending columns: a contract sits in the first column whose date is still open.
+  ucPhases: [["Inspection", "insp"], ["HOA review", "hoa"], ["Financing", "ws"], ["Closing", "close"]],
   statuses: {
     Buyer: ["Consult scheduled", "Consult complete", "Rep signed", "Showing homes", "Submitting offers"],
     Listing: ["Consult scheduled", "Consult complete", "Listing signed / Prep", "Coming soon", "Active"],

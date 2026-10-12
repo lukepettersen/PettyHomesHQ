@@ -296,6 +296,9 @@ body { background: var(--bg); }
 #pg-deals .stsel select { padding: 3px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--fg); }
 #pg-deals .chk { flex-direction: row !important; align-items: center; gap: 8px !important; font-size: 13px !important; color: var(--fg) !important; }
 #pg-deals .chk input { width: auto !important; }
+#pg-deals .na-row { display: flex; gap: 8px; align-items: center; }
+#pg-deals .na-row input[type=date] { flex: 1; min-width: 0; }
+#pg-deals .na-row .chk { display: inline-flex; white-space: nowrap; }
 #pg-deals .sm-btn { padding: 3px 10px; font-size: 12.5px; }
 #pg-deals .linkbtn.danger { color: var(--bad); align-self: flex-start; }
 #pg-deals .rm-x { border: 0; background: none; color: var(--muted); font-size: 16px; line-height: 1; padding: 0 2px; }
@@ -604,6 +607,19 @@ body { background: var(--bg); }
 #pg-tasks .linkbtn2 { border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 12.5px; padding: 0; margin-right: 10px; }
 #pg-tasks .linkbtn2.danger, #pg-tasks .danger-btn { color: var(--bad); }
 #pg-tasks .list-acts { display: block; margin-top: 2px; }
+#pg-tasks .shell.with-detail.wide { grid-template-columns: 210px minmax(0, 1fr); }
+#pg-tasks .shell.wide .detail { position: fixed; inset: 0 0 0 auto; width: min(380px, 100%); max-height: none; border-radius: 0; z-index: 20; box-shadow: -8px 0 24px rgb(0 0 0 / .15); }
+#pg-tasks .board { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 6px; align-items: flex-start; }
+#pg-tasks .col { flex: 1 0 240px; max-width: 360px; display: flex; flex-direction: column; }
+#pg-tasks .col h3 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; gap: 8px; padding-inline: 2px; }
+#pg-tasks .col h3.bad span { color: var(--bad); }
+#pg-tasks .col .row { grid-template-columns: 22px minmax(0, 1fr); padding: 8px 10px; }
+#pg-tasks .col .row .r { grid-column: 2; }
+#pg-tasks .col-empty { padding: 14px 10px; color: var(--muted); font-size: 12.5px; text-align: center; }
+#pg-tasks .ontoday { display: inline-flex; gap: 6px; align-items: center; font-size: 12.5px; color: var(--muted); margin-left: 4px; }
+#pg-tasks .grp-link { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; text-decoration: none; cursor: pointer; }
+#pg-tasks .grp-link:hover { color: var(--accent); }
+#pg-tasks .side > div:first-child .nav-i { font-weight: 600; }
 #pg-tasks .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); z-index: 30; }
 :root {
   --bg: #f4f6f7; --surface: #ffffff; --sunken: #eaeef0; --line: #d8dee2; --fg: #16222a; --muted: #5b6b75;
@@ -843,6 +859,13 @@ body { background: var(--bg); }
 #pg-admin .linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; font-size: 12.5px; }
 #pg-admin .perm td:not(:first-child), #pg-admin .perm th:not(:first-child) { text-align: center; }
 
+/* Side menus follow the page as you scroll, on every tab. */
+@media (min-width: 761px) {
+  :is(#pg-people, #pg-admin) .side-nav, #pg-tasks .side { position: sticky; top: 12px; align-self: start; max-height: calc(100vh - 24px); overflow-y: auto; }
+}
+@media (min-width: 1101px) {
+  #pg-deals .cleft, #pg-deals .cright { position: sticky; top: 12px; align-self: start; max-height: calc(100vh - 24px); overflow-y: auto; }
+}
 :root {
   --bg: #fbf6f2; --surface: #ffffff; --sunken: #f2ece4; --line: #e2dbcf; --fg: #383232; --muted: #6f6863;
   --accent: #5f6447; --accent-soft: #e8ede2; --ok: #4c7642; --ok-soft: #e3eedd; --warn: #a3552d; --warn-soft: #f8e5da;
@@ -901,7 +924,7 @@ body { background: var(--bg); }
 <div id="toast" class="toast" hidden></div>
 </div>
 <div class="pg" id="pg-tasks" hidden>
-<div class="mock-bar"><span><strong>Mockup</strong> · starts empty, "today" is Mon Oct 12, 2026. Try quick add, or type #listname to put a task in a list.</span>
+<div class="mock-bar"><span><strong>Mockup</strong> · starts empty, "today" is Mon Oct 12, 2026. Today shows everything due now, broken into categories. Tasks sort themselves: linked to a client → Clients, repeating → Recurring, everything else → Personal.</span>
   <span class="seg" role="group" aria-label="Viewing as" style="margin-left:12px"><button id="as-lp" aria-pressed="true">Viewing as Luke</button><button id="as-as" aria-pressed="false">Viewing as assistant</button></span></div>
 
 <header class="topnav"><div class="brand"><svg viewBox="0 0 118 165" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M 59.1 39.6 L 78.6 59.1 L 117.6 59.1 L 78.6 20.1 L 59.1 0.6 L 39.5 20.1 L 0.5 59.1 L 39.6 59.1 Z M 59.1 39.6"/><path fill="currentColor" d="M 89.1 102.1 L 37.6 102.1 L 37.6 129.6 L 117.6 129.6 L 117.6 65.9 L 89.1 65.9 Z M 89.1 102.1"/><path fill="currentColor" d="M 28.6 99.2 L 14.4 85 L 0.1 70.6 L 0.1 163 L 28.6 163 Z M 28.6 99.2"/><path fill="currentColor" d="M 19.1 80.4 L 33.1 94.4 L 80.6 94.4 L 80.6 65.9 L 4.7 65.9 Z M 19.1 80.4"/></svg><span class="wm">Petty Homes</span><span class="hq">HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html">Pipeline</a><a href="tasks.html" class="on">Tasks</a><a href="messages.html">Messages</a><a href="admin.html">Admin</a></nav></header>
@@ -975,6 +998,8 @@ window.HQ.settings = window.HQ.settings || {
   sources: ["Sphere", "Sphere Referral", "Website", "Zillow Preferred", "Open House", "Sign Call"],
   follow: ["7", "30", "60", "90", "180"],
   tags: ["Buyer", "Seller", "Past Client", "A Lead", "B Lead", "C Lead", "Email Newsletter", "Mailers", "Christmas Cards"],
+  // Under Contract/Pending columns: a contract sits in the first column whose date is still open.
+  ucPhases: [["Inspection", "insp"], ["HOA review", "hoa"], ["Financing", "ws"], ["Closing", "close"]],
   statuses: {
     Buyer: ["Consult scheduled", "Consult complete", "Rep signed", "Showing homes", "Submitting offers"],
     Listing: ["Consult scheduled", "Consult complete", "Listing signed / Prep", "Coming soon", "Active"],
@@ -1363,10 +1388,10 @@ function progressRow(eng) {
   </button>`;
 }
 // Contract phase from its key dates: the first one not yet met or waived.
-const UC_PHASES = [["insp", "Inspection"], ["hoa", "HOA review"], ["ws", "Financing"], ["close", "Closing"]];
+const UC_PHASES = { map(f) { return HQ.settings.ucPhases.map(([l, k]) => f([k, l])); } };
 function ucPhase(pa) {
-  const hit = UC_PHASES.find(([k]) => k in pa.ms && !["met", "waived"].includes(pa.msStatus[k]) && k !== "close");
-  return hit ? hit[1] : "Closing";
+  const ph = HQ.settings.ucPhases, hit = ph.find(([, k]) => k in pa.ms && !["met", "waived"].includes(pa.msStatus[k]));
+  return hit ? hit[0] : ph[ph.length - 1][0];
 }
 let pview = "buyers";
 function pItem(file, eng) {
@@ -1398,7 +1423,7 @@ function renderActive() {
     cols = STATUS[kind].map(st => { const es = list.filter(e => !activePA(e) && e.status === st); return [st, es.map(e => pItem(e, e)), es.reduce((t, e) => t + (e.price || 0), 0)]; });
   }
   const vol = pas.reduce((s, x) => s + (x.price || 0), 0);
-  const tabs = [["buyers", "Buyers", buyers.filter(e => !activePA(e)).length], ["sellers", "Sellers", listings.filter(e => !activePA(e)).length], ["uc", "Under contract", pas.length]];
+  const tabs = [["buyers", "Buyers", buyers.filter(e => !activePA(e)).length], ["sellers", "Sellers", listings.filter(e => !activePA(e)).length], ["uc", "Under Contract/Pending", pas.length]];
   app.innerHTML = `
     <div class="board-head">
       <div class="left"><h1>Pipeline</h1><span class="board-sum">${money(vol)} under contract</span></div>
@@ -1444,10 +1469,10 @@ function renderContact() {
       </section>
       <aside class="cright">
         <div class="card-s">
-          <h3>Tasks <span class="muted">${c.tasks.filter(t => t.s === "open").length}</span><button class="plus" data-toast="Quick add, already linked to ${esc(c.name)}" aria-label="Add task">+</button></h3>
+          <h3>Tasks <span class="muted">${c.tasks.filter(t => t.s === "open").length}</span><button class="plus" data-applyopen="1" aria-label="Add task">+</button></h3>
           ${c.tasks.length ? c.tasks.map((t, i) => ptaskHtml(t, i)).join("") : `<p class="muted sm">No tasks outside their files.</p>`}
-          ${applyOpen ? `<div class="apply"><select id="apply-tpl" aria-label="Template">${(typeof HQ !== "undefined" ? HQ.templates : []).slice().sort((a, b) => !!a.trigger - !!b.trigger).map(t => `<option value="${t.id}">${esc(t.name)}${t.trigger ? "" : " (by hand)"}</option>`).join("")}</select><button class="btn primary" data-applytpl="1">Apply</button><button class="btn" data-applycancel="1">Cancel</button></div>`
-            : `<button class="btn" data-applyopen="1">Apply template</button>`}
+          ${applyOpen ? `<div class="apply"><input id="ct-new" placeholder="Task for ${esc(c.name.split(" ")[0])}" aria-label="New task"><input id="ct-due" type="date" value="${iso(TODAY)}" aria-label="Due"><button class="btn primary" data-applytpl="1">Add</button><button class="btn" data-applycancel="1">Cancel</button></div>`
+            : `<button class="btn" data-applyopen="1">+ Add task</button>`}
         </div>
         <div class="card-s">
           <h3>Buying &amp; selling <span class="muted">${myFiles.length}</span></h3>
@@ -1513,6 +1538,14 @@ function engPane(eng) {
 }
 
 function factsInline(dl) {
+  if (dl.side === "buyer") {
+    const fm = dl.form || {}, at = fm.inspAt ? new Date(fm.inspAt) : null;
+    return [["Price", money(dl.price)], ["Earnest", money(dl.em || 0)], ["Seller contrib.", money(dl.sc || 0)],
+      ["Commission", role === "admin" ? (dl.comm ? `${dl.comm}% · ${money(Math.round(dl.price * dl.comm / 100))}` : "—") : null], ["BAC", money(dl.bac || 0)],
+      ["Inspection", at ? `${DOW[at.getDay()]} ${short(at)} ${at.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : "—"],
+      ["Earnest money to", fm.emTo], ["Referral fee", fm.referral], ["Material defect", fm.mdc], ["New construction", (dl.facts || {}).newc]]
+      .map(([k, v]) => `<span><em>${k}</em> ${v === null ? `<i class="hid">hidden</i>` : `<b class="num">${esc(v || "—")}</b>`}</span>`).join("");
+  }
   return [["Price", money(dl.price)], ["Earnest", money(dl.em || 0)], ["Seller contrib.", money(dl.sc || 0)], [dl.side === "buyer" ? "BAC received" : "BAC paid", dl.bac],
     ["Commission", role === "admin" ? money(dl.comm || 0) : null], ["Financing", dl.fin]]
     .map(([k, v]) => `<span><em>${k}</em> ${v === null ? `<i class="hid">hidden</i>` : `<b class="num">${esc(v || "—")}</b>`}</span>`).join("");
@@ -1754,14 +1787,31 @@ const F = {
   contract: [["address", "Property address", "text", "Street, city", true], ["price", "Purchase price", "money", "", true], ["em", "Earnest money", "money"], ["sc", "Seller contributions", "money"], ["fin", "Buyer's financing", ["Conventional", "FHA", "VA", "Cash", "Other"]], ["comm", "Commission", "money"], ["bac", "BAC", "text", "e.g. 2.5%"]],
   facts: [["ptype", "Property type", ["Single family", "Townhome", "Condo", "Twin home", "Multi-family"]], ["year", "Year built", "number"], ["hoa", "HOA?", ["No", "Yes"]], ["newc", "New construction?", ["No", "Yes"]]],
   dates: [["fa", "Final Acceptance", "date"], ["insp", "Inspection deadline", "date"], ["ws", "Written Statement (lender)", "date"], ["hoa_d", "HOA doc rescission", "date"], ["close", "Closing", "date"]],
+  buyerPA: [
+    ["The contract", [["address", "Address", "text", "Street, city", true], ["price", "Purchase price", "money", "", true], ["em", "Earnest money", "money"], ["sc", "Seller contributions", "money"], ["comm", "Commission %", "pct", "e.g. 2.7"], ["bac", "BAC", "money", "e.g. 695"]]],
+    ["Key dates (leave blank if you don't know yet)", [["close", "Close date", "date"], ["fa", "Final Acceptance", "date"], ["insp", "Inspection deadline", "date"], ["ws", "Written Statement", "date-na"], ["hoa_d", "HOA doc rescission", "date-na"]]],
+    ["Notes", [["inspAt", "Inspection appointment", "datetime"], ["referral", "Referral fee", "text", "None, or who and how much"], ["emTo", "Earnest money to", "text", "Who holds it"], ["mdc", "Material defect clause?", "text", "None, or details"], ["newc", "New construction?", ["No", "Yes"]]]],
+    ["Buyer's lender", [["lenderName", "Name", "text"], ["lenderEmail", "Email", "text"], ["lenderCo", "Company", "text"]]],
+    ["Buyer's title", [["btitleCo", "Title company", "text"], ["btitleContact", "Contact name", "text"], ["btitleInfo", "Email / phone", "text"]]],
+    ["Seller's side", [["saName", "Seller's agent", "text", "Name"], ["saEmail", "Seller's agent email", "text"], ["stcName", "Seller's TC", "text", "Name"], ["stcInfo", "Seller's TC email / phone", "text"], ["stitleCo", "Seller's title company", "text"], ["stitleContact", "Seller's title contact", "text", "Name, email / phone"]]],
+  ],
   people: { buyer: [["p_lender", "Lender"], ["p_title", "Title"], ["p_other", "Listing agent"]], seller: [["p_other", "Buyer's agent"], ["p_title", "Title"], ["p_lender", "Buyer's lender"]] },
 };
+const BUYER_KEYS = ["inspAt", "referral", "emTo", "mdc", "lenderName", "lenderEmail", "lenderCo", "btitleCo", "btitleContact", "btitleInfo", "saName", "saEmail", "stcName", "stcInfo", "stitleCo", "stitleContact", "ws_na", "hoa_d_na"];
+// Buyer side: N/A on HOA means no HOA steps; N/A on Written Statement drops the lender deadline.
+function normBuyer(v) { v.hoa = v.hoa_d_na === "on" ? "No" : "Yes"; if (v.ws_na === "on") v.ws = ""; if (v.hoa_d_na === "on") v.hoa_d = ""; }
+const joinP = (...a) => a.filter(Boolean).join(" · ");
+function buyerPeople(v) {
+  return [[joinP(v.lenderName, v.lenderCo, v.lenderEmail), "Lender"], [joinP(v.btitleCo, v.btitleContact, v.btitleInfo), "Buyer's title"], [joinP(v.saName, v.saEmail), "Seller's agent"], [joinP(v.stcName, v.stcInfo), "Seller's TC"], [joinP(v.stitleCo, v.stitleContact), "Seller's title"]].filter(x => x[0]);
+}
+const pickForm = v => Object.fromEntries(BUYER_KEYS.map(k => [k, v[k] || ""]));
 let dealForm = null; // { mode: "buyer" | "listing" | "pa", cid, status, engId, v }
 
 function formGroups() {
   const f = dealForm;
   if (f.mode === "pa") {
     const side = sideOf(deals.find(x => x.id === f.engId));
+    if (side === "buyer") return F.buyerPA;
     return [["The contract", F.contract.map(x => x[0] === "bac" ? [x[0], side === "buyer" ? "BAC received" : "BAC paid", x[2], x[3]] : x)],
       ["Key dates (leave blank if you don't know yet)", F.dates], ["The property", F.facts], ["Other people on the deal", F.people[side].map(([k, l]) => [k, l, "text", "Name and company"])]];
   }
@@ -1780,10 +1830,12 @@ const formTrigger = () => dealForm.mode === "pa" ? `${sideOf(deals.find(x => x.i
 function fieldHtml([k, lab, type, ph, req]) {
   const v = dealForm.v;
   if (k === "comm" && role !== "admin") return "";
-  if (k === "hoa_d" && v.hoa !== "Yes") return "";
+  if (k === "hoa_d" && type !== "date-na" && v.hoa !== "Yes") return "";
+  if (type === "date-na") { const na = v[k + "_na"] === "on";
+    return `<label>${lab}<span class="na-row"><input data-df="${k}" type="date" value="${esc(na ? "" : v[k] || "")}" ${na ? "disabled" : ""}><span class="chk"><input type="checkbox" data-df="${k}_na" ${na ? "checked" : ""}> N/A</span></span></label>`; }
   const input = Array.isArray(type)
     ? `<select data-df="${k}">${type.map(o => `<option ${o === v[k] ? "selected" : ""}>${o}</option>`).join("")}</select>`
-    : `<input data-df="${k}" type="${type === "money" || type === "number" ? "number" : type === "date" ? "date" : "text"}" value="${esc(v[k] || "")}" placeholder="${esc(ph || (type === "money" ? "$" : ""))}" ${type === "money" ? 'min="0" step="any"' : ""}>`;
+    : `<input data-df="${k}" type="${type === "money" || type === "number" || type === "pct" ? "number" : type === "date" ? "date" : type === "datetime" ? "datetime-local" : "text"}" value="${esc(v[k] || "")}" placeholder="${esc(ph || (type === "money" ? "$" : ""))}" ${type === "money" || type === "pct" ? 'min="0" step="any"' : ""}>`;
   return `<label>${lab}${req ? " *" : ""}${input}</label>`;
 }
 function previewHtml() {
@@ -1815,7 +1867,7 @@ function dealModalHtml() {
   </form></div>`;
 }
 function openForm(mode, opts = {}) {
-  const base = { fin: "Conventional", ptype: "Single family", hoa: "No", newc: "No", timeframe: "0–3 months", preapproved: "Not yet" };
+  const base = { fin: "Conventional", ptype: "Single family", hoa: "No", newc: "No", timeframe: "0–3 months", preapproved: "Not yet", hoa_d_na: "on" };
   dealForm = { mode, cid: opts.cid || openContact || allContacts()[0][0], status: mode === "buyer" ? "Consult scheduled" : mode === "listing" ? "Consult scheduled" : null, engId: opts.engId, v: Object.assign(base, opts.v || {}) };
   renderDealModal();
 }
@@ -1826,7 +1878,8 @@ function editForm(dl) {
   if (dl.kind === "pa") {
     Object.assign(v, { em: dl.em || "", sc: dl.sc || "", fin: dl.fin, comm: dl.comm || "", bac: dl.bac || "" });
     Object.entries(dl.ms).forEach(([k, x]) => { v[k === "hoa" ? "hoa_d" : k] = x || ""; });
-    F.people[dl.side].forEach(([k, l]) => { const hit = (dl.people || []).find(x => x[1] === l); if (hit) v[k] = hit[0]; });
+    if (dl.side === "buyer") { Object.assign(v, dl.form || {}); if (!("ws" in dl.ms)) v.ws_na = "on"; if (!("hoa" in dl.ms)) v.hoa_d_na = "on"; }
+    else F.people[dl.side].forEach(([k, l]) => { const hit = (dl.people || []).find(x => x[1] === l); if (hit) v[k] = hit[0]; });
   }
   dealForm = { mode: dl.kind === "pa" ? "pa" : dl.kind, cid: dl.cid, status: dl.status, engId: dl.kind === "pa" ? dl.parent : dl.id, editId: dl.id, v };
   renderDealModal();
@@ -1835,8 +1888,11 @@ function saveEdit() {
   const f = dealForm, v = f.v, dl = deals.find(x => x.id === f.editId);
   const facts = { ptype: v.ptype, year: v.year, hoa: v.hoa, newc: v.newc };
   if (dl.kind === "pa") {
-    Object.assign(dl, { line: v.address, price: +v.price, em: +v.em || 0, sc: +v.sc || 0, fin: v.fin, comm: +v.comm || 0, bac: v.bac, facts, people: F.people[dl.side].filter(([k]) => v[k]).map(([k, l]) => [v[k], l]) });
-    const keys = ["fa", "insp", "ws"].concat(v.hoa === "Yes" ? ["hoa"] : []).concat(["close"]);
+    const isB = dl.side === "buyer"; if (isB) { normBuyer(v); facts.hoa = v.hoa; }
+    Object.assign(dl, { line: v.address, price: +v.price, em: +v.em || 0, sc: +v.sc || 0, fin: v.fin, comm: +v.comm || 0, bac: isB ? +v.bac || 0 : v.bac, facts, people: isB ? buyerPeople(v) : F.people[dl.side].filter(([k]) => v[k]).map(([k, l]) => [v[k], l]) });
+    if (isB) dl.form = pickForm(v);
+    if (isB && v.ws_na === "on") delete dl.ms.ws;
+    const keys = ["fa", "insp"].concat(isB && v.ws_na === "on" ? [] : ["ws"]).concat(v.hoa === "Yes" ? ["hoa"] : []).concat(["close"]);
     let moved = 0;
     keys.forEach(k => {
       const nv = v[k === "hoa" ? "hoa_d" : k] || null, old = dl.ms[k];
@@ -1865,10 +1921,12 @@ function submitForm() {
   const id = deals.length ? Math.max(...deals.map(x => x.id)) + 1 : 1;
   const facts = { ptype: v.ptype, year: v.year, hoa: v.hoa, newc: v.newc };
   if (f.mode === "pa") {
-    const eng = deals.find(x => x.id === f.engId), side = sideOf(eng);
+    const eng = deals.find(x => x.id === f.engId), side = sideOf(eng), isB = side === "buyer";
+    if (isB) { normBuyer(v); facts.hoa = v.hoa; }
     const pa = { id, kind: "pa", parent: eng.id, side, cid: eng.cid, name: eng.name, status: "Active", line: v.address, price: +v.price, em: +v.em || 0, sc: +v.sc || 0, bac: v.bac, comm: +v.comm || 0, fin: v.fin, facts,
       ms: { fa: v.fa || null, insp: v.insp || null, ws: v.ws || null }, msStatus: {}, tasks: [],
-      people: F.people[side].filter(([k]) => v[k]).map(([k, l]) => [v[k], l]) };
+      people: isB ? buyerPeople(v) : F.people[side].filter(([k]) => v[k]).map(([k, l]) => [v[k], l]) };
+    if (isB) { pa.form = pickForm(v); pa.bac = +v.bac || 0; if (v.ws_na === "on") delete pa.ms.ws; }
     if (v.hoa === "Yes") pa.ms.hoa = v.hoa_d || null;
     pa.ms.close = v.close || null;
     Object.keys(pa.ms).forEach(k => pa.msStatus[k] = pa.ms[k] && d(pa.ms[k]) < TODAY ? "met" : "pending");
@@ -1953,15 +2011,13 @@ document.addEventListener("click", e => {
     ctab[openContact] = "timeline"; render(); toast(`Closed! ${c.name} is now a Past Client.${post.length ? ` ${post.length} post-close tasks added.` : ""}`); return;
   }
   if (b.dataset.deal) { openCard(+b.dataset.deal); return; }
-  if (b.dataset.applyopen) { applyOpen = true; render(); return; }
+  if (b.dataset.applyopen) { applyOpen = true; render(); const i = el("ct-new"); if (i) i.focus(); return; }
   if (b.dataset.applycancel) { applyOpen = false; render(); return; }
   if (b.dataset.applytpl) {
-    const tpl = HQ.templates.find(x => x.id === el("apply-tpl").value), c = contact(openContact);
-    const made = HQ.expand(tpl, TODAY).map(x => ({ t: x.t, due: x.due ? iso(x.due) : null, waiting: x.waiting, who: x.who === "Alyssa" ? "AS" : "LP", s: "open" }));
-    c.tasks.push(...made);
-    HQ.newTasks.push(...made.filter(x => x.due || !x.waiting).map(x => Object.assign({ cid: openContact, name: c.name }, x)));
-    const w = made.filter(x => x.waiting).length;
-    applyOpen = false; render(); toast(`Added ${made.length} tasks from "${tpl.name}".${w ? ` ${w} wait for a contract date.` : ""} Dated ones are on the Tasks page too.`); return;
+    const c = contact(openContact), i = el("ct-new"), t = i.value.trim(); if (!t) { i.focus(); return; }
+    const task = { t, due: el("ct-due").value || iso(TODAY), who: "LP", s: "open" };
+    c.tasks.push(task); HQ.newTasks.push(Object.assign({ cid: openContact, name: c.name }, task));
+    applyOpen = false; render(); toast(`Task added. It's on the Tasks page under Clients too.`); return;
   }
   if (b.dataset.editcard) { const c = contact(openContact); editCard = b.dataset.editcard; draft = JSON.parse(JSON.stringify(c)); draft.assigned = draft.assigned || "Luke Pettersen"; draft.newMode = {}; render(); return; }
   if (b.dataset.cancelcard) { editCard = null; draft = null; render(); return; }
@@ -2018,7 +2074,7 @@ document.addEventListener("change", e => {
     if (ds.dstatus) dealForm.status = e.target.value;
     if (ds.dcid) dealForm.cid = e.target.value;
     // Redraw only when the set of fields changes; otherwise just refresh the preview.
-    if (ds.dstatus || ds.df === "hoa") renderDealModal(); else if (el("dm-prev")) el("dm-prev").innerHTML = previewHtml();
+    if (ds.dstatus || ds.df === "hoa" || /_na$/.test(ds.df || "")) renderDealModal(); else if (el("dm-prev")) el("dm-prev").innerHTML = previewHtml();
     return;
   }
   if (ds.estatus) { setStatus(deals.find(x => x.id === +ds.estatus), e.target.value); return; }
@@ -2041,7 +2097,9 @@ function addTag() {
   const isNew = !ALL_TAGS.includes(v); if (isNew) ALL_TAGS.push(v);
   tagAdding = false; toast(isNew ? `Created new tag "${v}".` : `Tagged "${v}".`); render();
 }
-document.addEventListener("keydown", e => { if (e.target.id === "tag-in" && e.key === "Enter") { e.preventDefault(); addTag(); } if (e.target.id === "tag-in" && e.key === "Escape") { tagAdding = false; render(); } });
+document.addEventListener("keydown", e => {
+  if (e.target.id === "ct-new" && e.key === "Enter") { e.preventDefault(); document.querySelector("[data-applytpl]").click(); return; }
+  if (e.target.id === "ct-new" && e.key === "Escape") { applyOpen = false; render(); return; } if (e.target.id === "tag-in" && e.key === "Enter") { e.preventDefault(); addTag(); } if (e.target.id === "tag-in" && e.key === "Escape") { tagAdding = false; render(); } });
 
 // Deep link from the Tasks mockup: deals.html#contact-calloway
 function fromHash() {
@@ -2094,7 +2152,7 @@ function syncTouches() {
   }).filter(p => p.days >= p.follow);
 }
 
-let view = "today", filter = "all", sel = null, me = "LP", whoF = "everyone", whoOpen = false, whoQ = "";
+let view = "today", sel = null, me = "LP", whoF = "everyone", whoOpen = false, whoQ = "";
 const TEAM = HQ.settings.team;
 const whoLabel = () => whoF === "everyone" ? "Everyone" : whoF === "me" ? "Me" : TEAM.find(t => t[0] === whoF)[1];
 function whoMenu() {
@@ -2105,37 +2163,32 @@ function whoMenu() {
       ${"everyone".includes(whoQ.toLowerCase()) ? opt("everyone", "Everyone") : ""}${"me".includes(whoQ.toLowerCase()) ? opt("me", "Me", me) : ""}
       <div class="who-h">Team members</div>${team.map(([k, n]) => opt(k, n, k)).join("")}</div>` : ""}</span>`;
 }
+let onToday = {}; // list name -> false when hidden from Today
+const showsOnToday = l => onToday[l] !== false;
 let LISTS = [], newListOpen = false, confirmDel = null, renamingList = false;
 const el = id => document.getElementById(id);
 
-const VIEWS = [
-  ["today", "Today"], ["tomorrow", "Tomorrow"], ["overdue", "Overdue"],
-  ["touch", "Due for a touch"],
-];
+// Today on top, then categories. Every task lands in exactly one category.
+const CATS = [["clients", "Clients"], ["touch", "Due for a touch"], ["recurring", "Recurring"], ["personal", "Personal"]];
+const catOf = t => t.repeat ? "recurring" : t.list ? "list:" + t.list : t.link ? "clients" : "personal";
+const catName = k => k.startsWith("list:") ? k.slice(5) : k === "today" ? "Today" : CATS.find(c => c[0] === k)[1];
+const allCats = () => CATS.map(c => c[0]).concat(LISTS.map(l => "list:" + l));
 function inView(t, v) {
-  const n = diff(d(t.due), TODAY);
-  if (v === "today") return n <= 0;
-  if (v === "tomorrow") return n === 1;
-  if (v === "overdue") return n < 0;
-  if (v === "recurring") return !!t.repeat;
-  if (v.startsWith("list:")) return t.list === v.slice(5);
-  return false;
+  if (v === "today") return diff(d(t.due), TODAY) <= 0;
+  return catOf(t) === v;
 }
 const visible = v => tasks.filter(t => !t.done || t.justDone).filter(t => whoF === "everyone" || t.who === (whoF === "me" ? me : whoF)).filter(t => inView(t, v));
-function applyFilter(list) {
-  if (filter === "general") return list.filter(t => !t.step);
-  if (filter === "deal") return list.filter(t => t.step);
-  return list;
-}
 const sortT = (a, b) => d(a.due) - d(b.due) || (b.p - a.p) || ((a.time || "z") > (b.time || "z") ? 1 : -1);
+const openCount = v => v === "touch" ? touches.length : visible(v).filter(t => !t.done).length;
+const lateCount = v => v === "touch" ? 0 : visible(v).filter(t => !t.done && diff(d(t.due), TODAY) < 0).length;
 
 function renderSide() {
-  const cnt = v => v === "touch" ? touches.length : visible(v).filter(t => !t.done).length;
-  const od = cnt("overdue");
+  const item = (k, l) => { const late = lateCount(k); return `<li><button class="nav-i" data-view="${esc(k)}" aria-current="${view === k}"><span>${esc(l)}</span><span class="c ${late ? "bad" : ""}" ${late ? `title="${late} overdue"` : ""}>${openCount(k) || ""}</span></button></li>`; };
+  const todayN = openCount("today") + touches.length;
   el("side").innerHTML = `
-    <div><h4>Views</h4><ul>${VIEWS.map(([k, l]) => `<li><button class="nav-i" data-view="${k}" aria-current="${view === k}"><span>${l}</span><span class="c ${k === "overdue" && od ? "bad" : ""}">${cnt(k) || ""}</span></button></li>`).join("")}</ul></div>
-    <div><h4>Lists</h4><ul><li><button class="nav-i" data-view="recurring" aria-current="${view === "recurring"}"><span>Recurring</span><span class="c">${cnt("recurring") || ""}</span></button></li>
-      ${LISTS.map(l => `<li><button class="nav-i" data-view="list:${esc(l)}" aria-current="${view === "list:" + l}"><span>${esc(l)}</span><span class="c">${cnt("list:" + l) || ""}</span></button></li>`).join("")}
+    <div><ul><li><button class="nav-i" data-view="today" aria-current="${view === "today"}"><span>Today</span><span class="c ${lateCount("today") ? "bad" : ""}">${todayN || ""}</span></button></li></ul></div>
+    <div><h4>Categories</h4><ul>${CATS.map(([k, l]) => item(k, l)).join("")}</ul></div>
+    <div><h4>My lists</h4><ul>${LISTS.map(l => item("list:" + l, l)).join("")}
       <li>${newListOpen ? `<div class="newlist"><input id="nl-name" placeholder="List name" aria-label="New list name"><button class="btn primary" data-nlsave="1">Add</button></div>` : `<button class="nav-i addl" data-newlist="1"><span>+ New list</span></button>`}</li></ul></div>`;
 }
 
@@ -2143,11 +2196,10 @@ function rowHtml(t) {
   const n = diff(d(t.due), TODAY);
   const L = t.link && LINKS[t.link];
   const meta = [];
-  if (L) meta.push(`<span class="link ${L.kind}">${esc(L.label)}</span>`);
-  if (t.subs) meta.push(`<span>☐ ${t.subs.filter(s => s[1]).length}/${t.subs.length}</span>`);
+  if (L && view !== "clients") meta.push(`<span class="link ${L.kind}">${esc(L.label)}</span>`);
+  if (t.subs && t.subs.length) meta.push(`<span>☐ ${t.subs.filter(s => s[1]).length}/${t.subs.length}</span>`);
   if (t.repeat) meta.push(`<span>↻ ${t.repeat}</span>`);
   if (t.auto) meta.push(`<span class="listtag">From Important Dates</span>`);
-  if (t.list && !view.startsWith("list:")) meta.push(`<span class="listtag">${esc(t.list)}</span>`);
   const dueTxt = (n === 0 ? "Today" : n === 1 ? "Tomorrow" : n < 0 ? short(d(t.due)) : fmt(d(t.due))) + (t.time ? " " + t.time : "");
   return `<div class="row ${t.done ? "done" : ""} ${sel === t.id ? "sel" : ""}">
     <button class="check p${t.p}" data-done="${t.id}" aria-label="Complete: ${esc(t.t)}">${t.done ? '<svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ""}</button>
@@ -2155,47 +2207,56 @@ function rowHtml(t) {
     <span class="r"><span class="due date ${n < 0 && !t.done ? "overdue" : ""}">${dueTxt}</span><span class="av ${t.who === "AS" ? "as" : ""}" title="${PEOPLE[t.who]}">${t.who}</span></span>
   </div>`;
 }
+const touchRow = (p, i) => `<div class="row"><span></span><a class="body" href="deals.html#contact-${p.cid}" style="text-decoration:none;color:inherit"><span class="t">${esc(p.n)}</span><span class="meta"><span>Every ${p.f}</span><span>Last touch ${p.last}</span></span></a><span class="r"><button class="touch-btn" data-touch="${i}">Log touch</button></span></div>`;
+const section = (h, items, count, bad) => `<section class="group"><h3 class="${bad ? "bad" : ""}">${h}<span>${count}</span></h3><div class="list">${items}</div></section>`;
+const catHead = k => `<button class="grp-link" data-view="${esc(k)}">${esc(catName(k))} ›</button>`;
+const byWhen = list => {
+  const b = f => list.filter(t => f(diff(d(t.due), TODAY)));
+  return [["Overdue", b(x => x < 0), true], ["Today", b(x => x === 0)], ["Tomorrow", b(x => x === 1)], ["Later", b(x => x > 1)]];
+};
 
-function groupsFor(list) {
-  if (view === "today") return [["Overdue", list.filter(t => diff(d(t.due), TODAY) < 0), true], ["Today", list.filter(t => diff(d(t.due), TODAY) === 0)]];
-  if (view === "recurring") return [[null, list]];
-  if (view.startsWith("list:")) {
-    const b = n => list.filter(t => { const x = diff(d(t.due), TODAY); return n === "o" ? x < 0 : n === "t" ? x === 0 : n === "m" ? x === 1 : x > 1; });
-    return [["Overdue", b("o"), true], ["Today", b("t")], ["Tomorrow", b("m")], ["Later", b("l")]];
+function bodyHtml() {
+  if (view === "today") {
+    const cols = CATS.map(c => c[0]).concat(LISTS.filter(showsOnToday).map(l => "list:" + l));
+    // A list hidden from Today folds its due tasks into Personal, so nothing goes missing.
+    const colOf = t => { const k = catOf(t); return k.startsWith("list:") && !showsOnToday(k.slice(5)) ? "personal" : k; };
+    const due = visible("today");
+    return `<div class="board">${cols.map(k => {
+      if (k === "touch") return `<section class="col"><h3>${catHead(k)}<span>${touches.length || ""}</span></h3><div class="list">${touches.map(touchRow).join("") || `<div class="col-empty">No one due</div>`}</div></section>`;
+      const items = due.filter(t => colOf(t) === k).sort(sortT), late = items.some(t => !t.done && diff(d(t.due), TODAY) < 0);
+      return `<section class="col"><h3 class="${late ? "bad" : ""}">${catHead(k)}<span>${items.filter(t => !t.done).length || ""}</span></h3><div class="list">${items.map(rowHtml).join("") || `<div class="col-empty">Nothing due</div>`}</div></section>`;
+    }).join("")}</div>${tasks.length || touches.length ? "" : `<div class="empty">No tasks yet. Type one in the box above, or apply a template from a person's page.</div>`}`;
   }
-  return [[null, list]];
+  if (view === "touch") return touches.length ? `<div class="list">${touches.map(touchRow).join("")}</div>` : `<div class="empty">${Object.values(HQ.contacts).some(c => c.follow) ? "Everyone is up to date." : "Set a follow-up frequency on a person and they'll show up here when they're due."}</div>`;
+  const list = visible(view).sort(sortT);
+  if (!list.length) return `<div class="empty">${{ clients: "No client tasks. Add one with \"re\" and a name, e.g. \"call lender re Ortiz Fri\", or apply a template from a person's page.", recurring: "Nothing recurring yet. Try \"rent check every month\".", personal: "No personal tasks. Anything not tied to a client lands here." }[view] || "Nothing in this list yet."}</div>`;
+  if (view === "clients") {
+    const order = [...new Set(list.map(t => t.link))];
+    return order.map(cid => { const items = list.filter(t => t.link === cid), late = items.some(t => !t.done && diff(d(t.due), TODAY) < 0);
+      return section(`<a class="grp-link" href="deals.html#contact-${cid}">${esc(LINKS[cid] ? LINKS[cid].label : "Unknown")} ›</a>`, items.map(rowHtml).join(""), items.filter(t => !t.done).length, late); }).join("");
+  }
+  if (view === "recurring") return `<div class="list">${list.map(rowHtml).join("")}</div>`;
+  return byWhen(list).filter(g => g[1].length).map(([h, items, bad]) => section(`<span>${h}</span>`, items.map(rowHtml).join(""), items.filter(t => !t.done).length, bad)).join("");
 }
 
 function renderMain() {
-  const title = view === "recurring" ? "Recurring" : view.startsWith("list:") ? view.slice(5) : VIEWS.find(v => v[0] === view)[1];
-  if (view === "touch") {
-    el("main").innerHTML = `<div class="main-h"><div><h1>Due for a touch</h1><div class="sub">People past their follow-up frequency</div></div></div>
-      <div class="list">${touches.map((p, i) => `<div class="row"><span></span><a class="body" href="deals.html#contact-${p.cid}" style="text-decoration:none;color:inherit"><span class="t">${esc(p.n)}</span><span class="meta"><span>Every ${p.f}</span><span>Last touch ${p.last}</span></span></a><span class="r"><button class="touch-btn" data-touch="${i}">Log touch</button></span></div>`).join("") || ""}</div>
-      ${touches.length ? "" : `<div class="empty">${Object.values(HQ.contacts).some(c => c.follow) ? "Everyone is up to date." : "Set a follow-up frequency on a person and they'll show up here when they're due."}</div>`}`;
-    return;
-  }
-  const list = applyFilter(visible(view)).sort(sortT);
-  const open = list.filter(t => !t.done).length;
-  const groups = groupsFor(list).filter(g => g[1].length);
+  const isList = view.startsWith("list:"), title = catName(view);
+  const sub = { today: fmt(TODAY) + " · overdue items are marked in red", clients: "Grouped by client · click a name to open their page", touch: "People past their follow-up frequency", recurring: "Each one shows up in Today when it's due, then schedules the next", personal: "Anything not tied to a client" }[view] || (showsOnToday(view.slice(5)) ? "Due tasks show in their own column on Today" : "Hidden from Today: its due tasks show in the Personal column instead");
+  const ph = { clients: 'Add a client task, e.g. "call lender re Ortiz Fri 9am"', recurring: 'Add a recurring task, e.g. "rent check every month"', personal: 'Add a personal task, e.g. "renew license Fri"' }[view] || 'Add a task, e.g. "call lender re Ortiz Fri 9am" or "rent check every month"';
   el("main").innerHTML = `
     <div class="main-h">
-      <div>${view.startsWith("list:") && renamingList ? `<span class="newlist"><input id="list-name" value="${esc(title)}" aria-label="List name"><button class="btn primary" data-savelist="1">Save</button></span>` : `<h1>${esc(title)}</h1>`}${view.startsWith("list:") && !renamingList ? `<span class="list-acts"><button class="linkbtn2" data-renlist="1">Rename</button><button class="linkbtn2 danger" data-dellist="1">${confirmDel === "list" ? "Click again to delete list" : "Delete list"}</button></span>` : ""}<div class="sub">${view === "recurring" ? "Each one shows up in Today when it's due, then schedules the next" : view.startsWith("list:") ? open + " open · these also show in Today, Tomorrow and Overdue when they're due" : open + " open" + (view === "today" ? " · " + fmt(TODAY) : "")}</div></div>
-      <span class="tools">${whoMenu()}
-      <span class="filters" role="group" aria-label="Show">
-        <button data-filter="all" aria-pressed="${filter === "all"}">All</button>
-        <button data-filter="general" aria-pressed="${filter === "general"}">General</button>
-        <button data-filter="deal" aria-pressed="${filter === "deal"}">Deal steps</button>
-      </span></span>
+      <div>${isList && renamingList ? `<span class="newlist"><input id="list-name" value="${esc(title)}" aria-label="List name"><button class="btn primary" data-savelist="1">Save</button></span>` : `<h1>${esc(title)}</h1>`}${isList && !renamingList ? `<span class="list-acts"><button class="linkbtn2" data-renlist="1">Rename</button><button class="linkbtn2 danger" data-dellist="1">${confirmDel === "list" ? "Click again to delete list" : "Delete list"}</button><label class="ontoday"><input type="checkbox" id="list-ontoday" ${showsOnToday(view.slice(5)) ? "checked" : ""}> Show as its own column on Today</label></span>` : ""}<div class="sub">${sub}</div></div>
+      ${view === "touch" ? "" : `<span class="tools">${whoMenu()}</span>`}
     </div>
-    <div class="qa">
+    ${view === "touch" ? "" : `<div class="qa">
       <form id="qa-form" autocomplete="off">
-        <input id="qa-input" placeholder='Add a task, e.g. "call lender re Murphy Fri 9am" or "rent check every month"' aria-label="Quick add task">
+        <input id="qa-input" placeholder='${ph}' aria-label="Quick add task">
         <button class="add" type="submit">Add</button>
       </form>
       <div class="parsed" id="parsed"></div>
-    </div>
-    ${groups.length ? groups.map(([h, items, bad]) => `<section class="group">${h ? `<h3 class="${bad ? "bad" : ""}"><span>${h}</span><span>${items.filter(t => !t.done).length}</span></h3>` : ""}<div class="list">${items.map(rowHtml).join("")}</div></section>`).join("") : `<div class="empty">${tasks.length ? "Nothing here. Enjoy it." : "No tasks yet. Type one in the box above, or apply a template from a person's page."}</div>`}`;
-  const inp = el("qa-input");
+    </div>`}
+    ${bodyHtml()}`;
+  const inp = el("qa-input"); if (!inp) return;
   inp.addEventListener("input", () => showParsed(parse(inp.value)));
   el("qa-form").addEventListener("submit", e => { e.preventDefault(); addTask(inp.value); });
 }
@@ -2204,7 +2265,7 @@ function renderDetail() {
   const box = el("detail"), shell = el("shell");
   const t = tasks.find(x => x.id === sel);
   if (!t) { box.hidden = true; shell.classList.remove("with-detail"); return; }
-  box.hidden = false; shell.classList.add("with-detail");
+  box.hidden = false; shell.classList.add("with-detail"); shell.classList.toggle("wide", view === "today");
   const L = t.link && LINKS[t.link];
   box.innerHTML = `
     <div class="detail-h">
@@ -2221,7 +2282,7 @@ function renderDetail() {
       <label for="d-due">Due</label><input type="date" id="d-due" value="${t.due}">
       <label for="d-time">Time</label><input id="d-time" value="${t.time || ""}" placeholder="None">
       <label for="d-repeat">Repeat</label><select id="d-repeat">${["", "Daily", "Weekly", "Monthly", "Yearly"].map(r => `<option value="${r}" ${t.repeat === r || (!t.repeat && !r) ? "selected" : ""}>${r || "Never"}</option>`).join("")}</select>
-      <label for="d-list">List</label><select id="d-list"><option value="">None</option>${LISTS.map(l => `<option ${t.list === l ? "selected" : ""}>${esc(l)}</option>`).join("")}<option value="__new">+ New list…</option></select>
+      <label for="d-list">List</label><select id="d-list"><option value="">None (sorted automatically)</option>${LISTS.map(l => `<option ${t.list === l ? "selected" : ""}>${esc(l)}</option>`).join("")}<option value="__new">+ New list…</option></select>
       <label for="d-p">Priority</label><select id="d-p">${["None", "Low", "Medium", "High"].map((p, i) => `<option value="${i}" ${t.p === i ? "selected" : ""}>${p}</option>`).join("")}</select>
       <label for="d-who">Assignee</label><select id="d-who">${Object.entries(PEOPLE).map(([k, v]) => `<option value="${k}" ${t.who === k ? "selected" : ""}>${v}</option>`).join("")}</select>
       <label>Linked to</label><span>${L ? `<a class="link ${L.kind}" href="deals.html#contact-${CID[t.link]}" style="text-decoration:none">${esc(L.full)}</a>` : `<span style="color:var(--muted)">Nothing (general task)</span>`}</span>
@@ -2279,9 +2340,11 @@ function addTask(text) {
   const p = parse(text); if (!p.t) return;
   if (p.list && !LISTS.includes(p.list)) LISTS.push(p.list);
   const list = p.list || (view.startsWith("list:") ? view.slice(5) : undefined);
-  const t = { id: nextId++, t: p.t, due: p.due || iso(TODAY), time: p.time, who: p.who || me, link: p.link, list, p: p.p || 0, repeat: p.repeat, kind: "task", done: false };
+  const repeat = p.repeat || (view === "recurring" ? "Weekly" : undefined);
+  const t = { id: nextId++, t: p.t, due: p.due || iso(TODAY), time: p.time, who: p.who || me, link: p.link, list, p: p.p || 0, repeat, kind: "task", done: false };
   tasks.push(t);
-  toast(`Added "${t.t}" for ${fmt(d(t.due))}${inView(t, view) ? "" : ". It's in a different view."}`);
+  const k = catOf(t);
+  toast(`Added "${t.t}" to ${catName(k)}, due ${fmt(d(t.due))}${view === "recurring" && !p.repeat ? ", repeats weekly (change it in the task)" : ""}${view === "clients" && !t.link ? '. No client matched, so it went to Personal. Use "re" + a name to link one' : ""}.`);
   render();
   const i = el("qa-input"); if (i) i.focus();
 }
@@ -2309,7 +2372,6 @@ document.addEventListener("click", e => {
   if (b.dataset.view) { view = b.dataset.view; sel = null; render(); return; }
   if (b.dataset.newlist) { newListOpen = true; renderSide(); el("nl-name").focus(); return; }
   if (b.dataset.nlsave) { saveNewList(); return; }
-  if (b.dataset.filter) { filter = b.dataset.filter; render(); return; }
   if (b.dataset.whotoggle) { whoOpen = !whoOpen; whoQ = ""; render(); const q = el("who-q"); if (q) q.focus(); return; }
   if (b.dataset.who) { whoF = b.dataset.who; whoOpen = false; render(); return; }
   if (b.id === "as-lp" || b.id === "as-as") {
@@ -2325,8 +2387,8 @@ document.addEventListener("click", e => {
   if (b.dataset.addsub) { const t = tasks.find(x => x.id === sel), v = el("sub-new").value.trim(); if (!v) { el("sub-new").focus(); return; } (t.subs = t.subs || []).push([v, false]); render(); el("sub-new").focus(); return; }
   if (b.dataset.deltask) { const id = +b.dataset.deltask; if (confirmDel !== "task" + id) { confirmDel = "task" + id; renderDetail(); return; } tasks = tasks.filter(x => x.id !== id); sel = null; confirmDel = null; render(); toast("Task deleted."); return; }
   if (b.dataset.renlist) { renamingList = true; renderMain(); const i = el("list-name"); i.focus(); i.select(); return; }
-  if (b.dataset.savelist) { const old = view.slice(5), n = el("list-name").value.trim(); if (n && n !== old && !LISTS.includes(n)) { LISTS[LISTS.indexOf(old)] = n; tasks.forEach(t => { if (t.list === old) t.list = n; }); view = "list:" + n; } renamingList = false; render(); return; }
-  if (b.dataset.dellist) { const l = view.slice(5); if (confirmDel !== "list") { confirmDel = "list"; renderMain(); return; } LISTS.splice(LISTS.indexOf(l), 1); tasks.forEach(t => { if (t.list === l) delete t.list; }); confirmDel = null; view = "today"; render(); toast(`Deleted "${l}". Its tasks are kept, just not in a list.`); return; }
+  if (b.dataset.savelist) { const old = view.slice(5), n = el("list-name").value.trim(); if (n && n !== old && !LISTS.includes(n)) { if (old in onToday) { onToday[n] = onToday[old]; delete onToday[old]; } LISTS[LISTS.indexOf(old)] = n; tasks.forEach(t => { if (t.list === old) t.list = n; }); view = "list:" + n; } renamingList = false; render(); return; }
+  if (b.dataset.dellist) { const l = view.slice(5); if (confirmDel !== "list") { confirmDel = "list"; renderMain(); return; } LISTS.splice(LISTS.indexOf(l), 1); delete onToday[l]; tasks.forEach(t => { if (t.list === l) delete t.list; }); confirmDel = null; view = "today"; render(); toast(`Deleted "${l}". Its tasks are kept, just not in a list.`); return; }
   if (b.dataset.done) {
     const t = tasks.find(x => x.id === +b.dataset.done);
     t.done = !t.done; t.justDone = t.done;
@@ -2338,6 +2400,7 @@ document.addEventListener("click", e => {
   if (b.dataset.toast) { toast(b.dataset.toast); return; }
 });
 document.addEventListener("change", e => {
+  if (e.target.id === "list-ontoday") { const l = view.slice(5); onToday[l] = e.target.checked; toast(e.target.checked ? `"${l}" now has its own column on Today.` : `"${l}" is hidden from Today. Its due tasks show under Personal.`); render(); return; }
   const t = tasks.find(x => x.id === sel); if (!t) return;
   const id = e.target.id, v = e.target.value;
   if (e.target.dataset.sub !== undefined) { t.subs[+e.target.dataset.sub][1] = e.target.checked; render(); return; }
@@ -2347,7 +2410,6 @@ document.addEventListener("change", e => {
   if (id === "d-p") t.p = +v;
   if (id === "d-who") t.who = v;
   if (id === "d-list") { if (v === "__new") { const n = "New list " + (LISTS.length + 1); LISTS.push(n); t.list = n; toast(`Created "${n}". Rename it from the sidebar later.`); } else t.list = v || undefined; }
-  if (id === "d-list") t.list = v || undefined;
   if (id === "d-title") t.t = v;
   if (id === "d-notes") { t.notes = v; return; }
   render();
@@ -2553,6 +2615,7 @@ const TPLS = () => HQ.templates;
 const curCk = () => TPLS().find(x => x.id === state.tplId) || TPLS()[0];
 const stepCount = x => x.phases.reduce((n, ph) => n + ph.steps.length, 0);
 const PA_TRIGGERS = [["Buyer · Under contract", "When a buyer-side purchase agreement is added"], ["Seller · Under contract", "When a seller-side purchase agreement is added"], ["Buyer · Closed", "When a buyer-side contract closes"], ["Seller · Closed", "When a seller-side contract closes"]];
+const UC_DATES = [["insp", "Inspection deadline"], ["hoa", "HOA doc rescission"], ["ws", "Written Statement"], ["close", "Closing"]];
 const trigOptions = () => Object.entries(state.pipes).flatMap(([p, st]) => st.map(x => `${p} · ${x}`)).concat(PA_TRIGGERS.map(x => x[0]));
 const blankStep = () => ({ name: "New step", anchor: "Start date", days: 1, dir: "after", who: "Alyssa", type: "Task", tpl: "", cond: "Always", advance: "" });
 const applied = () => { const x = curCk(); if (state.ckApply && x.trigger) toast(`Open deals in ${x.trigger} get this change too.`); };
@@ -2590,10 +2653,15 @@ const V = {
     </tbody></table></div></div>`;
   },
   pipelines() {
-    return `<h1>Client statuses</h1><p>The statuses a buyer or listing moves through on the Pipeline. Under contract and Closed come from purchase agreements, so they aren't listed here. Each status can start a task template.</p>
-    <div class="cards">${Object.entries(state.pipes).map(([p, st]) => `<div class="box"><h2>${p} statuses</h2><div class="tbl-wrap"><table><tbody>
+    const uc = HQ.settings.ucPhases, ucT = TPLS().filter(x => / · Under contract$/.test(x.trigger));
+    return `<h1>Client statuses</h1><p>The columns on each Pipeline tab. Buyers and sellers move through their statuses from the contact page. Once a purchase agreement is added they move to Under Contract/Pending, where the column follows the contract dates. Each status can start a task template.</p>
+    <div class="cards">${Object.entries(state.pipes).map(([p, st]) => `<div class="box"><h2>${p === "Listing" ? "Seller" : p} Pipeline</h2><div class="tbl-wrap"><table><tbody>
       ${st.map((s, i) => `<tr><td class="muted" style="width:28px">${i + 1}</td><td><input data-stage="${p}:${i}" value="${esc(s)}"></td><td style="white-space:nowrap">${(() => { const ts = TPLS().filter(x => x.trigger === p + " · " + s); return ts.length ? ts.map(x => `<button class="linkbtn" data-tplid="${x.id}" data-gosec="1">${esc(x.name)} (${stepCount(x)})</button>`).join(", ") : `<button class="linkbtn" data-gock="${p}|${esc(s)}">+ Add template</button>`; })()}</td><td style="width:90px;white-space:nowrap"><button class="rm" data-up="${p}:${i}" aria-label="Move up">↑</button><button class="rm" data-down="${p}:${i}" aria-label="Move down">↓</button><button class="rm" data-rmstage="${p}:${i}" aria-label="Remove">×</button></td></tr>`).join("")}
-    </tbody></table></div><div class="addrow"><button class="btn" data-addstage="${p}">+ Add status</button></div></div>`).join("")}</div>`;
+    </tbody></table></div><div class="addrow"><button class="btn" data-addstage="${p}">+ Add status</button></div></div>`).join("")}
+      <div class="box"><h2>Under Contract/Pending Pipeline</h2><div class="tbl-wrap"><table><thead><tr><th></th><th>Column</th><th>A contract stays here until</th><th></th></tr></thead><tbody>
+      ${uc.map(([n, k], i) => `<tr><td class="muted" style="width:28px">${i + 1}</td><td><input data-ucname="${i}" value="${esc(n)}"></td><td><select data-ucuntil="${i}">${UC_DATES.map(([v, l]) => `<option value="${v}" ${v === k ? "selected" : ""}>${l} is met</option>`).join("")}</select></td><td style="width:90px;white-space:nowrap"><button class="rm" data-ucup="${i}" aria-label="Move up" ${i ? "" : "disabled"}>↑</button><button class="rm" data-ucdown="${i}" aria-label="Move down" ${i < uc.length - 1 ? "" : "disabled"}>↓</button><button class="rm" data-ucrm="${i}" aria-label="Remove" ${uc.length > 1 ? "" : "disabled"}>×</button></td></tr>`).join("")}
+      </tbody></table></div><p class="muted" style="margin:8px 14px;font-size:13px">Contracts with nothing left open sit in the last column. Templates that start here: ${ucT.map(x => `<button class="linkbtn" data-tplid="${x.id}" data-gosec="1">${esc(x.name)} (${stepCount(x)})</button>`).join(", ") || "none"}.</p>
+      <div class="addrow"><button class="btn" data-ucadd="1">+ Add column</button></div></div></div>`;
   },
   checklists() {
     const t = curCk(), steps = stepCount(t);
@@ -2716,6 +2784,9 @@ document.addEventListener("click", e => {
   if (ds.newrole) { state.roles.push("New role"); state.perms.forEach(p => p.push(false)); render(); toast("Added a role. Type its name in the column header."); return; }
   if (ds.up || ds.down) { const [p, i] = pair(ds.up || ds.down), a = state.pipes[p], j = +i + (ds.up ? -1 : 1); if (j >= 0 && j < a.length) [a[i], a[j]] = [a[j], a[i]]; render(); return; }
   if (ds.rmstage) { const [p, i] = pair(ds.rmstage); state.pipes[p].splice(+i, 1); render(); return; }
+  if (ds.ucadd) { HQ.settings.ucPhases.splice(-1, 0, ["New column", "insp"]); render(); return; }
+  if (ds.ucrm) { HQ.settings.ucPhases.splice(+ds.ucrm, 1); render(); return; }
+  if (ds.ucup || ds.ucdown) { const a = HQ.settings.ucPhases, i = +(ds.ucup || ds.ucdown), j = i + (ds.ucup ? -1 : 1); if (j >= 0 && j < a.length) [a[i], a[j]] = [a[j], a[i]]; render(); return; }
   if (ds.addstage) { state.pipes[ds.addstage].push("New status"); render(); return; }
   if (ds.tplid) { state.tplId = ds.tplid; state.ckPending = null; if (ds.gosec) { sec = "checklists"; window.scrollTo(0, 0); } render(); return; }
   if (ds.gock) { const [pp, st] = ds.gock.split("|"); const x = { id: "t" + (++tplN), name: `${pp} · ${st}`, trigger: `${pp} · ${st}`, phases: [{ name: "Steps", steps: [] }] }; TPLS().push(x); state.tplId = x.id; sec = "checklists"; render(); window.scrollTo(0, 0); return; }
@@ -2755,6 +2826,8 @@ document.addEventListener("change", e => {
   if (t.id === "tpl-filter") { state.tplFilter = t.value; render(); return; }
   if (ds.u) { const [i, j] = pair(ds.u); state.users[i][j] = t.value; syncTeam(); return; }
   if (ds.perm) { const [i, j] = pair(ds.perm); state.perms[i][+j + 1] = t.checked; return; }
+  if (ds.ucname !== undefined) { HQ.settings.ucPhases[+ds.ucname][0] = t.value.trim() || HQ.settings.ucPhases[+ds.ucname][0]; return; }
+  if (ds.ucuntil !== undefined) { HQ.settings.ucPhases[+ds.ucuntil][1] = t.value; toast("Saved. The Pipeline regroups contracts right away."); return; }
   if (ds.stage) { const [p, i] = pair(ds.stage), old = state.pipes[p][i]; state.pipes[p][i] = t.value; TPLS().forEach(x => { if (x.trigger === p + " · " + old) x.trigger = p + " · " + t.value; }); toast("Renamed. Templates that start at this stage moved with it."); return; }
   if (ds.rm && t.closest("table")) { const [i, j] = pair(ds.rm); state.reminders[i][j] = j === "2" ? +t.value : t.value; if (j === "3") render(); return; }
   if (ds.role) { const j = +ds.role, old = state.roles[j], nv = t.value.trim() || old; state.roles[j] = nv; state.users.forEach(u => { if (u[2] === old) u[2] = nv; }); render(); return; }

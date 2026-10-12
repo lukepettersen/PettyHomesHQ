@@ -188,6 +188,9 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 .stsel select { padding: 3px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--fg); }
 .chk { flex-direction: row !important; align-items: center; gap: 8px !important; font-size: 13px !important; color: var(--fg) !important; }
 .chk input { width: auto !important; }
+.na-row { display: flex; gap: 8px; align-items: center; }
+.na-row input[type=date] { flex: 1; min-width: 0; }
+.na-row .chk { display: inline-flex; white-space: nowrap; }
 .sm-btn { padding: 3px 10px; font-size: 12.5px; }
 .linkbtn.danger { color: var(--bad); align-self: flex-start; }
 .rm-x { border: 0; background: none; color: var(--muted); font-size: 16px; line-height: 1; padding: 0 2px; }
@@ -476,10 +479,10 @@ function progressRow(eng) {
   </button>`;
 }
 // Contract phase from its key dates: the first one not yet met or waived.
-const UC_PHASES = [["insp", "Inspection"], ["hoa", "HOA review"], ["ws", "Financing"], ["close", "Closing"]];
+const UC_PHASES = { map(f) { return HQ.settings.ucPhases.map(([l, k]) => f([k, l])); } };
 function ucPhase(pa) {
-  const hit = UC_PHASES.find(([k]) => k in pa.ms && !["met", "waived"].includes(pa.msStatus[k]) && k !== "close");
-  return hit ? hit[1] : "Closing";
+  const ph = HQ.settings.ucPhases, hit = ph.find(([, k]) => k in pa.ms && !["met", "waived"].includes(pa.msStatus[k]));
+  return hit ? hit[0] : ph[ph.length - 1][0];
 }
 let pview = "buyers";
 function pItem(file, eng) {
@@ -511,7 +514,7 @@ function renderActive() {
     cols = STATUS[kind].map(st => { const es = list.filter(e => !activePA(e) && e.status === st); return [st, es.map(e => pItem(e, e)), es.reduce((t, e) => t + (e.price || 0), 0)]; });
   }
   const vol = pas.reduce((s, x) => s + (x.price || 0), 0);
-  const tabs = [["buyers", "Buyers", buyers.filter(e => !activePA(e)).length], ["sellers", "Sellers", listings.filter(e => !activePA(e)).length], ["uc", "Under contract", pas.length]];
+  const tabs = [["buyers", "Buyers", buyers.filter(e => !activePA(e)).length], ["sellers", "Sellers", listings.filter(e => !activePA(e)).length], ["uc", "Under Contract/Pending", pas.length]];
   app.innerHTML = `
     <div class="board-head">
       <div class="left"><h1>Pipeline</h1><span class="board-sum">${money(vol)} under contract</span></div>
@@ -557,10 +560,10 @@ function renderContact() {
       </section>
       <aside class="cright">
         <div class="card-s">
-          <h3>Tasks <span class="muted">${c.tasks.filter(t => t.s === "open").length}</span><button class="plus" data-toast="Quick add, already linked to ${esc(c.name)}" aria-label="Add task">+</button></h3>
+          <h3>Tasks <span class="muted">${c.tasks.filter(t => t.s === "open").length}</span><button class="plus" data-applyopen="1" aria-label="Add task">+</button></h3>
           ${c.tasks.length ? c.tasks.map((t, i) => ptaskHtml(t, i)).join("") : `<p class="muted sm">No tasks outside their files.</p>`}
-          ${applyOpen ? `<div class="apply"><select id="apply-tpl" aria-label="Template">${(typeof HQ !== "undefined" ? HQ.templates : []).slice().sort((a, b) => !!a.trigger - !!b.trigger).map(t => `<option value="${t.id}">${esc(t.name)}${t.trigger ? "" : " (by hand)"}</option>`).join("")}</select><button class="btn primary" data-applytpl="1">Apply</button><button class="btn" data-applycancel="1">Cancel</button></div>`
-            : `<button class="btn" data-applyopen="1">Apply template</button>`}
+          ${applyOpen ? `<div class="apply"><input id="ct-new" placeholder="Task for ${esc(c.name.split(" ")[0])}" aria-label="New task"><input id="ct-due" type="date" value="${iso(TODAY)}" aria-label="Due"><button class="btn primary" data-applytpl="1">Add</button><button class="btn" data-applycancel="1">Cancel</button></div>`
+            : `<button class="btn" data-applyopen="1">+ Add task</button>`}
         </div>
         <div class="card-s">
           <h3>Buying &amp; selling <span class="muted">${myFiles.length}</span></h3>
@@ -626,6 +629,14 @@ function engPane(eng) {
 }
 
 function factsInline(dl) {
+  if (dl.side === "buyer") {
+    const fm = dl.form || {}, at = fm.inspAt ? new Date(fm.inspAt) : null;
+    return [["Price", money(dl.price)], ["Earnest", money(dl.em || 0)], ["Seller contrib.", money(dl.sc || 0)],
+      ["Commission", role === "admin" ? (dl.comm ? `${dl.comm}% · ${money(Math.round(dl.price * dl.comm / 100))}` : "—") : null], ["BAC", money(dl.bac || 0)],
+      ["Inspection", at ? `${DOW[at.getDay()]} ${short(at)} ${at.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : "—"],
+      ["Earnest money to", fm.emTo], ["Referral fee", fm.referral], ["Material defect", fm.mdc], ["New construction", (dl.facts || {}).newc]]
+      .map(([k, v]) => `<span><em>${k}</em> ${v === null ? `<i class="hid">hidden</i>` : `<b class="num">${esc(v || "—")}</b>`}</span>`).join("");
+  }
   return [["Price", money(dl.price)], ["Earnest", money(dl.em || 0)], ["Seller contrib.", money(dl.sc || 0)], [dl.side === "buyer" ? "BAC received" : "BAC paid", dl.bac],
     ["Commission", role === "admin" ? money(dl.comm || 0) : null], ["Financing", dl.fin]]
     .map(([k, v]) => `<span><em>${k}</em> ${v === null ? `<i class="hid">hidden</i>` : `<b class="num">${esc(v || "—")}</b>`}</span>`).join("");
@@ -867,14 +878,31 @@ const F = {
   contract: [["address", "Property address", "text", "Street, city", true], ["price", "Purchase price", "money", "", true], ["em", "Earnest money", "money"], ["sc", "Seller contributions", "money"], ["fin", "Buyer's financing", ["Conventional", "FHA", "VA", "Cash", "Other"]], ["comm", "Commission", "money"], ["bac", "BAC", "text", "e.g. 2.5%"]],
   facts: [["ptype", "Property type", ["Single family", "Townhome", "Condo", "Twin home", "Multi-family"]], ["year", "Year built", "number"], ["hoa", "HOA?", ["No", "Yes"]], ["newc", "New construction?", ["No", "Yes"]]],
   dates: [["fa", "Final Acceptance", "date"], ["insp", "Inspection deadline", "date"], ["ws", "Written Statement (lender)", "date"], ["hoa_d", "HOA doc rescission", "date"], ["close", "Closing", "date"]],
+  buyerPA: [
+    ["The contract", [["address", "Address", "text", "Street, city", true], ["price", "Purchase price", "money", "", true], ["em", "Earnest money", "money"], ["sc", "Seller contributions", "money"], ["comm", "Commission %", "pct", "e.g. 2.7"], ["bac", "BAC", "money", "e.g. 695"]]],
+    ["Key dates (leave blank if you don't know yet)", [["close", "Close date", "date"], ["fa", "Final Acceptance", "date"], ["insp", "Inspection deadline", "date"], ["ws", "Written Statement", "date-na"], ["hoa_d", "HOA doc rescission", "date-na"]]],
+    ["Notes", [["inspAt", "Inspection appointment", "datetime"], ["referral", "Referral fee", "text", "None, or who and how much"], ["emTo", "Earnest money to", "text", "Who holds it"], ["mdc", "Material defect clause?", "text", "None, or details"], ["newc", "New construction?", ["No", "Yes"]]]],
+    ["Buyer's lender", [["lenderName", "Name", "text"], ["lenderEmail", "Email", "text"], ["lenderCo", "Company", "text"]]],
+    ["Buyer's title", [["btitleCo", "Title company", "text"], ["btitleContact", "Contact name", "text"], ["btitleInfo", "Email / phone", "text"]]],
+    ["Seller's side", [["saName", "Seller's agent", "text", "Name"], ["saEmail", "Seller's agent email", "text"], ["stcName", "Seller's TC", "text", "Name"], ["stcInfo", "Seller's TC email / phone", "text"], ["stitleCo", "Seller's title company", "text"], ["stitleContact", "Seller's title contact", "text", "Name, email / phone"]]],
+  ],
   people: { buyer: [["p_lender", "Lender"], ["p_title", "Title"], ["p_other", "Listing agent"]], seller: [["p_other", "Buyer's agent"], ["p_title", "Title"], ["p_lender", "Buyer's lender"]] },
 };
+const BUYER_KEYS = ["inspAt", "referral", "emTo", "mdc", "lenderName", "lenderEmail", "lenderCo", "btitleCo", "btitleContact", "btitleInfo", "saName", "saEmail", "stcName", "stcInfo", "stitleCo", "stitleContact", "ws_na", "hoa_d_na"];
+// Buyer side: N/A on HOA means no HOA steps; N/A on Written Statement drops the lender deadline.
+function normBuyer(v) { v.hoa = v.hoa_d_na === "on" ? "No" : "Yes"; if (v.ws_na === "on") v.ws = ""; if (v.hoa_d_na === "on") v.hoa_d = ""; }
+const joinP = (...a) => a.filter(Boolean).join(" · ");
+function buyerPeople(v) {
+  return [[joinP(v.lenderName, v.lenderCo, v.lenderEmail), "Lender"], [joinP(v.btitleCo, v.btitleContact, v.btitleInfo), "Buyer's title"], [joinP(v.saName, v.saEmail), "Seller's agent"], [joinP(v.stcName, v.stcInfo), "Seller's TC"], [joinP(v.stitleCo, v.stitleContact), "Seller's title"]].filter(x => x[0]);
+}
+const pickForm = v => Object.fromEntries(BUYER_KEYS.map(k => [k, v[k] || ""]));
 let dealForm = null; // { mode: "buyer" | "listing" | "pa", cid, status, engId, v }
 
 function formGroups() {
   const f = dealForm;
   if (f.mode === "pa") {
     const side = sideOf(deals.find(x => x.id === f.engId));
+    if (side === "buyer") return F.buyerPA;
     return [["The contract", F.contract.map(x => x[0] === "bac" ? [x[0], side === "buyer" ? "BAC received" : "BAC paid", x[2], x[3]] : x)],
       ["Key dates (leave blank if you don't know yet)", F.dates], ["The property", F.facts], ["Other people on the deal", F.people[side].map(([k, l]) => [k, l, "text", "Name and company"])]];
   }
@@ -893,10 +921,12 @@ const formTrigger = () => dealForm.mode === "pa" ? `${sideOf(deals.find(x => x.i
 function fieldHtml([k, lab, type, ph, req]) {
   const v = dealForm.v;
   if (k === "comm" && role !== "admin") return "";
-  if (k === "hoa_d" && v.hoa !== "Yes") return "";
+  if (k === "hoa_d" && type !== "date-na" && v.hoa !== "Yes") return "";
+  if (type === "date-na") { const na = v[k + "_na"] === "on";
+    return `<label>${lab}<span class="na-row"><input data-df="${k}" type="date" value="${esc(na ? "" : v[k] || "")}" ${na ? "disabled" : ""}><span class="chk"><input type="checkbox" data-df="${k}_na" ${na ? "checked" : ""}> N/A</span></span></label>`; }
   const input = Array.isArray(type)
     ? `<select data-df="${k}">${type.map(o => `<option ${o === v[k] ? "selected" : ""}>${o}</option>`).join("")}</select>`
-    : `<input data-df="${k}" type="${type === "money" || type === "number" ? "number" : type === "date" ? "date" : "text"}" value="${esc(v[k] || "")}" placeholder="${esc(ph || (type === "money" ? "$" : ""))}" ${type === "money" ? 'min="0" step="any"' : ""}>`;
+    : `<input data-df="${k}" type="${type === "money" || type === "number" || type === "pct" ? "number" : type === "date" ? "date" : type === "datetime" ? "datetime-local" : "text"}" value="${esc(v[k] || "")}" placeholder="${esc(ph || (type === "money" ? "$" : ""))}" ${type === "money" || type === "pct" ? 'min="0" step="any"' : ""}>`;
   return `<label>${lab}${req ? " *" : ""}${input}</label>`;
 }
 function previewHtml() {
@@ -928,7 +958,7 @@ function dealModalHtml() {
   </form></div>`;
 }
 function openForm(mode, opts = {}) {
-  const base = { fin: "Conventional", ptype: "Single family", hoa: "No", newc: "No", timeframe: "0–3 months", preapproved: "Not yet" };
+  const base = { fin: "Conventional", ptype: "Single family", hoa: "No", newc: "No", timeframe: "0–3 months", preapproved: "Not yet", hoa_d_na: "on" };
   dealForm = { mode, cid: opts.cid || openContact || allContacts()[0][0], status: mode === "buyer" ? "Consult scheduled" : mode === "listing" ? "Consult scheduled" : null, engId: opts.engId, v: Object.assign(base, opts.v || {}) };
   renderDealModal();
 }
@@ -939,7 +969,8 @@ function editForm(dl) {
   if (dl.kind === "pa") {
     Object.assign(v, { em: dl.em || "", sc: dl.sc || "", fin: dl.fin, comm: dl.comm || "", bac: dl.bac || "" });
     Object.entries(dl.ms).forEach(([k, x]) => { v[k === "hoa" ? "hoa_d" : k] = x || ""; });
-    F.people[dl.side].forEach(([k, l]) => { const hit = (dl.people || []).find(x => x[1] === l); if (hit) v[k] = hit[0]; });
+    if (dl.side === "buyer") { Object.assign(v, dl.form || {}); if (!("ws" in dl.ms)) v.ws_na = "on"; if (!("hoa" in dl.ms)) v.hoa_d_na = "on"; }
+    else F.people[dl.side].forEach(([k, l]) => { const hit = (dl.people || []).find(x => x[1] === l); if (hit) v[k] = hit[0]; });
   }
   dealForm = { mode: dl.kind === "pa" ? "pa" : dl.kind, cid: dl.cid, status: dl.status, engId: dl.kind === "pa" ? dl.parent : dl.id, editId: dl.id, v };
   renderDealModal();
@@ -948,8 +979,11 @@ function saveEdit() {
   const f = dealForm, v = f.v, dl = deals.find(x => x.id === f.editId);
   const facts = { ptype: v.ptype, year: v.year, hoa: v.hoa, newc: v.newc };
   if (dl.kind === "pa") {
-    Object.assign(dl, { line: v.address, price: +v.price, em: +v.em || 0, sc: +v.sc || 0, fin: v.fin, comm: +v.comm || 0, bac: v.bac, facts, people: F.people[dl.side].filter(([k]) => v[k]).map(([k, l]) => [v[k], l]) });
-    const keys = ["fa", "insp", "ws"].concat(v.hoa === "Yes" ? ["hoa"] : []).concat(["close"]);
+    const isB = dl.side === "buyer"; if (isB) { normBuyer(v); facts.hoa = v.hoa; }
+    Object.assign(dl, { line: v.address, price: +v.price, em: +v.em || 0, sc: +v.sc || 0, fin: v.fin, comm: +v.comm || 0, bac: isB ? +v.bac || 0 : v.bac, facts, people: isB ? buyerPeople(v) : F.people[dl.side].filter(([k]) => v[k]).map(([k, l]) => [v[k], l]) });
+    if (isB) dl.form = pickForm(v);
+    if (isB && v.ws_na === "on") delete dl.ms.ws;
+    const keys = ["fa", "insp"].concat(isB && v.ws_na === "on" ? [] : ["ws"]).concat(v.hoa === "Yes" ? ["hoa"] : []).concat(["close"]);
     let moved = 0;
     keys.forEach(k => {
       const nv = v[k === "hoa" ? "hoa_d" : k] || null, old = dl.ms[k];
@@ -978,10 +1012,12 @@ function submitForm() {
   const id = deals.length ? Math.max(...deals.map(x => x.id)) + 1 : 1;
   const facts = { ptype: v.ptype, year: v.year, hoa: v.hoa, newc: v.newc };
   if (f.mode === "pa") {
-    const eng = deals.find(x => x.id === f.engId), side = sideOf(eng);
+    const eng = deals.find(x => x.id === f.engId), side = sideOf(eng), isB = side === "buyer";
+    if (isB) { normBuyer(v); facts.hoa = v.hoa; }
     const pa = { id, kind: "pa", parent: eng.id, side, cid: eng.cid, name: eng.name, status: "Active", line: v.address, price: +v.price, em: +v.em || 0, sc: +v.sc || 0, bac: v.bac, comm: +v.comm || 0, fin: v.fin, facts,
       ms: { fa: v.fa || null, insp: v.insp || null, ws: v.ws || null }, msStatus: {}, tasks: [],
-      people: F.people[side].filter(([k]) => v[k]).map(([k, l]) => [v[k], l]) };
+      people: isB ? buyerPeople(v) : F.people[side].filter(([k]) => v[k]).map(([k, l]) => [v[k], l]) };
+    if (isB) { pa.form = pickForm(v); pa.bac = +v.bac || 0; if (v.ws_na === "on") delete pa.ms.ws; }
     if (v.hoa === "Yes") pa.ms.hoa = v.hoa_d || null;
     pa.ms.close = v.close || null;
     Object.keys(pa.ms).forEach(k => pa.msStatus[k] = pa.ms[k] && d(pa.ms[k]) < TODAY ? "met" : "pending");
@@ -1066,15 +1102,13 @@ document.addEventListener("click", e => {
     ctab[openContact] = "timeline"; render(); toast(`Closed! ${c.name} is now a Past Client.${post.length ? ` ${post.length} post-close tasks added.` : ""}`); return;
   }
   if (b.dataset.deal) { openCard(+b.dataset.deal); return; }
-  if (b.dataset.applyopen) { applyOpen = true; render(); return; }
+  if (b.dataset.applyopen) { applyOpen = true; render(); const i = el("ct-new"); if (i) i.focus(); return; }
   if (b.dataset.applycancel) { applyOpen = false; render(); return; }
   if (b.dataset.applytpl) {
-    const tpl = HQ.templates.find(x => x.id === el("apply-tpl").value), c = contact(openContact);
-    const made = HQ.expand(tpl, TODAY).map(x => ({ t: x.t, due: x.due ? iso(x.due) : null, waiting: x.waiting, who: x.who === "Alyssa" ? "AS" : "LP", s: "open" }));
-    c.tasks.push(...made);
-    HQ.newTasks.push(...made.filter(x => x.due || !x.waiting).map(x => Object.assign({ cid: openContact, name: c.name }, x)));
-    const w = made.filter(x => x.waiting).length;
-    applyOpen = false; render(); toast(`Added ${made.length} tasks from "${tpl.name}".${w ? ` ${w} wait for a contract date.` : ""} Dated ones are on the Tasks page too.`); return;
+    const c = contact(openContact), i = el("ct-new"), t = i.value.trim(); if (!t) { i.focus(); return; }
+    const task = { t, due: el("ct-due").value || iso(TODAY), who: "LP", s: "open" };
+    c.tasks.push(task); HQ.newTasks.push(Object.assign({ cid: openContact, name: c.name }, task));
+    applyOpen = false; render(); toast(`Task added. It's on the Tasks page under Clients too.`); return;
   }
   if (b.dataset.editcard) { const c = contact(openContact); editCard = b.dataset.editcard; draft = JSON.parse(JSON.stringify(c)); draft.assigned = draft.assigned || "Luke Pettersen"; draft.newMode = {}; render(); return; }
   if (b.dataset.cancelcard) { editCard = null; draft = null; render(); return; }
@@ -1131,7 +1165,7 @@ document.addEventListener("change", e => {
     if (ds.dstatus) dealForm.status = e.target.value;
     if (ds.dcid) dealForm.cid = e.target.value;
     // Redraw only when the set of fields changes; otherwise just refresh the preview.
-    if (ds.dstatus || ds.df === "hoa") renderDealModal(); else if (el("dm-prev")) el("dm-prev").innerHTML = previewHtml();
+    if (ds.dstatus || ds.df === "hoa" || /_na$/.test(ds.df || "")) renderDealModal(); else if (el("dm-prev")) el("dm-prev").innerHTML = previewHtml();
     return;
   }
   if (ds.estatus) { setStatus(deals.find(x => x.id === +ds.estatus), e.target.value); return; }
@@ -1154,7 +1188,9 @@ function addTag() {
   const isNew = !ALL_TAGS.includes(v); if (isNew) ALL_TAGS.push(v);
   tagAdding = false; toast(isNew ? `Created new tag "${v}".` : `Tagged "${v}".`); render();
 }
-document.addEventListener("keydown", e => { if (e.target.id === "tag-in" && e.key === "Enter") { e.preventDefault(); addTag(); } if (e.target.id === "tag-in" && e.key === "Escape") { tagAdding = false; render(); } });
+document.addEventListener("keydown", e => {
+  if (e.target.id === "ct-new" && e.key === "Enter") { e.preventDefault(); document.querySelector("[data-applytpl]").click(); return; }
+  if (e.target.id === "ct-new" && e.key === "Escape") { applyOpen = false; render(); return; } if (e.target.id === "tag-in" && e.key === "Enter") { e.preventDefault(); addTag(); } if (e.target.id === "tag-in" && e.key === "Escape") { tagAdding = false; render(); } });
 
 // Deep link from the Tasks mockup: deals.html#contact-calloway
 function fromHash() {

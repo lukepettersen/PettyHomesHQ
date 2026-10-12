@@ -198,6 +198,7 @@ const TPLS = () => HQ.templates;
 const curCk = () => TPLS().find(x => x.id === state.tplId) || TPLS()[0];
 const stepCount = x => x.phases.reduce((n, ph) => n + ph.steps.length, 0);
 const PA_TRIGGERS = [["Buyer · Under contract", "When a buyer-side purchase agreement is added"], ["Seller · Under contract", "When a seller-side purchase agreement is added"], ["Buyer · Closed", "When a buyer-side contract closes"], ["Seller · Closed", "When a seller-side contract closes"]];
+const UC_DATES = [["insp", "Inspection deadline"], ["hoa", "HOA doc rescission"], ["ws", "Written Statement"], ["close", "Closing"]];
 const trigOptions = () => Object.entries(state.pipes).flatMap(([p, st]) => st.map(x => `${p} · ${x}`)).concat(PA_TRIGGERS.map(x => x[0]));
 const blankStep = () => ({ name: "New step", anchor: "Start date", days: 1, dir: "after", who: "Alyssa", type: "Task", tpl: "", cond: "Always", advance: "" });
 const applied = () => { const x = curCk(); if (state.ckApply && x.trigger) toast(`Open deals in ${x.trigger} get this change too.`); };
@@ -235,10 +236,15 @@ const V = {
     </tbody></table></div></div>`;
   },
   pipelines() {
-    return `<h1>Client statuses</h1><p>The statuses a buyer or listing moves through on the Pipeline. Under contract and Closed come from purchase agreements, so they aren't listed here. Each status can start a task template.</p>
-    <div class="cards">${Object.entries(state.pipes).map(([p, st]) => `<div class="box"><h2>${p} statuses</h2><div class="tbl-wrap"><table><tbody>
+    const uc = HQ.settings.ucPhases, ucT = TPLS().filter(x => / · Under contract$/.test(x.trigger));
+    return `<h1>Client statuses</h1><p>The columns on each Pipeline tab. Buyers and sellers move through their statuses from the contact page. Once a purchase agreement is added they move to Under Contract/Pending, where the column follows the contract dates. Each status can start a task template.</p>
+    <div class="cards">${Object.entries(state.pipes).map(([p, st]) => `<div class="box"><h2>${p === "Listing" ? "Seller" : p} Pipeline</h2><div class="tbl-wrap"><table><tbody>
       ${st.map((s, i) => `<tr><td class="muted" style="width:28px">${i + 1}</td><td><input data-stage="${p}:${i}" value="${esc(s)}"></td><td style="white-space:nowrap">${(() => { const ts = TPLS().filter(x => x.trigger === p + " · " + s); return ts.length ? ts.map(x => `<button class="linkbtn" data-tplid="${x.id}" data-gosec="1">${esc(x.name)} (${stepCount(x)})</button>`).join(", ") : `<button class="linkbtn" data-gock="${p}|${esc(s)}">+ Add template</button>`; })()}</td><td style="width:90px;white-space:nowrap"><button class="rm" data-up="${p}:${i}" aria-label="Move up">↑</button><button class="rm" data-down="${p}:${i}" aria-label="Move down">↓</button><button class="rm" data-rmstage="${p}:${i}" aria-label="Remove">×</button></td></tr>`).join("")}
-    </tbody></table></div><div class="addrow"><button class="btn" data-addstage="${p}">+ Add status</button></div></div>`).join("")}</div>`;
+    </tbody></table></div><div class="addrow"><button class="btn" data-addstage="${p}">+ Add status</button></div></div>`).join("")}
+      <div class="box"><h2>Under Contract/Pending Pipeline</h2><div class="tbl-wrap"><table><thead><tr><th></th><th>Column</th><th>A contract stays here until</th><th></th></tr></thead><tbody>
+      ${uc.map(([n, k], i) => `<tr><td class="muted" style="width:28px">${i + 1}</td><td><input data-ucname="${i}" value="${esc(n)}"></td><td><select data-ucuntil="${i}">${UC_DATES.map(([v, l]) => `<option value="${v}" ${v === k ? "selected" : ""}>${l} is met</option>`).join("")}</select></td><td style="width:90px;white-space:nowrap"><button class="rm" data-ucup="${i}" aria-label="Move up" ${i ? "" : "disabled"}>↑</button><button class="rm" data-ucdown="${i}" aria-label="Move down" ${i < uc.length - 1 ? "" : "disabled"}>↓</button><button class="rm" data-ucrm="${i}" aria-label="Remove" ${uc.length > 1 ? "" : "disabled"}>×</button></td></tr>`).join("")}
+      </tbody></table></div><p class="muted" style="margin:8px 14px;font-size:13px">Contracts with nothing left open sit in the last column. Templates that start here: ${ucT.map(x => `<button class="linkbtn" data-tplid="${x.id}" data-gosec="1">${esc(x.name)} (${stepCount(x)})</button>`).join(", ") || "none"}.</p>
+      <div class="addrow"><button class="btn" data-ucadd="1">+ Add column</button></div></div></div>`;
   },
   checklists() {
     const t = curCk(), steps = stepCount(t);
@@ -361,6 +367,9 @@ document.addEventListener("click", e => {
   if (ds.newrole) { state.roles.push("New role"); state.perms.forEach(p => p.push(false)); render(); toast("Added a role. Type its name in the column header."); return; }
   if (ds.up || ds.down) { const [p, i] = pair(ds.up || ds.down), a = state.pipes[p], j = +i + (ds.up ? -1 : 1); if (j >= 0 && j < a.length) [a[i], a[j]] = [a[j], a[i]]; render(); return; }
   if (ds.rmstage) { const [p, i] = pair(ds.rmstage); state.pipes[p].splice(+i, 1); render(); return; }
+  if (ds.ucadd) { HQ.settings.ucPhases.splice(-1, 0, ["New column", "insp"]); render(); return; }
+  if (ds.ucrm) { HQ.settings.ucPhases.splice(+ds.ucrm, 1); render(); return; }
+  if (ds.ucup || ds.ucdown) { const a = HQ.settings.ucPhases, i = +(ds.ucup || ds.ucdown), j = i + (ds.ucup ? -1 : 1); if (j >= 0 && j < a.length) [a[i], a[j]] = [a[j], a[i]]; render(); return; }
   if (ds.addstage) { state.pipes[ds.addstage].push("New status"); render(); return; }
   if (ds.tplid) { state.tplId = ds.tplid; state.ckPending = null; if (ds.gosec) { sec = "checklists"; window.scrollTo(0, 0); } render(); return; }
   if (ds.gock) { const [pp, st] = ds.gock.split("|"); const x = { id: "t" + (++tplN), name: `${pp} · ${st}`, trigger: `${pp} · ${st}`, phases: [{ name: "Steps", steps: [] }] }; TPLS().push(x); state.tplId = x.id; sec = "checklists"; render(); window.scrollTo(0, 0); return; }
@@ -400,6 +409,8 @@ document.addEventListener("change", e => {
   if (t.id === "tpl-filter") { state.tplFilter = t.value; render(); return; }
   if (ds.u) { const [i, j] = pair(ds.u); state.users[i][j] = t.value; syncTeam(); return; }
   if (ds.perm) { const [i, j] = pair(ds.perm); state.perms[i][+j + 1] = t.checked; return; }
+  if (ds.ucname !== undefined) { HQ.settings.ucPhases[+ds.ucname][0] = t.value.trim() || HQ.settings.ucPhases[+ds.ucname][0]; return; }
+  if (ds.ucuntil !== undefined) { HQ.settings.ucPhases[+ds.ucuntil][1] = t.value; toast("Saved. The Pipeline regroups contracts right away."); return; }
   if (ds.stage) { const [p, i] = pair(ds.stage), old = state.pipes[p][i]; state.pipes[p][i] = t.value; TPLS().forEach(x => { if (x.trigger === p + " · " + old) x.trigger = p + " · " + t.value; }); toast("Renamed. Templates that start at this stage moved with it."); return; }
   if (ds.rm && t.closest("table")) { const [i, j] = pair(ds.rm); state.reminders[i][j] = j === "2" ? +t.value : t.value; if (j === "3") render(); return; }
   if (ds.role) { const j = +ds.role, old = state.roles[j], nv = t.value.trim() || old; state.roles[j] = nv; state.users.forEach(u => { if (u[2] === old) u[2] = nv; }); render(); return; }
