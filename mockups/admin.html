@@ -56,6 +56,9 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 .paq td input, .paq td select { min-width: 120px; }
 .paq .pill { display: inline-block; margin-top: 4px; }
 .sec-if { max-width: 260px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); font-size: 13px; }
+.savebar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border: 1px solid var(--line); box-shadow: 0 8px 28px rgb(0 0 0 / .18); border-radius: 12px; padding: 10px 12px 10px 16px; display: flex; align-items: center; gap: 10px; z-index: 25; font-weight: 600; font-size: 14px; max-width: calc(100% - 32px); }
+.savebar span { margin-right: 8px; }
+.savebar[hidden] { display: none; }
 .pill { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
 .side-nav { display: flex; flex-direction: column; gap: 12px; }
 .side-nav h4 { margin: 0 0 4px; padding: 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
@@ -64,7 +67,7 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 .nav-i:hover { background: var(--sunken); }
 .nav-i[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .nav-i .c { font-size: 12px; color: var(--muted); }
-.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); z-index: 40; }
+.toast { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); z-index: 40; }
 @media (max-width: 760px) {
   .side-nav { flex-direction: row; overflow-x: auto; }
   .side-nav h4 { display: none; }
@@ -162,6 +165,7 @@ select:disabled, input:disabled { opacity: .45; }
   <aside class="side-nav" id="side"></aside>
   <main class="main" id="main"></main>
 </div>
+<div id="savebar" class="savebar" hidden><span>You have unsaved changes</span><button class="btn" data-discard="1">Discard</button><button class="btn primary" data-savechanges="1">Save changes</button></div>
 <div id="toast" class="toast" hidden></div>
 <script>
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -182,12 +186,7 @@ const state = {
   perms: [["See commissions", true, false], ["Delete people and deals", true, false], ["Manage users and roles", true, false], ["Edit checklist templates", true, true], ["Edit text and email templates", true, true], ["Export data", true, false], ["Send texts", true, true]],
   get pipes() { return HQ.settings.statuses; },
   tplId: "t4", ckApply: true, ckPending: null,
-  reminders: [
-    ["Birthday", "Text happy birthday", 0, "on", "Luke", "Text", "Everyone"],
-    ["Birthday", "Send birthday card", 7, "before", "Alyssa", "Task", "Past clients"],
-    ["Homeiversary", "Text happy homeiversary", 0, "on", "Luke", "Text", "Everyone"],
-    ["Homeiversary", "Send homeiversary card", 7, "before", "Alyssa", "Task", "Past clients"],
-  ],
+  get reminders() { return HQ.settings.reminders; },
   fields: [["Mailing name", "Text", "People"], ["Referred by", "Person", "People"], ["Homeiversary", "Date", "People"], ["Preferred contact time", "Dropdown", "People"], ["Pre-approval amount", "Number", "Deals"], ["Lender", "Person", "Deals"], ["New construction", "Checkbox", "Deals"]],
   get tags() { return HQ.settings.tags; },
   get stages() { return HQ.settings.stages; },
@@ -472,4 +471,28 @@ document.addEventListener("change", e => {
   if (ds.tf) { state.templates[state.tplSel][ds.tf] = t.value; if (ds.tf !== "3") render(); return; }
 });
 render();
+
+/* ---------- Save bar: Admin changes stay a draft until you save ---------- */
+const dataKeys = () => Object.keys(state).filter(k => !Object.getOwnPropertyDescriptor(state, k).get && Array.isArray(state[k]));
+const snapNow = () => JSON.stringify({ settings: HQ.settings, templates: HQ.templates, state: Object.fromEntries(dataKeys().map(k => [k, state[k]])) });
+let saved = snapNow(), typing = false;
+function restoreInto(target, src) {
+  Object.keys(target).forEach(k => { if (!(k in src)) delete target[k]; });
+  Object.entries(src).forEach(([k, v]) => {
+    if (Array.isArray(v) && Array.isArray(target[k])) target[k].splice(0, target[k].length, ...v);
+    else if (v && typeof v === "object" && target[k] && typeof target[k] === "object" && !Array.isArray(v)) restoreInto(target[k], v);
+    else target[k] = v;
+  });
+}
+function saveBar() {
+  const dirty = typing || snapNow() !== saved, bar = el("savebar");
+  bar.hidden = !dirty;
+}
+document.addEventListener("input", e => { if (e.target.closest("#main")) { typing = true; saveBar(); } });
+document.addEventListener("change", () => setTimeout(saveBar));
+document.addEventListener("click", e => {
+  if (e.target.closest("[data-savechanges]")) { const a = window.document.activeElement; if (a && a.blur) a.blur(); typing = false; saved = snapNow(); saveBar(); toast("Changes saved."); return; }
+  if (e.target.closest("[data-discard]")) { const o = JSON.parse(saved); restoreInto(HQ.settings, o.settings); HQ.templates.splice(0, HQ.templates.length, ...o.templates); dataKeys().forEach(k => state[k].splice(0, state[k].length, ...o.state[k])); typing = false; render(); saveBar(); toast("Changes discarded."); return; }
+  setTimeout(saveBar);
+});
 </script>

@@ -187,10 +187,11 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 
 .grp-link { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; text-decoration: none; cursor: pointer; }
 .grp-link:hover { color: var(--accent); }
 .side > div:first-child .nav-i { font-weight: 600; }
+.save-row { flex-direction: row; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--line); }
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); z-index: 30; }
 </style>
 
-<div class="mock-bar"><span><strong>Mockup</strong> · starts empty, "today" is Mon Oct 12, 2026. Today shows everything due now, broken into categories. Tasks sort themselves: linked to a client → Clients, repeating → Recurring, everything else → Personal.</span>
+<div class="mock-bar"><span><strong>Mockup</strong> · starts empty, "today" is Mon Oct 12, 2026. Today shows everything due now, broken into categories. Tasks sort themselves: linked to a client → Clients, repeating → Recurring, birthdays and homeiversaries → Important dates.</span>
   <span class="seg" role="group" aria-label="Viewing as" style="margin-left:12px"><button id="as-lp" aria-pressed="true">Viewing as Luke</button><button id="as-as" aria-pressed="false">Viewing as assistant</button></span></div>
 
 <header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html">Pipeline</a><a href="tasks.html" class="on">Tasks</a><a href="messages.html">Messages</a><a href="admin.html">Admin</a></nav></header>
@@ -243,7 +244,37 @@ function gather() {
       step: { phase: t.phase, file, rule: t.a ? `${MSN[t.a]} ${t.o === 0 ? "day of" : (t.o > 0 ? "+ " : "− ") + Math.abs(t.o) + " days"}` : "set when the checklist started" } });
     out.push(w);
   }));
+  out.push(...dateTasks());
   tasks = out;
+}
+// Important dates: every birthday and homeiversary, run through Admin → Date reminders.
+const dateDone = {};
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+function monthDay(s) {
+  if (!s) return null; const t = String(s).trim().toLowerCase();
+  let m = t.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return [+m[2] - 1, +m[3]];
+  m = t.match(/^([a-z]{3})[a-z]*\.?\s+(\d{1,2})/); if (m && MONTHS.includes(m[1])) return [MONTHS.indexOf(m[1]), +m[2]];
+  m = t.match(/^(\d{1,2})\/(\d{1,2})/); if (m) return [+m[1] - 1, +m[2]];
+  return null;
+}
+function dateTasks() {
+  const out = [], firstOf = n => n.split("&")[0].trim().split(" ")[0];
+  Object.entries(HQ.contacts).forEach(([cid, c]) => {
+    const events = c.birthdays.map(([n, b]) => ["Birthday", n ? n.replace(/ \(.*\)$/, "") : firstOf(c.name), b]).concat(c.homeiversary ? [["Homeiversary", firstOf(c.name), c.homeiversary]] : []);
+    events.forEach(([type, who, raw]) => {
+      const md = monthDay(raw); if (!md) return;
+      HQ.settings.reminders.filter(r => r[0] === type && (r[6] === "Everyone" || (r[6] === "Past clients" && c.stage === "Past Client") || r[6] === c.stage)).forEach((r, ri) => {
+        [TODAY.getFullYear(), TODAY.getFullYear() + 1].forEach(y => {
+          const occ = new Date(y, md[0], md[1]), due = add(occ, r[3] === "before" ? -r[2] : r[3] === "after" ? r[2] : 0), n = diff(due, TODAY);
+          if (n < -14 || n > 60) return;
+          const key = `d-${cid}-${type}-${who}-${r[1]}-${y}`;
+          const team = HQ.settings.team.find(([, nm]) => nm.split(" ")[0] === r[4]) || HQ.settings.team[0];
+          out.push({ id: key, t: `${r[1]} · ${who}'s ${type === "Birthday" ? "birthday" : "homeiversary"} ${short(occ)}`, due: iso(due), who: team[0], link: cid, p: 0, auto: true, kind: r[5] === "Text" ? "text" : r[5] === "Email" ? "email" : "task", done: !!dateDone[key], justDone: dateDone[key] === "just" });
+        });
+      });
+    });
+  });
+  return out;
 }
 const byId = id => tasks.find(x => String(x.id) === String(id));
 function delTask(t) {
@@ -279,9 +310,9 @@ let LISTS = [], newListOpen = false, confirmDel = null, renamingList = false;
 const el = id => document.getElementById(id);
 
 // Today on top, then categories. Every task lands in exactly one category.
-const CATS = [["clients", "Clients"], ["touch", "Due for a touch"], ["recurring", "Recurring"], ["personal", "Personal"]];
-const catOf = t => t.repeat ? "recurring" : t.list ? "list:" + t.list : t.link ? "clients" : "personal";
-const catName = k => k.startsWith("list:") ? k.slice(5) : k === "today" ? "Today" : CATS.find(c => c[0] === k)[1];
+const CATS = [["clients", "Clients"], ["touch", "Due for a touch"], ["dates", "Important dates"], ["recurring", "Recurring"]];
+const catOf = t => t.auto ? "dates" : t.repeat ? "recurring" : t.list ? "list:" + t.list : t.link ? "clients" : "nolist";
+const catName = k => k.startsWith("list:") ? k.slice(5) : k === "today" ? "Today" : k === "nolist" ? "No list" : CATS.find(c => c[0] === k)[1];
 const allCats = () => CATS.map(c => c[0]).concat(LISTS.map(l => "list:" + l));
 function inView(t, v) {
   if (v === "today") return diff(d(t.due), TODAY) <= 0;
@@ -298,7 +329,7 @@ function renderSide() {
   el("side").innerHTML = `
     <div><ul><li><button class="nav-i" data-view="today" aria-current="${view === "today"}"><span>Today</span><span class="c ${lateCount("today") ? "bad" : ""}">${todayN || ""}</span></button></li></ul></div>
     <div><h4>Categories</h4><ul>${CATS.map(([k, l]) => item(k, l)).join("")}</ul></div>
-    <div><h4>My lists</h4><ul>${LISTS.map(l => item("list:" + l, l)).join("")}
+    <div><h4>My lists</h4><ul>${LISTS.map(l => item("list:" + l, l)).join("")}${openCount("nolist") || view === "nolist" ? item("nolist", "No list") : ""}
       <li>${newListOpen ? `<div class="newlist"><input id="nl-name" placeholder="List name" aria-label="New list name"><button class="btn primary" data-nlsave="1">Add</button></div>` : `<button class="nav-i addl" data-newlist="1"><span>+ New list</span></button>`}</li></ul></div>`;
 }
 
@@ -328,10 +359,9 @@ const byWhen = list => {
 
 function bodyHtml() {
   if (view === "today") {
-    const cols = CATS.map(c => c[0]).concat(LISTS.filter(showsOnToday).map(l => "list:" + l));
-    // A list hidden from Today folds its due tasks into Personal, so nothing goes missing.
-    const colOf = t => { const k = catOf(t); return k.startsWith("list:") && !showsOnToday(k.slice(5)) ? "personal" : k; };
-    const due = visible("today");
+    const due = visible("today").filter(t => { const k = catOf(t); return !k.startsWith("list:") || showsOnToday(k.slice(5)); });
+    const cols = CATS.map(c => c[0]).concat(LISTS.filter(showsOnToday).map(l => "list:" + l)).concat(due.some(t => catOf(t) === "nolist") ? ["nolist"] : []);
+    const colOf = catOf;
     return `<div class="board">${cols.map(k => {
       if (k === "touch") return `<section class="col"><h3>${catHead(k)}<span>${touches.length || ""}</span></h3><div class="list">${touches.map(touchRow).join("") || `<div class="col-empty">No one due</div>`}</div></section>`;
       const items = due.filter(t => colOf(t) === k).sort(sortT), late = items.some(t => !t.done && diff(d(t.due), TODAY) < 0);
@@ -340,7 +370,7 @@ function bodyHtml() {
   }
   if (view === "touch") return touches.length ? `<div class="list">${touches.map(touchRow).join("")}</div>` : `<div class="empty">${Object.values(HQ.contacts).some(c => c.follow) ? "Everyone is up to date." : "Set a follow-up frequency on a person and they'll show up here when they're due."}</div>`;
   const list = visible(view).sort(sortT);
-  if (!list.length) return `<div class="empty">${{ clients: "No client tasks. Add one with \"re\" and a name, e.g. \"call lender re Ortiz Fri\", or apply a template from a person's page.", recurring: "Nothing recurring yet. Try \"rent check every month\".", personal: "No personal tasks. Anything not tied to a client lands here." }[view] || "Nothing in this list yet."}</div>`;
+  if (!list.length) return `<div class="empty">${{ clients: "No client tasks. Add one with \"re\" and a name, e.g. \"call lender re Ortiz Fri\", or apply a template from a person's page.", recurring: "Nothing recurring yet. Try \"rent check every month\".", dates: "Nothing coming up. Birthdays and homeiversaries from people's Important Dates show here, using the rules in Admin → Date reminders.", nolist: "Nothing here." }[view] || "Nothing in this list yet."}</div>`;
   if (view === "clients") {
     const order = [...new Set(list.map(t => t.link))];
     return order.map(cid => { const items = list.filter(t => t.link === cid), late = items.some(t => !t.done && diff(d(t.due), TODAY) < 0);
@@ -352,8 +382,8 @@ function bodyHtml() {
 
 function renderMain() {
   const isList = view.startsWith("list:"), title = catName(view);
-  const sub = { today: fmt(TODAY) + " · overdue items are marked in red", clients: "Grouped by client · click a name to open their page", touch: "People past their follow-up frequency", recurring: "Each one shows up in Today when it's due, then schedules the next", personal: "Anything not tied to a client" }[view] || (showsOnToday(view.slice(5)) ? "Due tasks show in their own column on Today" : "Hidden from Today: its due tasks show in the Personal column instead");
-  const ph = { clients: 'Add a client task, e.g. "call lender re Ortiz Fri 9am"', recurring: 'Add a recurring task, e.g. "rent check every month"', personal: 'Add a personal task, e.g. "renew license Fri"' }[view] || 'Add a task, e.g. "call lender re Ortiz Fri 9am" or "rent check every month"';
+  const sub = { today: fmt(TODAY) + " · overdue items are marked in red", clients: "Grouped by client · click a name to open their page", touch: "People past their follow-up frequency", recurring: "Each one shows up in Today when it's due, then schedules the next", dates: "Birthday and homeiversary cards and texts for the next 60 days · rules in Admin → Date reminders", nolist: "Tasks with no client and no list. Give them a list or link a client to sort them." }[view] || (showsOnToday(view.slice(5)) ? "Due tasks show in their own column on Today" : "Hidden from Today. Its tasks only show here.");
+  const ph = { clients: 'Add a client task, e.g. "call lender re Ortiz Fri 9am"', recurring: 'Add a recurring task, e.g. "rent check every month"', dates: 'Add a task, e.g. "call Sam re birthday Fri"' }[view] || 'Add a task, e.g. "call lender re Ortiz Fri 9am" or "rent check every month"';
   el("main").innerHTML = `
     <div class="main-h">
       <div>${isList && renamingList ? `<span class="newlist"><input id="list-name" value="${esc(title)}" aria-label="List name"><button class="btn primary" data-savelist="1">Save</button></span>` : `<h1>${esc(title)}</h1>`}${isList && !renamingList ? `<span class="list-acts"><button class="linkbtn2" data-renlist="1">Rename</button><button class="linkbtn2 danger" data-dellist="1">${confirmDel === "list" ? "Click again to delete list" : "Delete list"}</button><label class="ontoday"><input type="checkbox" id="list-ontoday" ${showsOnToday(view.slice(5)) ? "checked" : ""}> Show as its own column on Today</label></span>` : ""}<div class="sub">${sub}</div></div>
@@ -372,9 +402,10 @@ function renderMain() {
   el("qa-form").addEventListener("submit", e => { e.preventDefault(); addTask(inp.value); });
 }
 
+let dr = null; // unsaved edits to the open task; Save applies them
 function renderDetail() {
   const box = el("detail"), shell = el("shell");
-  const t = byId(sel);
+  const t0 = byId(sel), t = t0 && Object.assign({}, t0, dr || {});
   if (!t) { box.hidden = true; shell.classList.remove("with-detail"); return; }
   box.hidden = false; shell.classList.add("with-detail"); shell.classList.toggle("wide", view === "today");
   const L = t.link && LINKS[t.link];
@@ -403,6 +434,7 @@ function renderDetail() {
       <div class="newlist"><input id="sub-new" placeholder="Add a subtask" aria-label="New subtask"><button class="btn" data-addsub="1">Add</button></div>
     </div>
     <div class="sec"><h5>Notes</h5><textarea class="notes" id="d-notes" placeholder="Add notes">${esc(t.notes || "")}</textarea></div>
+    <div class="sec save-row"><button class="btn" data-tcancel="1" ${dr ? "" : "disabled"}>Cancel</button><button class="btn primary" id="tsave" data-tsave="1" ${dr ? "" : "disabled"}>${dr ? "Save changes" : "Saved"}</button></div>
     <div class="sec"><button class="btn danger-btn" data-deltask="${t.id}">${confirmDel === "task" + t.id ? "Click again to delete" : "Delete task"}</button></div>`;
 }
 
@@ -455,7 +487,7 @@ function addTask(text) {
   const t = { t: p.t, due: p.due || iso(TODAY), time: p.time, who: p.who || me, list, p: p.p || 0, repeat, kind: "task", done: false };
   if (p.link && HQ.contacts[p.link]) { t.s = "open"; HQ.contacts[p.link].tasks.push(t); t.link = p.link; } else { t.id = nextId++; own.push(t); }
   const k = catOf(t);
-  toast(`Added "${t.t}" to ${catName(k)}, due ${fmt(d(t.due))}${view === "recurring" && !p.repeat ? ", repeats weekly (change it in the task)" : ""}${view === "clients" && !t.link ? '. No client matched, so it went to Personal. Use "re" + a name to link one' : ""}.`);
+  toast(`Added "${t.t}" to ${catName(k)}, due ${fmt(d(t.due))}${view === "recurring" && !p.repeat ? ", repeats weekly (change it in the task)" : ""}${view === "clients" && !t.link ? '. No client matched. Use "re" + a name to link one' : ""}.`);
   render();
   const i = el("qa-input"); if (i) i.focus();
 }
@@ -480,6 +512,7 @@ function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; 
 
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return; gather();
+  if ((b.dataset.open && b.dataset.open !== String(sel)) || b.dataset.close || b.dataset.view) { if (dr || (el("tsave") && !el("tsave").disabled)) { toast("Save or cancel your changes first."); const s = el("tsave"); if (s) s.focus(); return; } }
   if (b.dataset.view) { view = b.dataset.view; sel = null; render(); return; }
   if (b.dataset.newlist) { newListOpen = true; renderSide(); el("nl-name").focus(); return; }
   if (b.dataset.nlsave) { saveNewList(); return; }
@@ -492,11 +525,13 @@ document.addEventListener("click", e => {
     el("as-as").setAttribute("aria-pressed", me === "AS");
     sel = null; render(); return;
   }
+  if (b.dataset.tsave) { saveTask(); return; }
+  if (b.dataset.tcancel) { dr = null; renderDetail(); toast("Changes discarded."); return; }
   if (b.dataset.open) { sel = b.dataset.open; render(); return; }
   if (confirmDel && !b.dataset.deltask && !b.dataset.dellist) confirmDel = null;
   if (b.dataset.close) { sel = null; render(); return; }
-  if (b.dataset.addsub) { const t = byId(sel), v = el("sub-new").value.trim(); if (!v) { el("sub-new").focus(); return; } (t.subs = t.subs || []).push([v, false]); render(); el("sub-new").focus(); return; }
-  if (b.dataset.deltask) { const id = b.dataset.deltask; if (confirmDel !== "task" + id) { confirmDel = "task" + id; renderDetail(); return; } delTask(byId(id)); sel = null; confirmDel = null; render(); toast("Task deleted."); return; }
+  if (b.dataset.addsub) { const t0 = byId(sel), v = el("sub-new").value.trim(); if (!v) { el("sub-new").focus(); return; } dr = dr || {}; dr.subs = dr.subs || (t0.subs || []).map(x => x.slice()); dr.subs.push([v, false]); renderDetail(); el("sub-new").focus(); return; }
+  if (b.dataset.deltask) { const id = b.dataset.deltask; if (confirmDel !== "task" + id) { confirmDel = "task" + id; renderDetail(); return; } delTask(byId(id)); sel = null; dr = null; confirmDel = null; render(); toast("Task deleted."); return; }
   if (b.dataset.renlist) { renamingList = true; renderMain(); const i = el("list-name"); i.focus(); i.select(); return; }
   if (b.dataset.savelist) { const old = view.slice(5), n = el("list-name").value.trim(); if (n && n !== old && !LISTS.includes(n)) { if (old in onToday) { onToday[n] = onToday[old]; delete onToday[old]; } LISTS[LISTS.indexOf(old)] = n; gather(); tasks.forEach(t => { if (t.list === old) t.list = n; }); view = "list:" + n; } renamingList = false; render(); return; }
   if (b.dataset.dellist) { const l = view.slice(5); if (confirmDel !== "list") { confirmDel = "list"; renderMain(); return; } LISTS.splice(LISTS.indexOf(l), 1); delete onToday[l]; gather(); tasks.forEach(t => { if (t.list === l) delete t.list; }); confirmDel = null; view = "today"; render(); toast(`Deleted "${l}". Its tasks are kept, just not in a list.`); return; }
@@ -504,6 +539,7 @@ document.addEventListener("click", e => {
     const t = byId(b.dataset.done);
     t.done = !t.done; t.justDone = t.done;
     if (t.ref) t.ref.s = t.done ? "done" : "open"; else if (t.s) t.s = t.done ? "done" : "open";
+    if (t.auto) dateDone[t.id] = t.done ? "just" : undefined;
     if (t.done && t.repeat) toast(`Done. Next one created (${t.repeat.toLowerCase()}).`);
     else if (t.done && t.step) toast(`Done. Also checked off on ${LINKS[t.link].label}'s ${t.step.file.toLowerCase()}.`);
     render(); return;
@@ -512,21 +548,32 @@ document.addEventListener("click", e => {
   if (b.dataset.toast) { toast(b.dataset.toast); return; }
 });
 document.addEventListener("change", e => {
-  if (e.target.id === "list-ontoday") { const l = view.slice(5); onToday[l] = e.target.checked; toast(e.target.checked ? `"${l}" now has its own column on Today.` : `"${l}" is hidden from Today. Its due tasks show under Personal.`); render(); return; }
-  gather(); const t = byId(sel); if (!t) return;
-  const id = e.target.id, v = e.target.value;
-  if (e.target.dataset.sub !== undefined) { t.subs[+e.target.dataset.sub][1] = e.target.checked; render(); return; }
+  if (e.target.id === "list-ontoday") { const l = view.slice(5); onToday[l] = e.target.checked; toast(e.target.checked ? `"${l}" now has its own column on Today.` : `"${l}" is hidden from Today. Its tasks only show in the list.`); render(); return; }
+  gather(); const t0 = byId(sel); if (!t0 || !e.target.closest("#detail")) return;
+  const id = e.target.id, v = e.target.value, t = dr = dr || {};
+  if (e.target.dataset.sub !== undefined) { t.subs = t.subs || (t0.subs || []).map(x => x.slice()); t.subs[+e.target.dataset.sub][1] = e.target.checked; renderDetail(); return; }
   if (id === "d-due" && v) t.due = v;
-  if (id === "d-time") t.time = v;
   if (id === "d-repeat") t.repeat = v || undefined;
   if (id === "d-p") t.p = +v;
-  if (id === "d-who") { t.who = v; if (t.ref) t.ref.who = v; }
+  if (id === "d-who") t.who = v;
   if (id === "d-list") { if (v === "__new") { const n = "New list " + (LISTS.length + 1); LISTS.push(n); t.list = n; toast(`Created "${n}". Rename it from the sidebar later.`); } else t.list = v || undefined; }
-  if (id === "d-title") { t.t = v; if (t.ref) t.ref.t = v; }
-  if (id === "d-notes") { t.notes = v; return; }
-  render();
+  // Text boxes: keep the panel as is (re-drawing here would swallow a click on Save).
+  if (id === "d-title") { t.t = v; armSave(); return; }
+  if (id === "d-time") { t.time = v; armSave(); return; }
+  if (id === "d-notes") { t.notes = v; armSave(); return; }
+  renderDetail();
 });
 
+function armSave() { const b = el("tsave"); if (b) { b.disabled = false; b.textContent = "Save changes"; b.previousElementSibling.disabled = false; } }
+document.addEventListener("input", e => { if (e.target.closest && e.target.closest("#detail") && e.target.id !== "sub-new") armSave(); });
+function saveTask() {
+  const t = byId(sel); if (!t) return;
+  ["d-title", "d-time", "d-notes"].forEach(id => { const i = el(id); if (i && i.value !== (id === "d-title" ? t.t : id === "d-time" ? t.time || "" : t.notes || "")) { dr = dr || {}; dr[{ "d-title": "t", "d-time": "time", "d-notes": "notes" }[id]] = i.value; } });
+  if (!dr) return;
+  Object.assign(t, dr);
+  if (t.ref) { if ("t" in dr) t.ref.t = dr.t; if ("who" in dr) t.ref.who = dr.who; }
+  dr = null; render(); toast("Saved.");
+}
 // Tasks created elsewhere (e.g. a template applied on a contact page).
 function drain() {
   if (typeof HQ === "undefined" || !HQ.newTasks.length) return 0;

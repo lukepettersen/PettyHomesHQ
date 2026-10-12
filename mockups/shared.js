@@ -68,6 +68,13 @@ window.HQ.settings = window.HQ.settings || {
         ppl("Seller's title", [f("stCo", "Title company", "text"), f("stContact", "Contact, email / phone", "text")])],
     };
   })(),
+  // Date reminders: [date type, task, days, before/on/after, who, kind, applies to]. Shared with Tasks → Important dates.
+  reminders: [
+    ["Birthday", "Text happy birthday", 0, "on", "Luke", "Text", "Everyone"],
+    ["Birthday", "Send birthday card", 7, "before", "Alyssa", "Task", "Past clients"],
+    ["Homeiversary", "Text happy homeiversary", 0, "on", "Luke", "Text", "Everyone"],
+    ["Homeiversary", "Send homeiversary card", 7, "before", "Alyssa", "Task", "Past clients"],
+  ],
   // Under Contract/Pending columns: a contract sits in the first column whose date is still open.
   ucPhases: [["Inspection", "insp"], ["HOA review", "hoa"], ["Financing", "ws"], ["Closing", "close"]],
   statuses: {
