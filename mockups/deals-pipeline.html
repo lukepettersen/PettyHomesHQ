@@ -658,7 +658,8 @@ function factsInline(dl) {
     ["Commission", role === "admin" ? (dl.comm ? `${dl.comm}% · ${money(Math.round(dl.price * dl.comm / 100))}` : "—") : null], [lab("bac"), money(dl.bac || 0)]];
   if (fields.some(x => x.k === "fin")) core.push([lab("fin"), dl.fin]);
   const peopleKeys = paSections(dl.side).filter(x => x.people).flatMap(x => x.fields.map(f => f.k));
-  const extra = fields.filter(x => !PA_CORE.includes(x.k) && !peopleKeys.includes(x.k) && fm[x.k]).map(x => {
+  const vis = shownFields(dl.side, Object.assign({}, dl.facts, fm));
+  const extra = vis.filter(x => !PA_CORE.includes(x.k) && !peopleKeys.includes(x.k) && fm[x.k]).map(x => {
     if (x.t !== "datetime") return [x.l, fm[x.k]];
     const at = new Date(fm[x.k]); return [x.l, `${DOW[at.getDay()]} ${short(at)} ${at.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`];
   });
@@ -1003,13 +1004,16 @@ function paExtras(side, v) { // everything that isn't a core field, plus the N/A
 }
 const paPeople = (side, v) => paSections(side).filter(x => x.people).map(x => [joinP(...x.fields.map(f => v[f.k])), x.name]).filter(x => x[0]);
 const naOn = (v, k) => v[k + "_na"] === "on";
+// "Show only if" rules from Admin, e.g. "newc=Yes".
+const shown = (x, v) => { if (!x.showIf) return true; const [k, val] = x.showIf.split("="); return (v[k] || "") === val; };
+const shownFields = (side, v) => paSections(side).filter(x => shown(x, v)).flatMap(x => x.fields.filter(f => shown(f, v)));
 let dealForm = null; // { mode: "buyer" | "listing" | "pa", cid, status, engId, v }
 
 function formGroups() {
   const f = dealForm;
   if (f.mode === "pa") {
     if (f.step === 1) return [];
-    const secs = paSections(f.side).map(x => [x.name, x.fields.map(asField)]);
+    const secs = paSections(f.side).map((x, i) => [x.name, i === 0 || shown(x, f.v) ? x.fields.filter(y => shown(y, f.v)).map(asField) : []]);
     return f.step === 2 ? secs.slice(0, 1) : f.step === 3 ? secs.slice(1) : secs;
   }
   if (f.mode === "buyer") {
@@ -1022,13 +1026,12 @@ function formGroups() {
   if (STATUS.listing.indexOf(f.status) < 2) return [["The home", [["address", "Property address", "text", "Street, city", true], ["price", "Estimated value", "money"], ["timeframe", "Timeframe", TF]]]].concat(f.status === "Consult scheduled" ? [["Consult", F.consult]] : []);
   return [["The listing", F.listing], ["The property", F.facts]];
 }
-const allFormFields = () => dealForm.mode === "pa" ? paFields(dealForm.side).map(asField) : formGroups().flatMap(([, fs]) => fs);
+const allFormFields = () => dealForm.mode === "pa" ? shownFields(dealForm.side, dealForm.v).map(asField) : formGroups().flatMap(([, fs]) => fs);
 const formTrigger = () => dealForm.mode === "pa" ? `${dealForm.side === "buyer" ? "Buyer" : "Seller"} · Under contract` : `${dealForm.mode === "buyer" ? "Buyer" : "Listing"} · ${dealForm.status}`;
 
 function fieldHtml([k, lab, type, ph, req]) {
   const v = dealForm.v;
   if (k === "comm" && role !== "admin") return "";
-  if (k === "hoa_d" && type !== "date-na" && v.hoa !== "Yes") return "";
   if (type === "date-na") { const na = v[k + "_na"] === "on";
     return `<label>${lab}<span class="na-row"><input data-df="${k}" type="date" value="${esc(na ? "" : v[k] || "")}" ${na ? "disabled" : ""}><span class="chk"><input type="checkbox" data-df="${k}_na" ${na ? "checked" : ""}> N/A</span></span></label>`; }
   const input = Array.isArray(type)
@@ -1282,7 +1285,7 @@ document.addEventListener("change", e => {
     if (ds.dstatus) dealForm.status = e.target.value;
     if (ds.dcid) dealForm.cid = e.target.value;
     // Redraw only when the set of fields changes; otherwise just refresh the preview.
-    if (ds.dstatus || ds.df === "hoa" || /_na$/.test(ds.df || "")) renderDealModal(); else if (el("dm-prev")) el("dm-prev").innerHTML = previewHtml();
+    if (ds.dstatus || e.target.tagName === "SELECT" || /_na$/.test(ds.df || "")) renderDealModal(); else if (el("dm-prev")) el("dm-prev").innerHTML = previewHtml();
     return;
   }
   if (ds.estatus) { setStatus(deals.find(x => x.id === +ds.estatus), e.target.value); return; }

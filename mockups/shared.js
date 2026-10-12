@@ -46,12 +46,13 @@ window.HQ.settings = window.HQ.settings || {
     const f = (k, l, t, x = {}) => Object.assign({ k, l, t }, x);
     const PT = ["Single family", "Townhome", "Condo", "Twin home", "Multi-family"];
     const property = () => ({ name: "The property", fields: [f("address", "Address", "text", { ph: "Street, city", req: true, core: true }), f("ptype", "Property type", "choice", { opts: PT, core: true }), f("year", "Year built", "number", { core: true }), f("hoa", "HOA?", "yesno", { core: true }), f("newc", "New construction?", "yesno", { core: true })] });
-    const dates = () => ({ name: "Key dates", fields: [f("close", "Close date", "date", { core: true }), f("fa", "Final Acceptance", "date", { core: true }), f("insp", "Inspection deadline", "date", { core: true }), f("ws", "Written Statement", "date-na", { core: true }), f("hoa_d", "HOA doc rescission", "date", { core: true })] });
+    const dates = () => ({ name: "Key dates", fields: [f("close", "Close date", "date", { core: true }), f("fa", "Final Acceptance", "date", { core: true }), f("insp", "Inspection deadline", "date", { core: true }), f("ws", "Written Statement", "date-na", { core: true }), f("hoa_d", "HOA doc rescission", "date", { core: true, showIf: "hoa=Yes" })] });
     const notes = () => ({ name: "Notes", fields: [f("inspAt", "Inspection appointment", "datetime"), f("referral", "Referral fee", "text", { ph: "None, or who and how much" }), f("emTo", "Earnest money to", "text", { ph: "Who holds it" }), f("mdc", "Material defect clause?", "text", { ph: "None, or details" })] });
     const ppl = (name, fields) => ({ name, people: true, fields });
     return {
       buyer: [property(),
         { name: "The contract", fields: [f("price", "Purchase price", "money", { req: true, core: true }), f("em", "Earnest money", "money", { core: true }), f("sc", "Seller contributions", "money", { core: true }), f("comm", "Commission %", "pct", { ph: "e.g. 2.7", core: true }), f("bac", "BAC", "money", { ph: "e.g. 695", core: true })] },
+        { name: "Buyer New Construction", showIf: "newc=Yes", fields: [f("ncBuilder", "Builder", "text"), f("ncRep", "Builder rep", "text", { ph: "Name" }), f("ncRepInfo", "Builder rep email / phone", "text"), f("ncLot", "Lot / plan", "text"), f("ncDone", "Estimated completion", "date"), f("ncRegistered", "Buyer registered with builder?", "yesno"), f("ncUpgrades", "Upgrades / notes", "text")] },
         dates(), notes(),
         ppl("Buyer's lender", [f("lenderName", "Name", "text"), f("lenderEmail", "Email", "text"), f("lenderCo", "Company", "text")]),
         ppl("Buyer's title", [f("btitleCo", "Title company", "text"), f("btitleContact", "Contact name", "text"), f("btitleInfo", "Email / phone", "text")]),

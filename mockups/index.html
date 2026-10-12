@@ -796,6 +796,9 @@ body { background: var(--bg); }
 #pg-admin .paforms-gap .box { margin-bottom: 12px; }
 #pg-admin .cards.stack { display: flex; flex-direction: column; gap: 14px; }
 #pg-admin .cards.stack td input, #pg-admin .cards.stack td select { width: 100%; min-width: 220px; }
+#pg-admin .paq td input, #pg-admin .paq td select { min-width: 120px; }
+#pg-admin .paq .pill { display: inline-block; margin-top: 4px; }
+#pg-admin .sec-if { max-width: 260px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); font-size: 13px; }
 #pg-admin .pill { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
 #pg-admin .side-nav { display: flex; flex-direction: column; gap: 12px; }
 #pg-admin .side-nav h4 { margin: 0 0 4px; padding: 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
@@ -1037,12 +1040,13 @@ window.HQ.settings = window.HQ.settings || {
     const f = (k, l, t, x = {}) => Object.assign({ k, l, t }, x);
     const PT = ["Single family", "Townhome", "Condo", "Twin home", "Multi-family"];
     const property = () => ({ name: "The property", fields: [f("address", "Address", "text", { ph: "Street, city", req: true, core: true }), f("ptype", "Property type", "choice", { opts: PT, core: true }), f("year", "Year built", "number", { core: true }), f("hoa", "HOA?", "yesno", { core: true }), f("newc", "New construction?", "yesno", { core: true })] });
-    const dates = () => ({ name: "Key dates", fields: [f("close", "Close date", "date", { core: true }), f("fa", "Final Acceptance", "date", { core: true }), f("insp", "Inspection deadline", "date", { core: true }), f("ws", "Written Statement", "date-na", { core: true }), f("hoa_d", "HOA doc rescission", "date", { core: true })] });
+    const dates = () => ({ name: "Key dates", fields: [f("close", "Close date", "date", { core: true }), f("fa", "Final Acceptance", "date", { core: true }), f("insp", "Inspection deadline", "date", { core: true }), f("ws", "Written Statement", "date-na", { core: true }), f("hoa_d", "HOA doc rescission", "date", { core: true, showIf: "hoa=Yes" })] });
     const notes = () => ({ name: "Notes", fields: [f("inspAt", "Inspection appointment", "datetime"), f("referral", "Referral fee", "text", { ph: "None, or who and how much" }), f("emTo", "Earnest money to", "text", { ph: "Who holds it" }), f("mdc", "Material defect clause?", "text", { ph: "None, or details" })] });
     const ppl = (name, fields) => ({ name, people: true, fields });
     return {
       buyer: [property(),
         { name: "The contract", fields: [f("price", "Purchase price", "money", { req: true, core: true }), f("em", "Earnest money", "money", { core: true }), f("sc", "Seller contributions", "money", { core: true }), f("comm", "Commission %", "pct", { ph: "e.g. 2.7", core: true }), f("bac", "BAC", "money", { ph: "e.g. 695", core: true })] },
+        { name: "Buyer New Construction", showIf: "newc=Yes", fields: [f("ncBuilder", "Builder", "text"), f("ncRep", "Builder rep", "text", { ph: "Name" }), f("ncRepInfo", "Builder rep email / phone", "text"), f("ncLot", "Lot / plan", "text"), f("ncDone", "Estimated completion", "date"), f("ncRegistered", "Buyer registered with builder?", "yesno"), f("ncUpgrades", "Upgrades / notes", "text")] },
         dates(), notes(),
         ppl("Buyer's lender", [f("lenderName", "Name", "text"), f("lenderEmail", "Email", "text"), f("lenderCo", "Company", "text")]),
         ppl("Buyer's title", [f("btitleCo", "Title company", "text"), f("btitleContact", "Contact name", "text"), f("btitleInfo", "Email / phone", "text")]),
@@ -1604,7 +1608,8 @@ function factsInline(dl) {
     ["Commission", role === "admin" ? (dl.comm ? `${dl.comm}% · ${money(Math.round(dl.price * dl.comm / 100))}` : "—") : null], [lab("bac"), money(dl.bac || 0)]];
   if (fields.some(x => x.k === "fin")) core.push([lab("fin"), dl.fin]);
   const peopleKeys = paSections(dl.side).filter(x => x.people).flatMap(x => x.fields.map(f => f.k));
-  const extra = fields.filter(x => !PA_CORE.includes(x.k) && !peopleKeys.includes(x.k) && fm[x.k]).map(x => {
+  const vis = shownFields(dl.side, Object.assign({}, dl.facts, fm));
+  const extra = vis.filter(x => !PA_CORE.includes(x.k) && !peopleKeys.includes(x.k) && fm[x.k]).map(x => {
     if (x.t !== "datetime") return [x.l, fm[x.k]];
     const at = new Date(fm[x.k]); return [x.l, `${DOW[at.getDay()]} ${short(at)} ${at.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`];
   });
@@ -1949,13 +1954,16 @@ function paExtras(side, v) { // everything that isn't a core field, plus the N/A
 }
 const paPeople = (side, v) => paSections(side).filter(x => x.people).map(x => [joinP(...x.fields.map(f => v[f.k])), x.name]).filter(x => x[0]);
 const naOn = (v, k) => v[k + "_na"] === "on";
+// "Show only if" rules from Admin, e.g. "newc=Yes".
+const shown = (x, v) => { if (!x.showIf) return true; const [k, val] = x.showIf.split("="); return (v[k] || "") === val; };
+const shownFields = (side, v) => paSections(side).filter(x => shown(x, v)).flatMap(x => x.fields.filter(f => shown(f, v)));
 let dealForm = null; // { mode: "buyer" | "listing" | "pa", cid, status, engId, v }
 
 function formGroups() {
   const f = dealForm;
   if (f.mode === "pa") {
     if (f.step === 1) return [];
-    const secs = paSections(f.side).map(x => [x.name, x.fields.map(asField)]);
+    const secs = paSections(f.side).map((x, i) => [x.name, i === 0 || shown(x, f.v) ? x.fields.filter(y => shown(y, f.v)).map(asField) : []]);
     return f.step === 2 ? secs.slice(0, 1) : f.step === 3 ? secs.slice(1) : secs;
   }
   if (f.mode === "buyer") {
@@ -1968,13 +1976,12 @@ function formGroups() {
   if (STATUS.listing.indexOf(f.status) < 2) return [["The home", [["address", "Property address", "text", "Street, city", true], ["price", "Estimated value", "money"], ["timeframe", "Timeframe", TF]]]].concat(f.status === "Consult scheduled" ? [["Consult", F.consult]] : []);
   return [["The listing", F.listing], ["The property", F.facts]];
 }
-const allFormFields = () => dealForm.mode === "pa" ? paFields(dealForm.side).map(asField) : formGroups().flatMap(([, fs]) => fs);
+const allFormFields = () => dealForm.mode === "pa" ? shownFields(dealForm.side, dealForm.v).map(asField) : formGroups().flatMap(([, fs]) => fs);
 const formTrigger = () => dealForm.mode === "pa" ? `${dealForm.side === "buyer" ? "Buyer" : "Seller"} · Under contract` : `${dealForm.mode === "buyer" ? "Buyer" : "Listing"} · ${dealForm.status}`;
 
 function fieldHtml([k, lab, type, ph, req]) {
   const v = dealForm.v;
   if (k === "comm" && role !== "admin") return "";
-  if (k === "hoa_d" && type !== "date-na" && v.hoa !== "Yes") return "";
   if (type === "date-na") { const na = v[k + "_na"] === "on";
     return `<label>${lab}<span class="na-row"><input data-df="${k}" type="date" value="${esc(na ? "" : v[k] || "")}" ${na ? "disabled" : ""}><span class="chk"><input type="checkbox" data-df="${k}_na" ${na ? "checked" : ""}> N/A</span></span></label>`; }
   const input = Array.isArray(type)
@@ -2228,7 +2235,7 @@ document.addEventListener("change", e => {
     if (ds.dstatus) dealForm.status = e.target.value;
     if (ds.dcid) dealForm.cid = e.target.value;
     // Redraw only when the set of fields changes; otherwise just refresh the preview.
-    if (ds.dstatus || ds.df === "hoa" || /_na$/.test(ds.df || "")) renderDealModal(); else if (el("dm-prev")) el("dm-prev").innerHTML = previewHtml();
+    if (ds.dstatus || e.target.tagName === "SELECT" || /_na$/.test(ds.df || "")) renderDealModal(); else if (el("dm-prev")) el("dm-prev").innerHTML = previewHtml();
     return;
   }
   if (ds.estatus) { setStatus(deals.find(x => x.id === +ds.estatus), e.target.value); return; }
@@ -2924,18 +2931,23 @@ const V = {
     </tbody></table></div><div class="addrow"><button class="btn" data-addrem="1">+ Add reminder</button></div></div>`;
   },
   paforms() {
-    const secs = HQ.settings.paForms[paSide];
-    const row = (x, si, fi, n) => `<tr><td><input data-pal="${si}:${fi}" value="${esc(x.l)}" aria-label="Field label"></td>
-      <td><select data-pat="${si}:${fi}" ${x.core ? "disabled" : ""}>${PA_TYPES.map(([v, l]) => `<option value="${v}" ${v === x.t ? "selected" : ""}>${l}</option>`).join("")}</select>${x.t === "choice" ? `<input data-pao="${si}:${fi}" value="${esc((x.opts || []).join(", "))}" placeholder="Options, comma separated" style="margin-top:4px" ${x.core ? "disabled" : ""}>` : ""}</td>
-      <td style="text-align:center"><input type="checkbox" data-par="${si}:${fi}" ${x.req ? "checked" : ""} ${["address", "price"].includes(x.k) ? "disabled" : ""} aria-label="Required"></td>
-      <td style="width:96px;white-space:nowrap"><button class="rm" data-pafu="${si}:${fi}" aria-label="Move up" ${fi ? "" : "disabled"}>↑</button><button class="rm" data-pafd="${si}:${fi}" aria-label="Move down" ${fi < n - 1 ? "" : "disabled"}>↓</button><button class="rm" data-pafx="${si}:${fi}" aria-label="Remove field" ${x.core ? 'disabled title="Used by the Pipeline and task templates"' : ""}>×</button></td></tr>`;
-    return `<h1>Purchase agreement forms</h1><p>What gets filled out when a purchase agreement is added. It asks who you represent, then the first section on its own, then everything else. Fields marked <span class="pill">Built-in</span> drive the Pipeline and task templates, so you can rename them but not remove them.</p>
+    const secs = HQ.settings.paForms[paSide], LOCK = ["address", "price"];
+    // "Show only if" choices: any Yes/No or dropdown question on this form.
+    const conds = secs.flatMap(sc => sc.fields).filter(f => f.t === "yesno" || f.t === "choice").flatMap(f => (f.t === "yesno" ? ["Yes", "No"] : f.opts || []).map(o => [f.k + "=" + o, `${f.l} is ${o}`]));
+    const ifSel = (attr, cur, selfKey) => `<select ${attr} aria-label="Show only if"><option value="">Always</option>${conds.filter(([v]) => !v.startsWith(selfKey + "=")).map(([v, l]) => `<option value="${esc(v)}" ${v === cur ? "selected" : ""}>Only if ${esc(l)}</option>`).join("")}</select>`;
+    const row = (x, si, fi, n) => `<tr><td><input data-pal="${si}:${fi}" value="${esc(x.l)}" aria-label="Question">${x.core ? `<span class="pill" title="The Pipeline, calendar or task templates read this one">Used by automations</span>` : ""}</td>
+      <td><input data-pah="${si}:${fi}" value="${esc(x.ph || "")}" placeholder="Hint inside the box" aria-label="Help text"></td>
+      <td><select data-pat="${si}:${fi}">${PA_TYPES.map(([v, l]) => `<option value="${v}" ${v === x.t ? "selected" : ""}>${l}</option>`).join("")}</select>${x.t === "choice" ? `<input data-pao="${si}:${fi}" value="${esc((x.opts || []).join(", "))}" placeholder="Options, comma separated" style="margin-top:4px">` : ""}</td>
+      <td>${ifSel(`data-paif="${si}:${fi}"`, x.showIf || "", x.k)}</td>
+      <td style="text-align:center"><input type="checkbox" data-par="${si}:${fi}" ${x.req ? "checked" : ""} ${LOCK.includes(x.k) ? "disabled" : ""} aria-label="Required"></td>
+      <td style="width:96px;white-space:nowrap"><button class="rm" data-pafu="${si}:${fi}" aria-label="Move up" ${fi ? "" : "disabled"}>↑</button><button class="rm" data-pafd="${si}:${fi}" aria-label="Move down" ${fi < n - 1 ? "" : "disabled"}>↓</button><button class="rm" data-pafx="${si}:${fi}" aria-label="Remove question" ${LOCK.includes(x.k) ? 'disabled title="Every contract needs an address and price"' : ""}>×</button></td></tr>`;
+    return `<h1>Purchase agreement forms</h1><p>What gets filled out when a purchase agreement is added. It asks who you represent, then the first section on its own, then everything else. Every question can be edited. Use "Show only if" to make a question or a whole section appear only after a certain answer. Questions marked <span class="pill">Used by automations</span> feed the Pipeline, calendar or task templates; if you remove one, the steps timed from it just wait.</p>
     <div class="seg-row"><span class="seg" role="group" aria-label="Form">${[["buyer", "Buyer side"], ["seller", "Seller side"]].map(([k, l]) => `<button data-paside="${k}" aria-pressed="${paSide === k}">${l}</button>`).join("")}</span></div>
-    ${secs.map((sc, si) => `<div class="box"><div class="box-h"><input class="sec-name" data-pas="${si}" value="${esc(sc.name)}" aria-label="Section name">${si === 0 ? `<span class="pill">Asked first</span>` : `<label class="muted" style="font-size:13px;display:inline-flex;gap:6px;align-items:center"><input type="checkbox" data-papeople="${si}" ${sc.people ? "checked" : ""}> Show as a contact line</label>`}
-      <span style="margin-left:auto;white-space:nowrap">${si ? `<button class="rm" data-pasu="${si}" aria-label="Move section up" ${si > 1 ? "" : "disabled"}>↑</button><button class="rm" data-pasd="${si}" aria-label="Move section down" ${si < secs.length - 1 ? "" : "disabled"}>↓</button><button class="rm" data-pasx="${si}" aria-label="Remove section" ${sc.fields.some(f => f.core) ? 'disabled title="Has built-in fields"' : ""}>×</button>` : ""}</span></div>
-      <div class="tbl-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th></th></tr></thead><tbody>
-      ${sc.fields.map((x, fi) => row(x, si, fi, sc.fields.length).replace('aria-label="Field label">', `aria-label="Field label">${x.core ? ' <span class="pill">Built-in</span>' : ""}`)).join("") || `<tr><td colspan="4" class="muted">No fields yet.</td></tr>`}
-      </tbody></table></div><div class="addrow"><button class="btn" data-pafadd="${si}">+ Add field</button></div></div>`).join("")}
+    ${secs.map((sc, si) => `<div class="box"><div class="box-h"><input class="sec-name" data-pas="${si}" value="${esc(sc.name)}" aria-label="Section name">${si === 0 ? `<span class="pill">Asked first</span>` : `${ifSel(`data-pasif="${si}" class="sec-if"`, sc.showIf || "", "")}<label class="muted" style="font-size:13px;display:inline-flex;gap:6px;align-items:center"><input type="checkbox" data-papeople="${si}" ${sc.people ? "checked" : ""}> Show as a contact line</label>`}
+      <span style="margin-left:auto;white-space:nowrap">${si ? `<button class="rm" data-pasu="${si}" aria-label="Move section up" ${si > 1 ? "" : "disabled"}>↑</button><button class="rm" data-pasd="${si}" aria-label="Move section down" ${si < secs.length - 1 ? "" : "disabled"}>↓</button><button class="rm" data-pasx="${si}" aria-label="Remove section" ${sc.fields.some(f => LOCK.includes(f.k)) ? 'disabled title="Has the address or price"' : ""}>×</button>` : ""}</span></div>
+      <div class="tbl-wrap"><table class="paq"><thead><tr><th>Question</th><th>Help text</th><th>Type</th><th>Show</th><th>Required</th><th></th></tr></thead><tbody>
+      ${sc.fields.map((x, fi) => row(x, si, fi, sc.fields.length)).join("") || `<tr><td colspan="6" class="muted">No questions yet.</td></tr>`}
+      </tbody></table></div><div class="addrow"><button class="btn" data-pafadd="${si}">+ Add question</button></div></div>`).join("")}
     <div class="addrow"><button class="btn primary" data-pasadd="1">+ Add section</button></div>`;
   },
   fields() {
@@ -2984,7 +2996,7 @@ document.addEventListener("click", e => {
   if (ds.rmstage) { const [p, i] = pair(ds.rmstage); state.pipes[p].splice(+i, 1); render(); return; }
   if (ds.paside) { paSide = ds.paside; render(); return; }
   { const secs = HQ.settings.paForms[paSide], pp = v => v.split(":").map(Number);
-    if (ds.pafadd) { const f = secs[+ds.pafadd].fields; f.push({ k: "f" + Date.now(), l: "New field", t: "text" }); render(); const ins = document.querySelectorAll(`[data-pal^="${ds.pafadd}:"]`); const i = ins[ins.length - 1]; if (i) { i.focus(); i.select(); } return; }
+    if (ds.pafadd) { const f = secs[+ds.pafadd].fields; f.push({ k: "f" + Date.now(), l: "New question", t: "text" }); render(); const ins = document.querySelectorAll(`[data-pal^="${ds.pafadd}:"]`); const i = ins[ins.length - 1]; if (i) { i.focus(); i.select(); } return; }
     if (ds.pafx) { const [si, fi] = pp(ds.pafx); secs[si].fields.splice(fi, 1); render(); return; }
     if (ds.pafu || ds.pafd) { const [si, fi] = pp(ds.pafu || ds.pafd), a = secs[si].fields, j = fi + (ds.pafu ? -1 : 1); [a[fi], a[j]] = [a[j], a[fi]]; render(); return; }
     if (ds.pasadd) { secs.push({ name: "New section", fields: [] }); render(); return; }
@@ -3036,6 +3048,9 @@ document.addEventListener("change", e => {
     if (ds.pal) { const [si, fi] = pp(ds.pal); secs[si].fields[fi].l = t.value.trim() || secs[si].fields[fi].l; return; }
     if (ds.pat) { const [si, fi] = pp(ds.pat), f = secs[si].fields[fi]; f.t = t.value; if (f.t === "choice" && !f.opts) f.opts = ["Option 1", "Option 2"]; render(); return; }
     if (ds.pao) { const [si, fi] = pp(ds.pao); secs[si].fields[fi].opts = t.value.split(",").map(x => x.trim()).filter(Boolean); return; }
+    if (ds.pah) { const [si, fi] = pp(ds.pah); secs[si].fields[fi].ph = t.value; return; }
+    if (ds.paif) { const [si, fi] = pp(ds.paif); secs[si].fields[fi].showIf = t.value || undefined; toast(t.value ? "This question now shows only after that answer." : "Always shown."); return; }
+    if (ds.pasif) { secs[+ds.pasif].showIf = t.value || undefined; toast(t.value ? "This section now shows only after that answer." : "Section always shown."); return; }
     if (ds.par) { const [si, fi] = pp(ds.par); secs[si].fields[fi].req = t.checked; return; }
     if (ds.pas !== undefined) { secs[+ds.pas].name = t.value.trim() || secs[+ds.pas].name; return; }
     if (ds.papeople) { secs[+ds.papeople].people = t.checked; return; } }
