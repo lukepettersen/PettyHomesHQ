@@ -40,6 +40,33 @@ window.HQ.settings = window.HQ.settings || {
   sources: ["Sphere", "Sphere Referral", "Website", "Zillow Preferred", "Open House", "Sign Call"],
   follow: ["7", "30", "60", "90", "180"],
   tags: ["Buyer", "Seller", "Past Client", "A Lead", "B Lead", "C Lead", "Email Newsletter", "Mailers", "Christmas Cards"],
+  // Purchase agreement forms, one per side. The first section is asked on its own (step 2), the rest after.
+  // core: fields the automations and Pipeline read; they can be renamed but not removed.
+  paForms: (() => {
+    const f = (k, l, t, x = {}) => Object.assign({ k, l, t }, x);
+    const PT = ["Single family", "Townhome", "Condo", "Twin home", "Multi-family"];
+    const property = () => ({ name: "The property", fields: [f("address", "Address", "text", { ph: "Street, city", req: true, core: true }), f("ptype", "Property type", "choice", { opts: PT, core: true }), f("year", "Year built", "number", { core: true }), f("hoa", "HOA?", "yesno", { core: true }), f("newc", "New construction?", "yesno", { core: true })] });
+    const dates = () => ({ name: "Key dates", fields: [f("close", "Close date", "date", { core: true }), f("fa", "Final Acceptance", "date", { core: true }), f("insp", "Inspection deadline", "date", { core: true }), f("ws", "Written Statement", "date-na", { core: true }), f("hoa_d", "HOA doc rescission", "date", { core: true })] });
+    const notes = () => ({ name: "Notes", fields: [f("inspAt", "Inspection appointment", "datetime"), f("referral", "Referral fee", "text", { ph: "None, or who and how much" }), f("emTo", "Earnest money to", "text", { ph: "Who holds it" }), f("mdc", "Material defect clause?", "text", { ph: "None, or details" })] });
+    const ppl = (name, fields) => ({ name, people: true, fields });
+    return {
+      buyer: [property(),
+        { name: "The contract", fields: [f("price", "Purchase price", "money", { req: true, core: true }), f("em", "Earnest money", "money", { core: true }), f("sc", "Seller contributions", "money", { core: true }), f("comm", "Commission %", "pct", { ph: "e.g. 2.7", core: true }), f("bac", "BAC", "money", { ph: "e.g. 695", core: true })] },
+        dates(), notes(),
+        ppl("Buyer's lender", [f("lenderName", "Name", "text"), f("lenderEmail", "Email", "text"), f("lenderCo", "Company", "text")]),
+        ppl("Buyer's title", [f("btitleCo", "Title company", "text"), f("btitleContact", "Contact name", "text"), f("btitleInfo", "Email / phone", "text")]),
+        ppl("Seller's agent", [f("saName", "Name", "text"), f("saEmail", "Email", "text")]),
+        ppl("Seller's TC", [f("stcName", "Name", "text"), f("stcInfo", "Email / phone", "text")]),
+        ppl("Seller's title", [f("stitleCo", "Title company", "text"), f("stitleContact", "Contact, email / phone", "text")])],
+      seller: [property(),
+        { name: "The contract", fields: [f("price", "Purchase price", "money", { req: true, core: true }), f("em", "Earnest money", "money", { core: true }), f("sc", "Seller contributions", "money", { core: true }), f("fin", "Buyer's financing", "choice", { opts: ["Conventional", "FHA", "VA", "Cash", "Other"], core: true }), f("comm", "Commission %", "pct", { ph: "e.g. 2.5", core: true }), f("bac", "BAC", "money", { core: true })] },
+        dates(), notes(),
+        ppl("Buyer's agent", [f("baName", "Name", "text"), f("baEmail", "Email", "text")]),
+        ppl("Buyer's lender", [f("blName", "Name", "text"), f("blEmail", "Email", "text"), f("blCo", "Company", "text")]),
+        ppl("Buyer's title", [f("btCo", "Title company", "text"), f("btContact", "Contact, email / phone", "text")]),
+        ppl("Seller's title", [f("stCo", "Title company", "text"), f("stContact", "Contact, email / phone", "text")])],
+    };
+  })(),
   // Under Contract/Pending columns: a contract sits in the first column whose date is still open.
   ucPhases: [["Inspection", "insp"], ["HOA review", "hoa"], ["Financing", "ws"], ["Closing", "close"]],
   statuses: {

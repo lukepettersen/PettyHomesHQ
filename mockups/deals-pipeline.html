@@ -188,6 +188,10 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 .stsel select { padding: 3px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--fg); }
 .chk { flex-direction: row !important; align-items: center; gap: 8px !important; font-size: 13px !important; color: var(--fg) !important; }
 .chk input { width: auto !important; }
+.side-pick { display: flex; flex-direction: column; gap: 10px; }
+.side-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.side-opt { border: 1.5px solid var(--line); background: var(--surface); border-radius: 10px; padding: 16px; text-align: left; display: flex; flex-direction: column; gap: 4px; font-size: 15px; }
+.side-opt[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
 .na-row { display: flex; gap: 8px; align-items: center; }
 .na-row input[type=date] { flex: 1; min-width: 0; }
 .na-row .chk { display: inline-flex; white-space: nowrap; }
@@ -629,17 +633,17 @@ function engPane(eng) {
 }
 
 function factsInline(dl) {
-  if (dl.side === "buyer") {
-    const fm = dl.form || {}, at = fm.inspAt ? new Date(fm.inspAt) : null;
-    return [["Price", money(dl.price)], ["Earnest", money(dl.em || 0)], ["Seller contrib.", money(dl.sc || 0)],
-      ["Commission", role === "admin" ? (dl.comm ? `${dl.comm}% · ${money(Math.round(dl.price * dl.comm / 100))}` : "—") : null], ["BAC", money(dl.bac || 0)],
-      ["Inspection", at ? `${DOW[at.getDay()]} ${short(at)} ${at.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : "—"],
-      ["Earnest money to", fm.emTo], ["Referral fee", fm.referral], ["Material defect", fm.mdc], ["New construction", (dl.facts || {}).newc]]
-      .map(([k, v]) => `<span><em>${k}</em> ${v === null ? `<i class="hid">hidden</i>` : `<b class="num">${esc(v || "—")}</b>`}</span>`).join("");
-  }
-  return [["Price", money(dl.price)], ["Earnest", money(dl.em || 0)], ["Seller contrib.", money(dl.sc || 0)], [dl.side === "buyer" ? "BAC received" : "BAC paid", dl.bac],
-    ["Commission", role === "admin" ? money(dl.comm || 0) : null], ["Financing", dl.fin]]
-    .map(([k, v]) => `<span><em>${k}</em> ${v === null ? `<i class="hid">hidden</i>` : `<b class="num">${esc(v || "—")}</b>`}</span>`).join("");
+  const fm = dl.form || {}, fields = paFields(dl.side), lab = k => (fields.find(x => x.k === k) || { l: k }).l;
+  const core = [["Price", money(dl.price)], [lab("em"), money(dl.em || 0)], [lab("sc"), money(dl.sc || 0)],
+    ["Commission", role === "admin" ? (dl.comm ? `${dl.comm}% · ${money(Math.round(dl.price * dl.comm / 100))}` : "—") : null], [lab("bac"), money(dl.bac || 0)]];
+  if (fields.some(x => x.k === "fin")) core.push([lab("fin"), dl.fin]);
+  const peopleKeys = paSections(dl.side).filter(x => x.people).flatMap(x => x.fields.map(f => f.k));
+  const extra = fields.filter(x => !PA_CORE.includes(x.k) && !peopleKeys.includes(x.k) && fm[x.k]).map(x => {
+    if (x.t !== "datetime") return [x.l, fm[x.k]];
+    const at = new Date(fm[x.k]); return [x.l, `${DOW[at.getDay()]} ${short(at)} ${at.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`];
+  });
+  const f = dl.facts || {}; extra.push(["Property", [f.ptype, f.year && "built " + f.year, f.hoa === "Yes" && "HOA", f.newc === "Yes" && "New construction"].filter(Boolean).join(" · ")]);
+  return core.concat(extra).map(([k, v]) => `<span><em>${esc(k)}</em> ${v === null ? `<i class="hid">hidden</i>` : `<b class="num">${esc(v || "—")}</b>`}</span>`).join("");
 }
 
 function ptaskHtml(t, i) {
@@ -878,34 +882,27 @@ const F = {
   contract: [["address", "Property address", "text", "Street, city", true], ["price", "Purchase price", "money", "", true], ["em", "Earnest money", "money"], ["sc", "Seller contributions", "money"], ["fin", "Buyer's financing", ["Conventional", "FHA", "VA", "Cash", "Other"]], ["comm", "Commission", "money"], ["bac", "BAC", "text", "e.g. 2.5%"]],
   facts: [["ptype", "Property type", ["Single family", "Townhome", "Condo", "Twin home", "Multi-family"]], ["year", "Year built", "number"], ["hoa", "HOA?", ["No", "Yes"]], ["newc", "New construction?", ["No", "Yes"]]],
   dates: [["fa", "Final Acceptance", "date"], ["insp", "Inspection deadline", "date"], ["ws", "Written Statement (lender)", "date"], ["hoa_d", "HOA doc rescission", "date"], ["close", "Closing", "date"]],
-  buyerPA: [
-    ["The property", [["address", "Address", "text", "Street, city", true], ["ptype", "Property type", ["Single family", "Townhome", "Condo", "Twin home", "Multi-family"]], ["year", "Year built", "number"], ["newc", "New construction?", ["No", "Yes"]]]],
-    ["The contract", [["price", "Purchase price", "money", "", true], ["em", "Earnest money", "money"], ["sc", "Seller contributions", "money"], ["comm", "Commission %", "pct", "e.g. 2.7"], ["bac", "BAC", "money", "e.g. 695"]]],
-    ["Key dates (leave blank if you don't know yet)", [["close", "Close date", "date"], ["fa", "Final Acceptance", "date"], ["insp", "Inspection deadline", "date"], ["ws", "Written Statement", "date-na"], ["hoa_d", "HOA doc rescission", "date-na"]]],
-    ["Notes", [["inspAt", "Inspection appointment", "datetime"], ["referral", "Referral fee", "text", "None, or who and how much"], ["emTo", "Earnest money to", "text", "Who holds it"], ["mdc", "Material defect clause?", "text", "None, or details"]]],
-    ["Buyer's lender", [["lenderName", "Name", "text"], ["lenderEmail", "Email", "text"], ["lenderCo", "Company", "text"]]],
-    ["Buyer's title", [["btitleCo", "Title company", "text"], ["btitleContact", "Contact name", "text"], ["btitleInfo", "Email / phone", "text"]]],
-    ["Seller's side", [["saName", "Seller's agent", "text", "Name"], ["saEmail", "Seller's agent email", "text"], ["stcName", "Seller's TC", "text", "Name"], ["stcInfo", "Seller's TC email / phone", "text"], ["stitleCo", "Seller's title company", "text"], ["stitleContact", "Seller's title contact", "text", "Name, email / phone"]]],
-  ],
   people: { buyer: [["p_lender", "Lender"], ["p_title", "Title"], ["p_other", "Listing agent"]], seller: [["p_other", "Buyer's agent"], ["p_title", "Title"], ["p_lender", "Buyer's lender"]] },
 };
-const BUYER_KEYS = ["inspAt", "referral", "emTo", "mdc", "lenderName", "lenderEmail", "lenderCo", "btitleCo", "btitleContact", "btitleInfo", "saName", "saEmail", "stcName", "stcInfo", "stitleCo", "stitleContact", "ws_na", "hoa_d_na"];
-// Buyer side: N/A on HOA means no HOA steps; N/A on Written Statement drops the lender deadline.
-function normBuyer(v) { v.hoa = v.hoa_d_na === "on" ? "No" : "Yes"; if (v.ws_na === "on") v.ws = ""; if (v.hoa_d_na === "on") v.hoa_d = ""; }
+// Purchase agreement forms live in Admin (HQ.settings.paForms). These turn them into form groups and back.
+const PA_CORE = ["address", "price", "em", "sc", "fin", "comm", "bac", "ptype", "year", "hoa", "newc", "fa", "insp", "ws", "hoa_d", "close"];
+const paSections = side => HQ.settings.paForms[side];
+const paFields = side => paSections(side).flatMap(x => x.fields);
+const asField = x => [x.k, x.l, x.t === "yesno" ? ["No", "Yes"] : x.t === "choice" ? x.opts : x.t, x.ph, x.req];
 const joinP = (...a) => a.filter(Boolean).join(" · ");
-function buyerPeople(v) {
-  return [[joinP(v.lenderName, v.lenderCo, v.lenderEmail), "Lender"], [joinP(v.btitleCo, v.btitleContact, v.btitleInfo), "Buyer's title"], [joinP(v.saName, v.saEmail), "Seller's agent"], [joinP(v.stcName, v.stcInfo), "Seller's TC"], [joinP(v.stitleCo, v.stitleContact), "Seller's title"]].filter(x => x[0]);
+function paExtras(side, v) { // everything that isn't a core field, plus the N/A flags
+  const o = {}; paFields(side).forEach(x => { if (!PA_CORE.includes(x.k)) o[x.k] = v[x.k] || ""; if (x.t === "date-na") o[x.k + "_na"] = v[x.k + "_na"] || ""; }); return o;
 }
-const pickForm = v => Object.fromEntries(BUYER_KEYS.map(k => [k, v[k] || ""]));
+const paPeople = (side, v) => paSections(side).filter(x => x.people).map(x => [joinP(...x.fields.map(f => v[f.k])), x.name]).filter(x => x[0]);
+const naOn = (v, k) => v[k + "_na"] === "on";
 let dealForm = null; // { mode: "buyer" | "listing" | "pa", cid, status, engId, v }
 
 function formGroups() {
   const f = dealForm;
   if (f.mode === "pa") {
-    const side = sideOf(deals.find(x => x.id === f.engId));
-    if (side === "buyer") return F.buyerPA;
-    return [["The property", [F.contract[0]].concat(F.facts)], ["The contract", F.contract.slice(1).map(x => x[0] === "bac" ? [x[0], "BAC paid", x[2], x[3]] : x)],
-      ["Key dates (leave blank if you don't know yet)", F.dates], ["Other people on the deal", F.people[side].map(([k, l]) => [k, l, "text", "Name and company"])]];
+    if (f.step === 1) return [];
+    const secs = paSections(f.side).map(x => [x.name, x.fields.map(asField)]);
+    return f.step === 2 ? secs.slice(0, 1) : f.step === 3 ? secs.slice(1) : secs;
   }
   if (f.mode === "buyer") {
     const i = STATUS.buyer.indexOf(f.status), g = [["What they're looking for", F.search]];
@@ -917,7 +914,8 @@ function formGroups() {
   if (STATUS.listing.indexOf(f.status) < 2) return [["The home", [["address", "Property address", "text", "Street, city", true], ["price", "Estimated value", "money"], ["timeframe", "Timeframe", TF]]]].concat(f.status === "Consult scheduled" ? [["Consult", F.consult]] : []);
   return [["The listing", F.listing], ["The property", F.facts]];
 }
-const formTrigger = () => dealForm.mode === "pa" ? `${sideOf(deals.find(x => x.id === dealForm.engId)) === "buyer" ? "Buyer" : "Seller"} · Under contract` : `${dealForm.mode === "buyer" ? "Buyer" : "Listing"} · ${dealForm.status}`;
+const allFormFields = () => dealForm.mode === "pa" ? paFields(dealForm.side).map(asField) : formGroups().flatMap(([, fs]) => fs);
+const formTrigger = () => dealForm.mode === "pa" ? `${dealForm.side === "buyer" ? "Buyer" : "Seller"} · Under contract` : `${dealForm.mode === "buyer" ? "Buyer" : "Listing"} · ${dealForm.status}`;
 
 function fieldHtml([k, lab, type, ph, req]) {
   const v = dealForm.v;
@@ -945,22 +943,24 @@ function allContacts() {
 }
 function dealModalHtml() {
   const f = dealForm, eng = f.engId && deals.find(x => x.id === f.engId);
-  const title = (f.editId ? "Edit " : "") + (f.mode === "pa" ? `purchase agreement · ${sideOf(eng) === "buyer" ? "buyer side" : "seller side"}` : f.mode === "buyer" ? (f.editId ? "buyer representation" : "Start a buyer") : (f.editId ? "listing" : "Start a listing"));
+  const title = (f.editId ? "Edit " : "") + (f.mode === "pa" ? `purchase agreement${f.step === 1 ? "" : f.side === "buyer" ? " · buyer side" : " · seller side"}` : f.mode === "buyer" ? (f.editId ? "buyer representation" : "Start a buyer") : (f.editId ? "listing" : "Start a listing"));
   return `<div class="modal-bg" data-dclose="1"><form class="modal deal-modal" id="deal-form" autocomplete="off">
     <h2>${title[0].toUpperCase() + title.slice(1)}</h2>
-    ${f.mode === "pa" ? `<p class="muted sm" style="margin:0">${esc(eng.name)} · ${esc(fileLine(eng))}</p>` : `<div class="dm-top">
+    ${f.mode === "pa" ? `<p class="muted sm" style="margin:0">${esc(eng.name)} · ${esc(fileLine(eng))}${f.step ? ` · <b>Step ${f.step} of 3</b>` : ""}</p>
+      ${f.step === 1 ? `<div class="side-pick"><p style="margin:0;font-weight:600">Who do you represent?</p><div class="side-opts">${[["buyer", "The buyer", "Buyer-side form and checklist"], ["seller", "The seller", "Seller-side form and checklist"]].map(([k, l, d]) => `<button type="button" class="side-opt" data-pside="${k}" aria-pressed="${f.side === k}"><b>${l}</b><span class="muted sm">${d}</span></button>`).join("")}</div></div>` : ""}` : `<div class="dm-top">
       <label>Client<select data-dcid="1" ${f.editId ? "disabled" : ""}>${allContacts().map(([cid, n]) => `<option value="${cid}" ${cid === f.cid ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>
       <label>Status<select data-dstatus="1">${STATUS[f.mode].map(s => `<option ${s === f.status ? "selected" : ""}>${s}</option>`).join("")}</select></label>
     </div>`}
     ${formGroups().map(([t, fields]) => { const inner = fields.map(fieldHtml).join(""); return inner ? `<fieldset><legend>${t}</legend><div class="dm-grid">${inner}</div></fieldset>` : ""; }).join("")}
     ${f.mode !== "pa" && !f.editId ? `<label class="chk"><input type="checkbox" data-df="accepted" ${f.v.accepted === "on" ? "checked" : ""}> They already have an accepted offer (add the purchase agreement next)</label>` : ""}
-    ${f.editId ? `<p class="muted sm" style="margin:0">Changing a date moves the steps timed from it.</p>` : `<div class="dm-prev" id="dm-prev">${previewHtml()}</div>`}
-    <div class="foot"><button type="button" class="btn" data-dclose="1">Cancel</button><button class="btn primary" type="submit">${f.editId ? "Save changes" : f.mode === "pa" ? "Add purchase agreement" : f.mode === "buyer" ? "Start buyer" : "Start listing"}</button></div>
+    ${f.editId ? `<p class="muted sm" style="margin:0">Changing a date moves the steps timed from it.</p>` : f.step && f.step < 3 ? "" : `<div class="dm-prev" id="dm-prev">${previewHtml()}</div>`}
+    <div class="foot">${f.step > 1 ? `<button type="button" class="btn" data-pstep="${f.step - 1}" style="margin-right:auto">← Back</button>` : ""}<button type="button" class="btn" data-dclose="1">Cancel</button><button class="btn primary" type="submit">${f.editId ? "Save changes" : f.step && f.step < 3 ? "Next →" : f.mode === "pa" ? "Add purchase agreement" : f.mode === "buyer" ? "Start buyer" : "Start listing"}</button></div>
   </form></div>`;
 }
 function openForm(mode, opts = {}) {
-  const base = { fin: "Conventional", ptype: "Single family", hoa: "No", newc: "No", timeframe: "0–3 months", preapproved: "Not yet", hoa_d_na: "on" };
+  const base = { fin: "Conventional", ptype: "Single family", hoa: "No", newc: "No", timeframe: "0–3 months", preapproved: "Not yet" };
   dealForm = { mode, cid: opts.cid || openContact || allContacts()[0][0], status: mode === "buyer" ? "Consult scheduled" : mode === "listing" ? "Consult scheduled" : null, engId: opts.engId, v: Object.assign(base, opts.v || {}) };
+  if (mode === "pa") { dealForm.step = 1; dealForm.side = sideOf(deals.find(x => x.id === opts.engId)); }
   renderDealModal();
 }
 function editForm(dl) {
@@ -970,21 +970,19 @@ function editForm(dl) {
   if (dl.kind === "pa") {
     Object.assign(v, { em: dl.em || "", sc: dl.sc || "", fin: dl.fin, comm: dl.comm || "", bac: dl.bac || "" });
     Object.entries(dl.ms).forEach(([k, x]) => { v[k === "hoa" ? "hoa_d" : k] = x || ""; });
-    if (dl.side === "buyer") { Object.assign(v, dl.form || {}); if (!("ws" in dl.ms)) v.ws_na = "on"; if (!("hoa" in dl.ms)) v.hoa_d_na = "on"; }
-    else F.people[dl.side].forEach(([k, l]) => { const hit = (dl.people || []).find(x => x[1] === l); if (hit) v[k] = hit[0]; });
+    Object.assign(v, dl.form || {}); if (!("ws" in dl.ms)) v.ws_na = "on";
   }
-  dealForm = { mode: dl.kind === "pa" ? "pa" : dl.kind, cid: dl.cid, status: dl.status, engId: dl.kind === "pa" ? dl.parent : dl.id, editId: dl.id, v };
+  dealForm = { mode: dl.kind === "pa" ? "pa" : dl.kind, cid: dl.cid, status: dl.status, engId: dl.kind === "pa" ? dl.parent : dl.id, editId: dl.id, v, side: dl.side, step: 0 };
   renderDealModal();
 }
 function saveEdit() {
   const f = dealForm, v = f.v, dl = deals.find(x => x.id === f.editId);
   const facts = { ptype: v.ptype, year: v.year, hoa: v.hoa, newc: v.newc };
   if (dl.kind === "pa") {
-    const isB = dl.side === "buyer"; if (isB) { normBuyer(v); facts.hoa = v.hoa; }
-    Object.assign(dl, { line: v.address, price: +v.price, em: +v.em || 0, sc: +v.sc || 0, fin: v.fin, comm: +v.comm || 0, bac: isB ? +v.bac || 0 : v.bac, facts, people: isB ? buyerPeople(v) : F.people[dl.side].filter(([k]) => v[k]).map(([k, l]) => [v[k], l]) });
-    if (isB) dl.form = pickForm(v);
-    if (isB && v.ws_na === "on") delete dl.ms.ws;
-    const keys = ["fa", "insp"].concat(isB && v.ws_na === "on" ? [] : ["ws"]).concat(v.hoa === "Yes" ? ["hoa"] : []).concat(["close"]);
+    if (naOn(v, "ws")) v.ws = "";
+    Object.assign(dl, { line: v.address, price: +v.price, em: +v.em || 0, sc: +v.sc || 0, fin: v.fin, comm: +v.comm || 0, bac: +v.bac || 0, facts, people: paPeople(dl.side, v), form: paExtras(dl.side, v) });
+    if (naOn(v, "ws")) delete dl.ms.ws;
+    const keys = ["fa", "insp"].concat(naOn(v, "ws") ? [] : ["ws"]).concat(v.hoa === "Yes" ? ["hoa"] : []).concat(["close"]);
     let moved = 0;
     keys.forEach(k => {
       const nv = v[k === "hoa" ? "hoa_d" : k] || null, old = dl.ms[k];
@@ -1007,18 +1005,23 @@ function readDealForm() { document.querySelectorAll("[data-df]").forEach(i => { 
 function submitForm() {
   readDealForm();
   const f = dealForm, v = f.v;
-  if (f.editId) { const miss = formGroups().flatMap(([, fs]) => fs).filter(x => x[4] && !v[x[0]]); if (miss.length) { toast(`Add ${miss.map(x => x[1].toLowerCase()).join(" and ")} first.`); return; } saveEdit(); return; }
-  const missing = formGroups().flatMap(([, fs]) => fs).filter(x => x[4] && !v[x[0]]);
+  if (f.mode === "pa" && f.step && f.step < 3) {
+    const miss = formGroups().flatMap(([, fs]) => fs).filter(x => x[4] && !v[x[0]]);
+    if (miss.length) { toast(`Add ${miss.map(x => x[1].toLowerCase()).join(" and ")} first.`); return; }
+    f.step++; renderDealModal(); return;
+  }
+  if (f.editId) { const miss = allFormFields().filter(x => x[4] && !v[x[0]]); if (miss.length) { toast(`Add ${miss.map(x => x[1].toLowerCase()).join(" and ")} first.`); return; } saveEdit(); return; }
+  const missing = allFormFields().filter(x => x[4] && !v[x[0]]);
   if (missing.length) { toast(`Add ${missing.map(x => x[1].toLowerCase()).join(" and ")} first.`); return; }
   const id = deals.length ? Math.max(...deals.map(x => x.id)) + 1 : 1;
   const facts = { ptype: v.ptype, year: v.year, hoa: v.hoa, newc: v.newc };
   if (f.mode === "pa") {
-    const eng = deals.find(x => x.id === f.engId), side = sideOf(eng), isB = side === "buyer";
-    if (isB) { normBuyer(v); facts.hoa = v.hoa; }
-    const pa = { id, kind: "pa", parent: eng.id, side, cid: eng.cid, name: eng.name, status: "Active", line: v.address, price: +v.price, em: +v.em || 0, sc: +v.sc || 0, bac: v.bac, comm: +v.comm || 0, fin: v.fin, facts,
+    const eng = deals.find(x => x.id === f.engId), side = f.side;
+    if (naOn(v, "ws")) v.ws = "";
+    const pa = { id, kind: "pa", parent: eng.id, side, cid: eng.cid, name: eng.name, status: "Active", line: v.address, price: +v.price, em: +v.em || 0, sc: +v.sc || 0, bac: +v.bac || 0, comm: +v.comm || 0, fin: v.fin, facts, form: paExtras(side, v),
       ms: { fa: v.fa || null, insp: v.insp || null, ws: v.ws || null }, msStatus: {}, tasks: [],
-      people: isB ? buyerPeople(v) : F.people[side].filter(([k]) => v[k]).map(([k, l]) => [v[k], l]) };
-    if (isB) { pa.form = pickForm(v); pa.bac = +v.bac || 0; if (v.ws_na === "on") delete pa.ms.ws; }
+      people: paPeople(side, v) };
+    if (naOn(v, "ws")) delete pa.ms.ws;
     if (v.hoa === "Yes") pa.ms.hoa = v.hoa_d || null;
     pa.ms.close = v.close || null;
     Object.keys(pa.ms).forEach(k => pa.msStatus[k] = pa.ms[k] && d(pa.ms[k]) < TODAY ? "met" : "pending");
@@ -1103,6 +1106,8 @@ document.addEventListener("click", e => {
     ctab[openContact] = "timeline"; render(); toast(`Closed! ${c.name} is now a Past Client.${post.length ? ` ${post.length} post-close tasks added.` : ""}`); return;
   }
   if (b.dataset.deal) { openCard(+b.dataset.deal); return; }
+  if (b.dataset.pside) { readDealForm(); dealForm.side = b.dataset.pside; renderDealModal(); return; }
+  if (b.dataset.pstep) { readDealForm(); dealForm.step = +b.dataset.pstep; renderDealModal(); return; }
   if (b.dataset.applyopen) { applyOpen = true; render(); const i = el("ct-new"); if (i) i.focus(); return; }
   if (b.dataset.applycancel) { applyOpen = false; render(); return; }
   if (b.dataset.applytpl) {

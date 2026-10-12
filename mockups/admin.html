@@ -43,6 +43,14 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
 .input { padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); width: 100%; }
 .tagchip { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; background: var(--sunken); color: var(--muted); white-space: nowrap; }
+.seg-row { margin-bottom: 12px; }
+.seg-row .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--surface); }
+.seg-row .seg button { border: 0; background: none; padding: 6px 16px; font-size: 13px; font-weight: 600; }
+.seg-row .seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.box-h { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.sec-name { font-weight: 700; font-size: 15px; border: 1px solid transparent; background: none; padding: 4px 6px; border-radius: 6px; min-width: 0; }
+.sec-name:hover, .sec-name:focus { border-color: var(--line); background: var(--bg); }
+.paforms-gap .box { margin-bottom: 12px; }
 .pill { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
 .side-nav { display: flex; flex-direction: column; gap: 12px; }
 .side-nav h4 { margin: 0 0 4px; padding: 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
@@ -155,12 +163,13 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 const el = id => document.getElementById(id);
 const SECTIONS = [
   ["Team", [["users", "Users & roles"]]],
-  ["Deals", [["pipelines", "Client statuses"], ["checklists", "Task templates"]]],
+  ["Deals", [["pipelines", "Client statuses"], ["paforms", "Purchase agreement forms"], ["checklists", "Task templates"]]],
   ["People", [["reminders", "Date reminders"], ["fields", "Custom fields"], ["tags", "Tags"], ["lists", "Stages, sources & follow-up"]]],
   ["Messaging", [["texttpl", "Text templates"], ["emailtpl", "Email templates"]]],
   ["Connections", [["integrations", "Integrations"]]],
 ];
-let sec = "checklists";
+let sec = "checklists", paSide = "buyer";
+const PA_TYPES = [["text", "Text"], ["money", "Money"], ["number", "Number"], ["pct", "Percent"], ["date", "Date"], ["date-na", "Date or N/A"], ["datetime", "Date and time"], ["yesno", "Yes / No"], ["choice", "Dropdown"]];
 
 const state = {
   users: [["Luke Pettersen", "luke@pettyhomes.com", "Admin", "Active"], ["Alyssa Chakiton", "assistant@pettyhomes.com", "Assistant", "Active"]],
@@ -323,6 +332,21 @@ const V = {
         <td><button class="rm" data-rmrem="${i}" aria-label="Remove">×</button></td></tr>`).join("")}
     </tbody></table></div><div class="addrow"><button class="btn" data-addrem="1">+ Add reminder</button></div></div>`;
   },
+  paforms() {
+    const secs = HQ.settings.paForms[paSide];
+    const row = (x, si, fi, n) => `<tr><td><input data-pal="${si}:${fi}" value="${esc(x.l)}" aria-label="Field label"></td>
+      <td><select data-pat="${si}:${fi}" ${x.core ? "disabled" : ""}>${PA_TYPES.map(([v, l]) => `<option value="${v}" ${v === x.t ? "selected" : ""}>${l}</option>`).join("")}</select>${x.t === "choice" ? `<input data-pao="${si}:${fi}" value="${esc((x.opts || []).join(", "))}" placeholder="Options, comma separated" style="margin-top:4px" ${x.core ? "disabled" : ""}>` : ""}</td>
+      <td style="text-align:center"><input type="checkbox" data-par="${si}:${fi}" ${x.req ? "checked" : ""} ${["address", "price"].includes(x.k) ? "disabled" : ""} aria-label="Required"></td>
+      <td style="width:96px;white-space:nowrap"><button class="rm" data-pafu="${si}:${fi}" aria-label="Move up" ${fi ? "" : "disabled"}>↑</button><button class="rm" data-pafd="${si}:${fi}" aria-label="Move down" ${fi < n - 1 ? "" : "disabled"}>↓</button><button class="rm" data-pafx="${si}:${fi}" aria-label="Remove field" ${x.core ? 'disabled title="Used by the Pipeline and task templates"' : ""}>×</button></td></tr>`;
+    return `<h1>Purchase agreement forms</h1><p>What gets filled out when a purchase agreement is added. It asks who you represent, then the first section on its own, then everything else. Fields marked <span class="pill">Built-in</span> drive the Pipeline and task templates, so you can rename them but not remove them.</p>
+    <div class="seg-row"><span class="seg" role="group" aria-label="Form">${[["buyer", "Buyer side"], ["seller", "Seller side"]].map(([k, l]) => `<button data-paside="${k}" aria-pressed="${paSide === k}">${l}</button>`).join("")}</span></div>
+    ${secs.map((sc, si) => `<div class="box"><div class="box-h"><input class="sec-name" data-pas="${si}" value="${esc(sc.name)}" aria-label="Section name">${si === 0 ? `<span class="pill">Asked first</span>` : `<label class="muted" style="font-size:13px;display:inline-flex;gap:6px;align-items:center"><input type="checkbox" data-papeople="${si}" ${sc.people ? "checked" : ""}> Show as a contact line</label>`}
+      <span style="margin-left:auto;white-space:nowrap">${si ? `<button class="rm" data-pasu="${si}" aria-label="Move section up" ${si > 1 ? "" : "disabled"}>↑</button><button class="rm" data-pasd="${si}" aria-label="Move section down" ${si < secs.length - 1 ? "" : "disabled"}>↓</button><button class="rm" data-pasx="${si}" aria-label="Remove section" ${sc.fields.some(f => f.core) ? 'disabled title="Has built-in fields"' : ""}>×</button>` : ""}</span></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th></th></tr></thead><tbody>
+      ${sc.fields.map((x, fi) => row(x, si, fi, sc.fields.length).replace('aria-label="Field label">', `aria-label="Field label">${x.core ? ' <span class="pill">Built-in</span>' : ""}`)).join("") || `<tr><td colspan="4" class="muted">No fields yet.</td></tr>`}
+      </tbody></table></div><div class="addrow"><button class="btn" data-pafadd="${si}">+ Add field</button></div></div>`).join("")}
+    <div class="addrow"><button class="btn primary" data-pasadd="1">+ Add section</button></div>`;
+  },
   fields() {
     return `<h1>Custom fields</h1><p>Extra fields on people or deals. Built-in fields (name, phones, stage, deal dates) aren't listed here.</p>
     <div class="box"><div class="tbl-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Shows on</th><th></th></tr></thead><tbody>
@@ -367,6 +391,14 @@ document.addEventListener("click", e => {
   if (ds.newrole) { state.roles.push("New role"); state.perms.forEach(p => p.push(false)); render(); toast("Added a role. Type its name in the column header."); return; }
   if (ds.up || ds.down) { const [p, i] = pair(ds.up || ds.down), a = state.pipes[p], j = +i + (ds.up ? -1 : 1); if (j >= 0 && j < a.length) [a[i], a[j]] = [a[j], a[i]]; render(); return; }
   if (ds.rmstage) { const [p, i] = pair(ds.rmstage); state.pipes[p].splice(+i, 1); render(); return; }
+  if (ds.paside) { paSide = ds.paside; render(); return; }
+  { const secs = HQ.settings.paForms[paSide], pp = v => v.split(":").map(Number);
+    if (ds.pafadd) { const f = secs[+ds.pafadd].fields; f.push({ k: "f" + Date.now(), l: "New field", t: "text" }); render(); const ins = document.querySelectorAll(`[data-pal^="${ds.pafadd}:"]`); const i = ins[ins.length - 1]; if (i) { i.focus(); i.select(); } return; }
+    if (ds.pafx) { const [si, fi] = pp(ds.pafx); secs[si].fields.splice(fi, 1); render(); return; }
+    if (ds.pafu || ds.pafd) { const [si, fi] = pp(ds.pafu || ds.pafd), a = secs[si].fields, j = fi + (ds.pafu ? -1 : 1); [a[fi], a[j]] = [a[j], a[fi]]; render(); return; }
+    if (ds.pasadd) { secs.push({ name: "New section", fields: [] }); render(); return; }
+    if (ds.pasx) { secs.splice(+ds.pasx, 1); render(); return; }
+    if (ds.pasu || ds.pasd) { const i = +(ds.pasu || ds.pasd), j = i + (ds.pasu ? -1 : 1); [secs[i], secs[j]] = [secs[j], secs[i]]; render(); return; } }
   if (ds.ucadd) { HQ.settings.ucPhases.splice(-1, 0, ["New column", "insp"]); render(); return; }
   if (ds.ucrm) { HQ.settings.ucPhases.splice(+ds.ucrm, 1); render(); return; }
   if (ds.ucup || ds.ucdown) { const a = HQ.settings.ucPhases, i = +(ds.ucup || ds.ucdown), j = i + (ds.ucup ? -1 : 1); if (j >= 0 && j < a.length) [a[i], a[j]] = [a[j], a[i]]; render(); return; }
@@ -409,6 +441,13 @@ document.addEventListener("change", e => {
   if (t.id === "tpl-filter") { state.tplFilter = t.value; render(); return; }
   if (ds.u) { const [i, j] = pair(ds.u); state.users[i][j] = t.value; syncTeam(); return; }
   if (ds.perm) { const [i, j] = pair(ds.perm); state.perms[i][+j + 1] = t.checked; return; }
+  { const secs = HQ.settings.paForms[paSide], pp = v => v.split(":").map(Number);
+    if (ds.pal) { const [si, fi] = pp(ds.pal); secs[si].fields[fi].l = t.value.trim() || secs[si].fields[fi].l; return; }
+    if (ds.pat) { const [si, fi] = pp(ds.pat), f = secs[si].fields[fi]; f.t = t.value; if (f.t === "choice" && !f.opts) f.opts = ["Option 1", "Option 2"]; render(); return; }
+    if (ds.pao) { const [si, fi] = pp(ds.pao); secs[si].fields[fi].opts = t.value.split(",").map(x => x.trim()).filter(Boolean); return; }
+    if (ds.par) { const [si, fi] = pp(ds.par); secs[si].fields[fi].req = t.checked; return; }
+    if (ds.pas !== undefined) { secs[+ds.pas].name = t.value.trim() || secs[+ds.pas].name; return; }
+    if (ds.papeople) { secs[+ds.papeople].people = t.checked; return; } }
   if (ds.ucname !== undefined) { HQ.settings.ucPhases[+ds.ucname][0] = t.value.trim() || HQ.settings.ucPhases[+ds.ucname][0]; return; }
   if (ds.ucuntil !== undefined) { HQ.settings.ucPhases[+ds.ucuntil][1] = t.value; toast("Saved. The Pipeline regroups contracts right away."); return; }
   if (ds.stage) { const [p, i] = pair(ds.stage), old = state.pipes[p][i]; state.pipes[p][i] = t.value; TPLS().forEach(x => { if (x.trigger === p + " · " + old) x.trigger = p + " · " + t.value; }); toast("Renamed. Templates that start at this stage moved with it."); return; }
