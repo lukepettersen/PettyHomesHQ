@@ -144,7 +144,7 @@ select:disabled, input:disabled { opacity: .45; }
 .perm td:not(:first-child), .perm th:not(:first-child) { text-align: center; }
 </style>
 <div class="mock-bar"><strong>Mockup</strong> · fake data. Changes work on the page but aren't saved.</div>
-<header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html">Deals</a><a href="tasks.html">Tasks</a><a href="messages.html">Messages</a><a href="admin.html" class="on">Admin</a></nav></header>
+<header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html">Active Clients</a><a href="tasks.html">Tasks</a><a href="messages.html">Messages</a><a href="admin.html" class="on">Admin</a></nav></header>
 <div class="shell">
   <aside class="side-nav" id="side"></aside>
   <main class="main" id="main"></main>
@@ -155,7 +155,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 const el = id => document.getElementById(id);
 const SECTIONS = [
   ["Team", [["users", "Users & roles"]]],
-  ["Deals", [["pipelines", "Pipelines & stages"], ["checklists", "Task templates"]]],
+  ["Deals", [["pipelines", "Client statuses"], ["checklists", "Task templates"]]],
   ["People", [["reminders", "Date reminders"], ["fields", "Custom fields"], ["tags", "Tags"], ["lists", "Stages, sources & follow-up"]]],
   ["Messaging", [["texttpl", "Text templates"], ["emailtpl", "Email templates"]]],
   ["Connections", [["integrations", "Integrations"]]],
@@ -166,7 +166,7 @@ const state = {
   users: [["Luke Pettersen", "luke@pettyhomes.com", "Admin", "Active"], ["Alyssa Chakiton", "assistant@pettyhomes.com", "Assistant", "Active"]],
   roles: ["Admin", "Assistant"],
   perms: [["See commissions", true, false], ["Delete people and deals", true, false], ["Manage users and roles", true, false], ["Edit checklist templates", true, true], ["Edit text and email templates", true, true], ["Export data", true, false], ["Send texts", true, true]],
-  pipes: { Buyer: ["Lead", "Consult", "Rep Signed / Searching", "Offer Out", "Under Contract", "Closed"], Seller: ["Lead", "Consult", "Listing Signed / Prep", "Coming Soon", "Active", "Under Contract", "Closed"] },
+  pipes: { Buyer: ["Consult", "Rep signed", "Searching", "Offer out"], Listing: ["Prep", "Coming soon", "Active"] },
   tplId: "t4", ckApply: true, ckPending: null,
   reminders: [
     ["Birthday", "Text happy birthday", 0, "on", "Luke", "Text", "Everyone"],
@@ -196,7 +196,8 @@ const TODAY_A = new Date(2026, 9, 12);
 const TPLS = () => HQ.templates;
 const curCk = () => TPLS().find(x => x.id === state.tplId) || TPLS()[0];
 const stepCount = x => x.phases.reduce((n, ph) => n + ph.steps.length, 0);
-const trigOptions = () => Object.entries(state.pipes).flatMap(([p, st]) => st.map(x => `${p} · ${x}`));
+const PA_TRIGGERS = [["Buyer · Under contract", "When a buyer-side purchase agreement is added"], ["Seller · Under contract", "When a seller-side purchase agreement is added"], ["Buyer · Closed", "When a buyer-side contract closes"], ["Seller · Closed", "When a seller-side contract closes"]];
+const trigOptions = () => Object.entries(state.pipes).flatMap(([p, st]) => st.map(x => `${p} · ${x}`)).concat(PA_TRIGGERS.map(x => x[0]));
 const blankStep = () => ({ name: "New step", anchor: "Start date", days: 1, dir: "after", who: "Alyssa", type: "Task", tpl: "", cond: "Always", advance: "" });
 const applied = () => { const x = curCk(); if (state.ckApply && x.trigger) toast(`Open deals in ${x.trigger} get this change too.`); };
 let tplN = 100;
@@ -233,10 +234,10 @@ const V = {
     </tbody></table></div></div>`;
   },
   pipelines() {
-    return `<h1>Pipelines &amp; stages</h1><p>The columns on the Deals board. You can also edit these from the board with "Edit stages". Under Contract and Closed can be renamed but not removed.</p>
-    <div class="cards">${Object.entries(state.pipes).map(([p, st]) => `<div class="box"><h2>${p} pipeline</h2><div class="tbl-wrap"><table><tbody>
-      ${st.map((s, i) => `<tr><td class="muted" style="width:28px">${i + 1}</td><td><input data-stage="${p}:${i}" value="${esc(s)}"></td><td style="white-space:nowrap">${(() => { const ts = TPLS().filter(x => x.trigger === p + " · " + s); return ts.length ? ts.map(x => `<button class="linkbtn" data-tplid="${x.id}" data-gosec="1">${esc(x.name)} (${stepCount(x)})</button>`).join(", ") : `<button class="linkbtn" data-gock="${p}|${esc(s)}">+ Add template</button>`; })()}</td><td style="width:90px;white-space:nowrap"><button class="rm" data-up="${p}:${i}" aria-label="Move up">↑</button><button class="rm" data-down="${p}:${i}" aria-label="Move down">↓</button>${["Under Contract", "Closed"].includes(s) ? "" : `<button class="rm" data-rmstage="${p}:${i}" aria-label="Remove">×</button>`}</td></tr>`).join("")}
-    </tbody></table></div><div class="addrow"><button class="btn" data-addstage="${p}">+ Add stage</button></div></div>`).join("")}</div>`;
+    return `<h1>Client statuses</h1><p>The statuses a buyer or listing moves through on the Active Clients page. Under contract and Closed come from purchase agreements, so they aren't listed here. Each status can start a task template.</p>
+    <div class="cards">${Object.entries(state.pipes).map(([p, st]) => `<div class="box"><h2>${p} statuses</h2><div class="tbl-wrap"><table><tbody>
+      ${st.map((s, i) => `<tr><td class="muted" style="width:28px">${i + 1}</td><td><input data-stage="${p}:${i}" value="${esc(s)}"></td><td style="white-space:nowrap">${(() => { const ts = TPLS().filter(x => x.trigger === p + " · " + s); return ts.length ? ts.map(x => `<button class="linkbtn" data-tplid="${x.id}" data-gosec="1">${esc(x.name)} (${stepCount(x)})</button>`).join(", ") : `<button class="linkbtn" data-gock="${p}|${esc(s)}">+ Add template</button>`; })()}</td><td style="width:90px;white-space:nowrap"><button class="rm" data-up="${p}:${i}" aria-label="Move up">↑</button><button class="rm" data-down="${p}:${i}" aria-label="Move down">↓</button><button class="rm" data-rmstage="${p}:${i}" aria-label="Remove">×</button></td></tr>`).join("")}
+    </tbody></table></div><div class="addrow"><button class="btn" data-addstage="${p}">+ Add status</button></div></div>`).join("")}</div>`;
   },
   checklists() {
     const t = curCk(), steps = stepCount(t);
@@ -281,7 +282,7 @@ const V = {
         <div class="box ed-head">
           <input class="tname" data-tname="1" value="${esc(t.name)}" aria-label="Template name">
           <div class="toolbar">
-            <label class="lbl">Starts<select id="t-trigger"><option value="">By hand, from a contact</option>${Object.entries(state.pipes).map(([p, st]) => `<optgroup label="${p} pipeline">${st.map(x => `<option value="${esc(p + " · " + x)}" ${t.trigger === p + " · " + x ? "selected" : ""}>When a ${p.toLowerCase()} deal enters ${esc(x)}</option>`).join("")}</optgroup>`).join("")}</select></label>
+            <label class="lbl">Starts<select id="t-trigger"><option value="">By hand, from a contact</option>${Object.entries(state.pipes).map(([p, st]) => `<optgroup label="${p}s">${st.map(x => `<option value="${esc(p + " · " + x)}" ${t.trigger === p + " · " + x ? "selected" : ""}>When a ${p.toLowerCase()} moves to ${esc(x)}</option>`).join("")}</optgroup>`).join("")}<optgroup label="Purchase agreements">${PA_TRIGGERS.map(([v, l]) => `<option value="${v}" ${t.trigger === v ? "selected" : ""}>${l}</option>`).join("")}</optgroup></select></label>
             <label class="lbl">Copy steps from<select id="ck-copy"><option value="">Choose a template…</option>${TPLS().filter(x => x !== t && stepCount(x)).map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></label>
             <span style="display:flex;gap:6px;margin-left:auto"><button class="btn" data-tdup="1">Duplicate</button><button class="btn" data-tdel="1">${state.ckPending === "tdel" ? "Click again to delete" : "Delete"}</button></span>
           </div>
@@ -355,7 +356,7 @@ document.addEventListener("click", e => {
   if (ds.newrole) { state.roles.push("New role"); state.perms.forEach(p => p.push(false)); render(); toast("Added a role. Rename it in the Users table's role list later."); return; }
   if (ds.up || ds.down) { const [p, i] = pair(ds.up || ds.down), a = state.pipes[p], j = +i + (ds.up ? -1 : 1); if (j >= 0 && j < a.length) [a[i], a[j]] = [a[j], a[i]]; render(); return; }
   if (ds.rmstage) { const [p, i] = pair(ds.rmstage); state.pipes[p].splice(+i, 1); render(); return; }
-  if (ds.addstage) { const a = state.pipes[ds.addstage]; a.splice(a.indexOf("Under Contract"), 0, "New stage"); render(); return; }
+  if (ds.addstage) { state.pipes[ds.addstage].push("New status"); render(); return; }
   if (ds.tplid) { state.tplId = ds.tplid; state.ckPending = null; if (ds.gosec) { sec = "checklists"; window.scrollTo(0, 0); } render(); return; }
   if (ds.gock) { const [pp, st] = ds.gock.split("|"); const x = { id: "t" + (++tplN), name: `${pp} · ${st}`, trigger: `${pp} · ${st}`, phases: [{ name: "Steps", steps: [] }] }; TPLS().push(x); state.tplId = x.id; sec = "checklists"; render(); window.scrollTo(0, 0); return; }
   if (ds.newck) { const x = { id: "t" + (++tplN), name: "New template", trigger: "", phases: [{ name: "Steps", steps: [blankStep()] }] }; TPLS().push(x); state.tplId = x.id; state.ckPending = null; render(); const i = document.querySelector("[data-tname]"); if (i) { i.focus(); i.select(); } return; }

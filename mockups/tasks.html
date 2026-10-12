@@ -163,13 +163,21 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 
 .newlist input { flex: 1; min-width: 0; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
 .nav-i.addl { color: var(--accent); font-weight: 600; }
 .listtag { background: var(--sunken); padding: 0 6px; border-radius: 4px; }
+.who-dd { position: relative; }
+.who-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 5px 12px; font-size: 13px; font-weight: 600; min-width: 150px; text-align: left; display: flex; justify-content: space-between; gap: 10px; }
+.who-menu { position: absolute; right: 0; top: calc(100% + 4px); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgb(0 0 0 / .12); width: 240px; z-index: 15; padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.who-menu input { padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); margin-bottom: 4px; }
+.who-opt { border: 0; background: none; text-align: left; padding: 7px 8px; border-radius: 6px; display: flex; gap: 8px; align-items: center; font-size: 13.5px; }
+.who-opt:hover { background: var(--sunken); }
+.who-opt[aria-pressed="true"] { background: var(--accent-soft); font-weight: 600; }
+.who-h { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; padding: 8px 8px 4px; border-top: 1px solid var(--line); margin-top: 4px; }
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); z-index: 30; }
 </style>
 
 <div class="mock-bar"><span><strong>Mockup</strong> · fake data, "today" is Mon Oct 12, 2026. Try quick add, or type #listname to put a task in a list.</span>
   <span class="seg" role="group" aria-label="Viewing as" style="margin-left:12px"><button id="as-lp" aria-pressed="true">Viewing as Luke</button><button id="as-as" aria-pressed="false">Viewing as assistant</button></span></div>
 
-<header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html">Deals</a><a href="tasks.html" class="on">Tasks</a><a href="messages.html">Messages</a><a href="admin.html">Admin</a></nav></header>
+<header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html">Active Clients</a><a href="tasks.html" class="on">Tasks</a><a href="messages.html">Messages</a><a href="admin.html">Admin</a></nav></header>
 
 <div class="shell" id="shell">
   <aside class="side" id="side"></aside>
@@ -225,7 +233,17 @@ let nextId = tasks.length;
 
 const touches = [];
 
-let view = "today", filter = "all", sel = null, me = "LP", whoF = "everyone";
+let view = "today", filter = "all", sel = null, me = "LP", whoF = "everyone", whoOpen = false, whoQ = "";
+const TEAM = [["AS", "Alyssa Chakiton"], ["LP", "Luke Pettersen"]];
+const whoLabel = () => whoF === "everyone" ? "Everyone" : whoF === "me" ? "Me" : TEAM.find(t => t[0] === whoF)[1];
+function whoMenu() {
+  const opt = (k, l, av) => `<button class="who-opt" data-who="${k}" aria-pressed="${whoF === k}">${av ? `<span class="av ${av === "AS" ? "as" : ""}">${av}</span>` : ""}${l}</button>`;
+  const team = TEAM.filter(([, n]) => n.toLowerCase().includes(whoQ.toLowerCase()));
+  return `<span class="who-dd"><button class="who-btn" data-whotoggle="1" aria-expanded="${whoOpen}">${whoLabel()} <span aria-hidden="true">▾</span></button>
+    ${whoOpen ? `<div class="who-menu"><input id="who-q" placeholder="Search" value="${esc(whoQ)}" aria-label="Search team">
+      ${"everyone".includes(whoQ.toLowerCase()) ? opt("everyone", "Everyone") : ""}${"me".includes(whoQ.toLowerCase()) ? opt("me", "Me", me) : ""}
+      <div class="who-h">Team members</div>${team.map(([k, n]) => opt(k, n, k)).join("")}</div>` : ""}</span>`;
+}
 let LISTS = [], newListOpen = false;
 const el = id => document.getElementById(id);
 
@@ -242,7 +260,7 @@ function inView(t, v) {
   if (v.startsWith("list:")) return t.list === v.slice(5);
   return false;
 }
-const visible = v => tasks.filter(t => !t.done || t.justDone).filter(t => whoF === "everyone" || t.who === me).filter(t => inView(t, v));
+const visible = v => tasks.filter(t => !t.done || t.justDone).filter(t => whoF === "everyone" || t.who === (whoF === "me" ? me : whoF)).filter(t => inView(t, v));
 function applyFilter(list) {
   if (filter === "general") return list.filter(t => !t.step);
   if (filter === "deal") return list.filter(t => t.step);
@@ -301,10 +319,7 @@ function renderMain() {
   el("main").innerHTML = `
     <div class="main-h">
       <div><h1>${title}</h1><div class="sub">${view === "recurring" ? "Each one shows up in Today when it's due, then schedules the next" : view.startsWith("list:") ? open + " open · these also show in Today, Tomorrow and Overdue when they're due" : open + " open" + (view === "today" ? " · " + fmt(TODAY) : "")}</div></div>
-      <span class="tools"><span class="filters" role="group" aria-label="Whose tasks">
-        <button data-who="mine" aria-pressed="${whoF === "mine"}">Mine</button>
-        <button data-who="everyone" aria-pressed="${whoF === "everyone"}">Everyone</button>
-      </span>
+      <span class="tools">${whoMenu()}
       <span class="filters" role="group" aria-label="Show">
         <button data-filter="all" aria-pressed="${filter === "all"}">All</button>
         <button data-filter="general" aria-pressed="${filter === "general"}">General</button>
@@ -419,6 +434,10 @@ document.addEventListener("keydown", e => {
   if (e.target.id === "nl-name" && e.key === "Enter") { e.preventDefault(); saveNewList(); }
   if (e.target.id === "nl-name" && e.key === "Escape") { newListOpen = false; renderSide(); }
 });
+document.addEventListener("input", e => {
+  if (e.target.id === "who-q") { whoQ = e.target.value; const pos = e.target.selectionStart; renderMain(); const q = el("who-q"); q.focus(); q.setSelectionRange(pos, pos); }
+});
+document.addEventListener("click", e => { if (whoOpen && !e.target.closest(".who-dd")) { whoOpen = false; renderMain(); } });
 /* ---------- Events ---------- */
 let tt;
 function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2800); }
@@ -429,10 +448,11 @@ document.addEventListener("click", e => {
   if (b.dataset.newlist) { newListOpen = true; renderSide(); el("nl-name").focus(); return; }
   if (b.dataset.nlsave) { saveNewList(); return; }
   if (b.dataset.filter) { filter = b.dataset.filter; render(); return; }
-  if (b.dataset.who) { whoF = b.dataset.who; render(); return; }
+  if (b.dataset.whotoggle) { whoOpen = !whoOpen; whoQ = ""; render(); const q = el("who-q"); if (q) q.focus(); return; }
+  if (b.dataset.who) { whoF = b.dataset.who; whoOpen = false; render(); return; }
   if (b.id === "as-lp" || b.id === "as-as") {
     me = b.id === "as-lp" ? "LP" : "AS";
-    whoF = me === "LP" ? "everyone" : "mine";
+    whoF = me === "LP" ? "everyone" : "me";
     el("as-lp").setAttribute("aria-pressed", me === "LP");
     el("as-as").setAttribute("aria-pressed", me === "AS");
     sel = null; render(); return;
