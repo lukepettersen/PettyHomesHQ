@@ -68,6 +68,8 @@ window.HQ.settings = window.HQ.settings || {
         ppl("Seller's title", [f("stCo", "Title company", "text"), f("stContact", "Contact, email / phone", "text")])],
     };
   })(),
+  // Tools menu in the top bar: [name, link]. Starts empty.
+  tools: [],
   // Date reminders: [date type, task, days, before/on/after, who, kind, applies to]. Shared with Tasks → Important dates.
   reminders: [
     ["Birthday", "Text happy birthday", 0, "on", "Luke", "Text", "Everyone"],

@@ -942,6 +942,8 @@ body { background: var(--bg); }
 :is(#pg-people, #pg-deals, #pg-tasks, #pg-messages, #pg-admin) .topnav { background: var(--moss); border-bottom: 0; }
 :is(#pg-people, #pg-deals, #pg-tasks, #pg-messages, #pg-admin) .topnav nav a { color: var(--misty); }
 :is(#pg-people, #pg-deals, #pg-tasks, #pg-messages, #pg-admin) .topnav nav a:hover { color: #ffffff; }
+:is(#pg-people, #pg-deals, #pg-tasks, #pg-messages, #pg-admin) .topnav nav .tools-btn { border: 0; background: none; color: var(--misty); font: inherit; padding: 14px 10px; cursor: pointer; white-space: nowrap; border-bottom: 3px solid transparent; }
+:is(#pg-people, #pg-deals, #pg-tasks, #pg-messages, #pg-admin) .topnav nav .tools-btn:hover, :is(#pg-people, #pg-deals, #pg-tasks, #pg-messages, #pg-admin) .topnav nav .tools-btn[aria-expanded="true"] { color: #ffffff; }
 :is(#pg-people, #pg-deals, #pg-tasks, #pg-messages, #pg-admin) .topnav nav a.on { color: #ffffff; border-bottom-color: var(--coral); border-bottom-width: 3px; }
 :is(#pg-people, #pg-deals, #pg-tasks, #pg-messages, #pg-admin) .brand { display: flex; align-items: center; gap: 10px; color: var(--misty); padding-block: 10px; }
 :is(#pg-people, #pg-deals, #pg-tasks, #pg-messages, #pg-admin) .brand svg { width: 22px; height: 31px; flex: none; }
@@ -950,6 +952,16 @@ body { background: var(--bg); }
 :is(#pg-people, #pg-deals, #pg-tasks, #pg-messages, #pg-admin) .mock-bar { background: var(--misty); color: var(--charcoal); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) :is(#pg-people, #pg-deals, #pg-tasks, #pg-messages, #pg-admin) .mock-bar { background: #3c3535; color: var(--fg); } }
 :root[data-theme="dark"] :is(#pg-people, #pg-deals, #pg-tasks, #pg-messages, #pg-admin) .mock-bar { background: #3c3535; color: var(--fg); }
+
+
+.tools-menu { position: fixed; z-index: 60; background: #fff; color: #383232; border: 1px solid #e2dbcf; border-radius: 10px; box-shadow: 0 10px 30px rgb(0 0 0 / .16); min-width: 240px; max-width: 320px; padding: 6px; font-family: "Mukta Mahee", system-ui, sans-serif; }
+.tools-menu a { display: flex; flex-direction: column; padding: 8px 10px; border-radius: 7px; color: #383232; text-decoration: none; font-weight: 600; font-size: 14px; }
+.tools-menu a small { color: #6f6863; font-weight: 400; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tools-menu a:hover { background: #f2ece4; }
+.tools-menu .tm-empty { padding: 10px; color: #6f6863; font-size: 13px; }
+.tools-menu .tm-foot { border-top: 1px solid #e2dbcf; margin-top: 4px; padding-top: 4px; }
+.tools-menu .tm-foot button { border: 0; background: none; width: 100%; text-align: left; padding: 8px 10px; border-radius: 7px; color: #5f6447; font-weight: 700; font-size: 13px; cursor: pointer; }
+.tools-menu .tm-foot button:hover { background: #f2ece4; }
 
 </style>
 <div class="pg" id="pg-people" hidden>
@@ -1081,6 +1093,8 @@ window.HQ.settings = window.HQ.settings || {
         ppl("Seller's title", [f("stCo", "Title company", "text"), f("stContact", "Contact, email / phone", "text")])],
     };
   })(),
+  // Tools menu in the top bar: [name, link]. Starts empty.
+  tools: [],
   // Date reminders: [date type, task, days, before/on/after, who, kind, applies to]. Shared with Tasks → Important dates.
   reminders: [
     ["Birthday", "Text happy birthday", 0, "on", "Luke", "Text", "Everyone"],
@@ -2871,7 +2885,7 @@ const SECTIONS = [
   ["Deals", [["pipelines", "Client statuses"], ["paforms", "Purchase agreement forms"], ["checklists", "Task templates"]]],
   ["People", [["reminders", "Date reminders"], ["fields", "Custom fields"], ["tags", "Tags"], ["lists", "Stages, sources & follow-up"]]],
   ["Messaging", [["texttpl", "Text templates"], ["emailtpl", "Email templates"]]],
-  ["Connections", [["integrations", "Integrations"]]],
+  ["Connections", [["tools", "Tools menu"], ["integrations", "Integrations"]]],
 ];
 let sec = "checklists", paSide = "buyer";
 const PA_TYPES = [["text", "Text"], ["money", "Money"], ["number", "Number"], ["pct", "Percent"], ["date", "Date"], ["date-na", "Date or N/A"], ["datetime", "Date and time"], ["yesno", "Yes / No"], ["choice", "Dropdown"]];
@@ -3072,6 +3086,13 @@ const V = {
   },
   texttpl() { return msgTpl("Text"); },
   emailtpl() { return msgTpl("Email"); },
+  tools() {
+    const t = HQ.settings.tools;
+    return `<h1>Tools menu</h1><p>Links to the outside sites you use, like the MLS, Skyslope, your lender portal or showing service. They show in the <b>Tools</b> dropdown at the top of every page and open in a new tab.</p>
+    <div class="box"><div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Link</th><th></th></tr></thead><tbody>
+      ${t.map(([n, u], i) => `<tr><td><input data-tooln="${i}" value="${esc(n)}" aria-label="Name"></td><td><input data-toolu="${i}" value="${esc(u)}" aria-label="Link"></td><td style="width:96px;white-space:nowrap"><button class="rm" data-toolup="${i}" aria-label="Move up" ${i ? "" : "disabled"}>↑</button><button class="rm" data-tooldown="${i}" aria-label="Move down" ${i < t.length - 1 ? "" : "disabled"}>↓</button><button class="rm" data-toolrm="${i}" aria-label="Remove">×</button></td></tr>`).join("") || `<tr><td colspan="3" class="muted">No tools yet.</td></tr>`}
+    </tbody></table></div><div class="addrow"><input class="input" id="tl-name" placeholder="Name, e.g. NorthstarMLS" style="max-width:220px"><input class="input" id="tl-url" placeholder="Link, e.g. northstarmls.com" style="max-width:300px"><button class="btn primary" data-tooladd="1">+ Add tool</button></div></div>`;
+  },
   integrations() {
     return `<h1>Integrations</h1>
     <div class="cards">
@@ -3104,6 +3125,9 @@ document.addEventListener("click", e => {
     if (ds.pasadd) { secs.push({ name: "New section", fields: [] }); render(); return; }
     if (ds.pasx) { secs.splice(+ds.pasx, 1); render(); return; }
     if (ds.pasu || ds.pasd) { const i = +(ds.pasu || ds.pasd), j = i + (ds.pasu ? -1 : 1); [secs[i], secs[j]] = [secs[j], secs[i]]; render(); return; } }
+  if (ds.tooladd) { const n = el("tl-name").value.trim(), u = el("tl-url").value.trim(); if (!n) { el("tl-name").focus(); return; } if (!u) { el("tl-url").focus(); return; } HQ.settings.tools.push([n, u]); render(); el("tl-name").focus(); return; }
+  if (ds.toolrm) { HQ.settings.tools.splice(+ds.toolrm, 1); render(); return; }
+  if (ds.toolup || ds.tooldown) { const a = HQ.settings.tools, i = +(ds.toolup || ds.tooldown), j = i + (ds.toolup ? -1 : 1); [a[i], a[j]] = [a[j], a[i]]; render(); return; }
   if (ds.ucadd) { HQ.settings.ucPhases.splice(-1, 0, ["New column", "insp"]); render(); return; }
   if (ds.ucrm) { HQ.settings.ucPhases.splice(+ds.ucrm, 1); render(); return; }
   if (ds.ucup || ds.ucdown) { const a = HQ.settings.ucPhases, i = +(ds.ucup || ds.ucdown), j = i + (ds.ucup ? -1 : 1); if (j >= 0 && j < a.length) [a[i], a[j]] = [a[j], a[i]]; render(); return; }
@@ -3156,6 +3180,8 @@ document.addEventListener("change", e => {
     if (ds.par) { const [si, fi] = pp(ds.par); secs[si].fields[fi].req = t.checked; return; }
     if (ds.pas !== undefined) { secs[+ds.pas].name = t.value.trim() || secs[+ds.pas].name; return; }
     if (ds.papeople) { secs[+ds.papeople].people = t.checked; return; } }
+  if (ds.tooln !== undefined) { HQ.settings.tools[+ds.tooln][0] = t.value.trim() || HQ.settings.tools[+ds.tooln][0]; return; }
+  if (ds.toolu !== undefined) { HQ.settings.tools[+ds.toolu][1] = t.value.trim() || HQ.settings.tools[+ds.toolu][1]; return; }
   if (ds.ucname !== undefined) { HQ.settings.ucPhases[+ds.ucname][0] = t.value.trim() || HQ.settings.ucPhases[+ds.ucname][0]; return; }
   if (ds.ucuntil !== undefined) { HQ.settings.ucPhases[+ds.ucuntil][1] = t.value; toast("Saved. The Pipeline regroups contracts right away."); return; }
   if (ds.stage) { const [p, i] = pair(ds.stage), old = state.pipes[p][i]; state.pipes[p][i] = t.value; TPLS().forEach(x => { if (x.trigger === p + " · " + old) x.trigger = p + " · " + t.value; }); toast("Renamed. Templates that start at this stage moved with it."); return; }
@@ -3222,6 +3248,33 @@ document.addEventListener("click", e => {
   if (!m) return;
   e.preventDefault(); show(m[1], m[2]);
 }, true);
+
+// Tools: a dropdown of outside links you add in Admin -> Tools. Opens each in a new tab.
+const toolsEsc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const toolsUrl = u => /^https?:\/\//i.test(u) ? u : "https://" + u;
+document.querySelectorAll(".topnav nav").forEach(nav => {
+  const b = document.createElement("button"); b.className = "tools-btn"; b.type = "button"; b.setAttribute("aria-haspopup", "true"); b.setAttribute("aria-expanded", "false"); b.textContent = "Tools ▾";
+  const admin = [...nav.querySelectorAll("a")].find(a => a.getAttribute("href") === "admin.html"); nav.insertBefore(b, admin || null);
+});
+let toolsMenu = null;
+function closeTools() { if (toolsMenu) { toolsMenu.remove(); toolsMenu = null; } document.querySelectorAll(".tools-btn").forEach(x => x.setAttribute("aria-expanded", "false")); }
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".tools-btn");
+  if (btn) { const open = btn.getAttribute("aria-expanded") === "true"; closeTools(); if (open) return;
+    const r = btn.getBoundingClientRect(), list = HQ.settings.tools;
+    toolsMenu = document.createElement("div"); toolsMenu.className = "tools-menu"; toolsMenu.setAttribute("role", "menu");
+    toolsMenu.innerHTML = (list.length ? list.map(([n, u]) => `<a role="menuitem" href="${toolsEsc(toolsUrl(u))}" target="_blank" rel="noopener noreferrer">${toolsEsc(n)}<small>${toolsEsc(u.replace(/^https?:\/\//, ""))}</small></a>`).join("") : `<div class="tm-empty">No tools yet. Add the sites you use every day, like the MLS, Skyslope or your lender portal.</div>`)
+      + `<div class="tm-foot"><button type="button" data-edittools="1">${list.length ? "Edit tools" : "+ Add a tool"}</button></div>`;
+    document.body.appendChild(toolsMenu);
+    toolsMenu.style.top = (r.bottom + 4) + "px"; toolsMenu.style.left = Math.max(8, Math.min(r.left, innerWidth - toolsMenu.offsetWidth - 8)) + "px";
+    btn.setAttribute("aria-expanded", "true"); return; }
+  if (e.target.closest("[data-edittools]")) { closeTools(); show("admin"); const s = document.querySelector('#pg-admin [data-sec="tools"]'); if (s) s.click(); return; }
+  if (toolsMenu && e.target.closest(".tools-menu a")) { setTimeout(closeTools); return; }
+  if (toolsMenu && !e.target.closest(".tools-menu")) closeTools();
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeTools(); });
+addEventListener("scroll", closeTools, true);
+
 const start = location.hash.replace("#", "");
 show(INIT[start] ? start : "deals", /^#contact-/.test(location.hash) ? location.hash : null);
 </script>

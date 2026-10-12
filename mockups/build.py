@@ -52,6 +52,8 @@ BRAND_CSS = """
 .pg .topnav { background: var(--moss); border-bottom: 0; }
 .pg .topnav nav a { color: var(--misty); }
 .pg .topnav nav a:hover { color: #ffffff; }
+.pg .topnav nav .tools-btn { border: 0; background: none; color: var(--misty); font: inherit; padding: 14px 10px; cursor: pointer; white-space: nowrap; border-bottom: 3px solid transparent; }
+.pg .topnav nav .tools-btn:hover, .pg .topnav nav .tools-btn[aria-expanded="true"] { color: #ffffff; }
 .pg .topnav nav a.on { color: #ffffff; border-bottom-color: var(--coral); border-bottom-width: 3px; }
 .pg .brand { display: flex; align-items: center; gap: 10px; color: var(--misty); padding-block: 10px; }
 .pg .brand svg { width: 22px; height: 31px; flex: none; }
@@ -149,6 +151,7 @@ body {{ background: var(--bg); }}
 .pg {{ min-height: 100%; }}
 {chr(10).join(css)}
 {brand_css}
+{TOOLS_CSS}
 </style>
 {chr(10).join(html)}
 <script>
@@ -183,12 +186,51 @@ document.addEventListener("click", e => {{
   if (!m) return;
   e.preventDefault(); show(m[1], m[2]);
 }}, true);
+{TOOLS_JS}
 const start = location.hash.replace("#", "");
 show(INIT[start] ? start : "{DEFAULT}", /^#contact-/.test(location.hash) ? location.hash : null);
 </script>
 """
     Path(out).write_text(page)
 
+
+TOOLS_CSS = """
+.tools-menu { position: fixed; z-index: 60; background: #fff; color: #383232; border: 1px solid #e2dbcf; border-radius: 10px; box-shadow: 0 10px 30px rgb(0 0 0 / .16); min-width: 240px; max-width: 320px; padding: 6px; font-family: "Mukta Mahee", system-ui, sans-serif; }
+.tools-menu a { display: flex; flex-direction: column; padding: 8px 10px; border-radius: 7px; color: #383232; text-decoration: none; font-weight: 600; font-size: 14px; }
+.tools-menu a small { color: #6f6863; font-weight: 400; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tools-menu a:hover { background: #f2ece4; }
+.tools-menu .tm-empty { padding: 10px; color: #6f6863; font-size: 13px; }
+.tools-menu .tm-foot { border-top: 1px solid #e2dbcf; margin-top: 4px; padding-top: 4px; }
+.tools-menu .tm-foot button { border: 0; background: none; width: 100%; text-align: left; padding: 8px 10px; border-radius: 7px; color: #5f6447; font-weight: 700; font-size: 13px; cursor: pointer; }
+.tools-menu .tm-foot button:hover { background: #f2ece4; }
+"""
+TOOLS_JS = r"""
+// Tools: a dropdown of outside links you add in Admin -> Tools. Opens each in a new tab.
+const toolsEsc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const toolsUrl = u => /^https?:\/\//i.test(u) ? u : "https://" + u;
+document.querySelectorAll(".topnav nav").forEach(nav => {
+  const b = document.createElement("button"); b.className = "tools-btn"; b.type = "button"; b.setAttribute("aria-haspopup", "true"); b.setAttribute("aria-expanded", "false"); b.textContent = "Tools ▾";
+  const admin = [...nav.querySelectorAll("a")].find(a => a.getAttribute("href") === "admin.html"); nav.insertBefore(b, admin || null);
+});
+let toolsMenu = null;
+function closeTools() { if (toolsMenu) { toolsMenu.remove(); toolsMenu = null; } document.querySelectorAll(".tools-btn").forEach(x => x.setAttribute("aria-expanded", "false")); }
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".tools-btn");
+  if (btn) { const open = btn.getAttribute("aria-expanded") === "true"; closeTools(); if (open) return;
+    const r = btn.getBoundingClientRect(), list = HQ.settings.tools;
+    toolsMenu = document.createElement("div"); toolsMenu.className = "tools-menu"; toolsMenu.setAttribute("role", "menu");
+    toolsMenu.innerHTML = (list.length ? list.map(([n, u]) => `<a role="menuitem" href="${toolsEsc(toolsUrl(u))}" target="_blank" rel="noopener noreferrer">${toolsEsc(n)}<small>${toolsEsc(u.replace(/^https?:\/\//, ""))}</small></a>`).join("") : `<div class="tm-empty">No tools yet. Add the sites you use every day, like the MLS, Skyslope or your lender portal.</div>`)
+      + `<div class="tm-foot"><button type="button" data-edittools="1">${list.length ? "Edit tools" : "+ Add a tool"}</button></div>`;
+    document.body.appendChild(toolsMenu);
+    toolsMenu.style.top = (r.bottom + 4) + "px"; toolsMenu.style.left = Math.max(8, Math.min(r.left, innerWidth - toolsMenu.offsetWidth - 8)) + "px";
+    btn.setAttribute("aria-expanded", "true"); return; }
+  if (e.target.closest("[data-edittools]")) { closeTools(); show("admin"); const s = document.querySelector('#pg-admin [data-sec="tools"]'); if (s) s.click(); return; }
+  if (toolsMenu && e.target.closest(".tools-menu a")) { setTimeout(closeTools); return; }
+  if (toolsMenu && !e.target.closest(".tools-menu")) closeTools();
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeTools(); });
+addEventListener("scroll", closeTools, true);
+"""
 
 if __name__ == "__main__":
     main(sys.argv[1])

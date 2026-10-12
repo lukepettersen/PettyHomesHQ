@@ -175,7 +175,7 @@ const SECTIONS = [
   ["Deals", [["pipelines", "Client statuses"], ["paforms", "Purchase agreement forms"], ["checklists", "Task templates"]]],
   ["People", [["reminders", "Date reminders"], ["fields", "Custom fields"], ["tags", "Tags"], ["lists", "Stages, sources & follow-up"]]],
   ["Messaging", [["texttpl", "Text templates"], ["emailtpl", "Email templates"]]],
-  ["Connections", [["integrations", "Integrations"]]],
+  ["Connections", [["tools", "Tools menu"], ["integrations", "Integrations"]]],
 ];
 let sec = "checklists", paSide = "buyer";
 const PA_TYPES = [["text", "Text"], ["money", "Money"], ["number", "Number"], ["pct", "Percent"], ["date", "Date"], ["date-na", "Date or N/A"], ["datetime", "Date and time"], ["yesno", "Yes / No"], ["choice", "Dropdown"]];
@@ -376,6 +376,13 @@ const V = {
   },
   texttpl() { return msgTpl("Text"); },
   emailtpl() { return msgTpl("Email"); },
+  tools() {
+    const t = HQ.settings.tools;
+    return `<h1>Tools menu</h1><p>Links to the outside sites you use, like the MLS, Skyslope, your lender portal or showing service. They show in the <b>Tools</b> dropdown at the top of every page and open in a new tab.</p>
+    <div class="box"><div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Link</th><th></th></tr></thead><tbody>
+      ${t.map(([n, u], i) => `<tr><td><input data-tooln="${i}" value="${esc(n)}" aria-label="Name"></td><td><input data-toolu="${i}" value="${esc(u)}" aria-label="Link"></td><td style="width:96px;white-space:nowrap"><button class="rm" data-toolup="${i}" aria-label="Move up" ${i ? "" : "disabled"}>↑</button><button class="rm" data-tooldown="${i}" aria-label="Move down" ${i < t.length - 1 ? "" : "disabled"}>↓</button><button class="rm" data-toolrm="${i}" aria-label="Remove">×</button></td></tr>`).join("") || `<tr><td colspan="3" class="muted">No tools yet.</td></tr>`}
+    </tbody></table></div><div class="addrow"><input class="input" id="tl-name" placeholder="Name, e.g. NorthstarMLS" style="max-width:220px"><input class="input" id="tl-url" placeholder="Link, e.g. northstarmls.com" style="max-width:300px"><button class="btn primary" data-tooladd="1">+ Add tool</button></div></div>`;
+  },
   integrations() {
     return `<h1>Integrations</h1>
     <div class="cards">
@@ -408,6 +415,9 @@ document.addEventListener("click", e => {
     if (ds.pasadd) { secs.push({ name: "New section", fields: [] }); render(); return; }
     if (ds.pasx) { secs.splice(+ds.pasx, 1); render(); return; }
     if (ds.pasu || ds.pasd) { const i = +(ds.pasu || ds.pasd), j = i + (ds.pasu ? -1 : 1); [secs[i], secs[j]] = [secs[j], secs[i]]; render(); return; } }
+  if (ds.tooladd) { const n = el("tl-name").value.trim(), u = el("tl-url").value.trim(); if (!n) { el("tl-name").focus(); return; } if (!u) { el("tl-url").focus(); return; } HQ.settings.tools.push([n, u]); render(); el("tl-name").focus(); return; }
+  if (ds.toolrm) { HQ.settings.tools.splice(+ds.toolrm, 1); render(); return; }
+  if (ds.toolup || ds.tooldown) { const a = HQ.settings.tools, i = +(ds.toolup || ds.tooldown), j = i + (ds.toolup ? -1 : 1); [a[i], a[j]] = [a[j], a[i]]; render(); return; }
   if (ds.ucadd) { HQ.settings.ucPhases.splice(-1, 0, ["New column", "insp"]); render(); return; }
   if (ds.ucrm) { HQ.settings.ucPhases.splice(+ds.ucrm, 1); render(); return; }
   if (ds.ucup || ds.ucdown) { const a = HQ.settings.ucPhases, i = +(ds.ucup || ds.ucdown), j = i + (ds.ucup ? -1 : 1); if (j >= 0 && j < a.length) [a[i], a[j]] = [a[j], a[i]]; render(); return; }
@@ -460,6 +470,8 @@ document.addEventListener("change", e => {
     if (ds.par) { const [si, fi] = pp(ds.par); secs[si].fields[fi].req = t.checked; return; }
     if (ds.pas !== undefined) { secs[+ds.pas].name = t.value.trim() || secs[+ds.pas].name; return; }
     if (ds.papeople) { secs[+ds.papeople].people = t.checked; return; } }
+  if (ds.tooln !== undefined) { HQ.settings.tools[+ds.tooln][0] = t.value.trim() || HQ.settings.tools[+ds.tooln][0]; return; }
+  if (ds.toolu !== undefined) { HQ.settings.tools[+ds.toolu][1] = t.value.trim() || HQ.settings.tools[+ds.toolu][1]; return; }
   if (ds.ucname !== undefined) { HQ.settings.ucPhases[+ds.ucname][0] = t.value.trim() || HQ.settings.ucPhases[+ds.ucname][0]; return; }
   if (ds.ucuntil !== undefined) { HQ.settings.ucPhases[+ds.ucuntil][1] = t.value; toast("Saved. The Pipeline regroups contracts right away."); return; }
   if (ds.stage) { const [p, i] = pair(ds.stage), old = state.pipes[p][i]; state.pipes[p][i] = t.value; TPLS().forEach(x => { if (x.trigger === p + " · " + old) x.trigger = p + " · " + t.value; }); toast("Renamed. Templates that start at this stage moved with it."); return; }
