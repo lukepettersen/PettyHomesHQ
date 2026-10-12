@@ -934,6 +934,8 @@ window.HQ = window.HQ || (() => {
     newTasks: [],
     templates: [
       T("New lead follow-up", "", [{ name: "First contact", steps: [s("Call new lead", "Start date", 0, "on", "Luke", "Call"), s("Intro email", "Start date", 0, "on", "Alyssa", "Email", { tpl: "Website sign-up welcome" }), s("Schedule consult", "Start date", 2, "after", "Luke", "Task")] }]),
+      T("Buyer · Phone call scheduled", "Buyer · Phone call scheduled", [{ name: "Phone call", steps: [s("Initial phone call scheduled email", "Start date", 0, "on", "Alyssa", "Email", { tpl: "Initial phone call scheduled" }), s("Add call to Luke's calendar", "Start date", 0, "on", "Alyssa", "Task"), s("Hold phone call", "Start date", 1, "after", "Luke", "Call"), s("Schedule consult", "Start date", 1, "after", "Alyssa", "Task", { advance: "Consult scheduled" })] }]),
+      T("Listing · Phone call scheduled", "Listing · Phone call scheduled", [{ name: "Phone call", steps: [s("Initial phone call scheduled email", "Start date", 0, "on", "Alyssa", "Email", { tpl: "Initial phone call scheduled" }), s("Add call to Luke's calendar", "Start date", 0, "on", "Alyssa", "Task"), s("Hold phone call", "Start date", 1, "after", "Luke", "Call"), s("Schedule listing consult", "Start date", 1, "after", "Alyssa", "Task", { advance: "Consult scheduled" })] }]),
       T("Buyer · Consult scheduled", "Buyer · Consult scheduled", [{ name: "Before the consult", steps: [s("Agency disclosure + more info email", "Start date", 0, "on", "Alyssa", "Email"), s("Consult confirmation text", "Start date", 1, "after", "Luke", "Text"), s("Hold consult", "Start date", 2, "after", "Luke", "Task", { advance: "Consult complete" })] }]),
       T("Buyer · Consult complete", "Buyer · Consult complete", [{ name: "After the consult", steps: [s("Intro + Homespotter + legal name text", "Start date", 0, "on", "Alyssa", "Text", { tpl: "Intro + Homespotter + legal name" }), s("Buyer rep breakdown email", "Start date", 0, "on", "Alyssa", "Email", { tpl: "Buyer rep breakdown" }), s("Connect with lender?", "Start date", 1, "after", "Luke", "Task"), s("Send buyer rep to sign", "Start date", 1, "after", "Alyssa", "Task"), s("Buyer rep signed + saved", "Start date", 3, "after", "Alyssa", "Task", { advance: "Rep signed" })] }]),
       T("Buyer · Rep signed", "Buyer · Rep signed", [{ name: "Buyer rep", steps: [s("Email signed rep to clients", "Start date", 0, "on", "Alyssa", "Email"), s("Rename Gmail folder", "Start date", 0, "on", "Alyssa", "Task"), s("Set up home search", "Start date", 1, "after", "Luke", "Task", { advance: "Showing homes" })] }]),
@@ -1212,7 +1214,7 @@ let role = "admin", editing = null, openMenu = null, ucFilter = "all", showClose
 const expanded = {}, engOpen = {};
 
 // Client files: a buyer representation or a listing, plus purchase agreements ("pa") under one of them.
-const STATUS = { buyer: ["Consult scheduled", "Consult complete", "Rep signed", "Showing homes", "Submitting offers"], listing: ["Consult scheduled", "Consult complete", "Listing signed / Prep", "Coming soon", "Active"] };
+const STATUS = { buyer: ["Phone call scheduled", "Consult scheduled", "Consult complete", "Rep signed", "Showing homes", "Submitting offers"], listing: ["Phone call scheduled", "Consult scheduled", "Consult complete", "Listing signed / Prep", "Coming soon", "Active"] };
 const MS_NAMES = { fa: "Final Acceptance", insp: "Inspection", hoa: "HOA Rescission", ws: "Written Statement", close: "Closing" };
 const ANCHOR_KEY = { "Final Acceptance": "fa", "Inspection": "insp", "Written Statement": "ws", "HOA Rescission": "hoa", "Closing": "close" };
 
@@ -1370,7 +1372,7 @@ function renderActive() {
     </div>
     <div class="ptabs" role="tablist">${tabs.map(([k, l, n]) => `<button role="tab" data-pview="${k}" aria-selected="${pview === k}">${l} <span>${n}</span></button>`).join("")}</div>
     <p class="muted sm" style="margin:0">${pview === "uc" ? "Grouped by the next contract date still open. " : ""}Shows where each client is. To change a status, open the client.</p>
-    <div class="pcols" style="--n:${cols.length}">${cols.map(([l, items, total], i) => `<section class="pcol"><div class="pcol-h" style="--bar:${pview === "uc" ? "var(--coral)" : ["var(--mint)", "var(--moss)", "var(--misty)", "var(--mint)", "var(--moss)"][i % 5]}"><b>${esc(l)}</b><span class="muted sm">${items.length} · ${total ? kprice(total) : "$0"}</span></div><div class="pcol-b">${items.join("") || `<span class="pcol-e">None</span>`}</div></section>`).join("")}</div>
+    <div class="pcols" style="--n:${cols.length}">${cols.map(([l, items, total], i) => `<section class="pcol"><div class="pcol-h" style="--bar:${pview === "uc" ? "var(--coral)" : ["var(--misty)", "var(--mint)", "var(--moss)", "var(--misty)", "var(--mint)", "var(--moss)"][i % 6]}"><b>${esc(l)}</b><span class="muted sm">${items.length} · ${total ? kprice(total) : "$0"}</span></div><div class="pcol-b">${items.join("") || `<span class="pcol-e">None</span>`}</div></section>`).join("")}</div>
     <div class="closed-row"><button class="linkbtn" data-showclosed="1">${showClosed ? "Hide" : "Show"} closed in the last 30 days (${closed.length})</button>
       ${showClosed ? `<div class="pclosed">${closed.map(dl => `<button class="pitem" data-deal="${dl.id}"><span class="pi-t"><span class="sidechip ${dl.side}">${dl.side === "buyer" ? "Buyer" : "Seller"}</span><b>${esc(dl.line.split(",")[0])}</b></span><span class="muted sm">${esc(dl.name)} · ${kprice(dl.price)}</span><span class="pi-n">Closed ${short(d(dl.closed))}</span></button>`).join("")}</div>` : ""}</div>`;
 }
@@ -1796,11 +1798,11 @@ function formGroups() {
   if (f.mode === "buyer") {
     const i = STATUS.buyer.indexOf(f.status), g = [["What they're looking for", F.search]];
     if (f.status === "Consult scheduled") g.push(["Consult", F.consult]);
-    if (i >= 2) g.push(["Buyer rep", F.rep]);
+    if (i >= 3) g.push(["Buyer rep", F.rep]);
     if (f.status === "Submitting offers") g.push(["The offer", F.offer]);
     return g;
   }
-  if (STATUS.listing.indexOf(f.status) < 2) return [["The home", [["address", "Property address", "text", "Street, city", true], ["price", "Estimated value", "money"], ["timeframe", "Timeframe", TF]]]].concat(f.status === "Consult scheduled" ? [["Consult", F.consult]] : []);
+  if (STATUS.listing.indexOf(f.status) < 3) return [["The home", [["address", "Property address", "text", "Street, city", true], ["price", "Estimated value", "money"], ["timeframe", "Timeframe", TF]]]].concat(f.status === "Consult scheduled" ? [["Consult", F.consult]] : []);
   return [["The listing", F.listing], ["The property", F.facts]];
 }
 const formTrigger = () => dealForm.mode === "pa" ? `${sideOf(deals.find(x => x.id === dealForm.engId)) === "buyer" ? "Buyer" : "Seller"} · Under contract` : `${dealForm.mode === "buyer" ? "Buyer" : "Listing"} · ${dealForm.status}`;
@@ -1844,7 +1846,7 @@ function dealModalHtml() {
 }
 function openForm(mode, opts = {}) {
   const base = { fin: "Conventional", ptype: "Single family", hoa: "No", newc: "No", timeframe: "0–3 months", preapproved: "Not yet" };
-  dealForm = { mode, cid: opts.cid || openContact || allContacts()[0][0], status: mode === "buyer" ? "Consult scheduled" : mode === "listing" ? "Consult scheduled" : null, engId: opts.engId, v: Object.assign(base, opts.v || {}) };
+  dealForm = { mode, cid: opts.cid || openContact || allContacts()[0][0], status: mode === "buyer" ? "Phone call scheduled" : mode === "listing" ? "Phone call scheduled" : null, engId: opts.engId, v: Object.assign(base, opts.v || {}) };
   renderDealModal();
 }
 function editForm(dl) {
@@ -2533,7 +2535,7 @@ const state = {
   users: [["Luke Pettersen", "luke@pettyhomes.com", "Admin", "Active"], ["Alyssa Chakiton", "assistant@pettyhomes.com", "Assistant", "Active"]],
   roles: ["Admin", "Assistant"],
   perms: [["See commissions", true, false], ["Delete people and deals", true, false], ["Manage users and roles", true, false], ["Edit checklist templates", true, true], ["Edit text and email templates", true, true], ["Export data", true, false], ["Send texts", true, true]],
-  pipes: { Buyer: ["Consult scheduled", "Consult complete", "Rep signed", "Showing homes", "Submitting offers"], Listing: ["Consult scheduled", "Consult complete", "Listing signed / Prep", "Coming soon", "Active"] },
+  pipes: { Buyer: ["Phone call scheduled", "Consult scheduled", "Consult complete", "Rep signed", "Showing homes", "Submitting offers"], Listing: ["Phone call scheduled", "Consult scheduled", "Consult complete", "Listing signed / Prep", "Coming soon", "Active"] },
   tplId: "t4", ckApply: true, ckPending: null,
   reminders: [
     ["Birthday", "Text happy birthday", 0, "on", "Luke", "Text", "Everyone"],
@@ -2548,6 +2550,7 @@ const state = {
   follow: ["7", "30", "60", "90", "180"],
   templates: [
     ["Text", "BPC", "Intro + Homespotter + legal name", "Hi {first}! Great meeting you. Download Homespotter here: {link}. Can you confirm your full legal names for the buyer rep?"],
+    ["Email", "BPC", "Initial phone call scheduled", "Hi {first},\n\nThanks for setting up a call with Luke! Here's what to expect and a quick guide to buying with Petty Homes (attached).", "Your call with Luke"],
     ["Email", "BPC", "Buyer rep breakdown", "Hi {first},\n\nAttached is the buyer representation agreement. Here's a quick breakdown of what it covers…"],
     ["Email", "BUC", "Purchase agreement accepted", "Hi {first},\n\nCongratulations! Your offer on {address} was accepted. Here are your key dates:\n\nInspection: {inspection_date}\nClosing: {closing_date}"],
     ["Text", "BUC", "Day-of-inspection", "Hi {first}, the inspection at {address} is today. I'll meet you there!"],
