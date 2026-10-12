@@ -133,6 +133,42 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 .dm-prev { background: var(--accent-soft); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
 .deal-modal .foot { display: flex; justify-content: flex-end; gap: 6px; }
 @media (max-width: 560px) { .dm-top { grid-template-columns: 1fr; } }
+.ptabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.ptabs button { border: 0; border-bottom: 3px solid transparent; background: none; padding: 8px 14px; font-size: 15px; font-weight: 600; color: var(--muted); margin-bottom: -1px; }
+.ptabs button span { font-size: 12.5px; color: var(--muted); font-weight: 500; margin-left: 4px; }
+.ptabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--coral, var(--accent)); }
+.pcols { display: grid; grid-template-columns: repeat(var(--n), minmax(170px, 1fr)); gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+.pcol { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.pcol-h { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 2px 4px; border-bottom: 2px solid var(--line); font-size: 13.5px; }
+.pcol-b { display: flex; flex-direction: column; gap: 6px; }
+.pcol-e { color: var(--muted); font-size: 12.5px; padding: 6px 2px; }
+.pitem { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 8px 10px; text-align: left; display: flex; flex-direction: column; gap: 2px; font-size: 13px; cursor: pointer; }
+.pitem:hover { border-color: var(--accent); }
+.pi-t { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.pi-t b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pi-n { font-size: 12px; color: var(--fg); border-top: 1px solid var(--line); margin-top: 4px; padding-top: 4px; }
+.pi-n.od { color: var(--bad); font-weight: 600; }
+.pclosed { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+@media (max-width: 760px) { .pcols { grid-template-columns: minmax(0, 1fr); } }
+.psec { display: flex; flex-direction: column; gap: 8px; }
+.psec h2 { margin: 6px 0 0; font-family: var(--font-display); font-size: 17px; }
+.plist { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.prow-c { width: 100%; border: 0; border-top: 1px solid var(--line); background: none; text-align: left; padding: 12px 14px; display: grid; grid-template-columns: minmax(180px, 1.1fr) minmax(0, 2.2fr) minmax(170px, 1.1fr); gap: 16px; align-items: center; }
+.prow-c:first-child { border-top: 0; }
+.prow-c:hover { background: var(--bg); }
+.pr-who { display: flex; gap: 10px; align-items: flex-start; min-width: 0; }
+.pr-who .dot { margin-top: 7px; }
+.pr-who > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.pr-next { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; }
+.pr-next .od { color: var(--bad); font-weight: 600; font-size: 12.5px; }
+.stepper { list-style: none; margin: 0; padding: 0; display: flex; gap: 3px; min-width: 0; }
+.stepper li { flex: 1 1 0; min-width: 0; text-align: center; font-size: 11.5px; font-weight: 600; color: var(--muted); padding: 5px 4px; background: var(--sunken); position: relative; }
+.stepper li:first-child { border-radius: 999px 0 0 999px; }
+.stepper li:last-child { border-radius: 0 999px 999px 0; }
+.stepper li span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stepper li.past { background: var(--accent-soft); color: var(--accent); }
+.stepper li.now { background: var(--accent); color: var(--surface); }
+@media (max-width: 900px) { .prow-c { grid-template-columns: minmax(0, 1fr); gap: 8px; } }
 .cols3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
 @media (max-width: 980px) { .cols3 { grid-template-columns: minmax(0, 1fr); } }
 .col3 { background: var(--sunken); border-radius: var(--r); display: flex; flex-direction: column; min-width: 0; }
@@ -313,7 +349,7 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
   </span>
 </div>
 
-<header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html" class="on">Active Clients</a><a href="tasks.html">Tasks</a><a href="messages.html">Messages</a><a href="admin.html">Admin</a></nav></header>
+<header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html" class="on">Pipeline</a><a href="tasks.html">Tasks</a><a href="messages.html">Messages</a><a href="admin.html">Admin</a></nav></header>
 
 <main class="wrap" id="app"></main>
 <div id="deal-modal"></div>
@@ -431,46 +467,72 @@ function nextLine(dl) {
   const due = dueOf(dl, n), od = isOverdue(dl, n);
   return `<div class="next ${od ? "overdue" : ""}"><span>${esc(n.t)}</span><span class="date">${od ? "Overdue" : due ? short(due) : "Waiting"}</span></div>`;
 }
+// Read-only overview: where each client is. Status is changed from the client's page.
+function stepper(steps, cur) {
+  return `<ol class="stepper" aria-label="Progress">${steps.map((x, i) => `<li class="${i < cur ? "past" : i === cur ? "now" : ""}" ${i === cur ? 'aria-current="step"' : ""}><span>${esc(x)}</span></li>`).join("")}</ol>`;
+}
+function progressRow(eng) {
+  const pa = activePA(eng), steps = STATUS[eng.kind].concat(["Under contract"]);
+  const cur = pa ? steps.length - 1 : steps.indexOf(eng.status);
+  const file = pa || eng, n = openTasks(file)[0], due = n && dueOf(file, n), od = n && isOverdue(file, n);
+  const nextMs = pa ? Object.keys(pa.ms).filter(k => pa.ms[k] && ["pending", "extended"].includes(pa.msStatus[k]) && d(pa.ms[k]) >= TODAY).sort((x, y) => d(pa.ms[x]) - d(pa.ms[y]))[0] : null;
+  const title = eng.kind === "buyer" ? eng.name : eng.line.split(",")[0];
+  const sub = eng.kind === "buyer" ? (pa ? `Buying ${pa.line.split(",")[0]} · ${kprice(pa.price)}` : fileLine(eng)) : `${eng.name}${eng.price ? " · " + kprice(eng.price) : ""}`;
+  const extra = pa ? `${pa.ms.close ? "Closing " + short(d(pa.ms.close)) : "Closing date not set"}${nextMs ? ` · Next deadline: ${MS_NAMES[nextMs]} ${short(d(pa.ms[nextMs]))}` : ""}`
+    : eng.kind === "buyer" ? (eng.info.repExpires ? `Rep expires ${short(d(eng.info.repExpires))}` : "")
+    : eng.status === "Active" && eng.info.active ? `${diff(TODAY, d(eng.info.active))} days on market` : eng.info.photos ? `Photos ${short(d(eng.info.photos))}` : "";
+  return `<button class="prow-c" data-deal="${eng.id}">
+    <span class="pr-who"><span class="dot ${health(file)}" title="${HEALTH[health(file)]}"></span><span><b>${esc(title)}</b><span class="muted sm">${esc(sub)}</span></span></span>
+    ${stepper(steps, cur)}
+    <span class="pr-next"><span class="muted sm">${esc(extra)}</span>${n ? `<span class="${od ? "od" : "sm"}">${esc(n.t)} · ${od ? "overdue" : due ? short(due) : "waiting"}</span>` : `<span class="muted sm">All caught up</span>`}</span>
+  </button>`;
+}
+// Contract phase from its key dates: the first one not yet met or waived.
+const UC_PHASES = [["insp", "Inspection"], ["hoa", "HOA review"], ["ws", "Financing"], ["close", "Closing"]];
+function ucPhase(pa) {
+  const hit = UC_PHASES.find(([k]) => k in pa.ms && !["met", "waived"].includes(pa.msStatus[k]) && k !== "close");
+  return hit ? hit[1] : "Closing";
+}
+let pview = "buyers";
+function pItem(file, eng) {
+  const n = openTasks(file)[0], due = n && dueOf(file, n), od = n && isOverdue(file, n);
+  const pa = file.kind === "pa" ? file : null;
+  const title = pa ? pa.line.split(",")[0] : eng.kind === "buyer" ? eng.name : eng.line.split(",")[0];
+  const sub = pa ? `${pa.name} · ${kprice(pa.price)}` : eng.kind === "buyer" ? fileLine(eng) : `${eng.name}${eng.price ? " · " + kprice(eng.price) : ""}`;
+  const meta = pa ? (pa.ms.close ? "Closing " + short(d(pa.ms.close)) : "Closing date not set")
+    : eng.kind === "buyer" ? (eng.info.repExpires ? "Rep expires " + short(d(eng.info.repExpires)) : "")
+    : eng.status === "Active" && eng.info.active ? `${diff(TODAY, d(eng.info.active))} days on market` : eng.info.photos ? "Photos " + short(d(eng.info.photos)) : "";
+  return `<button class="pitem" data-deal="${(pa || eng).id}">
+    <span class="pi-t">${pa ? `<span class="sidechip ${pa.side}">${pa.side === "buyer" ? "Buyer" : "Seller"}</span>` : ""}<b>${esc(title)}</b><span class="dot ${health(file)}" title="${HEALTH[health(file)]}"></span></span>
+    <span class="muted sm">${esc(sub)}</span>
+    ${meta ? `<span class="muted sm">${esc(meta)}</span>` : ""}
+    <span class="pi-n ${od ? "od" : ""}">${n ? `${esc(n.t)} · ${od ? "overdue" : due ? short(due) : "waiting"}` : "All caught up"}</span>
+  </button>`;
+}
 function renderActive() {
   const buyers = deals.filter(x => x.kind === "buyer" && x.status !== "Closed");
   const listings = deals.filter(x => x.kind === "listing" && x.status !== "Closed");
-  const pas = deals.filter(x => x.kind === "pa" && x.status === "Active" && (ucFilter === "all" || x.side === ucFilter))
-    .sort((a, b) => (dueOf(a, openTasks(a)[0] || {}) || 8.64e15) - (dueOf(b, openTasks(b)[0] || {}) || 8.64e15));
-  const allPas = deals.filter(x => x.kind === "pa" && x.status === "Active");
+  const pas = deals.filter(x => x.kind === "pa" && x.status === "Active");
   const closed = deals.filter(x => x.kind === "pa" && x.status === "Closed");
-  const col = (title, count, body, extra = "") => `<section class="col3"><div class="col3-h"><span><b>${title}</b> <span class="muted">${count}</span></span>${extra}</div><div class="cards">${body || `<p class="muted sm" style="padding:8px">Nobody here right now.</p>`}</div></section>`;
-  const buyerCard = dl => { const pa = activePA(dl); return `<button class="card" data-deal="${dl.id}">
-      <span class="who"><span>${esc(dl.name)}</span><span class="dot ${health(dl)}" title="${HEALTH[health(dl)]}"></span></span>
-      <span class="addr"><span>${esc(fileLine(dl))}</span></span>
-      <span class="meta2"><span class="pill2">${pa ? "Under contract" : esc(dl.status)}</span>${dl.info.repExpires ? `<span class="muted">Rep expires ${short(d(dl.info.repExpires))}</span>` : ""}</span>
-      ${pa ? `<div class="next"><span>Contract: ${esc(pa.line.split(",")[0])}</span></div>` : nextLine(dl)}
-    </button>`; };
-  const listingCard = dl => { const pa = activePA(dl), dom = dl.info.active ? diff(TODAY, d(dl.info.active)) : null; return `<button class="card" data-deal="${dl.id}">
-      <span class="who"><span>${esc(dl.line.split(",")[0])}</span><span class="dot ${health(dl)}" title="${HEALTH[health(dl)]}"></span></span>
-      <span class="addr"><span>${esc(dl.name)}</span><span class="price num">${kprice(dl.price)}</span></span>
-      <span class="meta2"><span class="pill2">${pa ? "Under contract" : esc(dl.status)}</span>${dl.status === "Active" && dom !== null ? `<span class="muted">${dom} days on market</span>` : dl.info.photos && dl.status === "Prep" ? `<span class="muted">Photos ${short(d(dl.info.photos))}</span>` : ""}</span>
-      ${pa ? `<div class="next"><span>See Under contract</span></div>` : nextLine(dl)}
-    </button>`; };
-  const paCard = dl => { const done = dl.tasks.filter(t => eff(dl, t) !== "open").length; return `<button class="card" data-deal="${dl.id}">
-      <span class="who"><span><span class="sidechip ${dl.side}">${dl.side === "buyer" ? "Buyer" : "Seller"}</span> ${esc(dl.line.split(",")[0])}</span><span class="dot ${health(dl)}" title="${HEALTH[health(dl)]}"></span></span>
-      <span class="addr"><span>${esc(dl.name)}</span><span class="price num">${kprice(dl.price)}</span></span>
-      <div class="mini" title="${done} of ${dl.tasks.length} steps"><i style="width:${dl.tasks.length ? Math.round(done / dl.tasks.length * 100) : 0}%"></i></div>
-      <span class="addr"><span>${dl.ms.close ? "Closing " + short(d(dl.ms.close)) : "Closing date not set"}</span></span>
-      ${nextLine(dl)}
-    </button>`; };
-  const vol = allPas.reduce((s, x) => s + (x.price || 0), 0);
+  let cols;
+  if (pview === "uc") cols = UC_PHASES.map(([, l]) => [l, pas.filter(p => ucPhase(p) === l).map(p => pItem(p))]);
+  else {
+    const kind = pview === "buyers" ? "buyer" : "listing", list = pview === "buyers" ? buyers : listings;
+    cols = STATUS[kind].map(st => [st, list.filter(e => !activePA(e) && e.status === st).map(e => pItem(e, e))])
+      .concat([["Under contract", list.filter(activePA).map(e => pItem(activePA(e), e))]]);
+  }
+  const vol = pas.reduce((s, x) => s + (x.price || 0), 0);
+  const tabs = [["buyers", "Buyers", buyers.length], ["sellers", "Sellers", listings.length], ["uc", "Under contract", pas.length]];
   app.innerHTML = `
     <div class="board-head">
-      <div class="left"><h1>Active clients</h1><span class="board-sum">${buyers.length} buyers · ${listings.length} listings · ${allPas.length} under contract · ${money(vol)} pending</span></div>
+      <div class="left"><h1>Pipeline</h1><span class="board-sum">${money(vol)} under contract</span></div>
       <span class="left"><button class="btn primary" data-start="buyer">+ Start buyer</button><button class="btn primary" data-start="listing">+ Start listing</button></span>
     </div>
-    <div class="cols3">
-      ${col("Buyers", buyers.length, buyers.map(buyerCard).join(""))}
-      ${col("Listings", listings.length, listings.map(listingCard).join(""))}
-      ${col("Under contract", allPas.length, pas.map(paCard).join(""), `<span class="seg tiny" role="group" aria-label="Side">${[["all", "All"], ["buyer", "Buyer"], ["seller", "Seller"]].map(([k, l]) => `<button data-ucf="${k}" aria-pressed="${ucFilter === k}">${l}</button>`).join("")}</span>`)}
-    </div>
+    <div class="ptabs" role="tablist">${tabs.map(([k, l, n]) => `<button role="tab" data-pview="${k}" aria-selected="${pview === k}">${l} <span>${n}</span></button>`).join("")}</div>
+    <p class="muted sm" style="margin:0">${pview === "uc" ? "Grouped by the next contract date still open. " : ""}Shows where each client is. To change a status, open the client.</p>
+    <div class="pcols" style="--n:${cols.length}">${cols.map(([l, items]) => `<section class="pcol"><div class="pcol-h"><b>${esc(l)}</b><span class="muted">${items.length}</span></div><div class="pcol-b">${items.join("") || `<span class="pcol-e">None</span>`}</div></section>`).join("")}</div>
     <div class="closed-row"><button class="linkbtn" data-showclosed="1">${showClosed ? "Hide" : "Show"} closed in the last 30 days (${closed.length})</button>
-      ${showClosed ? `<div class="cards closed-list">${closed.map(dl => `<button class="card" data-deal="${dl.id}"><span class="who"><span><span class="sidechip ${dl.side}">${dl.side === "buyer" ? "Buyer" : "Seller"}</span> ${esc(dl.line.split(",")[0])}</span></span><span class="addr"><span>${esc(dl.name)}</span><span class="price num">${kprice(dl.price)}</span></span><div class="next"><span>Closed ${short(d(dl.closed))}</span></div></button>`).join("")}</div>` : ""}</div>`;
+      ${showClosed ? `<div class="pclosed">${closed.map(dl => `<button class="pitem" data-deal="${dl.id}"><span class="pi-t"><span class="sidechip ${dl.side}">${dl.side === "buyer" ? "Buyer" : "Seller"}</span><b>${esc(dl.line.split(",")[0])}</b></span><span class="muted sm">${esc(dl.name)} · ${kprice(dl.price)}</span><span class="pi-n">Closed ${short(d(dl.closed))}</span></button>`).join("")}</div>` : ""}</div>`;
 }
 
 /* ---------- Contacts ---------- */
@@ -559,7 +621,7 @@ function renderContact() {
   const touchDue = c.follow && ago !== null && ago >= c.follow;
   const fileLabel = dl => dl.kind === "pa" ? `${dl.line.split(",")[0]} · ${dl.status === "Active" ? "under contract" : dl.status.toLowerCase()}${dl.closed ? " " + short(d(dl.closed)) : ""}` : dl.kind === "buyer" ? `Buyer · ${dl.status === "Closed" ? "closed" : activePA(dl) ? "under contract" : dl.status.toLowerCase()}` : `${dl.line.split(",")[0]} · ${dl.status === "Closed" ? "closed" : activePA(dl) ? "under contract" : dl.status.toLowerCase()}`;
   app.innerHTML = `
-    <button class="back" data-back="1">← Active clients</button>
+    <button class="back" data-back="1">← Pipeline</button>
     <div class="c3">
       <aside class="cleft">${leftHtml(c, stage, ago, touchDue)}</aside>
       <section class="ccenter">
@@ -1042,7 +1104,7 @@ document.addEventListener("click", e => {
   if (bg && (e.target === bg || bg.tagName === "BUTTON")) { dealForm = null; renderDealModal(); return; }
   const b = e.target.closest("button"); if (!b) return;
   const dl = b.dataset.dl ? deals.find(x => x.id === +b.dataset.dl) : null;
-  if (b.dataset.ucf) { ucFilter = b.dataset.ucf; render(); return; }
+  if (b.dataset.pview) { pview = b.dataset.pview; render(); return; }
   if (b.dataset.showclosed) { showClosed = !showClosed; render(); return; }
   if (b.dataset.start) { openForm(b.dataset.start, { cid: openContact }); return; }
   if (b.dataset.addpa) { const eng = deals.find(x => x.id === +b.dataset.addpa); openForm("pa", { engId: eng.id, v: eng.kind === "listing" ? Object.assign({ address: eng.line, price: eng.price || "" }, eng.facts || {}) : {} }); return; }
