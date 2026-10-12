@@ -643,6 +643,19 @@ body { background: var(--bg); }
 #pg-tasks .grp-link { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; text-decoration: none; cursor: pointer; }
 #pg-tasks .grp-link:hover { color: var(--accent); }
 #pg-tasks .side > div:first-child .nav-i { font-weight: 600; }
+#pg-tasks .h4-act { float: right; border: 0; background: none; color: var(--accent); font-size: 11px; font-weight: 700; text-transform: none; letter-spacing: 0; padding: 0; }
+#pg-tasks .arrange { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+#pg-tasks .arrange-h { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
+#pg-tasks .arr-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 4px 0; border-top: 1px solid var(--line); }
+#pg-tasks .arr-row input:not([type]), #pg-tasks .arr-row input#arr-new { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); min-width: 0; }
+#pg-tasks .arr-n { color: var(--muted); font-size: 12px; text-align: center; }
+#pg-tasks .arr-fixed { font-weight: 600; }
+#pg-tasks .arr-btns { display: flex; gap: 2px; }
+#pg-tasks .arr-btns .rm, #pg-tasks .rm-ph { width: 26px; height: 26px; border: 0; background: none; color: var(--muted); font-size: 15px; display: inline-block; }
+#pg-tasks .arr-btns .rm:disabled { opacity: .3; }
+#pg-tasks .arr-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+#pg-tasks .sm { font-size: 12px; }
+#pg-tasks .muted { color: var(--muted); }
 #pg-tasks .save-row { flex-direction: row; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--line); }
 #pg-tasks .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); z-index: 30; }
 :root {
@@ -2392,8 +2405,12 @@ function whoMenu() {
       ${"everyone".includes(whoQ.toLowerCase()) ? opt("everyone", "Everyone") : ""}${"me".includes(whoQ.toLowerCase()) ? opt("me", "Me", me) : ""}
       <div class="who-h">Team members</div>${team.map(([k, n]) => opt(k, n, k)).join("")}</div>` : ""}</span>`;
 }
-let onToday = {}; // list name -> false when hidden from Today
-const showsOnToday = l => onToday[l] !== false;
+let onToday = {}; // column key -> false when hidden from Today
+const showsOnToday = k => onToday[k] !== false;
+// The order of lists in the sidebar and columns on Today. Built-in categories and your own lists mix freely.
+let ORDER = ["clients", "touch", "dates", "recurring"];
+const orderedKeys = () => { const all = CATS.map(c => c[0]).concat(LISTS.map(l => "list:" + l)); return ORDER.filter(k => all.includes(k)).concat(all.filter(k => !ORDER.includes(k))); };
+let arranging = null; // draft while customizing: { order, on, names }
 let LISTS = [], newListOpen = false, confirmDel = null, renamingList = false;
 const el = id => document.getElementById(id);
 
@@ -2401,9 +2418,9 @@ const el = id => document.getElementById(id);
 const CATS = [["clients", "Clients"], ["touch", "Due for a touch"], ["dates", "Important dates"], ["recurring", "Recurring"]];
 const catOf = t => t.auto ? "dates" : t.repeat ? "recurring" : t.list ? "list:" + t.list : t.link ? "clients" : "nolist";
 const catName = k => k.startsWith("list:") ? k.slice(5) : k === "today" ? "Today" : k === "nolist" ? "No list" : CATS.find(c => c[0] === k)[1];
-const allCats = () => CATS.map(c => c[0]).concat(LISTS.map(l => "list:" + l));
+const allCats = orderedKeys;
 function inView(t, v) {
-  if (v === "today") return diff(d(t.due), TODAY) <= 0;
+  if (v === "today") return diff(d(t.due), TODAY) <= 0 && showsOnToday(catOf(t));
   return catOf(t) === v;
 }
 const visible = v => tasks.filter(t => !t.done || t.justDone).filter(t => whoF === "everyone" || t.who === (whoF === "me" ? me : whoF)).filter(t => inView(t, v));
@@ -2413,11 +2430,10 @@ const lateCount = v => v === "touch" ? 0 : visible(v).filter(t => !t.done && dif
 
 function renderSide() {
   const item = (k, l) => { const late = lateCount(k); return `<li><button class="nav-i" data-view="${esc(k)}" aria-current="${view === k}"><span>${esc(l)}</span><span class="c ${late ? "bad" : ""}" ${late ? `title="${late} overdue"` : ""}>${openCount(k) || ""}</span></button></li>`; };
-  const todayN = openCount("today") + touches.length;
+  const todayN = openCount("today") + (showsOnToday("touch") ? touches.length : 0);
   el("side").innerHTML = `
     <div><ul><li><button class="nav-i" data-view="today" aria-current="${view === "today"}"><span>Today</span><span class="c ${lateCount("today") ? "bad" : ""}">${todayN || ""}</span></button></li></ul></div>
-    <div><h4>Categories</h4><ul>${CATS.map(([k, l]) => item(k, l)).join("")}</ul></div>
-    <div><h4>My lists</h4><ul>${LISTS.map(l => item("list:" + l, l)).join("")}${openCount("nolist") || view === "nolist" ? item("nolist", "No list") : ""}
+    <div><h4>Lists <button class="h4-act" data-arrange="1">Edit</button></h4><ul>${orderedKeys().map(k => item(k, catName(k))).join("")}${openCount("nolist") || view === "nolist" ? item("nolist", "No list") : ""}
       <li>${newListOpen ? `<div class="newlist"><input id="nl-name" placeholder="List name" aria-label="New list name"><button class="btn primary" data-nlsave="1">Add</button></div>` : `<button class="nav-i addl" data-newlist="1"><span>+ New list</span></button>`}</li></ul></div>`;
 }
 
@@ -2447,18 +2463,18 @@ const byWhen = list => {
 
 function bodyHtml() {
   if (view === "today") {
-    const due = visible("today").filter(t => { const k = catOf(t); return !k.startsWith("list:") || showsOnToday(k.slice(5)); });
-    const cols = CATS.map(c => c[0]).concat(LISTS.filter(showsOnToday).map(l => "list:" + l)).concat(due.some(t => catOf(t) === "nolist") ? ["nolist"] : []);
+    const due = visible("today").filter(t => showsOnToday(catOf(t)));
+    const cols = orderedKeys().filter(showsOnToday).concat(due.some(t => catOf(t) === "nolist") ? ["nolist"] : []);
     const colOf = catOf;
     return `<div class="board">${cols.map(k => {
       if (k === "touch") return `<section class="col"><h3>${catHead(k)}<span>${touches.length || ""}</span></h3><div class="list">${touches.map(touchRow).join("") || `<div class="col-empty">No one due</div>`}</div></section>`;
       const items = due.filter(t => colOf(t) === k).sort(sortT), late = items.some(t => !t.done && diff(d(t.due), TODAY) < 0);
       return `<section class="col"><h3 class="${late ? "bad" : ""}">${catHead(k)}<span>${items.filter(t => !t.done).length || ""}</span></h3><div class="list">${items.map(rowHtml).join("") || `<div class="col-empty">Nothing due</div>`}</div></section>`;
-    }).join("")}</div>${tasks.length || touches.length ? "" : `<div class="empty">No tasks yet. Type one in the box above, or apply a template from a person's page.</div>`}`;
+    }).join("")}</div>${tasks.length || touches.length ? "" : `<div class="empty">No tasks yet. Type one in the box above, or add one from a person's page.</div>`}`;
   }
   if (view === "touch") return touches.length ? `<div class="list">${touches.map(touchRow).join("")}</div>` : `<div class="empty">${Object.values(HQ.contacts).some(c => c.follow) ? "Everyone is up to date." : "Set a follow-up frequency on a person and they'll show up here when they're due."}</div>`;
   const list = visible(view).sort(sortT);
-  if (!list.length) return `<div class="empty">${{ clients: "No client tasks. Add one with \"re\" and a name, e.g. \"call lender re Ortiz Fri\", or apply a template from a person's page.", recurring: "Nothing recurring yet. Try \"rent check every month\".", dates: "Nothing coming up. Birthdays and homeiversaries from people's Important Dates show here, using the rules in Admin → Date reminders.", nolist: "Nothing here." }[view] || "Nothing in this list yet."}</div>`;
+  if (!list.length) return `<div class="empty">${{ clients: "No client tasks. Add one with \"re\" and a name, e.g. \"call lender re Ortiz Fri\", or add one from their page.", recurring: "Nothing recurring yet. Try \"rent check every month\".", dates: "Nothing coming up. Birthdays and homeiversaries from people's Important Dates show here, using the rules in Admin → Date reminders.", nolist: "Nothing here." }[view] || "Nothing in this list yet."}</div>`;
   if (view === "clients") {
     const order = [...new Set(list.map(t => t.link))];
     return order.map(cid => { const items = list.filter(t => t.link === cid), late = items.some(t => !t.done && diff(d(t.due), TODAY) < 0);
@@ -2468,14 +2484,24 @@ function bodyHtml() {
   return byWhen(list).filter(g => g[1].length).map(([h, items, bad]) => section(`<span>${h}</span>`, items.map(rowHtml).join(""), items.filter(t => !t.done).length, bad)).join("");
 }
 
+function arrangeHtml() {
+  const a = arranging;
+  return `<div class="arrange"><div class="arrange-h"><b>Lists and Today columns</b><span class="muted sm">Use the arrows to change the order. Unticked lists stay in the sidebar but don't get a column on Today.</span></div>
+    ${a.order.map((k, i) => `<div class="arr-row"><span class="arr-n">${i + 1}</span>
+      ${k.startsWith("list:") ? `<input data-arrname="${esc(k)}" value="${esc(a.names[k])}" aria-label="List name">` : `<span class="arr-fixed">${esc(catName(k))} <span class="muted sm">built in</span></span>`}
+      <label class="ontoday"><input type="checkbox" data-arron="${esc(k)}" ${a.on[k] !== false ? "checked" : ""}> On Today</label>
+      <span class="arr-btns"><button class="rm" data-arrup="${i}" aria-label="Move up" ${i ? "" : "disabled"}>↑</button><button class="rm" data-arrdown="${i}" aria-label="Move down" ${i < a.order.length - 1 ? "" : "disabled"}>↓</button>${k.startsWith("list:") ? `<button class="rm" data-arrdel="${esc(k)}" aria-label="Delete list">×</button>` : `<span class="rm-ph"></span>`}</span></div>`).join("")}
+    <div class="arr-row"><span class="arr-n">+</span><input id="arr-new" placeholder="New list name" aria-label="New list name"><button class="btn" data-arradd="1">Add list</button></div>
+    <div class="arr-foot"><button class="btn" data-arrcancel="1">Cancel</button><button class="btn primary" data-arrsave="1">Save</button></div></div>`;
+}
 function renderMain() {
   const isList = view.startsWith("list:"), title = catName(view);
-  const sub = { today: fmt(TODAY) + " · overdue items are marked in red", clients: "Grouped by client · click a name to open their page", touch: "People past their follow-up frequency", recurring: "Each one shows up in Today when it's due, then schedules the next", dates: "Birthday and homeiversary cards and texts for the next 60 days · rules in Admin → Date reminders", nolist: "Tasks with no client and no list. Give them a list or link a client to sort them." }[view] || (showsOnToday(view.slice(5)) ? "Due tasks show in their own column on Today" : "Hidden from Today. Its tasks only show here.");
+  const sub = { today: fmt(TODAY) + " · overdue items are marked in red", clients: "Grouped by client · click a name to open their page", touch: "People past their follow-up frequency", recurring: "Each one shows up in Today when it's due, then schedules the next", dates: "Birthday and homeiversary cards and texts for the next 60 days · rules in Admin → Date reminders", nolist: "Tasks with no client and no list. Give them a list or link a client to sort them." }[view] || (showsOnToday(view) ? "Due tasks show in their own column on Today" : "Hidden from Today. Its tasks only show here.");
   const ph = { clients: 'Add a client task, e.g. "call lender re Ortiz Fri 9am"', recurring: 'Add a recurring task, e.g. "rent check every month"', dates: 'Add a task, e.g. "call Sam re birthday Fri"' }[view] || 'Add a task, e.g. "call lender re Ortiz Fri 9am" or "rent check every month"';
   el("main").innerHTML = `
     <div class="main-h">
-      <div>${isList && renamingList ? `<span class="newlist"><input id="list-name" value="${esc(title)}" aria-label="List name"><button class="btn primary" data-savelist="1">Save</button></span>` : `<h1>${esc(title)}</h1>`}${isList && !renamingList ? `<span class="list-acts"><button class="linkbtn2" data-renlist="1">Rename</button><button class="linkbtn2 danger" data-dellist="1">${confirmDel === "list" ? "Click again to delete list" : "Delete list"}</button><label class="ontoday"><input type="checkbox" id="list-ontoday" ${showsOnToday(view.slice(5)) ? "checked" : ""}> Show as its own column on Today</label></span>` : ""}<div class="sub">${sub}</div></div>
-      ${view === "touch" ? "" : `<span class="tools">${whoMenu()}</span>`}
+      <div>${isList && renamingList ? `<span class="newlist"><input id="list-name" value="${esc(title)}" aria-label="List name"><button class="btn primary" data-savelist="1">Save</button></span>` : `<h1>${esc(title)}</h1>`}${isList && !renamingList ? `<span class="list-acts"><button class="linkbtn2" data-renlist="1">Rename</button><button class="linkbtn2 danger" data-dellist="1">${confirmDel === "list" ? "Click again to delete list" : "Delete list"}</button><label class="ontoday"><input type="checkbox" id="list-ontoday" ${showsOnToday(view) ? "checked" : ""}> Show as its own column on Today</label></span>` : ""}<div class="sub">${sub}</div></div>
+      ${view === "touch" ? "" : `<span class="tools">${view === "today" ? `<button class="btn" data-arrange="1">Edit columns</button>` : ""}${whoMenu()}</span>`}
     </div>
     ${view === "touch" ? "" : `<div class="qa">
       <form id="qa-form" autocomplete="off">
@@ -2484,6 +2510,7 @@ function renderMain() {
       </form>
       <div class="parsed" id="parsed"></div>
     </div>`}
+    ${arranging ? arrangeHtml() : ""}
     ${bodyHtml()}`;
   const inp = el("qa-input"); if (!inp) return;
   inp.addEventListener("input", () => showParsed(parse(inp.value)));
@@ -2613,6 +2640,27 @@ document.addEventListener("click", e => {
     el("as-as").setAttribute("aria-pressed", me === "AS");
     sel = null; render(); return;
   }
+  if (b.dataset.arrange) { if (!arranging) arranging = { order: orderedKeys(), on: Object.fromEntries(orderedKeys().map(k => [k, showsOnToday(k)])), names: Object.fromEntries(LISTS.map(l => ["list:" + l, l])), deleted: [] }; view = "today"; sel = null; render(); return; }
+  if (arranging) {
+    const a = arranging, readNames = () => document.querySelectorAll("[data-arrname]").forEach(i => a.names[i.dataset.arrname] = i.value);
+    if (b.dataset.arrup || b.dataset.arrdown) { readNames(); const i = +(b.dataset.arrup || b.dataset.arrdown), j = i + (b.dataset.arrup ? -1 : 1); [a.order[i], a.order[j]] = [a.order[j], a.order[i]]; renderMain(); return; }
+    if (b.dataset.arrdel) { readNames(); a.order = a.order.filter(k => k !== b.dataset.arrdel); a.deleted.push(b.dataset.arrdel); renderMain(); return; }
+    if (b.dataset.arradd) { readNames(); const n = el("arr-new").value.trim(); if (!n) { el("arr-new").focus(); return; } const k = "list:" + n; if (!a.order.includes(k)) { a.order.push(k); a.names[k] = n; a.on[k] = true; a.added = (a.added || []).concat(k); } renderMain(); el("arr-new").focus(); return; }
+    if (b.dataset.arrcancel) { arranging = null; render(); return; }
+    if (b.dataset.arrsave) {
+      readNames(); gather();
+      a.deleted.forEach(k => { const l = k.slice(5); LISTS = LISTS.filter(x => x !== l); tasks.forEach(t => { if (t.list === l) delete t.list; }); });
+      (a.added || []).filter(k => a.order.includes(k)).forEach(k => { if (!LISTS.includes(k.slice(5))) LISTS.push(k.slice(5)); });
+      const order = a.order.map(k => {
+        if (!k.startsWith("list:")) return k;
+        const old = k.slice(5), n = (a.names[k] || old).trim() || old;
+        if (n !== old && !LISTS.includes(n)) { LISTS[LISTS.indexOf(old)] = n; tasks.forEach(t => { if (t.list === old) t.list = n; }); a.on["list:" + n] = a.on[k]; return "list:" + n; }
+        return k;
+      });
+      ORDER = order; onToday = {}; order.forEach(k => { if (a.on[k] === false) onToday[k] = false; });
+      arranging = null; render(); toast("Saved. The sidebar and Today columns use this order."); return;
+    }
+  }
   if (b.dataset.tsave) { saveTask(); return; }
   if (b.dataset.tcancel) { dr = null; renderDetail(); toast("Changes discarded."); return; }
   if (b.dataset.open) { sel = b.dataset.open; render(); return; }
@@ -2621,8 +2669,8 @@ document.addEventListener("click", e => {
   if (b.dataset.addsub) { const t0 = byId(sel), v = el("sub-new").value.trim(); if (!v) { el("sub-new").focus(); return; } dr = dr || {}; dr.subs = dr.subs || (t0.subs || []).map(x => x.slice()); dr.subs.push([v, false]); renderDetail(); el("sub-new").focus(); return; }
   if (b.dataset.deltask) { const id = b.dataset.deltask; if (confirmDel !== "task" + id) { confirmDel = "task" + id; renderDetail(); return; } delTask(byId(id)); sel = null; dr = null; confirmDel = null; render(); toast("Task deleted."); return; }
   if (b.dataset.renlist) { renamingList = true; renderMain(); const i = el("list-name"); i.focus(); i.select(); return; }
-  if (b.dataset.savelist) { const old = view.slice(5), n = el("list-name").value.trim(); if (n && n !== old && !LISTS.includes(n)) { if (old in onToday) { onToday[n] = onToday[old]; delete onToday[old]; } LISTS[LISTS.indexOf(old)] = n; gather(); tasks.forEach(t => { if (t.list === old) t.list = n; }); view = "list:" + n; } renamingList = false; render(); return; }
-  if (b.dataset.dellist) { const l = view.slice(5); if (confirmDel !== "list") { confirmDel = "list"; renderMain(); return; } LISTS.splice(LISTS.indexOf(l), 1); delete onToday[l]; gather(); tasks.forEach(t => { if (t.list === l) delete t.list; }); confirmDel = null; view = "today"; render(); toast(`Deleted "${l}". Its tasks are kept, just not in a list.`); return; }
+  if (b.dataset.savelist) { const old = view.slice(5), n = el("list-name").value.trim(); if (n && n !== old && !LISTS.includes(n)) { if (("list:" + old) in onToday) { onToday["list:" + n] = onToday["list:" + old]; delete onToday["list:" + old]; } ORDER = ORDER.map(k => k === "list:" + old ? "list:" + n : k); LISTS[LISTS.indexOf(old)] = n; gather(); tasks.forEach(t => { if (t.list === old) t.list = n; }); view = "list:" + n; } renamingList = false; render(); return; }
+  if (b.dataset.dellist) { const l = view.slice(5); if (confirmDel !== "list") { confirmDel = "list"; renderMain(); return; } LISTS.splice(LISTS.indexOf(l), 1); delete onToday["list:" + l]; ORDER = ORDER.filter(k => k !== "list:" + l); gather(); tasks.forEach(t => { if (t.list === l) delete t.list; }); confirmDel = null; view = "today"; render(); toast(`Deleted "${l}". Its tasks are kept, just not in a list.`); return; }
   if (b.dataset.done) {
     const t = byId(b.dataset.done);
     t.done = !t.done; t.justDone = t.done;
@@ -2636,7 +2684,8 @@ document.addEventListener("click", e => {
   if (b.dataset.toast) { toast(b.dataset.toast); return; }
 });
 document.addEventListener("change", e => {
-  if (e.target.id === "list-ontoday") { const l = view.slice(5); onToday[l] = e.target.checked; toast(e.target.checked ? `"${l}" now has its own column on Today.` : `"${l}" is hidden from Today. Its tasks only show in the list.`); render(); return; }
+  if (e.target.dataset.arron && arranging) { arranging.on[e.target.dataset.arron] = e.target.checked; return; }
+  if (e.target.id === "list-ontoday") { const l = view.slice(5); onToday[view] = e.target.checked; toast(e.target.checked ? `"${l}" now has its own column on Today.` : `"${l}" is hidden from Today. Its tasks only show in the list.`); render(); return; }
   gather(); const t0 = byId(sel); if (!t0 || !e.target.closest("#detail")) return;
   const id = e.target.id, v = e.target.value, t = dr = dr || {};
   if (e.target.dataset.sub !== undefined) { t.subs = t.subs || (t0.subs || []).map(x => x.slice()); t.subs[+e.target.dataset.sub][1] = e.target.checked; renderDetail(); return; }
