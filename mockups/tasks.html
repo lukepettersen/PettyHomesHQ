@@ -203,7 +203,7 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); z-index: 30; }
 </style>
 
-<div class="mock-bar"><span><strong>Mockup</strong> · starts empty, "today" is Mon Oct 12, 2026. Today shows everything due now, broken into categories. Tasks sort themselves: linked to a client → Clients, repeating → Recurring, birthdays and homeiversaries → Important dates.</span>
+<div class="mock-bar"><span><strong>Mockup</strong> · starts empty, "today" is Mon Oct 12, 2026. Today shows everything due now, broken into categories. Tasks sort themselves: linked to a client → Clients, repeating → Recurring, birthdays and homeiversaries → Important dates, everything else → Misc.</span>
   <span class="seg" role="group" aria-label="Viewing as" style="margin-left:12px"><button id="as-lp" aria-pressed="true">Viewing as Luke</button><button id="as-as" aria-pressed="false">Viewing as assistant</button></span></div>
 
 <header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="tasks.html" class="on">Tasks</a><a href="messages.html">Messages</a><a href="deals.html">Pipeline</a><a href="admin.html">Admin</a></nav></header>
@@ -319,16 +319,16 @@ function whoMenu() {
 let onToday = {}; // column key -> false when hidden from Today
 const showsOnToday = k => onToday[k] !== false;
 // The order of lists in the sidebar and columns on Today. Built-in categories and your own lists mix freely.
-let ORDER = ["clients", "touch", "dates", "recurring"];
+let ORDER = ["clients", "touch", "dates", "recurring", "misc"];
 const orderedKeys = () => { const all = CATS.map(c => c[0]).concat(LISTS.map(l => "list:" + l)); return ORDER.filter(k => all.includes(k)).concat(all.filter(k => !ORDER.includes(k))); };
 let arranging = null; // draft while customizing: { order, on, names }
 let LISTS = [], newListOpen = false, confirmDel = null, renamingList = false;
 const el = id => document.getElementById(id);
 
 // Today on top, then categories. Every task lands in exactly one category.
-const CATS = [["clients", "Clients"], ["touch", "Due for a touch"], ["dates", "Important dates"], ["recurring", "Recurring"]];
-const catOf = t => t.auto ? "dates" : t.repeat ? "recurring" : t.list ? "list:" + t.list : t.link ? "clients" : "nolist";
-const catName = k => k.startsWith("list:") ? k.slice(5) : k === "today" ? "Today" : k === "nolist" ? "No list" : CATS.find(c => c[0] === k)[1];
+const CATS = [["clients", "Clients"], ["touch", "Due for a touch"], ["dates", "Important dates"], ["recurring", "Recurring"], ["misc", "Misc"]];
+const catOf = t => t.auto ? "dates" : t.repeat ? "recurring" : t.list ? "list:" + t.list : t.link ? "clients" : "misc";
+const catName = k => k.startsWith("list:") ? k.slice(5) : k === "today" ? "Today" : CATS.find(c => c[0] === k)[1];
 const allCats = orderedKeys;
 function inView(t, v) {
   if (v === "today") return diff(d(t.due), TODAY) <= 0 && showsOnToday(catOf(t));
@@ -344,7 +344,7 @@ function renderSide() {
   const todayN = openCount("today") + (showsOnToday("touch") ? touches.length : 0);
   el("side").innerHTML = `
     <div><ul><li><button class="nav-i" data-view="today" aria-current="${view === "today"}"><span>Today</span><span class="c ${lateCount("today") ? "bad" : ""}">${todayN || ""}</span></button></li></ul></div>
-    <div><h4>Lists <button class="h4-act" data-arrange="1">Edit</button></h4><ul>${orderedKeys().map(k => item(k, catName(k))).join("")}${openCount("nolist") || view === "nolist" ? item("nolist", "No list") : ""}
+    <div><h4>Lists <button class="h4-act" data-arrange="1">Edit</button></h4><ul>${orderedKeys().map(k => item(k, catName(k))).join("")}
       <li>${newListOpen ? `<div class="newlist"><input id="nl-name" placeholder="List name" aria-label="New list name"><button class="btn primary" data-nlsave="1">Add</button></div>` : `<button class="nav-i addl" data-newlist="1"><span>+ New list</span></button>`}</li></ul></div>`;
 }
 
@@ -375,7 +375,7 @@ const byWhen = list => {
 function bodyHtml() {
   if (view === "today") {
     const due = visible("today").filter(t => showsOnToday(catOf(t)));
-    const cols = orderedKeys().filter(showsOnToday).concat(due.some(t => catOf(t) === "nolist") ? ["nolist"] : []);
+    const cols = orderedKeys().filter(showsOnToday);
     const colOf = catOf;
     return `<div class="board">${cols.map(k => {
       if (k === "touch") return `<section class="col"><h3>${catHead(k)}<span>${touches.length || ""}</span></h3><div class="list">${touches.map(touchRow).join("") || `<div class="col-empty">No one due</div>`}</div></section>`;
@@ -385,7 +385,7 @@ function bodyHtml() {
   }
   if (view === "touch") return touches.length ? `<div class="list">${touches.map(touchRow).join("")}</div>` : `<div class="empty">${Object.values(HQ.contacts).some(c => c.follow) ? "Everyone is up to date." : "Set a follow-up frequency on a person and they'll show up here when they're due."}</div>`;
   const list = visible(view).sort(sortT);
-  if (!list.length) return `<div class="empty">${{ clients: "No client tasks. Add one with \"re\" and a name, e.g. \"call lender re Ortiz Fri\", or add one from their page.", recurring: "Nothing recurring yet. Try \"rent check every month\".", dates: "Nothing coming up. Birthdays and homeiversaries from people's Important Dates show here, using the rules in Admin → Date reminders.", nolist: "Nothing here." }[view] || "Nothing in this list yet."}</div>`;
+  if (!list.length) return `<div class="empty">${{ clients: "No client tasks. Add one with \"re\" and a name, e.g. \"call lender re Ortiz Fri\", or add one from their page.", recurring: "Nothing recurring yet. Try \"rent check every month\".", dates: "Nothing coming up. Birthdays and homeiversaries from people's Important Dates show here, using the rules in Admin → Date reminders.", misc: "Nothing in Misc. Any task with no client lands here." }[view] || "Nothing in this list yet."}</div>`;
   if (view === "clients") {
     const order = [...new Set(list.map(t => t.link))];
     return order.map(cid => { const items = list.filter(t => t.link === cid), late = items.some(t => !t.done && diff(d(t.due), TODAY) < 0);
@@ -407,8 +407,8 @@ function arrangeHtml() {
 }
 function renderMain() {
   const isList = view.startsWith("list:"), title = catName(view);
-  const sub = { today: fmt(TODAY) + " · overdue items are marked in red", clients: "Grouped by client · click a name to open their page", touch: "People past their follow-up frequency", recurring: "Each one shows up in Today when it's due, then schedules the next", dates: "Birthday and homeiversary cards and texts for the next 60 days · rules in Admin → Date reminders", nolist: "Tasks with no client and no list. Give them a list or link a client to sort them." }[view] || (showsOnToday(view) ? "Due tasks show in their own column on Today" : "Hidden from Today. Its tasks only show here.");
-  const ph = { clients: 'Add a client task, e.g. "call lender re Ortiz Fri 9am"', recurring: 'Add a recurring task, e.g. "rent check every month"', dates: 'Add a task, e.g. "call Sam re birthday Fri"' }[view] || 'Add a task, e.g. "call lender re Ortiz Fri 9am" or "rent check every month"';
+  const sub = { today: fmt(TODAY) + " · overdue items are marked in red", clients: "Grouped by client · click a name to open their page", touch: "People past their follow-up frequency", recurring: "Each one shows up in Today when it's due, then schedules the next", dates: "Birthday and homeiversary cards and texts for the next 60 days · rules in Admin → Date reminders", misc: "Tasks that aren't for a client" }[view] || (showsOnToday(view) ? "Due tasks show in their own column on Today" : "Hidden from Today. Its tasks only show here.");
+  const ph = { clients: 'Add a client task, e.g. "call lender re Ortiz Fri 9am"', recurring: 'Add a recurring task, e.g. "rent check every month"', dates: 'Add a task, e.g. "call Sam re birthday Fri"', misc: 'Add a task, e.g. "renew license Fri"' }[view] || 'Add a task, e.g. "call lender re Ortiz Fri 9am" or "rent check every month"';
   el("main").innerHTML = `
     <div class="main-h">
       <div>${isList && renamingList ? `<span class="newlist"><input id="list-name" value="${esc(title)}" aria-label="List name"><button class="btn primary" data-savelist="1">Save</button></span>` : `<h1>${esc(title)}</h1>`}${isList && !renamingList ? `<span class="list-acts"><button class="linkbtn2" data-renlist="1">Rename</button><button class="linkbtn2 danger" data-dellist="1">${confirmDel === "list" ? "Click again to delete list" : "Delete list"}</button><label class="ontoday"><input type="checkbox" id="list-ontoday" ${showsOnToday(view) ? "checked" : ""}> Show as its own column on Today</label></span>` : ""}<div class="sub">${sub}</div></div>
