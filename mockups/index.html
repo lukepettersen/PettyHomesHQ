@@ -1361,7 +1361,6 @@ function renderActive() {
   app.innerHTML = `
     <div class="board-head">
       <div class="left"><h1>Pipeline</h1><span class="board-sum">${money(vol)} under contract</span></div>
-      <span class="left"><button class="btn primary" data-start="buyer">+ Start buyer</button><button class="btn primary" data-start="listing">+ Start listing</button></span>
     </div>
     <div class="ptabs" role="tablist">${tabs.map(([k, l, n]) => `<button role="tab" data-pview="${k}" aria-selected="${pview === k}">${l} <span>${n}</span></button>`).join("")}</div>
     <p class="muted sm" style="margin:0">${pview === "uc" ? "Grouped by the next contract date still open. " : ""}Shows where each client is. To change a status, open the client.</p>
