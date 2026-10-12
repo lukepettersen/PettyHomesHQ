@@ -257,6 +257,7 @@ body { background: var(--bg); }
 #pg-deals .stsel select { padding: 3px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--fg); }
 #pg-deals .chk { flex-direction: row !important; align-items: center; gap: 8px !important; font-size: 13px !important; color: var(--fg) !important; }
 #pg-deals .chk input { width: auto !important; }
+#pg-deals .sm-btn { padding: 3px 10px; font-size: 12.5px; }
 #pg-deals .linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; text-decoration: underline; font-size: inherit; }
 #pg-deals .sm { font-size: 12.5px; }
 #pg-deals .od { color: var(--bad); font-size: 12.5px; }
@@ -1452,13 +1453,13 @@ function engPane(eng) {
   return `<div class="pane">
     <div class="pane-h">
       <div><b>${isB ? "Buyer representation" : "Listing"}</b> <span class="muted">${esc(fileLine(eng))}</span></div>
-      <div class="dp-r">${statusCtl}<span class="dot ${health(pa || eng)}" title="${HEALTH[health(pa || eng)]}"></span></div>
+      <div class="dp-r"><button class="btn sm-btn" data-editeng="${eng.id}">Edit</button>${statusCtl}<span class="dot ${health(pa || eng)}" title="${HEALTH[health(pa || eng)]}"></span></div>
     </div>
     <div class="factline">${engInfo(eng)}</div>
     ${pa ? `
       <div class="pa-box">
         <div class="pa-h"><div><span class="sidechip ${pa.side}">${pa.side === "buyer" ? "Buyer side" : "Seller side"}</span> <b>Purchase agreement</b> · ${esc(pa.line)} <span class="num muted">${money(pa.price)}</span></div>
-          <div class="dp-r"><span class="muted sm">${pa.ms.close ? "Closing " + short(d(pa.ms.close)) : "Closing date not set"}</span><button class="btn" data-paterm="${pa.id}">Fell through</button><button class="btn" data-paclose="${pa.id}">Mark closed</button></div></div>
+          <div class="dp-r"><span class="muted sm">${pa.ms.close ? "Closing " + short(d(pa.ms.close)) : "Closing date not set"}</span><button class="btn" data-editpa="${pa.id}">Edit</button><button class="btn" data-paterm="${pa.id}">Fell through</button><button class="btn" data-paclose="${pa.id}">Mark closed</button></div></div>
         <div class="pad">${datesHtml(pa)}</div>
         <div class="factline">${factsInline(pa)}</div>
         ${(pa.people || []).length ? `<div class="factline">${pa.people.map(([n, r]) => `<span><em>${r}</em> ${esc(n)}</span>`).join("")}</div>` : ""}
@@ -1742,7 +1743,7 @@ function fieldHtml([k, lab, type, ph, req]) {
   if (k === "hoa_d" && v.hoa !== "Yes") return "";
   const input = Array.isArray(type)
     ? `<select data-df="${k}">${type.map(o => `<option ${o === v[k] ? "selected" : ""}>${o}</option>`).join("")}</select>`
-    : `<input data-df="${k}" type="${type === "money" || type === "number" ? "number" : type === "date" ? "date" : "text"}" value="${esc(v[k] || "")}" placeholder="${esc(ph || (type === "money" ? "$" : ""))}" ${type === "money" ? 'min="0" step="500"' : ""}>`;
+    : `<input data-df="${k}" type="${type === "money" || type === "number" ? "number" : type === "date" ? "date" : "text"}" value="${esc(v[k] || "")}" placeholder="${esc(ph || (type === "money" ? "$" : ""))}" ${type === "money" ? 'min="0" step="any"' : ""}>`;
   return `<label>${lab}${req ? " *" : ""}${input}</label>`;
 }
 function previewHtml() {
@@ -1760,23 +1761,55 @@ function allContacts() {
 }
 function dealModalHtml() {
   const f = dealForm, eng = f.engId && deals.find(x => x.id === f.engId);
-  const title = f.mode === "pa" ? `Purchase agreement · ${sideOf(eng) === "buyer" ? "buyer side" : "seller side"}` : f.mode === "buyer" ? "Start a buyer" : "Start a listing";
+  const title = (f.editId ? "Edit " : "") + (f.mode === "pa" ? `purchase agreement · ${sideOf(eng) === "buyer" ? "buyer side" : "seller side"}` : f.mode === "buyer" ? (f.editId ? "buyer representation" : "Start a buyer") : (f.editId ? "listing" : "Start a listing"));
   return `<div class="modal-bg" data-dclose="1"><form class="modal deal-modal" id="deal-form" autocomplete="off">
-    <h2>${title}</h2>
+    <h2>${title[0].toUpperCase() + title.slice(1)}</h2>
     ${f.mode === "pa" ? `<p class="muted sm" style="margin:0">${esc(eng.name)} · ${esc(fileLine(eng))}</p>` : `<div class="dm-top">
-      <label>Client<select data-dcid="1">${allContacts().map(([cid, n]) => `<option value="${cid}" ${cid === f.cid ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>
+      <label>Client<select data-dcid="1" ${f.editId ? "disabled" : ""}>${allContacts().map(([cid, n]) => `<option value="${cid}" ${cid === f.cid ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>
       <label>Status<select data-dstatus="1">${STATUS[f.mode].map(s => `<option ${s === f.status ? "selected" : ""}>${s}</option>`).join("")}</select></label>
     </div>`}
     ${formGroups().map(([t, fields]) => { const inner = fields.map(fieldHtml).join(""); return inner ? `<fieldset><legend>${t}</legend><div class="dm-grid">${inner}</div></fieldset>` : ""; }).join("")}
-    ${f.mode !== "pa" ? `<label class="chk"><input type="checkbox" data-df="accepted" ${f.v.accepted === "on" ? "checked" : ""}> They already have an accepted offer (add the purchase agreement next)</label>` : ""}
-    <div class="dm-prev" id="dm-prev">${previewHtml()}</div>
-    <div class="foot"><button type="button" class="btn" data-dclose="1">Cancel</button><button class="btn primary" type="submit">${f.mode === "pa" ? "Add purchase agreement" : f.mode === "buyer" ? "Start buyer" : "Start listing"}</button></div>
+    ${f.mode !== "pa" && !f.editId ? `<label class="chk"><input type="checkbox" data-df="accepted" ${f.v.accepted === "on" ? "checked" : ""}> They already have an accepted offer (add the purchase agreement next)</label>` : ""}
+    ${f.editId ? `<p class="muted sm" style="margin:0">Changing a date moves the steps timed from it.</p>` : `<div class="dm-prev" id="dm-prev">${previewHtml()}</div>`}
+    <div class="foot"><button type="button" class="btn" data-dclose="1">Cancel</button><button class="btn primary" type="submit">${f.editId ? "Save changes" : f.mode === "pa" ? "Add purchase agreement" : f.mode === "buyer" ? "Start buyer" : "Start listing"}</button></div>
   </form></div>`;
 }
 function openForm(mode, opts = {}) {
   const base = { fin: "Conventional", ptype: "Single family", hoa: "No", newc: "No", timeframe: "0–3 months", preapproved: "Not yet" };
   dealForm = { mode, cid: opts.cid || openContact || allContacts()[0][0], status: mode === "buyer" ? "Consult" : mode === "listing" ? "Prep" : null, engId: opts.engId, v: Object.assign(base, opts.v || {}) };
   renderDealModal();
+}
+function editForm(dl) {
+  const v = { fin: "Conventional", ptype: "Single family", hoa: "No", newc: "No", timeframe: "0–3 months", preapproved: "Not yet" };
+  Object.assign(v, dl.info || {}, dl.facts || {});
+  if (dl.kind !== "buyer") { v.address = dl.line; v.price = dl.price || ""; }
+  if (dl.kind === "pa") {
+    Object.assign(v, { em: dl.em || "", sc: dl.sc || "", fin: dl.fin, comm: dl.comm || "", bac: dl.bac || "" });
+    Object.entries(dl.ms).forEach(([k, x]) => { v[k === "hoa" ? "hoa_d" : k] = x || ""; });
+    F.people[dl.side].forEach(([k, l]) => { const hit = (dl.people || []).find(x => x[1] === l); if (hit) v[k] = hit[0]; });
+  }
+  dealForm = { mode: dl.kind === "pa" ? "pa" : dl.kind, cid: dl.cid, status: dl.status, engId: dl.kind === "pa" ? dl.parent : dl.id, editId: dl.id, v };
+  renderDealModal();
+}
+function saveEdit() {
+  const f = dealForm, v = f.v, dl = deals.find(x => x.id === f.editId);
+  const facts = { ptype: v.ptype, year: v.year, hoa: v.hoa, newc: v.newc };
+  if (dl.kind === "pa") {
+    Object.assign(dl, { line: v.address, price: +v.price, em: +v.em || 0, sc: +v.sc || 0, fin: v.fin, comm: +v.comm || 0, bac: v.bac, facts, people: F.people[dl.side].filter(([k]) => v[k]).map(([k, l]) => [v[k], l]) });
+    const keys = ["fa", "insp", "ws"].concat(v.hoa === "Yes" ? ["hoa"] : []).concat(["close"]);
+    let moved = 0;
+    keys.forEach(k => {
+      const nv = v[k === "hoa" ? "hoa_d" : k] || null, old = dl.ms[k];
+      if (!(k in dl.ms)) { dl.ms[k] = nv; dl.msStatus[k] = "pending"; return; }
+      if (nv !== old) { moved += dl.tasks.filter(t => t.a === k && t.s === "open").length; if (old && nv && dl.msStatus[k] === "pending") { dl.msOrig = dl.msOrig || {}; dl.msOrig[k] = old; dl.msStatus[k] = "extended"; } dl.ms[k] = nv; }
+    });
+    if (v.hoa !== "Yes" && "hoa" in dl.ms) delete dl.ms.hoa;
+    dealForm = null; renderDealModal(); render(); toast(`Saved.${moved ? ` ${moved} step${moved === 1 ? "" : "s"} re-dated.` : ""}`); return;
+  }
+  if (dl.kind === "buyer") Object.assign(dl.info, { areas: v.areas, range: v.range, timeframe: v.timeframe, preapproved: v.preapproved, lender: v.lender, repSigned: v.repSigned, repExpires: v.repExpires, bac: v.bac, offer: v.offer, respond: v.respond });
+  else { dl.line = v.address; dl.price = +v.price || 0; dl.facts = facts; Object.assign(dl.info, { lcSigned: v.lcSigned, lcExpires: v.lcExpires, comm: v.comm, bac: v.bac, photos: v.photos, active: v.active }); }
+  const st = f.status; dealForm = null; renderDealModal();
+  if (st !== dl.status && !activePA(dl)) setStatus(dl, st); else { render(); toast("Saved."); }
 }
 function renderDealModal() {
   el("deal-modal").innerHTML = dealForm ? dealModalHtml() : "";
@@ -1786,6 +1819,7 @@ function readDealForm() { document.querySelectorAll("[data-df]").forEach(i => { 
 function submitForm() {
   readDealForm();
   const f = dealForm, v = f.v;
+  if (f.editId) { const miss = formGroups().flatMap(([, fs]) => fs).filter(x => x[4] && !v[x[0]]); if (miss.length) { toast(`Add ${miss.map(x => x[1].toLowerCase()).join(" and ")} first.`); return; } saveEdit(); return; }
   const missing = formGroups().flatMap(([, fs]) => fs).filter(x => x[4] && !v[x[0]]);
   if (missing.length) { toast(`Add ${missing.map(x => x[1].toLowerCase()).join(" and ")} first.`); return; }
   const id = Math.max(...deals.map(x => x.id)) + 1;
@@ -1847,6 +1881,8 @@ document.addEventListener("click", e => {
   if (b.dataset.showclosed) { showClosed = !showClosed; render(); return; }
   if (b.dataset.start) { openForm(b.dataset.start, { cid: openContact }); return; }
   if (b.dataset.addpa) { const eng = deals.find(x => x.id === +b.dataset.addpa); openForm("pa", { engId: eng.id, v: eng.kind === "listing" ? Object.assign({ address: eng.line, price: eng.price || "" }, eng.facts || {}) : {} }); return; }
+  if (b.dataset.editeng) { editForm(deals.find(x => x.id === +b.dataset.editeng)); return; }
+  if (b.dataset.editpa) { editForm(deals.find(x => x.id === +b.dataset.editpa)); return; }
   if (b.dataset.engopen) { engOpen[b.dataset.engopen] = !engOpen[b.dataset.engopen]; render(); return; }
   if (b.dataset.paterm) {
     const pa = deals.find(x => x.id === +b.dataset.paterm), eng = deals.find(x => x.id === pa.parent);
@@ -1927,7 +1963,7 @@ document.addEventListener("change", e => {
     if (ds.dstatus) dealForm.status = e.target.value;
     if (ds.dcid) dealForm.cid = e.target.value;
     // Redraw only when the set of fields changes; otherwise just refresh the preview.
-    if (ds.dstatus || ds.df === "hoa") renderDealModal(); else el("dm-prev").innerHTML = previewHtml();
+    if (ds.dstatus || ds.df === "hoa") renderDealModal(); else if (el("dm-prev")) el("dm-prev").innerHTML = previewHtml();
     return;
   }
   if (ds.estatus) { setStatus(deals.find(x => x.id === +ds.estatus), e.target.value); return; }
