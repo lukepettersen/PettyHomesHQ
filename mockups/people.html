@@ -60,6 +60,15 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 }
 .chk-row { display: flex !important; flex-direction: row !important; align-items: center; gap: 8px; font-weight: 600; }
 .chk-row input { width: auto; }
+.li-row { display: flex; align-items: center; border-radius: 6px; }
+.li-row .ni { flex: 1; min-width: 0; }
+.li-row .li-more { opacity: 0; }
+.li-row:hover .li-more, .li-row .li-more:focus { opacity: 1; }
+.li-menu select { padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; font-size: 12px; background: var(--surface); }
+.coll-menu button.danger { color: var(--bad); }
+[draggable="true"] { cursor: grab; }
+.dragging { opacity: .4; }
+.drop-over { box-shadow: inset 0 2px 0 var(--accent); background: var(--accent-soft); }
 </style>
 <style>
 /* Layout: collections (folders of smart lists) on the left; table with a filter bar on the right. */
@@ -192,7 +201,7 @@ let collections = [
 ];
 let cur = null, renaming = false, confirmDel = null;           // current list id, null = All people
 let working = [];         // filters being shown (may differ from the saved list)
-let building = false, collMenu = null, q = "", sort = "name", sel = new Set();
+let building = false, collMenu = null, listMenu = null, q = "", sort = "name", sel = new Set();
 const el = id => document.getElementById(id);
 const findList = id => { for (const c of collections) { const l = c.lists.find(x => x.id === id); if (l) return [c, l]; } return [null, null]; };
 const match = fs => people.filter(p => fs.every(f => test(p, f)));
@@ -207,17 +216,21 @@ function openList(id) {
 function renderSide() {
   el("side").innerHTML = `
     <button class="ni" data-open="" aria-current="${cur === null}"><span>All people</span><span class="c">${people.length}</span></button>
-    ${collections.map(c => `<div class="coll">
-      <div class="coll-h">
+    ${collections.map((c, ci) => `<div class="coll">
+      <div class="coll-h" draggable="true" data-drag="c:${c.id}" data-drop="c:${c.id}">
         <button class="tog" data-tog="${c.id}" aria-expanded="${c.open}">${esc(c.name)}</button>
         <button class="mini" data-newlist="${c.id}" title="New smart list in ${esc(c.name)}" aria-label="New smart list in ${esc(c.name)}">+</button>
         <button class="mini" data-cmenu="${c.id}" aria-label="Collection options">⋯</button>
       </div>
-      ${collMenu === c.id ? `<div class="coll-menu"><input id="rename-c" value="${esc(c.name)}" aria-label="Collection name"><button data-crename="${c.id}">Rename</button><button data-cdel="${c.id}">Delete</button></div>` : ""}
-      ${c.open ? `<div class="coll-body">${c.lists.map(l => `<button class="ni" data-open="${l.id}" aria-current="${cur === l.id}"><span>${esc(l.name)}</span><span class="c">${match(l.filters).length}</span></button>`).join("")}
-        <button class="addlink" data-newlist="${c.id}">+ New smart list</button></div>` : ""}
+      ${collMenu === c.id ? `<div class="coll-menu"><input id="rename-c" value="${esc(c.name)}" aria-label="Collection name"><button data-crename="${c.id}">Rename</button><button data-cmove="${ci}:-1" ${ci ? "" : "disabled"}>↑</button><button data-cmove="${ci}:1" ${ci < collections.length - 1 ? "" : "disabled"}>↓</button><button data-cdel="${c.id}">Delete</button></div>` : ""}
+      ${c.open ? `<div class="coll-body">${c.lists.map((l, li) => `<div class="li-row" draggable="true" data-drag="l:${l.id}" data-drop="l:${l.id}"><button class="ni" data-open="${l.id}" aria-current="${cur === l.id}"><span>${esc(l.name)}</span><span class="c">${match(l.filters).length}</span></button><button class="mini li-more" data-lmenu="${l.id}" aria-label="Options for ${esc(l.name)}">⋯</button></div>
+          ${listMenu === l.id ? `<div class="coll-menu li-menu"><input id="rename-l" value="${esc(l.name)}" aria-label="List name"><button data-lrn="${l.id}">Rename</button>
+            <button data-lmove="${l.id}:-1" ${li ? "" : "disabled"} aria-label="Move up">↑</button><button data-lmove="${l.id}:1" ${li < c.lists.length - 1 ? "" : "disabled"} aria-label="Move down">↓</button>
+            <select data-lto="${l.id}" aria-label="Move to collection"><option value="">Move to…</option>${collections.filter(x => x !== c).map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select>
+            <button data-ldup="${l.id}">Duplicate</button><button data-ldel2="${l.id}" class="danger">${confirmDel === "l" + l.id ? "Click again" : "Delete"}</button></div>` : ""}`).join("")}
+        <button class="addlink" data-newlist="${c.id}" data-drop="e:${c.id}">+ New smart list</button></div>` : ""}
     </div>`).join("")}
-    <div class="newcoll"><button class="addlink" data-newcoll="1">+ New collection</button></div>`;
+    <div class="newcoll"><button class="addlink" data-newcoll="1">+ New collection</button><p class="muted sm" style="margin:6px 8px 0">Drag lists and collections to reorder or move them, or use ⋯.</p></div>`;
 }
 
 function rows() {
@@ -342,11 +355,17 @@ document.addEventListener("click", e => {
   if (ds.open !== undefined) { openList(ds.open || null); return; }
   if (ds.tog) { const c = collections.find(x => x.id === ds.tog); c.open = !c.open; renderSide(); return; }
   if (ds.newlist) { const c = collections.find(x => x.id === ds.newlist); c.open = true; cur = null; working = []; building = true; render(); saveTarget = c.id; toast(`Add filters, then "Save as smart list" to put it in ${c.name}.`); return; }
-  if (ds.cmenu) { collMenu = collMenu === ds.cmenu ? null : ds.cmenu; renderSide(); return; }
+  if (ds.cmenu) { collMenu = collMenu === ds.cmenu ? null : ds.cmenu; listMenu = null; renderSide(); return; }
+  if (ds.cmove) { const [i, dlt] = ds.cmove.split(":").map(Number), j = i + dlt; [collections[i], collections[j]] = [collections[j], collections[i]]; renderSide(); return; }
+  if (ds.lmenu) { listMenu = listMenu === ds.lmenu ? null : ds.lmenu; collMenu = null; renderSide(); const i = el("rename-l"); if (i) i.focus(); return; }
+  if (ds.lrn) { const [, l] = findList(ds.lrn); l.name = el("rename-l").value.trim() || l.name; listMenu = null; render(); toast("Renamed."); return; }
+  if (ds.lmove) { const [id, dlt] = ds.lmove.split(":"), [c, l] = findList(id), i = c.lists.indexOf(l), j = i + +dlt; [c.lists[i], c.lists[j]] = [c.lists[j], c.lists[i]]; renderSide(); return; }
+  if (ds.ldup) { const [c, l] = findList(ds.ldup), copy = L(l.name + " copy", JSON.parse(JSON.stringify(l.filters))); c.lists.splice(c.lists.indexOf(l) + 1, 0, copy); listMenu = copy.id; renderSide(); const i = el("rename-l"); if (i) { i.focus(); i.select(); } return; }
+  if (ds.ldel2) { if (confirmDel !== "l" + ds.ldel2) { confirmDel = "l" + ds.ldel2; renderSide(); return; } const [c, l] = findList(ds.ldel2); c.lists = c.lists.filter(x => x !== l); confirmDel = null; listMenu = null; toast(`Deleted "${l.name}".`); if (cur === l.id) openList(null); else render(); return; }
   if (ds.crename) { const c = collections.find(x => x.id === ds.crename); c.name = el("rename-c").value.trim() || c.name; collMenu = null; render(); return; }
   if (ds.cdel) { const c = collections.find(x => x.id === ds.cdel); if (c.lists.length) { toast(`Move or delete the ${c.lists.length} lists in ${c.name} first.`); return; } collections = collections.filter(x => x !== c); collMenu = null; render(); return; }
   if (ds.newcoll) { const c = { id: "c" + (++nid), name: "New collection", open: true, lists: [] }; collections.push(c); collMenu = c.id; renderSide(); const i = el("rename-c"); if (i) { i.focus(); i.select(); } return; }
-  if (confirmDel && !ds.ldel && !ds.delsel) confirmDel = null;
+  if (confirmDel && !ds.ldel && !ds.delsel && !ds.ldel2) confirmDel = null;
   if (ds.lrename) { renaming = true; renderMain(); const i = el("list-name"); i.focus(); i.select(); return; }
   if (ds.lrsave) { const [, l] = findList(cur); l.name = el("list-name").value.trim() || l.name; renaming = false; render(); return; }
   if (ds.ldel) { if (confirmDel !== "list") { confirmDel = "list"; renderMain(); return; } const [c, l] = findList(cur); c.lists = c.lists.filter(x => x !== l); confirmDel = null; toast(`Deleted "${l.name}".`); openList(null); return; }
@@ -366,9 +385,31 @@ document.addEventListener("click", e => {
 });
 let saveTarget = null;
 document.addEventListener("change", e => {
+  if (e.target.dataset.lto && e.target.value) { const [c, l] = findList(e.target.dataset.lto), to = collections.find(x => x.id === e.target.value); c.lists = c.lists.filter(x => x !== l); to.lists.push(l); to.open = true; listMenu = null; renderSide(); toast(`Moved "${l.name}" to ${to.name}.`); return; }
   if (e.target.id === "b-field") { renderMain(); return; }
   if (e.target.dataset.sel) { const k = e.target.dataset.sel; e.target.checked ? sel.add(k) : sel.delete(k); renderMain(); }
   if (e.target.id === "all") { rows().forEach(p => e.target.checked ? sel.add(p.cid) : sel.delete(p.cid)); renderMain(); }
 });
+/* ---------- Drag and drop: lists between collections, collections up and down ---------- */
+let dragging = null;
+function moveItem(drag, drop) {
+  const [dk, did] = drag.split(":"), [tk, tid] = drop.split(":");
+  if (drag === drop) return;
+  if (dk === "l") {
+    const [from, l] = findList(did); if (!l) return;
+    from.lists = from.lists.filter(x => x !== l);
+    if (tk === "l") { const [to, t] = findList(tid); to.lists.splice(to.lists.indexOf(t), 0, l); to.open = true; }
+    else { const to = collections.find(x => x.id === tid); to.lists.push(l); to.open = true; }
+  } else {
+    const c = collections.find(x => x.id === did); collections = collections.filter(x => x !== c);
+    const tc = tk === "l" ? findList(tid)[0] : collections.find(x => x.id === tid);
+    const at = tc ? collections.indexOf(tc) : collections.length; collections.splice(at < 0 ? collections.length : at, 0, c);
+  }
+  renderSide();
+}
+document.addEventListener("dragstart", e => { const t = e.target.closest && e.target.closest("[data-drag]"); if (!t) return; dragging = t.dataset.drag; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", dragging); setTimeout(() => t.classList.add("dragging")); });
+document.addEventListener("dragover", e => { if (!dragging) return; const t = e.target.closest && e.target.closest("[data-drop]"); document.querySelectorAll(".drop-over").forEach(x => x !== t && x.classList.remove("drop-over")); if (!t) return; e.preventDefault(); t.classList.add("drop-over"); });
+document.addEventListener("drop", e => { const t = e.target.closest && e.target.closest("[data-drop]"); if (!dragging || !t) return; e.preventDefault(); const d = dragging; dragging = null; moveItem(d, t.dataset.drop); });
+document.addEventListener("dragend", () => { dragging = null; document.querySelectorAll(".dragging, .drop-over").forEach(x => x.classList.remove("dragging", "drop-over")); });
 render();
 </script>

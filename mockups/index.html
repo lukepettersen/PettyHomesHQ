@@ -62,6 +62,15 @@ body { background: var(--bg); }
 #pg-people .nav-i { white-space: nowrap; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; }}
 #pg-people .chk-row { display: flex !important; flex-direction: row !important; align-items: center; gap: 8px; font-weight: 600; }
 #pg-people .chk-row input { width: auto; }
+#pg-people .li-row { display: flex; align-items: center; border-radius: 6px; }
+#pg-people .li-row .ni { flex: 1; min-width: 0; }
+#pg-people .li-row .li-more { opacity: 0; }
+#pg-people .li-row:hover .li-more, #pg-people .li-row .li-more:focus { opacity: 1; }
+#pg-people .li-menu select { padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; font-size: 12px; background: var(--surface); }
+#pg-people .coll-menu button.danger { color: var(--bad); }
+#pg-people [draggable="true"] { cursor: grab; }
+#pg-people .dragging { opacity: .4; }
+#pg-people .drop-over { box-shadow: inset 0 2px 0 var(--accent); background: var(--accent-soft); }
 #pg-people .shell { max-width: 1500px; margin: 0 auto; padding-inline: 16px; padding-block: 14px 40px; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 18px; align-items: start; }
 @media (max-width: 860px) {#pg-people .shell { grid-template-columns: minmax(0, 1fr); }}
 #pg-people .main { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
@@ -249,6 +258,15 @@ body { background: var(--bg); }
 #pg-deals .ptabs button span { font-size: 12.5px; color: var(--muted); font-weight: 500; margin-left: 4px; }
 #pg-deals .ptabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--coral, var(--accent)); }
 #pg-deals .pcols { display: grid; grid-template-columns: repeat(var(--n), minmax(170px, 1fr)); gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+#pg-deals .st-h { gap: 6px !important; }
+#pg-deals .st-h input, #pg-deals .st-h select { width: 100%; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); font-weight: 700; font-size: 13.5px; color: var(--fg); }
+#pg-deals .st-h select { font-weight: 400; font-size: 12.5px; }
+#pg-deals .st-tools { display: flex; gap: 2px; }
+#pg-deals .st-tools .rm { border: 1px solid var(--line); background: var(--surface); border-radius: 5px; width: 28px; height: 26px; color: var(--muted); }
+#pg-deals .st-tools .rm:disabled { opacity: .35; }
+#pg-deals .st-add { border: 1.5px dashed var(--line); background: none; border-radius: 6px; padding: 14px 10px; color: var(--accent); font-weight: 700; }
+#pg-deals .st-foot { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 10px; flex-wrap: wrap; }
+#pg-deals .st-foot .muted { margin-right: auto; }
 #pg-deals .pcol { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 #pg-deals .pcol-h { display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border-top: 4px solid var(--bar, var(--line)); background: var(--surface); border-radius: 6px; box-shadow: 0 0 0 1px var(--line); font-size: 13.5px; }
 #pg-deals .pi-av { display: flex; gap: 4px; margin-top: 4px; }
@@ -1242,7 +1260,7 @@ let collections = [
 ];
 let cur = null, renaming = false, confirmDel = null;           // current list id, null = All people
 let working = [];         // filters being shown (may differ from the saved list)
-let building = false, collMenu = null, q = "", sort = "name", sel = new Set();
+let building = false, collMenu = null, listMenu = null, q = "", sort = "name", sel = new Set();
 const el = id => document.getElementById(id);
 const findList = id => { for (const c of collections) { const l = c.lists.find(x => x.id === id); if (l) return [c, l]; } return [null, null]; };
 const match = fs => people.filter(p => fs.every(f => test(p, f)));
@@ -1257,17 +1275,21 @@ function openList(id) {
 function renderSide() {
   el("side").innerHTML = `
     <button class="ni" data-open="" aria-current="${cur === null}"><span>All people</span><span class="c">${people.length}</span></button>
-    ${collections.map(c => `<div class="coll">
-      <div class="coll-h">
+    ${collections.map((c, ci) => `<div class="coll">
+      <div class="coll-h" draggable="true" data-drag="c:${c.id}" data-drop="c:${c.id}">
         <button class="tog" data-tog="${c.id}" aria-expanded="${c.open}">${esc(c.name)}</button>
         <button class="mini" data-newlist="${c.id}" title="New smart list in ${esc(c.name)}" aria-label="New smart list in ${esc(c.name)}">+</button>
         <button class="mini" data-cmenu="${c.id}" aria-label="Collection options">⋯</button>
       </div>
-      ${collMenu === c.id ? `<div class="coll-menu"><input id="rename-c" value="${esc(c.name)}" aria-label="Collection name"><button data-crename="${c.id}">Rename</button><button data-cdel="${c.id}">Delete</button></div>` : ""}
-      ${c.open ? `<div class="coll-body">${c.lists.map(l => `<button class="ni" data-open="${l.id}" aria-current="${cur === l.id}"><span>${esc(l.name)}</span><span class="c">${match(l.filters).length}</span></button>`).join("")}
-        <button class="addlink" data-newlist="${c.id}">+ New smart list</button></div>` : ""}
+      ${collMenu === c.id ? `<div class="coll-menu"><input id="rename-c" value="${esc(c.name)}" aria-label="Collection name"><button data-crename="${c.id}">Rename</button><button data-cmove="${ci}:-1" ${ci ? "" : "disabled"}>↑</button><button data-cmove="${ci}:1" ${ci < collections.length - 1 ? "" : "disabled"}>↓</button><button data-cdel="${c.id}">Delete</button></div>` : ""}
+      ${c.open ? `<div class="coll-body">${c.lists.map((l, li) => `<div class="li-row" draggable="true" data-drag="l:${l.id}" data-drop="l:${l.id}"><button class="ni" data-open="${l.id}" aria-current="${cur === l.id}"><span>${esc(l.name)}</span><span class="c">${match(l.filters).length}</span></button><button class="mini li-more" data-lmenu="${l.id}" aria-label="Options for ${esc(l.name)}">⋯</button></div>
+          ${listMenu === l.id ? `<div class="coll-menu li-menu"><input id="rename-l" value="${esc(l.name)}" aria-label="List name"><button data-lrn="${l.id}">Rename</button>
+            <button data-lmove="${l.id}:-1" ${li ? "" : "disabled"} aria-label="Move up">↑</button><button data-lmove="${l.id}:1" ${li < c.lists.length - 1 ? "" : "disabled"} aria-label="Move down">↓</button>
+            <select data-lto="${l.id}" aria-label="Move to collection"><option value="">Move to…</option>${collections.filter(x => x !== c).map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select>
+            <button data-ldup="${l.id}">Duplicate</button><button data-ldel2="${l.id}" class="danger">${confirmDel === "l" + l.id ? "Click again" : "Delete"}</button></div>` : ""}`).join("")}
+        <button class="addlink" data-newlist="${c.id}" data-drop="e:${c.id}">+ New smart list</button></div>` : ""}
     </div>`).join("")}
-    <div class="newcoll"><button class="addlink" data-newcoll="1">+ New collection</button></div>`;
+    <div class="newcoll"><button class="addlink" data-newcoll="1">+ New collection</button><p class="muted sm" style="margin:6px 8px 0">Drag lists and collections to reorder or move them, or use ⋯.</p></div>`;
 }
 
 function rows() {
@@ -1392,11 +1414,17 @@ document.addEventListener("click", e => {
   if (ds.open !== undefined) { openList(ds.open || null); return; }
   if (ds.tog) { const c = collections.find(x => x.id === ds.tog); c.open = !c.open; renderSide(); return; }
   if (ds.newlist) { const c = collections.find(x => x.id === ds.newlist); c.open = true; cur = null; working = []; building = true; render(); saveTarget = c.id; toast(`Add filters, then "Save as smart list" to put it in ${c.name}.`); return; }
-  if (ds.cmenu) { collMenu = collMenu === ds.cmenu ? null : ds.cmenu; renderSide(); return; }
+  if (ds.cmenu) { collMenu = collMenu === ds.cmenu ? null : ds.cmenu; listMenu = null; renderSide(); return; }
+  if (ds.cmove) { const [i, dlt] = ds.cmove.split(":").map(Number), j = i + dlt; [collections[i], collections[j]] = [collections[j], collections[i]]; renderSide(); return; }
+  if (ds.lmenu) { listMenu = listMenu === ds.lmenu ? null : ds.lmenu; collMenu = null; renderSide(); const i = el("rename-l"); if (i) i.focus(); return; }
+  if (ds.lrn) { const [, l] = findList(ds.lrn); l.name = el("rename-l").value.trim() || l.name; listMenu = null; render(); toast("Renamed."); return; }
+  if (ds.lmove) { const [id, dlt] = ds.lmove.split(":"), [c, l] = findList(id), i = c.lists.indexOf(l), j = i + +dlt; [c.lists[i], c.lists[j]] = [c.lists[j], c.lists[i]]; renderSide(); return; }
+  if (ds.ldup) { const [c, l] = findList(ds.ldup), copy = L(l.name + " copy", JSON.parse(JSON.stringify(l.filters))); c.lists.splice(c.lists.indexOf(l) + 1, 0, copy); listMenu = copy.id; renderSide(); const i = el("rename-l"); if (i) { i.focus(); i.select(); } return; }
+  if (ds.ldel2) { if (confirmDel !== "l" + ds.ldel2) { confirmDel = "l" + ds.ldel2; renderSide(); return; } const [c, l] = findList(ds.ldel2); c.lists = c.lists.filter(x => x !== l); confirmDel = null; listMenu = null; toast(`Deleted "${l.name}".`); if (cur === l.id) openList(null); else render(); return; }
   if (ds.crename) { const c = collections.find(x => x.id === ds.crename); c.name = el("rename-c").value.trim() || c.name; collMenu = null; render(); return; }
   if (ds.cdel) { const c = collections.find(x => x.id === ds.cdel); if (c.lists.length) { toast(`Move or delete the ${c.lists.length} lists in ${c.name} first.`); return; } collections = collections.filter(x => x !== c); collMenu = null; render(); return; }
   if (ds.newcoll) { const c = { id: "c" + (++nid), name: "New collection", open: true, lists: [] }; collections.push(c); collMenu = c.id; renderSide(); const i = el("rename-c"); if (i) { i.focus(); i.select(); } return; }
-  if (confirmDel && !ds.ldel && !ds.delsel) confirmDel = null;
+  if (confirmDel && !ds.ldel && !ds.delsel && !ds.ldel2) confirmDel = null;
   if (ds.lrename) { renaming = true; renderMain(); const i = el("list-name"); i.focus(); i.select(); return; }
   if (ds.lrsave) { const [, l] = findList(cur); l.name = el("list-name").value.trim() || l.name; renaming = false; render(); return; }
   if (ds.ldel) { if (confirmDel !== "list") { confirmDel = "list"; renderMain(); return; } const [c, l] = findList(cur); c.lists = c.lists.filter(x => x !== l); confirmDel = null; toast(`Deleted "${l.name}".`); openList(null); return; }
@@ -1416,10 +1444,32 @@ document.addEventListener("click", e => {
 });
 let saveTarget = null;
 document.addEventListener("change", e => {
+  if (e.target.dataset.lto && e.target.value) { const [c, l] = findList(e.target.dataset.lto), to = collections.find(x => x.id === e.target.value); c.lists = c.lists.filter(x => x !== l); to.lists.push(l); to.open = true; listMenu = null; renderSide(); toast(`Moved "${l.name}" to ${to.name}.`); return; }
   if (e.target.id === "b-field") { renderMain(); return; }
   if (e.target.dataset.sel) { const k = e.target.dataset.sel; e.target.checked ? sel.add(k) : sel.delete(k); renderMain(); }
   if (e.target.id === "all") { rows().forEach(p => e.target.checked ? sel.add(p.cid) : sel.delete(p.cid)); renderMain(); }
 });
+/* ---------- Drag and drop: lists between collections, collections up and down ---------- */
+let dragging = null;
+function moveItem(drag, drop) {
+  const [dk, did] = drag.split(":"), [tk, tid] = drop.split(":");
+  if (drag === drop) return;
+  if (dk === "l") {
+    const [from, l] = findList(did); if (!l) return;
+    from.lists = from.lists.filter(x => x !== l);
+    if (tk === "l") { const [to, t] = findList(tid); to.lists.splice(to.lists.indexOf(t), 0, l); to.open = true; }
+    else { const to = collections.find(x => x.id === tid); to.lists.push(l); to.open = true; }
+  } else {
+    const c = collections.find(x => x.id === did); collections = collections.filter(x => x !== c);
+    const tc = tk === "l" ? findList(tid)[0] : collections.find(x => x.id === tid);
+    const at = tc ? collections.indexOf(tc) : collections.length; collections.splice(at < 0 ? collections.length : at, 0, c);
+  }
+  renderSide();
+}
+document.addEventListener("dragstart", e => { const t = e.target.closest && e.target.closest("[data-drag]"); if (!t) return; dragging = t.dataset.drag; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", dragging); setTimeout(() => t.classList.add("dragging")); });
+document.addEventListener("dragover", e => { if (!dragging) return; const t = e.target.closest && e.target.closest("[data-drop]"); document.querySelectorAll(".drop-over").forEach(x => x !== t && x.classList.remove("drop-over")); if (!t) return; e.preventDefault(); t.classList.add("drop-over"); });
+document.addEventListener("drop", e => { const t = e.target.closest && e.target.closest("[data-drop]"); if (!dragging || !t) return; e.preventDefault(); const d = dragging; dragging = null; moveItem(d, t.dataset.drop); });
+document.addEventListener("dragend", () => { dragging = null; document.querySelectorAll(".dragging, .drop-over").forEach(x => x.classList.remove("dragging", "drop-over")); });
 render();
 
 return { onShow() { render(); } };
@@ -1564,6 +1614,41 @@ function pItem(file, eng) {
     <span class="pi-av">${[...new Set(openTasks(file).map(t => t.who))].sort().map(w => `<span class="av ${w === "AS" ? "as" : ""}" title="${WHO[w]}">${w}</span>`).join("")}</span>
   </button>`;
 }
+/* ---------- Edit stages right on the board (draft until Save) ---------- */
+let stageEdit = null; // { tab, rows: [{ orig, name, until }] }
+const UC_UNTIL = [["insp", "Inspection deadline"], ["hoa", "HOA doc rescission"], ["ws", "Written Statement"], ["close", "Closing"]];
+function startStageEdit() {
+  const tab = pview;
+  const rows = tab === "uc" ? HQ.settings.ucPhases.map(([n, k]) => ({ orig: n, name: n, until: k })) : STATUS[tab === "buyers" ? "buyer" : "listing"].map(n => ({ orig: n, name: n }));
+  stageEdit = { tab, rows };
+}
+function stageCount(tab, name) {
+  if (tab === "uc") return deals.filter(x => x.kind === "pa" && x.status === "Active" && ucPhase(x) === name).length;
+  const kind = tab === "buyers" ? "buyer" : "listing";
+  return deals.filter(x => x.kind === kind && x.status === name && !activePA(x)).length;
+}
+function stageEditHtml() {
+  const se = stageEdit, uc = se.tab === "uc";
+  return `<div class="st-edit"><div class="pcols" style="--n:${se.rows.length + 1}">${se.rows.map((r, i) => { const n = r.orig ? stageCount(se.tab, r.orig) : 0; return `<section class="pcol"><div class="pcol-h st-h" style="--bar:${uc ? "var(--coral)" : "var(--moss)"}">
+      <input data-stname="${i}" value="${esc(r.name)}" aria-label="Stage name">
+      ${uc ? `<select data-stuntil="${i}" aria-label="Stays here until">${UC_UNTIL.map(([k, l]) => `<option value="${k}" ${k === r.until ? "selected" : ""}>Until ${l}</option>`).join("")}</select>` : ""}
+      <span class="st-tools"><button class="rm" data-stmove="${i}:-1" aria-label="Move left" ${i ? "" : "disabled"}>←</button><button class="rm" data-stmove="${i}:1" aria-label="Move right" ${i < se.rows.length - 1 ? "" : "disabled"}>→</button><button class="rm" data-stdel="${i}" aria-label="Delete stage" ${se.rows.length > 1 ? "" : "disabled"}>×</button></span>
+      <span class="muted sm">${n ? `${n} client${n === 1 ? "" : "s"} here` : "Empty"}</span></div></section>`; }).join("")}
+    <section class="pcol"><button class="st-add" data-stadd="1">+ Add stage</button></section></div>
+    <div class="st-foot"><span class="muted sm">${uc ? "Each column holds contracts until its date is met. " : "Renaming moves everyone in that stage and keeps its task template attached. "}Changes also show in Admin → Client statuses.</span><button class="btn" data-stcancel="1">Cancel</button><button class="btn primary" data-stsave="1">Save stages</button></div></div>`;
+}
+function saveStageEdit() {
+  const se = stageEdit; document.querySelectorAll("[data-stname]").forEach(i => se.rows[+i.dataset.stname].name = i.value.trim() || se.rows[+i.dataset.stname].name);
+  const names = se.rows.map(r => r.name); if (new Set(names).size !== names.length) { toast("Two stages have the same name. Rename one first."); return; }
+  if (se.tab === "uc") { HQ.settings.ucPhases.splice(0, HQ.settings.ucPhases.length, ...se.rows.map(r => [r.name, r.until])); stageEdit = null; render(); toast("Stages saved."); return; }
+  const kind = se.tab === "buyers" ? "buyer" : "listing", P = kind === "buyer" ? "Buyer" : "Listing";
+  se.rows.filter(r => r.orig && r.orig !== r.name).forEach(r => {
+    deals.forEach(x => { if (x.kind === kind && x.status === r.orig) x.status = r.name; });
+    HQ.templates.forEach(t => { if (t.trigger === `${P} · ${r.orig}`) t.trigger = `${P} · ${r.name}`; });
+  });
+  STATUS[kind].splice(0, STATUS[kind].length, ...names);
+  stageEdit = null; render(); toast("Stages saved.");
+}
 function renderActive() {
   const buyers = deals.filter(x => x.kind === "buyer" && x.status !== "Closed");
   const listings = deals.filter(x => x.kind === "listing" && x.status !== "Closed");
@@ -1583,10 +1668,11 @@ function renderActive() {
   app.innerHTML = `
     <div class="board-head">
       <div class="left"><h1>Pipeline</h1><span class="board-sum">${money(vol)} under contract</span></div>
+      ${stageEdit ? "" : `<button class="btn" data-stedit="1">Edit stages</button>`}
     </div>
     <div class="ptabs" role="tablist">${tabs.map(([k, l, n]) => `<button role="tab" data-pview="${k}" aria-selected="${pview === k}">${l} <span>${n}</span></button>`).join("")}</div>
     <p class="muted sm" style="margin:0">${pview === "uc" ? `Grouped by the next contract date still open. Closed in ${TODAY.getFullYear()} stays on the right all year. ` : ""}Shows where each client is. To change a status, open the client.</p>
-    <div class="pcols" style="--n:${cols.length}">${cols.map(([l, items, total, isClosed], i) => `<section class="pcol ${isClosed ? "pcol-closed" : ""}"><div class="pcol-h" style="--bar:${isClosed ? "var(--moss)" : pview === "uc" ? "var(--coral)" : ["var(--misty)", "var(--mint)", "var(--moss)", "var(--misty)", "var(--mint)", "var(--moss)"][i % 6]}"><b>${esc(l)}</b><span class="muted sm">${items.length} · ${total ? kprice(total) : "$0"}</span></div><div class="pcol-b">${items.join("") || `<span class="pcol-e">${i === 0 && !deals.length ? "Start a buyer or listing from a person's page in People." : "None"}</span>`}</div></section>`).join("")}</div>`;
+    ${stageEdit ? stageEditHtml() : `<div class="pcols" style="--n:${cols.length}">${cols.map(([l, items, total, isClosed], i) => `<section class="pcol ${isClosed ? "pcol-closed" : ""}"><div class="pcol-h" style="--bar:${isClosed ? "var(--moss)" : pview === "uc" ? "var(--coral)" : ["var(--misty)", "var(--mint)", "var(--moss)", "var(--misty)", "var(--mint)", "var(--moss)"][i % 6]}"><b>${esc(l)}</b><span class="muted sm">${items.length} · ${total ? kprice(total) : "$0"}</span></div><div class="pcol-b">${items.join("") || `<span class="pcol-e">${i === 0 && !deals.length ? "Start a buyer or listing from a person's page in People." : "None"}</span>`}</div></section>`).join("")}</div>`}`;
 }
 
 /* ---------- Contacts ---------- */
@@ -2251,7 +2337,16 @@ document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   if (confirmDel && !b.dataset.deleng && !b.dataset.delperson && !b.dataset.filedel) confirmDel = null;
   const dl = b.dataset.dl ? deals.find(x => x.id === +b.dataset.dl) : null;
-  if (b.dataset.pview) { pview = b.dataset.pview; render(); return; }
+  if (b.dataset.pview) { if (stageEdit) { toast("Save or cancel your stage changes first."); return; } pview = b.dataset.pview; render(); return; }
+  if (b.dataset.stedit) { startStageEdit(); render(); return; }
+  if (stageEdit) {
+    const se = stageEdit, keep = () => document.querySelectorAll("[data-stname]").forEach(i => se.rows[+i.dataset.stname].name = i.value);
+    if (b.dataset.stmove) { keep(); const [i, dl] = b.dataset.stmove.split(":").map(Number), j = i + dl; [se.rows[i], se.rows[j]] = [se.rows[j], se.rows[i]]; render(); return; }
+    if (b.dataset.stdel) { keep(); const r = se.rows[+b.dataset.stdel], n = r.orig && se.tab !== "uc" ? stageCount(se.tab, r.orig) : 0; if (n) { toast(`${n} client${n === 1 ? " is" : "s are"} in "${r.orig}". Move them to another status from their page first.`); return; } se.rows.splice(+b.dataset.stdel, 1); render(); return; }
+    if (b.dataset.stadd) { keep(); se.rows.push({ orig: null, name: "New stage", until: "close" }); render(); const ins = document.querySelectorAll("[data-stname]"); const i = ins[ins.length - 1]; i.focus(); i.select(); return; }
+    if (b.dataset.stcancel) { stageEdit = null; render(); return; }
+    if (b.dataset.stsave) { saveStageEdit(); return; }
+  }
   if (b.dataset.start) { openForm(b.dataset.start, { cid: openContact }); return; }
   if (b.dataset.addpa) { const eng = deals.find(x => x.id === +b.dataset.addpa); openForm("pa", { engId: eng.id, v: eng.kind === "listing" ? Object.assign({ address: eng.line, price: eng.price || "" }, eng.facts || {}) : {} }); return; }
   if (b.dataset.deleng) {
@@ -2358,6 +2453,7 @@ document.addEventListener("change", e => {
     if (ds.dstatus || e.target.tagName === "SELECT" || /_na$/.test(ds.df || "")) renderDealModal(); else if (el("dm-prev")) el("dm-prev").innerHTML = previewHtml();
     return;
   }
+  if (ds.stuntil !== undefined && stageEdit) { stageEdit.rows[+ds.stuntil].until = e.target.value; return; }
   if (ds.estatus) { setStatus(deals.find(x => x.id === +ds.estatus), e.target.value); return; }
   if (ds.f && e.target.value === "__new") { collect(); draft.newMode[ds.f] = true; render(); const i = document.querySelector(`[data-new="${ds.f}"]`); if (i) i.focus(); return; }
   if (ds.msdate && e.target.value) {

@@ -139,6 +139,15 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 .ptabs button span { font-size: 12.5px; color: var(--muted); font-weight: 500; margin-left: 4px; }
 .ptabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--coral, var(--accent)); }
 .pcols { display: grid; grid-template-columns: repeat(var(--n), minmax(170px, 1fr)); gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+.st-h { gap: 6px !important; }
+.st-h input, .st-h select { width: 100%; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); font-weight: 700; font-size: 13.5px; color: var(--fg); }
+.st-h select { font-weight: 400; font-size: 12.5px; }
+.st-tools { display: flex; gap: 2px; }
+.st-tools .rm { border: 1px solid var(--line); background: var(--surface); border-radius: 5px; width: 28px; height: 26px; color: var(--muted); }
+.st-tools .rm:disabled { opacity: .35; }
+.st-add { border: 1.5px dashed var(--line); background: none; border-radius: 6px; padding: 14px 10px; color: var(--accent); font-weight: 700; }
+.st-foot { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 10px; flex-wrap: wrap; }
+.st-foot .muted { margin-right: auto; }
 .pcol { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .pcol-h { display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border-top: 4px solid var(--bar, var(--line)); background: var(--surface); border-radius: 6px; box-shadow: 0 0 0 1px var(--line); font-size: 13.5px; }
 .pi-av { display: flex; gap: 4px; margin-top: 4px; }
@@ -531,6 +540,41 @@ function pItem(file, eng) {
     <span class="pi-av">${[...new Set(openTasks(file).map(t => t.who))].sort().map(w => `<span class="av ${w === "AS" ? "as" : ""}" title="${WHO[w]}">${w}</span>`).join("")}</span>
   </button>`;
 }
+/* ---------- Edit stages right on the board (draft until Save) ---------- */
+let stageEdit = null; // { tab, rows: [{ orig, name, until }] }
+const UC_UNTIL = [["insp", "Inspection deadline"], ["hoa", "HOA doc rescission"], ["ws", "Written Statement"], ["close", "Closing"]];
+function startStageEdit() {
+  const tab = pview;
+  const rows = tab === "uc" ? HQ.settings.ucPhases.map(([n, k]) => ({ orig: n, name: n, until: k })) : STATUS[tab === "buyers" ? "buyer" : "listing"].map(n => ({ orig: n, name: n }));
+  stageEdit = { tab, rows };
+}
+function stageCount(tab, name) {
+  if (tab === "uc") return deals.filter(x => x.kind === "pa" && x.status === "Active" && ucPhase(x) === name).length;
+  const kind = tab === "buyers" ? "buyer" : "listing";
+  return deals.filter(x => x.kind === kind && x.status === name && !activePA(x)).length;
+}
+function stageEditHtml() {
+  const se = stageEdit, uc = se.tab === "uc";
+  return `<div class="st-edit"><div class="pcols" style="--n:${se.rows.length + 1}">${se.rows.map((r, i) => { const n = r.orig ? stageCount(se.tab, r.orig) : 0; return `<section class="pcol"><div class="pcol-h st-h" style="--bar:${uc ? "var(--coral)" : "var(--moss)"}">
+      <input data-stname="${i}" value="${esc(r.name)}" aria-label="Stage name">
+      ${uc ? `<select data-stuntil="${i}" aria-label="Stays here until">${UC_UNTIL.map(([k, l]) => `<option value="${k}" ${k === r.until ? "selected" : ""}>Until ${l}</option>`).join("")}</select>` : ""}
+      <span class="st-tools"><button class="rm" data-stmove="${i}:-1" aria-label="Move left" ${i ? "" : "disabled"}>←</button><button class="rm" data-stmove="${i}:1" aria-label="Move right" ${i < se.rows.length - 1 ? "" : "disabled"}>→</button><button class="rm" data-stdel="${i}" aria-label="Delete stage" ${se.rows.length > 1 ? "" : "disabled"}>×</button></span>
+      <span class="muted sm">${n ? `${n} client${n === 1 ? "" : "s"} here` : "Empty"}</span></div></section>`; }).join("")}
+    <section class="pcol"><button class="st-add" data-stadd="1">+ Add stage</button></section></div>
+    <div class="st-foot"><span class="muted sm">${uc ? "Each column holds contracts until its date is met. " : "Renaming moves everyone in that stage and keeps its task template attached. "}Changes also show in Admin → Client statuses.</span><button class="btn" data-stcancel="1">Cancel</button><button class="btn primary" data-stsave="1">Save stages</button></div></div>`;
+}
+function saveStageEdit() {
+  const se = stageEdit; document.querySelectorAll("[data-stname]").forEach(i => se.rows[+i.dataset.stname].name = i.value.trim() || se.rows[+i.dataset.stname].name);
+  const names = se.rows.map(r => r.name); if (new Set(names).size !== names.length) { toast("Two stages have the same name. Rename one first."); return; }
+  if (se.tab === "uc") { HQ.settings.ucPhases.splice(0, HQ.settings.ucPhases.length, ...se.rows.map(r => [r.name, r.until])); stageEdit = null; render(); toast("Stages saved."); return; }
+  const kind = se.tab === "buyers" ? "buyer" : "listing", P = kind === "buyer" ? "Buyer" : "Listing";
+  se.rows.filter(r => r.orig && r.orig !== r.name).forEach(r => {
+    deals.forEach(x => { if (x.kind === kind && x.status === r.orig) x.status = r.name; });
+    HQ.templates.forEach(t => { if (t.trigger === `${P} · ${r.orig}`) t.trigger = `${P} · ${r.name}`; });
+  });
+  STATUS[kind].splice(0, STATUS[kind].length, ...names);
+  stageEdit = null; render(); toast("Stages saved.");
+}
 function renderActive() {
   const buyers = deals.filter(x => x.kind === "buyer" && x.status !== "Closed");
   const listings = deals.filter(x => x.kind === "listing" && x.status !== "Closed");
@@ -550,10 +594,11 @@ function renderActive() {
   app.innerHTML = `
     <div class="board-head">
       <div class="left"><h1>Pipeline</h1><span class="board-sum">${money(vol)} under contract</span></div>
+      ${stageEdit ? "" : `<button class="btn" data-stedit="1">Edit stages</button>`}
     </div>
     <div class="ptabs" role="tablist">${tabs.map(([k, l, n]) => `<button role="tab" data-pview="${k}" aria-selected="${pview === k}">${l} <span>${n}</span></button>`).join("")}</div>
     <p class="muted sm" style="margin:0">${pview === "uc" ? `Grouped by the next contract date still open. Closed in ${TODAY.getFullYear()} stays on the right all year. ` : ""}Shows where each client is. To change a status, open the client.</p>
-    <div class="pcols" style="--n:${cols.length}">${cols.map(([l, items, total, isClosed], i) => `<section class="pcol ${isClosed ? "pcol-closed" : ""}"><div class="pcol-h" style="--bar:${isClosed ? "var(--moss)" : pview === "uc" ? "var(--coral)" : ["var(--misty)", "var(--mint)", "var(--moss)", "var(--misty)", "var(--mint)", "var(--moss)"][i % 6]}"><b>${esc(l)}</b><span class="muted sm">${items.length} · ${total ? kprice(total) : "$0"}</span></div><div class="pcol-b">${items.join("") || `<span class="pcol-e">${i === 0 && !deals.length ? "Start a buyer or listing from a person's page in People." : "None"}</span>`}</div></section>`).join("")}</div>`;
+    ${stageEdit ? stageEditHtml() : `<div class="pcols" style="--n:${cols.length}">${cols.map(([l, items, total, isClosed], i) => `<section class="pcol ${isClosed ? "pcol-closed" : ""}"><div class="pcol-h" style="--bar:${isClosed ? "var(--moss)" : pview === "uc" ? "var(--coral)" : ["var(--misty)", "var(--mint)", "var(--moss)", "var(--misty)", "var(--mint)", "var(--moss)"][i % 6]}"><b>${esc(l)}</b><span class="muted sm">${items.length} · ${total ? kprice(total) : "$0"}</span></div><div class="pcol-b">${items.join("") || `<span class="pcol-e">${i === 0 && !deals.length ? "Start a buyer or listing from a person's page in People." : "None"}</span>`}</div></section>`).join("")}</div>`}`;
 }
 
 /* ---------- Contacts ---------- */
@@ -1218,7 +1263,16 @@ document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   if (confirmDel && !b.dataset.deleng && !b.dataset.delperson && !b.dataset.filedel) confirmDel = null;
   const dl = b.dataset.dl ? deals.find(x => x.id === +b.dataset.dl) : null;
-  if (b.dataset.pview) { pview = b.dataset.pview; render(); return; }
+  if (b.dataset.pview) { if (stageEdit) { toast("Save or cancel your stage changes first."); return; } pview = b.dataset.pview; render(); return; }
+  if (b.dataset.stedit) { startStageEdit(); render(); return; }
+  if (stageEdit) {
+    const se = stageEdit, keep = () => document.querySelectorAll("[data-stname]").forEach(i => se.rows[+i.dataset.stname].name = i.value);
+    if (b.dataset.stmove) { keep(); const [i, dl] = b.dataset.stmove.split(":").map(Number), j = i + dl; [se.rows[i], se.rows[j]] = [se.rows[j], se.rows[i]]; render(); return; }
+    if (b.dataset.stdel) { keep(); const r = se.rows[+b.dataset.stdel], n = r.orig && se.tab !== "uc" ? stageCount(se.tab, r.orig) : 0; if (n) { toast(`${n} client${n === 1 ? " is" : "s are"} in "${r.orig}". Move them to another status from their page first.`); return; } se.rows.splice(+b.dataset.stdel, 1); render(); return; }
+    if (b.dataset.stadd) { keep(); se.rows.push({ orig: null, name: "New stage", until: "close" }); render(); const ins = document.querySelectorAll("[data-stname]"); const i = ins[ins.length - 1]; i.focus(); i.select(); return; }
+    if (b.dataset.stcancel) { stageEdit = null; render(); return; }
+    if (b.dataset.stsave) { saveStageEdit(); return; }
+  }
   if (b.dataset.start) { openForm(b.dataset.start, { cid: openContact }); return; }
   if (b.dataset.addpa) { const eng = deals.find(x => x.id === +b.dataset.addpa); openForm("pa", { engId: eng.id, v: eng.kind === "listing" ? Object.assign({ address: eng.line, price: eng.price || "" }, eng.facts || {}) : {} }); return; }
   if (b.dataset.deleng) {
@@ -1325,6 +1379,7 @@ document.addEventListener("change", e => {
     if (ds.dstatus || e.target.tagName === "SELECT" || /_na$/.test(ds.df || "")) renderDealModal(); else if (el("dm-prev")) el("dm-prev").innerHTML = previewHtml();
     return;
   }
+  if (ds.stuntil !== undefined && stageEdit) { stageEdit.rows[+ds.stuntil].until = e.target.value; return; }
   if (ds.estatus) { setStatus(deals.find(x => x.id === +ds.estatus), e.target.value); return; }
   if (ds.f && e.target.value === "__new") { collect(); draft.newMode[ds.f] = true; render(); const i = document.querySelector(`[data-new="${ds.f}"]`); if (i) i.focus(); return; }
   if (ds.msdate && e.target.value) {
