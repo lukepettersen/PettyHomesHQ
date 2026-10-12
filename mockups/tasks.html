@@ -171,10 +171,13 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 
 .who-opt:hover { background: var(--sunken); }
 .who-opt[aria-pressed="true"] { background: var(--accent-soft); font-weight: 600; }
 .who-h { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; padding: 8px 8px 4px; border-top: 1px solid var(--line); margin-top: 4px; }
+.linkbtn2 { border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 12.5px; padding: 0; margin-right: 10px; }
+.linkbtn2.danger, .danger-btn { color: var(--bad); }
+.list-acts { display: block; margin-top: 2px; }
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; max-width: calc(100% - 32px); z-index: 30; }
 </style>
 
-<div class="mock-bar"><span><strong>Mockup</strong> · fake data, "today" is Mon Oct 12, 2026. Try quick add, or type #listname to put a task in a list.</span>
+<div class="mock-bar"><span><strong>Mockup</strong> · starts empty, "today" is Mon Oct 12, 2026. Try quick add, or type #listname to put a task in a list.</span>
   <span class="seg" role="group" aria-label="Viewing as" style="margin-left:12px"><button id="as-lp" aria-pressed="true">Viewing as Luke</button><button id="as-as" aria-pressed="false">Viewing as assistant</button></span></div>
 
 <header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html">Pipeline</a><a href="tasks.html" class="on">Tasks</a><a href="messages.html">Messages</a><a href="admin.html">Admin</a></nav></header>
@@ -198,43 +201,29 @@ const fmt = x => DOW[x.getDay()] + " " + MON[x.getMonth()] + " " + x.getDate();
 const short = x => MON[x.getMonth()] + " " + x.getDate();
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-const PEOPLE = { LP: "Luke", AS: "Alyssa (assistant)" };
+const PEOPLE = Object.fromEntries(HQ.settings.team.map(([k, n]) => [k, n]));
 // Links a task can point to. Deals match the pipeline mockup.
-const LINKS = {
-  calloway: { kind: "deal", label: "Jordan & Priya Calloway", full: "Jordan & Priya Calloway · Buyer, Under Contract" },
-  pryce: { kind: "deal", label: "Owen Pryce", full: "Owen Pryce · Buyer, Offer Out" },
-  fisk: { kind: "deal", label: "Carol Fisk & Dean Moreno", full: "Carol Fisk & Dean Moreno · Seller, Prep" },
-  murphy: { kind: "person", label: "Kate Murphy", full: "Kate Murphy · Past Client" },
-  voss: { kind: "person", label: "Kara Voss", full: "Kara Voss · Past Client" },
-};
+// Links point at the shared people (HQ.contacts); rebuilt on every render.
+const LINKS = {}, CID = {};
+function syncLinks() {
+  Object.entries(HQ.contacts).forEach(([cid, c]) => { LINKS[cid] = { kind: "person", label: c.name, full: `${c.name} · ${c.stage}` }; CID[cid] = cid; });
+  Object.keys(LINKS).forEach(k => { if (!HQ.contacts[k]) { delete LINKS[k]; delete CID[k]; } });
+}
 
-// Contact page each link opens in the pipeline mockup.
-const CID = { calloway: "calloway", pryce: "d11", fisk: "d24", murphy: "murphy", voss: "d16" };
-// p: priority 0 none, 1 low, 2 med, 3 high. step: deal checklist info.
-let tasks = [
-  { t: "Earnest money receipt saved to file", due: "2026-10-07", who: "AS", link: "calloway", step: { phase: "Under Contract", rule: "Final Acceptance + 5d" } },
-  { t: "Insurance referral", due: "2026-10-07", who: "AS", link: "calloway", kind: "email", step: { phase: "Financing", rule: "Final Acceptance + 5d" } },
-  { t: "Review inspection report with clients", due: "2026-10-12", time: "4:00pm", who: "LP", link: "calloway", p: 3, step: { phase: "Inspection", rule: "Inspection − 2d" } },
-  { t: "Follow up with listing agent", due: "2026-10-12", who: "LP", link: "pryce", p: 2, step: { phase: "Offer Out", rule: "Start date + 1d" } },
-  { t: "Call Kate about spring listing timing", due: "2026-10-12", time: "11:00am", who: "LP", link: "murphy", p: 2 },
-  { t: "Draft inspection amendment", due: "2026-10-13", who: "LP", link: "calloway", p: 3, step: { phase: "Inspection", rule: "Inspection − 1d" } },
-  { t: "Send school district info for Upton Ave", due: "2026-10-13", who: "LP", link: "calloway" },
-  { t: "Signed amendment to lender + title", due: "2026-10-14", who: "AS", link: "calloway", kind: "email", step: { phase: "Inspection", rule: "Inspection day of" } },
-  { t: "Schedule listing photos", due: "2026-10-15", who: "AS", link: "fisk", step: { phase: "Prep", rule: "Start date + 1d" } },
-  { t: "Send home value update", due: "2026-10-27", who: "AS", link: "voss", repeat: "Yearly" },
-  { t: "Send birthday card", due: "2027-01-15", who: "AS", link: "murphy", repeat: "Yearly", auto: "Kate's birthday, Jan 22" },
-  { t: "Text happy birthday", due: "2027-01-22", who: "LP", link: "murphy", repeat: "Yearly", auto: "Kate's birthday, Jan 22" },
-  { t: "Text happy birthday", due: "2027-03-04", who: "LP", link: "calloway", repeat: "Yearly", auto: "Jordan's birthday, Mar 4" },
-  { t: "Send homeiversary card", due: "2027-06-11", who: "AS", link: "murphy", repeat: "Yearly", auto: "Homeiversary, Jun 18" },
-  { t: "Text happy homeiversary", due: "2027-09-29", who: "LP", link: "voss", repeat: "Yearly", auto: "Homeiversary, Sep 29" },
-];
-tasks.forEach((t, i) => { t.id = i; t.done = false; t.p = t.p || 0; t.kind = t.kind || "task"; });
-let nextId = tasks.length;
+let tasks = []; // starts empty
+let nextId = 0;
 
-const touches = [];
+// People past their follow-up frequency.
+let touches = [];
+function syncTouches() {
+  touches = Object.entries(HQ.contacts).filter(([, c]) => c.follow).map(([cid, c]) => {
+    const last = c.history.filter(h => ["note", "text", "call", "email"].includes(h[1])).map(h => d(h[0])).sort((a, b) => b - a)[0];
+    return { cid, n: c.name, f: c.follow + " days", last: last ? short(last) : "never", days: last ? diff(TODAY, last) : Infinity, follow: c.follow };
+  }).filter(p => p.days >= p.follow);
+}
 
 let view = "today", filter = "all", sel = null, me = "LP", whoF = "everyone", whoOpen = false, whoQ = "";
-const TEAM = [["AS", "Alyssa Chakiton"], ["LP", "Luke Pettersen"]];
+const TEAM = HQ.settings.team;
 const whoLabel = () => whoF === "everyone" ? "Everyone" : whoF === "me" ? "Me" : TEAM.find(t => t[0] === whoF)[1];
 function whoMenu() {
   const opt = (k, l, av) => `<button class="who-opt" data-who="${k}" aria-pressed="${whoF === k}">${av ? `<span class="av ${av === "AS" ? "as" : ""}">${av}</span>` : ""}${l}</button>`;
@@ -244,7 +233,7 @@ function whoMenu() {
       ${"everyone".includes(whoQ.toLowerCase()) ? opt("everyone", "Everyone") : ""}${"me".includes(whoQ.toLowerCase()) ? opt("me", "Me", me) : ""}
       <div class="who-h">Team members</div>${team.map(([k, n]) => opt(k, n, k)).join("")}</div>` : ""}</span>`;
 }
-let LISTS = [], newListOpen = false;
+let LISTS = [], newListOpen = false, confirmDel = null, renamingList = false;
 const el = id => document.getElementById(id);
 
 const VIEWS = [
@@ -309,8 +298,8 @@ function renderMain() {
   const title = view === "recurring" ? "Recurring" : view.startsWith("list:") ? view.slice(5) : VIEWS.find(v => v[0] === view)[1];
   if (view === "touch") {
     el("main").innerHTML = `<div class="main-h"><div><h1>Due for a touch</h1><div class="sub">People past their follow-up frequency</div></div></div>
-      <div class="list">${touches.map((p, i) => `<div class="row"><span></span><span class="body"><span class="t">${p.n}</span><span class="meta"><span>Every ${p.f}</span><span>Last touch ${p.last}</span></span></span><span class="r"><button class="touch-btn" data-touch="${i}">Log touch</button></span></div>`).join("") || ""}</div>
-      ${touches.length ? "" : `<div class="empty">Everyone is up to date.</div>`}`;
+      <div class="list">${touches.map((p, i) => `<div class="row"><span></span><a class="body" href="deals.html#contact-${p.cid}" style="text-decoration:none;color:inherit"><span class="t">${esc(p.n)}</span><span class="meta"><span>Every ${p.f}</span><span>Last touch ${p.last}</span></span></a><span class="r"><button class="touch-btn" data-touch="${i}">Log touch</button></span></div>`).join("") || ""}</div>
+      ${touches.length ? "" : `<div class="empty">${Object.values(HQ.contacts).some(c => c.follow) ? "Everyone is up to date." : "Set a follow-up frequency on a person and they'll show up here when they're due."}</div>`}`;
     return;
   }
   const list = applyFilter(visible(view)).sort(sortT);
@@ -318,7 +307,7 @@ function renderMain() {
   const groups = groupsFor(list).filter(g => g[1].length);
   el("main").innerHTML = `
     <div class="main-h">
-      <div><h1>${title}</h1><div class="sub">${view === "recurring" ? "Each one shows up in Today when it's due, then schedules the next" : view.startsWith("list:") ? open + " open · these also show in Today, Tomorrow and Overdue when they're due" : open + " open" + (view === "today" ? " · " + fmt(TODAY) : "")}</div></div>
+      <div>${view.startsWith("list:") && renamingList ? `<span class="newlist"><input id="list-name" value="${esc(title)}" aria-label="List name"><button class="btn primary" data-savelist="1">Save</button></span>` : `<h1>${esc(title)}</h1>`}${view.startsWith("list:") && !renamingList ? `<span class="list-acts"><button class="linkbtn2" data-renlist="1">Rename</button><button class="linkbtn2 danger" data-dellist="1">${confirmDel === "list" ? "Click again to delete list" : "Delete list"}</button></span>` : ""}<div class="sub">${view === "recurring" ? "Each one shows up in Today when it's due, then schedules the next" : view.startsWith("list:") ? open + " open · these also show in Today, Tomorrow and Overdue when they're due" : open + " open" + (view === "today" ? " · " + fmt(TODAY) : "")}</div></div>
       <span class="tools">${whoMenu()}
       <span class="filters" role="group" aria-label="Show">
         <button data-filter="all" aria-pressed="${filter === "all"}">All</button>
@@ -333,7 +322,7 @@ function renderMain() {
       </form>
       <div class="parsed" id="parsed"></div>
     </div>
-    ${groups.length ? groups.map(([h, items, bad]) => `<section class="group">${h ? `<h3 class="${bad ? "bad" : ""}"><span>${h}</span><span>${items.filter(t => !t.done).length}</span></h3>` : ""}<div class="list">${items.map(rowHtml).join("")}</div></section>`).join("") : `<div class="empty">Nothing here. Enjoy it.</div>`}`;
+    ${groups.length ? groups.map(([h, items, bad]) => `<section class="group">${h ? `<h3 class="${bad ? "bad" : ""}"><span>${h}</span><span>${items.filter(t => !t.done).length}</span></h3>` : ""}<div class="list">${items.map(rowHtml).join("")}</div></section>`).join("") : `<div class="empty">${tasks.length ? "Nothing here. Enjoy it." : "No tasks yet. Type one in the box above, or apply a template from a person's page."}</div>`}`;
   const inp = el("qa-input");
   inp.addEventListener("input", () => showParsed(parse(inp.value)));
   el("qa-form").addEventListener("submit", e => { e.preventDefault(); addTask(inp.value); });
@@ -367,12 +356,13 @@ function renderDetail() {
     </div>
     <div class="sec"><h5>Subtasks</h5>
       ${(t.subs || []).map((s, i) => `<label class="sub-i ${s[1] ? "done" : ""}"><input type="checkbox" data-sub="${i}" ${s[1] ? "checked" : ""}><span>${esc(s[0])}</span></label>`).join("") || `<span style="font-size:12.5px;color:var(--muted)">None yet</span>`}
-      <button class="btn" style="align-self:flex-start" data-toast="Adds a subtask">+ Add subtask</button>
+      <div class="newlist"><input id="sub-new" placeholder="Add a subtask" aria-label="New subtask"><button class="btn" data-addsub="1">Add</button></div>
     </div>
-    <div class="sec"><h5>Notes</h5><textarea class="notes" id="d-notes" placeholder="Add notes"></textarea></div>`;
+    <div class="sec"><h5>Notes</h5><textarea class="notes" id="d-notes" placeholder="Add notes">${esc(t.notes || "")}</textarea></div>
+    <div class="sec"><button class="btn danger-btn" data-deltask="${t.id}">${confirmDel === "task" + t.id ? "Click again to delete" : "Delete task"}</button></div>`;
 }
 
-function render() { renderSide(); renderMain(); renderDetail(); }
+function render() { syncLinks(); syncTouches(); if (sel !== null && !tasks.some(t => t.id === sel)) sel = null; renderSide(); renderMain(); renderDetail(); }
 
 /* ---------- Quick add parsing ---------- */
 function parse(text) {
@@ -458,7 +448,13 @@ document.addEventListener("click", e => {
     sel = null; render(); return;
   }
   if (b.dataset.open) { sel = +b.dataset.open; render(); return; }
+  if (confirmDel && !b.dataset.deltask && !b.dataset.dellist) confirmDel = null;
   if (b.dataset.close) { sel = null; render(); return; }
+  if (b.dataset.addsub) { const t = tasks.find(x => x.id === sel), v = el("sub-new").value.trim(); if (!v) { el("sub-new").focus(); return; } (t.subs = t.subs || []).push([v, false]); render(); el("sub-new").focus(); return; }
+  if (b.dataset.deltask) { const id = +b.dataset.deltask; if (confirmDel !== "task" + id) { confirmDel = "task" + id; renderDetail(); return; } tasks = tasks.filter(x => x.id !== id); sel = null; confirmDel = null; render(); toast("Task deleted."); return; }
+  if (b.dataset.renlist) { renamingList = true; renderMain(); const i = el("list-name"); i.focus(); i.select(); return; }
+  if (b.dataset.savelist) { const old = view.slice(5), n = el("list-name").value.trim(); if (n && n !== old && !LISTS.includes(n)) { LISTS[LISTS.indexOf(old)] = n; tasks.forEach(t => { if (t.list === old) t.list = n; }); view = "list:" + n; } renamingList = false; render(); return; }
+  if (b.dataset.dellist) { const l = view.slice(5); if (confirmDel !== "list") { confirmDel = "list"; renderMain(); return; } LISTS.splice(LISTS.indexOf(l), 1); tasks.forEach(t => { if (t.list === l) delete t.list; }); confirmDel = null; view = "today"; render(); toast(`Deleted "${l}". Its tasks are kept, just not in a list.`); return; }
   if (b.dataset.done) {
     const t = tasks.find(x => x.id === +b.dataset.done);
     t.done = !t.done; t.justDone = t.done;
@@ -466,7 +462,7 @@ document.addEventListener("click", e => {
     else if (t.done && t.step) toast(`Done. Also checked off on the ${LINKS[t.link].label} checklist and logged to the timeline.`);
     render(); return;
   }
-  if (b.dataset.touch) { const p = touches.splice(+b.dataset.touch, 1)[0]; toast(`Touch logged for ${p.n}. Next one due in ${p.f}.`); render(); return; }
+  if (b.dataset.touch) { const p = touches[+b.dataset.touch]; HQ.contacts[p.cid].history.unshift([iso(TODAY), "call", "Touch logged from Tasks", me]); toast(`Touch logged for ${p.n}. Next one due in ${p.f}.`); render(); return; }
   if (b.dataset.toast) { toast(b.dataset.toast); return; }
 });
 document.addEventListener("change", e => {
@@ -481,6 +477,7 @@ document.addEventListener("change", e => {
   if (id === "d-list") { if (v === "__new") { const n = "New list " + (LISTS.length + 1); LISTS.push(n); t.list = n; toast(`Created "${n}". Rename it from the sidebar later.`); } else t.list = v || undefined; }
   if (id === "d-list") t.list = v || undefined;
   if (id === "d-title") t.t = v;
+  if (id === "d-notes") { t.notes = v; return; }
   render();
 });
 
@@ -489,8 +486,7 @@ function drain() {
   if (typeof HQ === "undefined" || !HQ.newTasks.length) return 0;
   const n = HQ.newTasks.length;
   HQ.newTasks.splice(0).forEach(x => {
-    const key = "c_" + x.cid;
-    if (!LINKS[key]) { LINKS[key] = { kind: "person", label: x.name, full: x.name }; CID[key] = x.cid; }
+    const key = x.cid;
     tasks.push({ id: nextId++, t: x.t, due: x.due || iso(TODAY), who: x.who, link: key, p: 0, kind: "task", done: false });
   });
   return n;

@@ -109,7 +109,7 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 .newc label { font-size: 12px; color: var(--muted); font-weight: 600; display: flex; flex-direction: column; gap: 3px; }
 .newc { display: flex; flex-direction: column; gap: 8px; }
 </style>
-<div class="mock-bar"><strong>Mockup</strong> · fake data. Texts and missed calls from your business line (612) 555-0100. Email stays in Gmail. <button class="linkbtn" data-incoming="1">Simulate an incoming text</button></div>
+<div class="mock-bar"><strong>Mockup</strong> · starts empty. Texts and missed calls from your business line (612) 555-0100. Email stays in Gmail. <button class="linkbtn" data-incoming="1">Simulate an incoming text</button></div>
 <header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html">Pipeline</a><a href="tasks.html">Tasks</a><a href="messages.html" class="on">Messages</a><a href="admin.html">Admin</a></nav></header>
 <div class="shell" id="shell">
   <section class="panel convs" id="convs"></section>
@@ -119,120 +119,128 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 <div id="toast" class="toast" hidden></div>
 <script>
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-// m: [dir in/out/missed, text, time, day]
-let convs = [
-  { id: 1, name: "Priya Calloway", cid: "calloway", phone: "(612) 555-0193", unread: true, stage: "Under Contract", deal: "Buyer · 4127 Upton Ave S #3", next: "Review inspection report · Today 4pm", tags: ["Buyer", "Seller", "A Lead"],
-    m: [["out", "Inspector is wrapping up, we'll go over the report Monday at 4.", "3:12 PM", "Sat Oct 10"], ["in", "Perfect. Can you send the report before so we can read it?", "3:20 PM", "Sat Oct 10"], ["out", "Yep, it'll come straight from the inspector tonight.", "3:22 PM", "Sat Oct 10"], ["in", "Got it, thanks! Is the water heater thing a big deal?", "8:41 AM", "Today"]] },
-  { id: 3, name: "Owen Pryce", cid: "d11", phone: "(612) 555-0111", unread: false, stage: "Lead", deal: "Buyer · Offer Out", next: "Follow up with listing agent · Today", tags: ["Buyer", "B Lead"],
-    m: [["out", "Offer is in on Hillside Ave. Response deadline is tomorrow at 5pm.", "6:15 PM", "Sun Oct 11"], ["in", "Fingers crossed 🤞", "6:20 PM", "Sun Oct 11"]] },
-  { id: 4, name: "Kate Murphy", cid: "murphy", phone: "(651) 555-0172", unread: false, stage: "Past Client", deal: "", next: "Call Kate about spring listing timing · Today", tags: ["Past Client", "Mailers"],
-    m: [["missed", "Missed call · 0:42 voicemail", "5:48 PM", "Fri Oct 9"]] },
-  { id: 9, name: "Carol Fisk", cid: "d24", phone: "(612) 555-0124", unread: false, stage: "Lead", deal: "Seller · 3318 47th Ave S", next: "Schedule listing photos · Thu", tags: ["Seller", "A Lead"],
-    m: [["out", "Photographer can do Thursday at 10. Does that work?", "2:05 PM", "Fri Oct 9"], ["in", "Thursday works. Dean will be home to let them in.", "2:31 PM", "Fri Oct 9"]] },
-];
+// Conversations start empty. A conversation is linked to a person in People by `cid`.
+// m: [direction in/out/missed, text, time label, day label, sort key]
+let convs = [], cur = null, filt = "all", q = "", composing = false, confirmDel = false, linking = false;
 const TEMPLATES = [
   ["", "Insert template…"],
   ["Hi {first}, just checking in! Anything I can help with?", "Check-in"],
-  ["Hi {first}, the inspection is scheduled for {date}. I'll meet you there.", "BUC · Day-of-inspection text"],
-  ["Hi {first}, earnest money is due by {date}. Wiring instructions are in your email.", "BUC · Earnest money"],
-  ["Hi {first}! Thanks for reaching out. I'm Luke with Petty Homes. What's the best time to talk?", "Lead · First reply"],
-  ["Hi {first}, it's Alyssa from Luke's team. I'll be helping with paperwork and scheduling.", "SPC · Intro with assistant"],
+  ["Hi {first}, the inspection is scheduled for {date}. I'll meet you there.", "Day-of-inspection"],
+  ["Hi {first}, earnest money is due by {date}. Wiring instructions are in your email.", "Earnest money"],
+  ["Hi {first}! Thanks for reaching out. I'm Luke with Petty Homes. What's the best time to talk?", "First reply to a lead"],
+  ["Hi {first}, it's Alyssa from Luke's team. I'll be helping with paperwork and scheduling.", "Intro with assistant"],
 ];
-let cur = 1, filt = "all", q = "";
 const el = id => document.getElementById(id);
-const first = c => c.name.startsWith("(") ? "there" : c.name.split(" ")[0];
+const person = c => c && c.cid ? HQ.contacts[c.cid] : null;
+const nameOf = c => person(c) ? person(c).name : c.phone;
+const first = c => person(c) ? person(c).name.split(/[ &]/)[0] : "there";
 const last = c => c.m[c.m.length - 1];
-// Sort key for a message: newest first, like iMessage. "Now" messages carry their own key.
-const DAYS = { "Today": 0, "Sun Oct 11": 1, "Sat Oct 10": 2, "Fri Oct 9": 3, "Thu Oct 8": 4 };
 let clock = 0, fresh = null;
-function ts(m) {
-  if (m[4]) return m[4];
-  const t = m[2].match(/(\d+):(\d+) (AM|PM)/); if (!t) return 0;
-  return (10 - (DAYS[m[3]] ?? 9)) * 1440 + ((+t[1] % 12) + (t[3] === "PM" ? 12 : 0)) * 60 + +t[2];
-}
-const nowKey = () => 100000 + (++clock);
-const INCOMING = [
-  [3, "Any word from the listing agent yet?"],
-  [9, "Quick question, should we be out of the house for the photos?"],
-  [null, "Hi Luke, got your name from Kara Voss. We're thinking about selling next spring.", "(952) 555-0144"],
-  [4, "Sorry I missed you! Free after 4 today if you want to call."],
-  [1, "Also, can we move the final walkthrough to the morning?"],
-];
+const nowKey = () => ++clock;
+const findByPhone = ph => Object.entries(HQ.contacts).find(([, c]) => c.phones.some(p => p[1].replace(/\D/g, "") === ph.replace(/\D/g, "")));
+const SAMPLE_IN = [["(952) 555-0144", "Hi Luke, got your name from a friend. We're thinking about selling next spring."], ["(763) 555-0110", "Saw your sign on Lincoln Ave. Is it still available?"], ["(651) 555-0199", "Are you free for a quick call about buying this year?"]];
 let nextIn = 0;
+function logToTimeline(c, kind, text) { const p = person(c); if (p) p.history.unshift(["2026-10-12", kind, text, "LP"]); }
+function convFor(phone) {
+  let c = convs.find(x => x.phone.replace(/\D/g, "") === phone.replace(/\D/g, ""));
+  if (!c) { const hit = findByPhone(phone); c = { id: convs.length ? Math.max(...convs.map(x => x.id)) + 1 : 1, phone, cid: hit ? hit[0] : null, unread: false, m: [] }; convs.push(c); }
+  return c;
+}
 
 function renderList() {
-  let list = convs.filter(c => filt === "all" || (filt === "unread" ? c.unread : c.m.some(m => m[0] === "missed"))).sort((a, b) => ts(last(b)) - ts(last(a)));
-  if (q) list = list.filter(c => (c.name + c.phone + c.m.map(m => m[1]).join(" ")).toLowerCase().includes(q.toLowerCase()));
+  convs = convs.filter(c => !c.cid || HQ.contacts[c.cid] || (c.cid = null, true));
+  let list = convs.filter(c => filt === "all" || (filt === "unread" ? c.unread : c.m.some(m => m[0] === "missed"))).sort((a, b) => (last(b) ? last(b)[4] : 0) - (last(a) ? last(a)[4] : 0));
+  if (q) list = list.filter(c => (nameOf(c) + c.phone + c.m.map(m => m[1]).join(" ")).toLowerCase().includes(q.toLowerCase()));
+  const withPhones = Object.entries(HQ.contacts).filter(([, p]) => p.phones.length);
   el("convs").innerHTML = `<div class="top"><input class="input" id="q" placeholder="Search messages" value="${esc(q)}" aria-label="Search messages">
     <span class="seg" role="group" aria-label="Filter">${[["all", "All"], ["unread", "Unread"], ["missed", "Missed calls"]].map(([k, l]) => `<button data-filt="${k}" aria-pressed="${filt === k}">${l}</button>`).join("")}</span>
-    <button class="btn" data-toast="Start a text to anyone in People, or a new number">+ New message</button></div>
-    ${list.map(c => { const l = last(c); return `<button class="conv ${c.unread ? "unread" : ""} ${fresh === c.id ? "fresh" : ""}" data-conv="${c.id}" aria-current="${cur === c.id}"><span class="n"><span>${esc(c.name)}</span></span><span class="t">${l[3] === "Today" ? l[2] : l[3].replace(/^\w+ /, "")}</span><span class="s ${l[0] === "missed" ? "missed" : ""}">${l[0] === "out" ? "You: " : ""}${esc(l[1])}</span></button>`; }).join("") || `<p class="muted" style="padding:14px">No conversations.</p>`}`;
-  const qi = el("q"); qi.addEventListener("input", () => { q = qi.value; const p = qi.selectionStart; renderList(); const n = el("q"); n.focus(); n.setSelectionRange(p, p); });
+    ${composing ? `<div class="newc"><label>To<select class="input" id="nm-to"><option value="">Type a number below…</option>${withPhones.map(([cid, p]) => `<option value="${cid}">${esc(p.name)} · ${esc(p.phones[0][1])}</option>`).join("")}</select></label>
+      <label>Or a number<input class="input" id="nm-phone" placeholder="(612) 555-0123"></label>
+      <span style="display:flex;gap:6px"><button class="btn primary" data-startmsg="1">Start</button><button class="btn" data-cancelmsg="1">Cancel</button></span></div>`
+      : `<button class="btn" data-newmsg="1">+ New message</button>`}</div>
+    ${list.map(c => { const l = last(c); return `<button class="conv ${c.unread ? "unread" : ""} ${fresh === c.id ? "fresh" : ""}" data-conv="${c.id}" aria-current="${cur === c.id}"><span class="n"><span>${esc(nameOf(c))}</span></span><span class="t">${l ? l[2] : ""}</span><span class="s ${l && l[0] === "missed" ? "missed" : ""}">${l ? (l[0] === "out" ? "You: " : "") + esc(l[1]) : "No messages yet"}</span></button>`; }).join("") || `<p class="muted" style="padding:14px">${convs.length ? "No conversations match." : "No messages yet. Texts and missed calls to your business line show up here."}</p>`}`;
+  const qi = el("q"); qi.addEventListener("input", () => { q = qi.value; const pos = qi.selectionStart; renderList(); const n = el("q"); n.focus(); n.setSelectionRange(pos, pos); });
 }
 function renderThread() {
-  const c = convs.find(x => x.id === cur); c.unread = false;
-  let day = "";
-  const body = c.m.map(([dir, txt, time, d]) => {
-    const dh = d !== day ? `<div class="day">${d}</div>` : ""; day = d;
-    if (dir === "missed") return dh + `<div class="sys">📞 ${esc(txt)} · ${time}<button data-toast="Calls ${esc(c.phone)} from your business line">Call back</button><button data-toast="Creates a task: Call back ${esc(c.name)}">Make task</button></div>`;
-    return dh + `<div class="bub ${dir}">${esc(txt)}<small>${time}</small></div>`;
-  }).join("");
-  el("thread").innerHTML = `<div class="th-h"><div><button class="back" data-back="1">← All</button> <b>${esc(c.name)}</b> <span class="muted sm num">${c.cid || c.name.startsWith("(") ? "" : c.phone}</span>${c.known ? ` <span class="muted sm">· ${esc(c.known)}</span>` : ""}</div>
-    <div style="display:flex;gap:6px">${c.cid ? `<a class="btn" href="deals.html#contact-${c.cid}">Open contact</a>` : ""}<button class="btn" data-toast="Calls ${esc(c.phone)} from your business line">Call</button></div></div>
+  const c = convs.find(x => x.id === cur);
+  if (!c) { el("thread").innerHTML = `<div class="msgs" style="justify-content:center;align-items:center"><p class="muted">Pick a conversation, or start a new message.</p></div>`; return; }
+  c.unread = false;
+  const body = c.m.map(([dir, txt, time]) => dir === "missed"
+    ? `<div class="sys">Missed call · ${time}<button data-callback="1">Call back</button><button data-calltask="1">Make task</button></div>`
+    : `<div class="bub ${dir}">${esc(txt)}<small>${time}</small></div>`).join("") || `<p class="muted sm" style="align-self:center">No messages yet. Say hi.</p>`;
+  el("thread").innerHTML = `<div class="th-h"><div><button class="back" data-back="1">← All</button> <b>${esc(nameOf(c))}</b> ${person(c) ? `<span class="muted sm num">${esc(c.phone)}</span>` : ""}</div>
+    <div style="display:flex;gap:6px">${person(c) ? `<a class="btn" href="deals.html#contact-${c.cid}">Open contact</a>` : ""}<button class="btn" data-callback="1">Call</button><button class="btn" data-delconv="1">${confirmDel ? "Click again to delete" : "Delete"}</button></div></div>
     <div class="msgs" id="msgs">${body}</div>
     <div class="comp"><textarea id="txt" rows="2" placeholder="Text ${esc(first(c))}…"></textarea>
       <div class="row"><select id="tpl" aria-label="Insert template">${TEMPLATES.map(([v, l]) => `<option value="${esc(v)}">${l}</option>`).join("")}</select>
-      <span style="display:flex;gap:8px;align-items:center"><span class="muted sm">Logged to their timeline</span><button class="btn primary" data-send="1">Send</button></span></div></div>`;
+      <span style="display:flex;gap:8px;align-items:center"><span class="muted sm">${person(c) ? "Logged to their timeline" : "Add them to People to keep a timeline"}</span><button class="btn primary" data-send="1">Send</button></span></div></div>`;
   const m = el("msgs"); m.scrollTop = m.scrollHeight;
   el("shell").classList.add("thread-open");
 }
 function renderInfo() {
   const c = convs.find(x => x.id === cur);
-  if (!c.cid && c.created) {
-    el("info").innerHTML = `<h3>${esc(c.name)}</h3><dl class="kv"><dt>Stage</dt><dd>${esc(c.stage)}</dd><dt>Next up</dt><dd>${esc(c.next)}</dd><dt>Phone</dt><dd class="num">${c.phone}</dd></dl><p class="muted sm" style="margin:0">Added to People just now.</p>`;
+  if (!c) { el("info").innerHTML = `<p class="muted sm" style="margin:0">Details about the person you're texting show here.</p>`; return; }
+  const p = person(c);
+  if (!p) {
+    const all = Object.entries(HQ.contacts);
+    el("info").innerHTML = `<h3>New number</h3><p class="muted sm" style="margin:0">${esc(c.phone)} isn't linked to anyone in People.</p>
+      ${linking ? `<div class="newc"><label>Link to<select class="input" id="ln-cid">${all.map(([cid, x]) => `<option value="${cid}">${esc(x.name)}</option>`).join("")}</select></label><span style="display:flex;gap:6px"><button class="btn primary" data-dolink="1">Link</button><button class="btn" data-cancellink="1">Cancel</button></span></div>`
+      : `<div class="newc"><label>Name<input class="input" id="nc-name" placeholder="Full name"></label>
+      <label>Stage<select class="input" id="nc-stage">${HQ.settings.stages.map(s => `<option ${s === "Lead" ? "selected" : ""}>${esc(s)}</option>`).join("")}</select></label>
+      <label>Source<select class="input" id="nc-source">${HQ.settings.sources.map(s => `<option>${esc(s)}</option>`).join("")}</select></label>
+      <button class="btn primary" data-create="1">Add to People</button>${all.length ? `<button class="btn" data-linkopen="1">Link to existing person</button>` : ""}</div>`}`;
     return;
   }
-  if (!c.cid) {
-    el("info").innerHTML = `<h3>${c.known ? "Not in People yet" : "New number"}</h3>
-      <p class="muted sm" style="margin:0">${c.known ? esc(c.known) + "." : "Not linked to anyone. Add them as a lead or link to an existing person."}</p>
-      <div class="newc"><label>Name<input class="input" id="nc-name" placeholder="Full name" value="${c.known ? esc(c.name) : ""}"></label>
-      <label>Stage<select class="input" id="nc-stage">${(c.known ? ["Realtor", "Industry Partners", "Lead"] : ["Lead", "Realtor", "Industry Partners"]).map(s => `<option>${s}</option>`).join("")}</select></label>
-      <label>Source<select class="input">${["Sign call", "Website", "Sphere Referral", "Zillow Preferred"].map(s => `<option>${s}</option>`).join("")}</select></label>
-      <button class="btn primary" data-create="1">Create contact</button><button class="btn" data-toast="Search People and attach this number">Link to existing person</button></div>`;
-    return;
-  }
-  el("info").innerHTML = `<h3>${esc(c.name)}</h3>
-    <dl class="kv"><dt>Stage</dt><dd>${esc(c.stage)}</dd>${c.deal ? `<dt>Deal</dt><dd>${esc(c.deal)}</dd>` : ""}${c.next ? `<dt>Next up</dt><dd>${esc(c.next)}</dd>` : ""}<dt>Phone</dt><dd class="num">${c.phone}</dd></dl>
-    <div class="tags">${c.tags.map(t => `<span class="tagchip">${esc(t)}</span>`).join("")}</div>
+  el("info").innerHTML = `<h3>${esc(p.name)}</h3>
+    <dl class="kv"><dt>Stage</dt><dd>${esc(p.stage)}</dd><dt>Phone</dt><dd class="num">${esc(c.phone)}</dd>${p.source ? `<dt>Source</dt><dd>${esc(p.source)}</dd>` : ""}</dl>
+    ${p.tags.length ? `<div class="tags">${p.tags.map(t => `<span class="tagchip">${esc(t)}</span>`).join("")}</div>` : ""}
     <a class="btn" href="deals.html#contact-${c.cid}">Open contact page</a>
-    <button class="btn" data-toast="Quick add a task linked to ${esc(c.name)}">+ Task</button>`;
+    <button class="btn" data-followtask="1">+ Follow-up task</button>`;
 }
-function render() { renderList(); renderThread(); renderInfo(); }
+function render() { renderList(); renderThread(); renderInfo(); if (cur === null) el("shell").classList.remove("thread-open"); }
 let tt; function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
+function addTask(c, t) { if (!person(c)) { toast("Add them to People first so the task has a name on it."); return; } HQ.newTasks.push({ cid: c.cid, name: person(c).name, t, due: "2026-10-12", who: "LP" }); person(c).tasks.push({ t, due: "2026-10-12", who: "LP", s: "open" }); toast(`Task added: ${t}. It's on the Tasks page.`); }
 document.addEventListener("click", e => {
-  const b = e.target.closest("button"); if (!b) return;
-  if (b.dataset.incoming) {
-    const [id, text, phone] = INCOMING[nextIn++ % INCOMING.length];
-    let c = id ? convs.find(x => x.id === id) : convs.find(x => x.phone === phone);
-    if (!c) { c = { id: 100 + convs.length, name: phone, cid: null, phone, unread: true, m: [] }; convs.push(c); }
-    c.m.push(["in", text, "Now", "Today", nowKey()]);
+  const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
+  if (confirmDel && !ds.delconv) confirmDel = false;
+  if (ds.incoming) {
+    const withPhones = Object.values(HQ.contacts).filter(p => p.phones.length);
+    let phone, text;
+    if (withPhones.length && nextIn % 2) { const p = withPhones[nextIn % withPhones.length]; phone = p.phones[0][1]; text = "Hi! Quick question when you have a minute."; }
+    else [phone, text] = SAMPLE_IN[nextIn % SAMPLE_IN.length];
+    nextIn++;
+    const c = convFor(phone); c.m.push(["in", text, "Now", "Today", nowKey()]); logToTimeline(c, "text", "Received: " + text);
     if (c.id !== cur) c.unread = true;
     fresh = c.id; renderList(); if (c.id === cur) renderThread();
-    toast(`New text from ${c.name}`); setTimeout(() => { fresh = null; }, 1500); return;
+    toast(`New text from ${nameOf(c)}`); setTimeout(() => { fresh = null; }, 1500); return;
   }
-  if (b.dataset.conv) { cur = +b.dataset.conv; render(); return; }
-  if (b.dataset.filt) { filt = b.dataset.filt; renderList(); return; }
-  if (b.dataset.back) { el("shell").classList.remove("thread-open"); return; }
-  if (b.dataset.send) {
-    const t = el("txt"), v = t.value.trim(); if (!v) return;
-    convs.find(x => x.id === cur).m.push(["out", v, "Now", "Today", nowKey()]); render(); toast("Sent and logged to their timeline."); return;
+  if (ds.newmsg) { composing = true; renderList(); return; }
+  if (ds.cancelmsg) { composing = false; renderList(); return; }
+  if (ds.startmsg) {
+    const cid = el("nm-to").value, phone = cid ? HQ.contacts[cid].phones[0][1] : el("nm-phone").value.trim();
+    if (!phone) { toast("Pick a person or type a number."); return; }
+    const c = convFor(phone); if (cid) c.cid = cid; composing = false; cur = c.id; render(); el("txt").focus(); return;
   }
-  if (b.dataset.create) {
-    const c = convs.find(x => x.id === cur), n = el("nc-name").value.trim(); if (!n) { toast("Add a name first."); return; }
-    Object.assign(c, { name: n, created: true, stage: el("nc-stage").value, deal: "", next: "Follow up on new lead · Today", tags: [] });
-    toast(`Created ${n}. A follow-up task was added.`); render(); return;
+  if (ds.conv) { cur = +ds.conv; linking = false; render(); return; }
+  if (ds.filt) { filt = ds.filt; renderList(); return; }
+  if (ds.back) { el("shell").classList.remove("thread-open"); return; }
+  if (ds.send) {
+    const t = el("txt"), v = t.value.trim(); if (!v) { t.focus(); return; }
+    const c = convs.find(x => x.id === cur); c.m.push(["out", v, "Now", "Today", nowKey()]); logToTimeline(c, "text", v); render(); toast(person(c) ? "Sent and logged to their timeline." : "Sent."); return;
   }
-  if (b.dataset.toast) { toast(b.dataset.toast); return; }
+  if (ds.create) {
+    const c = convs.find(x => x.id === cur), n = el("nc-name").value.trim(); if (!n) { toast("Add a name first."); el("nc-name").focus(); return; }
+    c.cid = HQ.newContact(n, { stage: el("nc-stage").value, source: el("nc-source").value, phones: [["Mobile", c.phone]] });
+    c.m.forEach(m => logToTimeline(c, "text", (m[0] === "out" ? "" : "Received: ") + m[1]));
+    toast(`Added ${n} to People.`); render(); return;
+  }
+  if (ds.linkopen) { linking = true; renderInfo(); return; }
+  if (ds.cancellink) { linking = false; renderInfo(); return; }
+  if (ds.dolink) { const c = convs.find(x => x.id === cur), cid = el("ln-cid").value; c.cid = cid; HQ.contacts[cid].phones.push(["Mobile", c.phone]); linking = false; toast(`Linked to ${HQ.contacts[cid].name}. Number added to their contact.`); render(); return; }
+  if (ds.delconv) { if (!confirmDel) { confirmDel = true; renderThread(); return; } convs = convs.filter(x => x.id !== cur); cur = null; confirmDel = false; render(); toast("Conversation deleted."); return; }
+  if (ds.callback) { const c = convs.find(x => x.id === cur); toast(`Calling ${c.phone} from your business line.`); return; }
+  if (ds.calltask) { const c = convs.find(x => x.id === cur); addTask(c, `Call back ${person(c) ? person(c).name : c.phone}`); return; }
+  if (ds.followtask) { const c = convs.find(x => x.id === cur); addTask(c, `Follow up with ${person(c).name}`); return; }
 });
 document.addEventListener("change", e => {
   if (e.target.id === "tpl" && e.target.value) {
@@ -241,5 +249,4 @@ document.addEventListener("change", e => {
   }
 });
 render();
-el("shell").classList.remove("thread-open");
 </script>

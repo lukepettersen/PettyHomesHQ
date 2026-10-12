@@ -189,6 +189,9 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 .chk { flex-direction: row !important; align-items: center; gap: 8px !important; font-size: 13px !important; color: var(--fg) !important; }
 .chk input { width: auto !important; }
 .sm-btn { padding: 3px 10px; font-size: 12.5px; }
+.linkbtn.danger { color: var(--bad); align-self: flex-start; }
+.rm-x { border: 0; background: none; color: var(--muted); font-size: 16px; line-height: 1; padding: 0 2px; }
+.rm-x:hover { color: var(--bad); }
 .linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; text-decoration: underline; font-size: inherit; }
 .sm { font-size: 12.5px; }
 .od { color: var(--bad); font-size: 12.5px; } .td { color: var(--accent); font-size: 12.5px; }
@@ -250,7 +253,7 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 .tk { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding-top: 2px; }
 .tk.note { color: var(--accent); } .tk.text { color: var(--ok); } .tk.call { color: var(--waive); } .tk.missed { color: var(--bad); } .tk.email { color: var(--warn); } .tk.done { color: var(--ok); }
 
-.ptask { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; align-items: start; font-size: 13px; padding-top: 6px; border-top: 1px solid var(--line); }
+.ptask { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: start; font-size: 13px; padding-top: 6px; border-top: 1px solid var(--line); }
 .ptask:first-of-type { border-top: 0; }
 .ptask.done .title { color: var(--muted); text-decoration: line-through; }
 .ptask .check { width: 18px; height: 18px; }
@@ -343,7 +346,7 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 </style>
 
 <div class="mock-bar">
-  <span><strong>Mockup</strong> · fake data, "today" is Mon Oct 12, 2026. Click a card to open the client. No current deal: <button class="linkbtn" data-opencontact="murphy">Kate Murphy</button> · <button class="linkbtn" data-opencontact="d16">Kara Voss</button></span>
+  <span><strong>Mockup</strong> · starts empty. Add someone in People, then start a buyer or listing from their page. "Today" is Mon Oct 12, 2026.</span>
   <span class="seg" role="group" aria-label="View as">
     <button id="role-admin" aria-pressed="true">Admin view</button>
     <button id="role-assistant" aria-pressed="false">Assistant view</button>
@@ -373,27 +376,11 @@ let role = "admin", editing = null, openMenu = null, ucFilter = "all", showClose
 const expanded = {}, engOpen = {};
 
 // Client files: a buyer representation or a listing, plus purchase agreements ("pa") under one of them.
-const STATUS = { buyer: ["Consult scheduled", "Consult complete", "Rep signed", "Showing homes", "Submitting offers"], listing: ["Consult scheduled", "Consult complete", "Listing signed / Prep", "Coming soon", "Active"] };
+const STATUS = { get buyer() { return HQ.settings.statuses.Buyer; }, get listing() { return HQ.settings.statuses.Listing; } };
 const MS_NAMES = { fa: "Final Acceptance", insp: "Inspection", hoa: "HOA Rescission", ws: "Written Statement", close: "Closing" };
 const ANCHOR_KEY = { "Final Acceptance": "fa", "Inspection": "insp", "Written Statement": "ws", "HOA Rescission": "hoa", "Closing": "close" };
 
-const deals = [
-  { id: 1, kind: "buyer", cid: "calloway", name: "Jordan & Priya Calloway", status: "Showing homes", since: "2026-08-28",
-    info: { areas: "SW Minneapolis", range: "$375–425k", repSigned: "2026-08-28", repExpires: "2027-02-28", bac: "2.5%", preapproved: "Yes", lender: "Dana Kim · Northfield Lending" } },
-  { id: 2, kind: "pa", parent: 1, side: "buyer", cid: "calloway", name: "Jordan & Priya Calloway", status: "Active", line: "4127 Upton Ave S #3, Minneapolis",
-    price: 412500, em: 8000, sc: 5000, bac: "2.5%", comm: 10312.5, fin: "Conventional",
-    ms: { fa: "2026-10-02", insp: "2026-10-14", hoa: "2026-10-13", ws: null, close: "2026-10-30" }, msOrig: { insp: "2026-10-09" }, msStatus: { insp: "extended" },
-    facts: { ptype: "Townhome", year: "1994", hoa: "Yes", newc: "No" }, keepOpen: ["Request earnest money", "Remind lender about written statement"],
-    people: [["Dana Kim · Northfield Lending", "Lender"], ["Lakeview Title", "Title"], ["Marcus Holt · Bluewater Realty", "Listing agent"]] },
-  { id: 3, kind: "listing", cid: "calloway", name: "Jordan & Priya Calloway", status: "Active", since: "2026-10-05", line: "2201 Lyndale Ave S #407, Minneapolis", price: 289000,
-    info: { lcSigned: "2026-09-30", lcExpires: "2027-03-31", comm: "2.5%", bac: "2.5%", photos: "2026-10-02", active: "2026-10-05" }, facts: { ptype: "Condo", year: "1987", hoa: "Yes", newc: "No" } },
-  { id: 4, kind: "buyer", cid: "d11", name: "Owen Pryce", status: "Submitting offers", since: "2026-10-11",
-    info: { areas: "Golden Valley, St. Louis Park", range: "to $400k", repSigned: "2026-09-15", repExpires: "2027-03-15", bac: "2.5%", preapproved: "Yes", offer: "2215 Hillside Ave, Golden Valley · $389,000", respond: "2026-10-13" } },
-  { id: 5, kind: "listing", cid: "d24", name: "Carol Fisk & Dean Moreno", status: "Listing signed / Prep", since: "2026-10-08", line: "3318 47th Ave S, Minneapolis", price: 365000,
-    info: { lcSigned: "2026-10-08", lcExpires: "2027-04-08", comm: "2.5%", bac: "2.5%", photos: "2026-10-15" }, facts: { ptype: "Single family", year: "1926", hoa: "No", newc: "No" } },
-  { id: 6, kind: "buyer", cid: "d16", name: "Kara Voss", status: "Closed", since: "2026-06-01", info: { areas: "Minneapolis", range: "$350–400k" } },
-  { id: 7, kind: "pa", parent: 6, side: "buyer", cid: "d16", name: "Kara Voss", status: "Closed", line: "3816 Grand Ave S, Minneapolis", price: 376000, closed: "2026-09-29", ms: {} },
-];
+const deals = HQ.files; // starts empty
 
 const triggerOf = dl => dl.kind === "pa" ? `${dl.side === "buyer" ? "Buyer" : "Seller"} · Under contract` : `${dl.kind === "buyer" ? "Buyer" : "Listing"} · ${dl.status}`;
 function condOk(cond, v) {
@@ -531,83 +518,19 @@ function renderActive() {
     </div>
     <div class="ptabs" role="tablist">${tabs.map(([k, l, n]) => `<button role="tab" data-pview="${k}" aria-selected="${pview === k}">${l} <span>${n}</span></button>`).join("")}</div>
     <p class="muted sm" style="margin:0">${pview === "uc" ? "Grouped by the next contract date still open. " : ""}Shows where each client is. To change a status, open the client.</p>
-    <div class="pcols" style="--n:${cols.length}">${cols.map(([l, items, total], i) => `<section class="pcol"><div class="pcol-h" style="--bar:${pview === "uc" ? "var(--coral)" : ["var(--misty)", "var(--mint)", "var(--moss)", "var(--misty)", "var(--mint)", "var(--moss)"][i % 6]}"><b>${esc(l)}</b><span class="muted sm">${items.length} · ${total ? kprice(total) : "$0"}</span></div><div class="pcol-b">${items.join("") || `<span class="pcol-e">None</span>`}</div></section>`).join("")}</div>
+    <div class="pcols" style="--n:${cols.length}">${cols.map(([l, items, total], i) => `<section class="pcol"><div class="pcol-h" style="--bar:${pview === "uc" ? "var(--coral)" : ["var(--misty)", "var(--mint)", "var(--moss)", "var(--misty)", "var(--mint)", "var(--moss)"][i % 6]}"><b>${esc(l)}</b><span class="muted sm">${items.length} · ${total ? kprice(total) : "$0"}</span></div><div class="pcol-b">${items.join("") || `<span class="pcol-e">${i === 0 && !deals.length ? "Start a buyer or listing from a person's page in People." : "None"}</span>`}</div></section>`).join("")}</div>
     <div class="closed-row"><button class="linkbtn" data-showclosed="1">${showClosed ? "Hide" : "Show"} closed in the last 30 days (${closed.length})</button>
       ${showClosed ? `<div class="pclosed">${closed.map(dl => `<button class="pitem" data-deal="${dl.id}"><span class="pi-t"><span class="sidechip ${dl.side}">${dl.side === "buyer" ? "Buyer" : "Seller"}</span><b>${esc(dl.line.split(",")[0])}</b></span><span class="muted sm">${esc(dl.name)} · ${kprice(dl.price)}</span><span class="pi-n">Closed ${short(d(dl.closed))}</span></button>`).join("")}</div>` : ""}</div>`;
 }
 
 /* ---------- Contacts ---------- */
-const CONTACTS = {
-  calloway: {
-    name: "Jordan & Priya Calloway", stage: "Lead", follow: 30, source: "Sphere Referral", referred: "Kara Voss", mailing: "The Calloways",
-    tags: ["Buyer", "Seller", "A Lead", "Email Newsletter"],
-    phones: [["Jordan", "(612) 555-0148"], ["Priya", "(612) 555-0193"]],
-    emails: [["Jordan", "jordan.calloway@example.com"], ["Priya", "priya.calloway@example.com"]],
-    address: "2201 Lyndale Ave S #407, Minneapolis, MN 55405",
-    birthdays: [["Jordan", "Mar 4"], ["Priya", "Jul 19"], ["Mila (daughter)", "Nov 2"]], homeiversary: "Aug 16, 2019 (Lyndale condo)",
-    tasks: [
-      { t: "Send school district info for Upton Ave", due: "2026-10-13", who: "LP", s: "open" },
-      { t: "Ask about storage unit timing", due: "2026-10-20", who: "AS", s: "open" },
-    ],
-    history: [
-      ["2026-10-11", "note", "Inspection done. Minor items: water heater is 14 years old, deck railing loose. Asking for a $1,500 credit.", "LP"],
-      ["2026-10-11", "text", "Inspector is wrapping up, we'll go over the report Monday at 4.", "LP"],
-      ["2026-10-09", "call", "Talked through the inspection extension. They're fine waiting until Wed.", "LP"],
-      ["2026-10-06", "email", "Gmail · Re: Earnest money wiring instructions", "AS"],
-      ["2026-10-03", "note", "Priya prefers texts after 5pm. Jordan is fine with calls anytime.", "AS"],
-      ["2026-09-30", "note", "Listing their condo too. Want both to close within a week of each other.", "LP"],
-    ],
-  },
-  murphy: {
-    name: "Kate Murphy", stage: "Past Client", follow: 90, source: "Sphere", referred: "", mailing: "Kate Murphy",
-    tags: ["Past Client", "Mailers", "Christmas Cards", "Email Newsletter", "2026 RE Health Check Needed"],
-    phones: [["Mobile", "(651) 555-0172"]], emails: [["", "kate.murphy@example.com"]], address: "1789 Juliet Ave, St. Paul, MN 55105",
-    birthdays: [["Kate", "Jan 22"]], homeiversary: "Jun 18, 2021",
-    tasks: [{ t: "Call Kate about spring listing timing", due: "2026-10-12", who: "LP", s: "open" }],
-    history: [
-      ["2026-09-30", "email", "Gmail · Batch email: Timberwolves season tickets are back!", "AS"],
-      ["2026-09-22", "call", "Quick check-in. Kids back in school, no plans to move before spring.", "LP"],
-      ["2026-09-21", "email", "Gmail · Minnesota Market Update – September", "LP"],
-      ["2026-07-14", "note", "Thinking about selling next spring. Wants a CMA in January.", "LP"],
-      ["2026-06-18", "text", "Happy homeiversary! 5 years on Juliet Ave 🎉", "LP"],
-      ["2026-06-02", "missed", "Missed call from Kate", "LP"],
-    ],
-  },
-};
+const CONTACTS = HQ.contacts;
 const cidOf = dl => dl.cid || "d" + dl.id;
 // People without deals (matches the People mockup): [name, stage, follow, source, tags, phone, days since last touch]
 const EXTRA = {};
-function contact(cid) {
-  if (CONTACTS[cid]) return CONTACTS[cid];
-  if (EXTRA[cid]) {
-    const [name, stage, follow, source, tags, phone, last] = EXTRA[cid];
-    const f = name.split(/[ &]/)[0].toLowerCase(), l = name.split(" ").pop().toLowerCase();
-    return CONTACTS[cid] = { name, stage, follow, source, referred: "", mailing: name, tags: [...tags], phones: [["Mobile", phone]], emails: [["", `${f}.${l}@example.com`]],
-      address: "Twin Cities, MN", birthdays: [], homeiversary: "", tasks: [], history: [[iso(add(TODAY, -last)), "call", "Caught up. Nothing new on their end.", "LP"], [iso(add(TODAY, -last - 30)), "email", "Gmail · Minnesota Market Update", "LP"]] };
-  }
-  const mine = deals.filter(x => cidOf(x) === cid);
-  const dl = mine.find(x => x.kind !== "pa") || mine[0];
-  const pa = mine.find(x => x.kind === "pa" && x.status === "Closed");
-  const first = dl.name.split(/[ &]/)[0].toLowerCase(), last = dl.name.split(" ").pop().toLowerCase();
-  const closed = !!pa;
-  const pair = memberNames(dl.name);
-  const c = {
-    name: dl.name, stage: closed ? "Past Client" : "Lead", follow: closed ? 30 : null, source: cid === "d11" ? "Website" : "Sphere Referral",
-    referred: "", mailing: dl.name, tags: [dl.kind === "listing" ? "Seller" : "Buyer"].concat(closed ? ["Past Client", "Email Newsletter", "Mailers"] : ["Email Newsletter"]),
-    phones: pair ? pair.map((n, i) => [n.split(" ")[0], "(612) 555-01" + String(dl.id * 7 + i * 40).padStart(2, "0")]) : [["Mobile", "(612) 555-01" + String(dl.id * 7).padStart(2, "0")]],
-    emails: pair ? pair.map(n => [n.split(" ")[0], n.toLowerCase().replace(" ", ".") + "@example.com"]) : [["", `${first}.${last}@example.com`]],
-    address: closed ? pa.line + ", MN" : dl.kind === "listing" ? dl.line + ", MN" : "Twin Cities, MN", birthdays: [], homeiversary: closed ? fmt(d(pa.closed)).replace(/^\w+ /, "") + ", 2026" : "",
-    tasks: [], history: closed ? [
-      [iso(add(d(pa.closed), 7)), "text", "How's the new place? Let us know if you need any vendor recs.", "LP"],
-      [iso(add(d(pa.closed), 1)), "email", "Gmail · Congrats on closing! A few things for your first week", "AS"],
-    ] : [
-      [dl.since, "call", "Intro call. Next step scheduled.", "LP"],
-      [dl.since, "email", "Gmail · Intro email", "AS"],
-    ],
-  };
-  CONTACTS[cid] = c; return c;
-}
-let openContact = null, ctab = {}, tlFilter = "all", composer = "note", applyOpen = false;
+function contact(cid) { return CONTACTS[cid]; }
+
+let openContact = null, ctab = {}, tlFilter = "all", composer = "note", applyOpen = false, confirmDel = null;
 const WHO = { LP: "Luke", AS: "Alyssa" };
 
 function renderContact() {
@@ -681,7 +604,7 @@ function engPane(eng) {
   return `<div class="pane">
     <div class="pane-h">
       <div><b>${isB ? "Buyer representation" : "Listing"}</b> <span class="muted">${esc(fileLine(eng))}</span></div>
-      <div class="dp-r"><button class="btn sm-btn" data-editeng="${eng.id}">Edit</button>${statusCtl}<span class="dot ${health(pa || eng)}" title="${HEALTH[health(pa || eng)]}"></span></div>
+      <div class="dp-r"><button class="btn sm-btn" data-editeng="${eng.id}">Edit</button><button class="btn sm-btn" data-deleng="${eng.id}">${confirmDel === "eng" + eng.id ? "Click again to delete" : "Delete"}</button>${statusCtl}<span class="dot ${health(pa || eng)}" title="${HEALTH[health(pa || eng)]}"></span></div>
     </div>
     <div class="factline">${engInfo(eng)}</div>
     ${pa ? `
@@ -709,11 +632,12 @@ function factsInline(dl) {
 }
 
 function ptaskHtml(t, i) {
-  if (!t.due) return `<div class="ptask ${t.s === "done" ? "done" : ""}"><button class="check" data-ptask="${i}" aria-label="Mark done: ${esc(t.t)}">${t.s === "done" ? CHECK : ""}</button><div><div class="title">${esc(t.t)}</div><div class="sm muted">${t.waiting ? "Waits for " + esc(t.waiting) + " date" : "No due date"} · ${WHO[t.who]}</div></div></div>`;
+  if (!t.due) return `<div class="ptask ${t.s === "done" ? "done" : ""}"><button class="check" data-ptask="${i}" aria-label="Mark done: ${esc(t.t)}">${t.s === "done" ? CHECK : ""}</button><div><div class="title">${esc(t.t)}</div><div class="sm muted">${t.waiting ? "Waits for " + esc(t.waiting) + " date" : "No due date"} · ${WHO[t.who]}</div></div><button class="rm-x" data-delptask="${i}" aria-label="Delete task">×</button></div>`;
   const n = diff(d(t.due), TODAY), done = t.s === "done";
   return `<div class="ptask ${done ? "done" : ""}">
     <button class="check" data-ptask="${i}" aria-label="Mark ${done ? "not done" : "done"}: ${esc(t.t)}">${done ? CHECK : ""}</button>
     <div><div class="title">${esc(t.t)}</div><div class="sm ${!done && n < 0 ? "od" : !done && n === 0 ? "td" : "muted"}">${n === 0 && !done ? "Today" : fmt(d(t.due))} · ${WHO[t.who]}</div></div>
+    <button class="rm-x" data-delptask="${i}" aria-label="Delete task">×</button>
   </div>`;
 }
 
@@ -802,15 +726,15 @@ function rowHtml(dl, t) {
 /* ---------- Editable left column ---------- */
 let editCard = null, draft = null, tagAdding = false;
 const OPTS = {
-  stage: ["Sphere", "Past Client", "Lead", "Industry Partners", "Passive Marketing", "Archive", "Trash"],
-  follow: ["Not set", "Every 7 days", "Every 30 days", "Every 60 days", "Every 90 days", "Every 180 days"],
-  source: ["Sphere", "Sphere Referral", "Website", "AJ Gimme Lead", "Stacie Rihl", "Zillow Preferred"],
-  assigned: ["Luke Pettersen", "Alyssa Chakiton"],
+  get stage() { return HQ.settings.stages; },
+  get follow() { return ["Not set"].concat(HQ.settings.follow.map(n => `Every ${n} days`)); },
+  get source() { return HQ.settings.sources; },
+  get assigned() { return HQ.settings.team.map(t => t[1]); },
 };
-const ALL_TAGS = ["A Lead", "B Lead", "C Lead", "D Lead", "Buyer", "Seller", "Past Client", "Email Newsletter", "Mailers", "Christmas Cards", "Petty Homes Event List", "Real Estate Health Check", "2026 RE Health Check Needed", "Google Review Sent", "Investor", "No Bday Needed", "Timberwolves Tickets 2026-2027 NOT RESPONDED"];
+const ALL_TAGS = HQ.settings.tags;
 const followTxt = n => n ? `Every ${n} days` : "Not set";
 
-function leftHtml(c, stage, ago, touchDue) { return infoCard(c, ago) + detailsCard(c, stage, touchDue) + tagsCard(c) + datesCard(c); }
+function leftHtml(c, stage, ago, touchDue) { return infoCard(c, ago) + detailsCard(c, stage, touchDue) + tagsCard(c) + datesCard(c) + `<button class="linkbtn danger" data-delperson="1">${confirmDel === "person" ? "Click again to delete this person and their files" : "Delete person"}</button>`; }
 const head = (title, key) => `<h3>${title}${editCard === key ? "" : `<button class="edit-btn" data-editcard="${key}">Edit</button>`}</h3>`;
 const foot = key => `<div class="ed-foot"><button class="btn" data-cancelcard="1">Cancel</button><button class="btn primary" data-savecard="${key}">Save</button></div>`;
 const listRows = (arr, kind, ph) => arr.map(([l, v], i) => `<div class="ed-row"><input class="lbl" data-${kind}l="${i}" value="${esc(l)}" placeholder="Label" aria-label="Label"><input data-${kind}v="${i}" value="${esc(v)}" placeholder="${ph}" aria-label="${ph}"><button class="rm" data-rm="${kind}:${i}" aria-label="Remove">×</button></div>`).join("");
@@ -920,7 +844,7 @@ function saveCard(key) {
   }
   if (key === "details") {
     ["stage", "follow", "assigned", "source"].forEach(k => {
-      if (draft.newMode[k] && (draft["new_" + k] || "").trim()) { const v = draft["new_" + k].trim(); if (!OPTS[k].includes(v)) OPTS[k].push(v); draft[k] = v; }
+      if (draft.newMode[k] && (draft["new_" + k] || "").trim()) { let v = draft["new_" + k].trim(); if (k === "follow") { const n = (v.match(/\d+/) || [])[0]; if (n && !HQ.settings.follow.includes(n)) HQ.settings.follow.push(n); v = n ? `Every ${n} days` : "Not set"; } else if (!OPTS[k].includes(v)) OPTS[k].push(v); draft[k] = v; }
     });
     c.stage = draft.stage; c.assigned = draft.assigned; c.source = draft.source; c.referred = draft.referred; c.mailing = draft.mailing;
     const f = typeof draft.follow === "string" ? draft.follow : followTxt(draft.follow);
@@ -1051,7 +975,7 @@ function submitForm() {
   if (f.editId) { const miss = formGroups().flatMap(([, fs]) => fs).filter(x => x[4] && !v[x[0]]); if (miss.length) { toast(`Add ${miss.map(x => x[1].toLowerCase()).join(" and ")} first.`); return; } saveEdit(); return; }
   const missing = formGroups().flatMap(([, fs]) => fs).filter(x => x[4] && !v[x[0]]);
   if (missing.length) { toast(`Add ${missing.map(x => x[1].toLowerCase()).join(" and ")} first.`); return; }
-  const id = Math.max(...deals.map(x => x.id)) + 1;
+  const id = deals.length ? Math.max(...deals.map(x => x.id)) + 1 : 1;
   const facts = { ptype: v.ptype, year: v.year, hoa: v.hoa, newc: v.newc };
   if (f.mode === "pa") {
     const eng = deals.find(x => x.id === f.engId), side = sideOf(eng);
@@ -1105,11 +1029,25 @@ document.addEventListener("click", e => {
   const bg = e.target.closest("[data-dclose]");
   if (bg && (e.target === bg || bg.tagName === "BUTTON")) { dealForm = null; renderDealModal(); return; }
   const b = e.target.closest("button"); if (!b) return;
+  if (confirmDel && !b.dataset.deleng && !b.dataset.delperson) confirmDel = null;
   const dl = b.dataset.dl ? deals.find(x => x.id === +b.dataset.dl) : null;
   if (b.dataset.pview) { pview = b.dataset.pview; render(); return; }
   if (b.dataset.showclosed) { showClosed = !showClosed; render(); return; }
   if (b.dataset.start) { openForm(b.dataset.start, { cid: openContact }); return; }
   if (b.dataset.addpa) { const eng = deals.find(x => x.id === +b.dataset.addpa); openForm("pa", { engId: eng.id, v: eng.kind === "listing" ? Object.assign({ address: eng.line, price: eng.price || "" }, eng.facts || {}) : {} }); return; }
+  if (b.dataset.deleng) {
+    const id = +b.dataset.deleng;
+    if (confirmDel !== "eng" + id) { confirmDel = "eng" + id; render(); return; }
+    for (let i = deals.length - 1; i >= 0; i--) if (deals[i].id === id || deals[i].parent === id) deals.splice(i, 1);
+    confirmDel = null; ctab[openContact] = undefined; render(); toast("Deleted."); return;
+  }
+  if (b.dataset.delperson) {
+    if (confirmDel !== "person") { confirmDel = "person"; render(); return; }
+    const name = contact(openContact).name; HQ.deleteContact(openContact); confirmDel = null; openContact = null;
+    if (typeof show === "function") show("people"); else render();
+    toast(`Deleted ${name}.`); return;
+  }
+  if (b.dataset.delptask) { contact(openContact).tasks.splice(+b.dataset.delptask, 1); render(); return; }
   if (b.dataset.editeng) { editForm(deals.find(x => x.id === +b.dataset.editeng)); return; }
   if (b.dataset.editpa) { editForm(deals.find(x => x.id === +b.dataset.editpa)); return; }
   if (b.dataset.engopen) { engOpen[b.dataset.engopen] = !engOpen[b.dataset.engopen]; render(); return; }
@@ -1210,7 +1148,7 @@ document.addEventListener("change", e => {
 });
 
 function addTag() {
-  const i = el("tag-in"), v = i && i.value.trim(); if (!v) return;
+  const i = el("tag-in"), v = i && i.value.trim(); if (!v) { if (i) i.focus(); return; }
   const c = contact(openContact);
   if (!c.tags.includes(v)) c.tags.push(v);
   const isNew = !ALL_TAGS.includes(v); if (isNew) ALL_TAGS.push(v);

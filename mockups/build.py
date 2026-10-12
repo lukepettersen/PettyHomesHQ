@@ -115,14 +115,16 @@ def main(out):
         css.append(scope_css(styles, f"#pg-{key}"))
         body = body.replace('<div class="brand">Petty Homes <span>HQ</span></div>', BRAND_HTML)
         html.append(f'<div class="pg" id="pg-{key}" hidden>\n{body}\n</div>')
-        api = ""
+        # Every page re-renders when shown, since people, files and settings are shared.
+        api = "\nreturn { onShow() { render(); } };"
         if key == "deals":
             api = ('\nreturn { open(h) { try { history.replaceState(null, "", h); } catch (_) {}\n'
                    '  const m = (h || "").match(/^#contact-([\\w-]+)$/);\n'
-                   '  if (m) { openContact = m[1]; tlFilter = "all"; editCard = null; draft = null; render(); window.scrollTo(0, 0); } } };')
+                   '  if (m && CONTACTS[m[1]]) { openContact = m[1]; tlFilter = "all"; editCard = null; draft = null; ctab[m[1]] = undefined; window.scrollTo(0, 0); } },\n'
+                   '  onShow(h) { if (!h || (openContact && !CONTACTS[openContact])) { openContact = null; editing = null; } render(); } };')
         if key == "tasks":
-            api = ('\nreturn { onShow() { const n = drain(); if (n) { render(); '
-                   'toast(`${n} new task${n === 1 ? "" : "s"} from a template.`); } } };')
+            api = ('\nreturn { onShow() { const n = drain(); render(); '
+                   'if (n) toast(`${n} new task${n === 1 ? "" : "s"} from a template.`); } };')
         js.append(f"INIT.{key} = function (document) {{\n{script}{api}\n}};")
 
     ids = ", ".join(f"#pg-{k}" for k, _ in PAGES)
@@ -159,7 +161,7 @@ function show(key, hash) {{
   document.querySelectorAll(".pg").forEach(p => p.hidden = p.id !== "pg-" + key);
   if (!API[key]) API[key] = INIT[key](scopedDoc(document.getElementById("pg-" + key))) || {{}};
   if (hash && API[key].open) API[key].open(hash);
-  if (API[key].onShow) API[key].onShow();
+  if (API[key].onShow) API[key].onShow(hash);
   window.scrollTo(0, 0);
 }}
 document.addEventListener("click", e => {{

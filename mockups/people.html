@@ -112,6 +112,8 @@ td a.name:hover { color: var(--accent); }
 .tags { display: flex; gap: 4px; flex-wrap: wrap; }
 .bulk { background: var(--fg); color: var(--surface); border-radius: var(--r); padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .bulk button { border: 1px solid rgb(255 255 255 / .3); background: none; color: inherit; border-radius: 6px; padding: 3px 10px; font-size: 13px; }
+.linkbtn2 { border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 12.5px; padding: 0; }
+.linkbtn2.danger { color: var(--bad); }
 .modal-bg { position: fixed; inset: 0; background: rgb(0 0 0 / .35); display: grid; place-items: center; z-index: 30; padding: 16px; }
 .modal { background: var(--surface); border-radius: 10px; padding: 18px; width: min(440px, 100%); display: flex; flex-direction: column; gap: 10px; }
 .modal h2 { margin: 0; font-family: var(--font-display); font-size: 18px; }
@@ -120,7 +122,7 @@ td a.name:hover { color: var(--accent); }
 .modal .foot { display: flex; justify-content: flex-end; gap: 6px; }
 .modal p { margin: 0; font-size: 13px; color: var(--muted); }
 </style>
-<div class="mock-bar"><strong>Mockup</strong> · fake data. Collections hold smart lists. Open a collection, pick a list, change its filters, then save.</div>
+<div class="mock-bar"><strong>Mockup</strong> · starts empty. Collections hold smart lists. Open a collection, pick a list, change its filters, then save.</div>
 <header class="topnav"><div class="brand">Petty Homes <span>HQ</span></div><nav aria-label="Main"><a href="people.html" class="on">People</a><a href="deals.html">Pipeline</a><a href="tasks.html">Tasks</a><a href="messages.html">Messages</a><a href="admin.html">Admin</a></nav></header>
 <div class="shell">
   <aside class="coll-nav" id="side"></aside>
@@ -131,31 +133,35 @@ td a.name:hover { color: var(--accent); }
 <script>
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 // [cid, name, stage, followDays, lastTouchDaysAgo, source, tags, deal, phone]
-let people = [
-  ["calloway", "Jordan & Priya Calloway", "Lead", 30, 1, "Sphere Referral", ["Buyer", "Seller", "A Lead"], "Buyer · Under Contract, Seller · Active", "(612) 555-0148"],
-  ["murphy", "Kate Murphy", "Past Client", 90, 12, "Sphere", ["Past Client", "Mailers", "Christmas Cards"], "", "(651) 555-0172"],
-  ["d11", "Owen Pryce", "Lead", null, 1, "Website", ["Buyer", "B Lead"], "Buyer · Offer Out", "(612) 555-0111"],
-  ["d24", "Carol Fisk & Dean Moreno", "Lead", null, 4, "Sphere Referral", ["Seller", "A Lead"], "Seller · Prep", "(612) 555-0124"],
-  ["d16", "Kara Voss", "Past Client", 30, 34, "Sphere", ["Past Client", "Email Newsletter"], "", "(612) 555-0116"],
-].map(([cid, name, stage, follow, last, source, tags, deal, phone]) => ({ cid, name, stage, follow, last, source, tags, deal, phone }));
-// Extra fields for filtering.
-people.forEach((p, i) => {
-  p.assigned = i % 4 === 3 ? "Alyssa Chakiton" : "Luke Pettersen";
-  p.dealStatus = /Under Contract/.test(p.deal) ? "Under contract" : /Buyer/.test(p.deal) ? "Active buyer" : /Seller/.test(p.deal) ? "Active seller" : "No active deal";
-});
+// Rows come from the shared people (HQ.contacts) and client files (HQ.files). Starts empty.
+const TODAY = new Date(2026, 9, 12);
+let people = [];
+function loadPeople() {
+  people = Object.entries(HQ.contacts).map(([cid, c]) => {
+    const touches = c.history.filter(h => ["note", "text", "call", "email"].includes(h[1])).map(h => new Date(h[0] + "T00:00"));
+    const lastD = touches.sort((a, b) => b - a)[0];
+    const files = HQ.files.filter(f => f.cid === cid && f.status !== "Closed" && f.status !== "Terminated");
+    const uc = files.some(f => f.kind === "pa" && f.status === "Active");
+    const buyer = files.find(f => f.kind === "buyer"), listing = files.find(f => f.kind === "listing");
+    const deal = [buyer && `Buyer · ${uc && HQ.files.some(f => f.kind === "pa" && f.parent === buyer.id && f.status === "Active") ? "Under contract" : buyer.status}`, listing && `Seller · ${HQ.files.some(f => f.kind === "pa" && f.parent === listing.id && f.status === "Active") ? "Under contract" : listing.status}`].filter(Boolean).join(", ");
+    return { cid, name: c.name, stage: c.stage, follow: c.follow, last: lastD ? Math.round((TODAY - lastD) / 86400000) : null, source: c.source || "—", tags: c.tags, deal,
+      phone: (c.phones[0] || [])[1] || "", assigned: c.assigned || "Luke Pettersen",
+      dealStatus: uc ? "Under contract" : buyer ? "Active buyer" : listing ? "Active seller" : "No active deal" };
+  });
+}
 
 /* ---------- Filters ---------- */
-const STAGES = ["Sphere", "Past Client", "Lead", "Industry Partners", "Passive Marketing", "Archive", "Trash"];
+const STAGES = HQ.settings.stages;
 const uniq = a => [...new Set(a)].sort();
 const FIELDS = {
   stage: { label: "Stage", ops: ["is", "is not"], values: () => STAGES },
-  tag: { label: "Tag", ops: ["has", "doesn't have"], values: () => uniq(people.flatMap(p => p.tags)) },
-  source: { label: "Source", ops: ["is", "is not"], values: () => uniq(people.map(p => p.source)) },
+  tag: { label: "Tag", ops: ["has", "doesn't have"], values: () => HQ.settings.tags },
+  source: { label: "Source", ops: ["is", "is not"], values: () => HQ.settings.sources },
   deal: { label: "Deal", ops: ["is", "is not"], values: () => ["Under contract", "Active buyer", "Active seller", "No active deal"] },
-  follow: { label: "Follow-up", ops: ["is"], values: () => ["Every 7 days", "Every 30 days", "Every 60 days", "Every 90 days", "Every 180 days", "Not set"] },
+  follow: { label: "Follow-up", ops: ["is"], values: () => HQ.settings.follow.map(n => `Every ${n} days`).concat(["Not set"]) },
   last: { label: "Last contact", ops: ["more than", "less than"], number: "days ago" },
   due: { label: "Due for a touch", ops: ["is"], values: () => ["Yes", "No"] },
-  assigned: { label: "Assigned to", ops: ["is", "is not"], values: () => ["Luke Pettersen", "Alyssa Chakiton"] },
+  assigned: { label: "Assigned to", ops: ["is", "is not"], values: () => HQ.settings.team.map(t => t[1]) },
 };
 function test(p, { f, op, v }) {
   const neg = op === "is not" || op === "doesn't have";
@@ -165,8 +171,8 @@ function test(p, { f, op, v }) {
   if (f === "source") hit = p.source === v;
   if (f === "deal") hit = p.dealStatus === v;
   if (f === "follow") hit = v === "Not set" ? !p.follow : p.follow === +v.match(/\d+/)[0];
-  if (f === "last") return op === "more than" ? p.last > +v : p.last < +v;
-  if (f === "due") hit = (!!p.follow && p.last >= p.follow) === (v === "Yes");
+  if (f === "last") return p.last === null ? op === "more than" : op === "more than" ? p.last > +v : p.last < +v;
+  if (f === "due") hit = (!!p.follow && (p.last === null || p.last >= p.follow)) === (v === "Yes");
   if (f === "assigned") hit = p.assigned === v;
   return neg ? !hit : hit;
 }
@@ -182,7 +188,7 @@ let collections = [
   { id: "c4", name: "Mailing Lists", open: false, lists: [L("Past client mailers", [{ f: "stage", op: "is", v: "Past Client" }, { f: "tag", op: "has", v: "Mailers" }]), L("Christmas cards", [{ f: "tag", op: "has", v: "Christmas Cards" }]), L("Email newsletter", [{ f: "tag", op: "has", v: "Email Newsletter" }])] },
   { id: "c5", name: "Partners", open: false, lists: [L("Industry partners", [{ f: "stage", op: "is", v: "Industry Partners" }])] },
 ];
-let cur = null;           // current list id, null = All people
+let cur = null, renaming = false, confirmDel = null;           // current list id, null = All people
 let working = [];         // filters being shown (may differ from the saved list)
 let building = false, collMenu = null, q = "", sort = "name", sel = new Set();
 const el = id => document.getElementById(id);
@@ -215,7 +221,7 @@ function renderSide() {
 function rows() {
   let r = match(working);
   if (q) { const s = q.toLowerCase(); r = r.filter(p => [p.name, p.phone, p.stage, p.source, p.deal, ...p.tags].join(" ").toLowerCase().includes(s)); }
-  r.sort(sort === "name" ? (a, b) => a.name.localeCompare(b.name) : sort === "last" ? (a, b) => b.last - a.last : (a, b) => a.stage.localeCompare(b.stage));
+  r.sort(sort === "name" ? (a, b) => a.name.localeCompare(b.name) : sort === "last" ? (a, b) => (b.last ?? 1e9) - (a.last ?? 1e9) : (a, b) => a.stage.localeCompare(b.stage));
   return r;
 }
 
@@ -235,7 +241,8 @@ function renderMain() {
   const r = rows();
   const changed = list ? !same(working, list.filters) : working.length > 0;
   el("main").innerHTML = `
-    <div class="bar"><div class="l">${coll ? `<span class="crumb">${esc(coll.name)} ›</span>` : ""}<h1>${list ? esc(list.name) : "All people"}</h1><span class="muted">${r.length} people</span></div>
+    <div class="bar"><div class="l">${coll ? `<span class="crumb">${esc(coll.name)} ›</span>` : ""}${renaming && list ? `<input class="input" id="list-name" value="${esc(list.name)}" style="max-width:260px" aria-label="List name"><button class="btn primary" data-lrsave="1">Save</button>` : `<h1>${list ? esc(list.name) : "All people"}</h1>`}<span class="muted">${r.length} people</span>
+      ${list && !renaming ? `<button class="linkbtn2" data-lrename="1">Rename</button><button class="linkbtn2 danger" data-ldel="1">${confirmDel === "list" ? "Click again to delete list" : "Delete list"}</button>` : ""}</div>
       <div style="display:flex;gap:8px;flex:1;justify-content:flex-end;min-width:240px"><input class="input search" id="q" placeholder="Search name, phone, tag…" value="${esc(q)}" aria-label="Search people"><button class="btn primary" data-add="1">+ Add person</button></div></div>
     <div class="filters">
       ${working.length ? working.map((f, i) => `<span class="fchip">${fText(f)}<button data-rmf="${i}" aria-label="Remove filter">×</button></span>`).join("") : `<span class="f-none">No filters. Showing everyone.</span>`}
@@ -243,7 +250,7 @@ function renderMain() {
       ${changed ? `<span class="f-actions">${list ? `<button class="btn" data-revert="1">Reset</button><button class="btn" data-saveas="1">Save as new list</button><button class="btn primary" data-savelist="1">Save changes</button>` : `<button class="btn" data-revert="1">Clear</button><button class="btn primary" data-saveas="1">Save as smart list</button>`}</span>` : ""}
       ${building ? builderHtml() : ""}
     </div>
-    ${sel.size ? `<div class="bulk"><b>${sel.size} selected</b><button data-toast="Add a tag to ${sel.size} people">Add tag</button><button data-toast="Change stage for ${sel.size} people">Change stage</button><button data-toast="Set follow-up for ${sel.size} people">Set follow-up</button><button data-toast="Assign ${sel.size} people">Assign</button><button data-toast="Download a CSV of ${sel.size} people">Export</button><button data-clear="1">Clear</button></div>` : ""}
+    ${sel.size ? `<div class="bulk"><b>${sel.size} selected</b><button data-toast="Add a tag to ${sel.size} people">Add tag</button><button data-toast="Change stage for ${sel.size} people">Change stage</button><button data-toast="Set follow-up for ${sel.size} people">Set follow-up</button><button data-toast="Assign ${sel.size} people">Assign</button><button data-toast="Download a CSV of ${sel.size} people">Export</button><button data-delsel="1">${confirmDel === "people" ? "Click again to delete " + sel.size : "Delete"}</button><button data-clear="1">Clear</button></div>` : ""}
     <div class="tbl-wrap"><table>
       <thead><tr><th style="width:30px"><input type="checkbox" id="all" aria-label="Select all" ${r.length && r.every(p => sel.has(p.cid)) ? "checked" : ""}></th>
         <th><button data-sort="name">Name${sort === "name" ? " ↓" : ""}</button></th><th><button data-sort="stage">Stage${sort === "stage" ? " ↓" : ""}</button></th>
@@ -252,15 +259,15 @@ function renderMain() {
         <td><input type="checkbox" data-sel="${p.cid}" ${sel.has(p.cid) ? "checked" : ""} aria-label="Select ${esc(p.name)}"></td>
         <td><a class="name" href="deals.html#contact-${p.cid}">${esc(p.name)}</a><div class="muted sm num">${p.phone}</div></td>
         <td>${esc(p.stage)}</td>
-        <td class="${p.follow && p.last >= p.follow ? "due" : ""}">${p.last === 0 ? "Today" : p.last === 1 ? "Yesterday" : p.last + " days ago"}</td>
+        <td class="${p.follow && (p.last === null || p.last >= p.follow) ? "due" : ""}">${p.last === null ? "Never" : p.last === 0 ? "Today" : p.last === 1 ? "Yesterday" : p.last + " days ago"}</td>
         <td>${p.follow ? `Every ${p.follow}d` : `<span class="muted">—</span>`}</td>
         <td>${p.deal ? `<span class="sm">${esc(p.deal)}</span>` : `<span class="muted">—</span>`}</td>
         <td><div class="tags">${p.tags.slice(0, 2).map(t => `<span class="tagchip">${esc(t)}</span>`).join("")}${p.tags.length > 2 ? `<span class="muted sm">+${p.tags.length - 2}</span>` : ""}</div></td>
-        <td class="muted">${esc(p.source)}</td></tr>`).join("") || `<tr><td colspan="8" class="muted" style="text-align:center;padding:24px">No one matches these filters.</td></tr>`}</tbody>
+        <td class="muted">${esc(p.source)}</td></tr>`).join("") || `<tr><td colspan="8" class="muted" style="text-align:center;padding:24px">${Object.keys(HQ.contacts).length ? "No one matches these filters." : "No people yet. Click + Add person to add your first contact."}</td></tr>`}</tbody>
     </table></div>`;
   const qi = el("q"); qi.addEventListener("input", () => { q = qi.value; const pos = qi.selectionStart; renderMain(); const n = el("q"); n.focus(); n.setSelectionRange(pos, pos); });
 }
-function render() { renderSide(); renderMain(); }
+function render() { loadPeople(); renderSide(); renderMain(); }
 
 /* ---------- Modals ---------- */
 function saveModal(defaultColl) {
@@ -295,8 +302,8 @@ function personModal() {
     </div>
     <button type="button" class="btn" id="p2-toggle" data-p2="1">+ Add a second person (spouse, partner, co-buyer)</button>
     <p id="p-preview"></p>
-    <div class="two"><label>Stage<select class="input" id="f-stage">${STAGES.map(s => `<option>${s}</option>`).join("")}</select></label>
-    <label>Source<select class="input" id="f-source">${["Sphere", "Sphere Referral", "Website", "Zillow Preferred", "AJ Gimme Lead", "Stacie Rihl"].map(s => `<option>${s}</option>`).join("")}</select></label></div>
+    <div class="two"><label>Stage<select class="input" id="f-stage">${STAGES.map(s => `<option ${s === "Lead" ? "selected" : ""}>${esc(s)}</option>`).join("")}</select></label>
+    <label>Source<select class="input" id="f-source">${HQ.settings.sources.map(s => `<option>${esc(s)}</option>`).join("")}</select></label></div>
     <div class="foot"><button type="button" class="btn" data-close="1">Cancel</button><button class="btn primary" type="submit">Add</button></div>
   </form></div>`;
   el("f-first").focus();
@@ -311,8 +318,13 @@ function personModal() {
   el("add-form").addEventListener("input", preview);
   el("add-form").addEventListener("submit", e => {
     e.preventDefault();
-    const name = display(), st = el("f-stage").value, m = st.match(/\d+/);
-    people.push({ cid: "x" + (people.length + 100), name, stage: st, follow: m ? +m[0] : null, last: 0, source: el("f-source").value, tags: [], deal: "", phone: v("f-phone") || "—", assigned: "Luke Pettersen", dealStatus: "No active deal" });
+    const name = display(), two = !el("p2").hidden && v("g-first");
+    const phones = [], emails = [];
+    if (v("f-phone")) phones.push([two ? v("f-first") : "Mobile", v("f-phone")]);
+    if (v("f-email")) emails.push([two ? v("f-first") : "", v("f-email")]);
+    if (two && v("g-phone")) phones.push([v("g-first"), v("g-phone")]);
+    if (two && v("g-email")) emails.push([v("g-first"), v("g-email")]);
+    HQ.newContact(name, { stage: el("f-stage").value, source: el("f-source").value, phones, emails });
     el("modal").innerHTML = ""; toast(`Added ${name}.`); render();
   });
 }
@@ -328,6 +340,11 @@ document.addEventListener("click", e => {
   if (ds.crename) { const c = collections.find(x => x.id === ds.crename); c.name = el("rename-c").value.trim() || c.name; collMenu = null; render(); return; }
   if (ds.cdel) { const c = collections.find(x => x.id === ds.cdel); if (c.lists.length) { toast(`Move or delete the ${c.lists.length} lists in ${c.name} first.`); return; } collections = collections.filter(x => x !== c); collMenu = null; render(); return; }
   if (ds.newcoll) { const c = { id: "c" + (++nid), name: "New collection", open: true, lists: [] }; collections.push(c); collMenu = c.id; renderSide(); const i = el("rename-c"); if (i) { i.focus(); i.select(); } return; }
+  if (confirmDel && !ds.ldel && !ds.delsel) confirmDel = null;
+  if (ds.lrename) { renaming = true; renderMain(); const i = el("list-name"); i.focus(); i.select(); return; }
+  if (ds.lrsave) { const [, l] = findList(cur); l.name = el("list-name").value.trim() || l.name; renaming = false; render(); return; }
+  if (ds.ldel) { if (confirmDel !== "list") { confirmDel = "list"; renderMain(); return; } const [c, l] = findList(cur); c.lists = c.lists.filter(x => x !== l); confirmDel = null; toast(`Deleted "${l.name}".`); openList(null); return; }
+  if (ds.delsel) { if (confirmDel !== "people") { confirmDel = "people"; renderMain(); return; } const n = sel.size; sel.forEach(cid => HQ.deleteContact(cid)); sel.clear(); confirmDel = null; render(); toast(`Deleted ${n} ${n === 1 ? "person" : "people"}.`); return; }
   if (ds.build) { building = true; renderMain(); return; }
   if (ds.cancelb) { building = false; renderMain(); return; }
   if (ds.addf) { working.push({ f: el("b-field").value, op: el("b-op").value, v: el("b-val").value }); building = false; renderMain(); return; }

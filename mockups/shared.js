@@ -33,6 +33,32 @@ window.HQ = window.HQ || (() => {
     ],
   };
 })();
+// Settings every page reads (edited in Admin), plus the people and client files.
+// The mockup starts empty: no people, clients, tasks or messages.
+window.HQ.settings = window.HQ.settings || {
+  stages: ["Sphere", "Past Client", "Lead", "Industry Partners", "Passive Marketing", "Archive", "Trash"],
+  sources: ["Sphere", "Sphere Referral", "Website", "Zillow Preferred", "Open House", "Sign Call"],
+  follow: ["7", "30", "60", "90", "180"],
+  tags: ["Buyer", "Seller", "Past Client", "A Lead", "B Lead", "C Lead", "Email Newsletter", "Mailers", "Christmas Cards"],
+  statuses: {
+    Buyer: ["Consult scheduled", "Consult complete", "Rep signed", "Showing homes", "Submitting offers"],
+    Listing: ["Consult scheduled", "Consult complete", "Listing signed / Prep", "Coming soon", "Active"],
+  },
+  team: [["LP", "Luke Pettersen"], ["AS", "Alyssa Chakiton"]],
+};
+window.HQ.contacts = window.HQ.contacts || {};
+window.HQ.files = window.HQ.files || [];
+window.HQ.nextCid = window.HQ.nextCid || 1;
+window.HQ.newContact = (name, extra) => {
+  const cid = "p" + (window.HQ.nextCid++);
+  window.HQ.contacts[cid] = Object.assign({ name, stage: "Lead", follow: null, source: "", referred: "", mailing: name, tags: [], phones: [], emails: [], address: "", birthdays: [], homeiversary: "", tasks: [], history: [], assigned: "Luke Pettersen", created: new Date(2026, 9, 12) }, extra || {});
+  return cid;
+};
+window.HQ.deleteContact = cid => {
+  delete window.HQ.contacts[cid];
+  for (let i = window.HQ.files.length - 1; i >= 0; i--) if (window.HQ.files[i].cid === cid) window.HQ.files.splice(i, 1);
+};
+
 // Turn a template into dated tasks, counting from `start` (a Date). Steps timed off
 // contract dates use the deal's dates when there is one; here they fall back to start.
 window.HQ.expand = (tpl, start, dates = {}) => tpl.phases.flatMap(ph => ph.steps.map(st => {
