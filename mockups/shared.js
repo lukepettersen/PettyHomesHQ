@@ -83,7 +83,8 @@ window.HQ.settings = window.HQ.settings || {
     Buyer: ["Consult scheduled", "Consult complete", "Rep signed", "Showing homes", "Submitting offers"],
     Listing: ["Consult scheduled", "Consult complete", "Listing signed / Prep", "Coming soon", "Active"],
   },
-  team: [["LP", "Luke Pettersen"], ["AS", "Alyssa Chakiton"]],
+  team: [["LP", "Luke Pettersen", "luke@pettyhomes.com"], ["AS", "Alyssa Chakiton", "assistant@pettyhomes.com"]],
+  gmailConnected: true, // Admin → Integrations; @mentions are emailed only when Gmail is connected
 };
 window.HQ.contacts = window.HQ.contacts || {};
 window.HQ.files = window.HQ.files || [];
@@ -95,6 +96,15 @@ window.HQ.newContact = (name, extra) => {
 };
 // Book a phone call: adds the appointment (Google Calendar invite to the client and the team)
 // and starts every template set to "When a phone call is booked", timed from today and the call date.
+// @mentions: whoever's first name follows @ in a note gets an HQ notification, plus a Gmail email when connected.
+window.HQ.me = "LP";
+window.HQ.notifications = [];
+window.HQ.mention = (cid, text) => {
+  const team = window.HQ.settings.team, c = window.HQ.contacts[cid];
+  const hits = team.filter(([k, n]) => k !== window.HQ.me && new RegExp("@" + n.split(" ")[0] + "\\b", "i").test(text));
+  hits.forEach(([k]) => window.HQ.notifications.unshift({ id: Date.now() + k, to: k, from: window.HQ.me, cid, name: c ? c.name : "", text, read: false }));
+  return hits;
+};
 window.HQ.bookCall = (cid, { date, start, end, title }) => {
   const c = window.HQ.contacts[cid]; if (!c) return 0;
   const last = c.name.split("&")[0].trim().split(" ").pop();

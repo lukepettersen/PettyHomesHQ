@@ -280,6 +280,12 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 .doc-n { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; display: block; }
 .doc-a { display: flex; gap: 12px; margin-top: 2px; }
 .linkbtn.danger { color: var(--bad); }
+.mention-wrap { position: relative; }
+.mention-pick { position: absolute; left: 8px; bottom: calc(100% + 4px); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgb(0 0 0 / .12); padding: 4px; z-index: 12; min-width: 220px; display: flex; flex-direction: column; }
+.mention-pick[hidden] { display: none; }
+.mention-pick button { border: 0; background: none; text-align: left; padding: 7px 8px; border-radius: 6px; display: flex; gap: 8px; align-items: center; font-size: 13.5px; }
+.mention-pick button:hover { background: var(--sunken); }
+.mention { color: var(--accent); background: var(--accent-soft); padding: 0 3px; border-radius: 4px; }
 .ptask { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: start; font-size: 13px; padding-top: 6px; border-top: 1px solid var(--line); }
 .ptask:first-of-type { border-top: 0; }
 .ptask.done .title { color: var(--muted); text-decoration: line-through; }
@@ -777,6 +783,15 @@ function ptaskHtml(t, i) {
 }
 
 const KIND = { note: "Note", text: "Text", call: "Call", missed: "Missed call", email: "Email", stage: "Status", done: "Step done" };
+const mentionHtml = txt => esc(txt).replace(/@([A-Za-z]+)/g, (m, n) => HQ.settings.team.some(t => t[1].split(" ")[0].toLowerCase() === n.toLowerCase()) ? `<b class="mention">${m}</b>` : m);
+// @ autocomplete in the note box: lists the team, picking one inserts "@First ".
+function mentionQuery(ta) { const m = /(^|\s)@([A-Za-z]*)$/.exec(ta.value.slice(0, ta.selectionStart)); return m ? m[2] : null; }
+function showMentionPick() {
+  const ta = el("comp-text"), box = el("mention-pick"); if (!ta || !box) return;
+  const q = composer === "text" ? null : mentionQuery(ta), hits = q === null ? [] : HQ.settings.team.filter(([k, n]) => n.toLowerCase().includes(q.toLowerCase()));
+  box.hidden = !hits.length;
+  box.innerHTML = hits.map(([k, n]) => `<button type="button" data-mpick="${esc(n.split(" ")[0])}"><span class="av ${k === "AS" ? "as" : ""}">${k}</span>${esc(n)}</button>`).join("");
+}
 function timelinePane(c, myFiles) {
   const items = c.history.map(([dt, k, txt, who]) => ({ dt, k, txt, who }));
   myFiles.forEach(dl => {
@@ -794,11 +809,11 @@ function timelinePane(c, myFiles) {
     <div class="composer">
       <div class="comp-tabs">${[["note", "Note"], ["text", "Send text"], ["logtext", "Log text"], ["call", "Log call"]].map(([k, l]) => `<button data-comp="${k}" aria-pressed="${composer === k}">${l}</button>`).join("")}</div>
       ${composer === "call" ? `<div class="comp-row"><select id="call-outcome" aria-label="Call outcome"><option>Talked</option><option>Left voicemail</option><option>No answer</option></select></div>` : ""}
-      <textarea id="comp-text" rows="3" placeholder="${composer === "note" ? "Add a note. Type @alyssa to notify." : composer === "text" ? "Text " + esc((c.phones[0] || ["", "them"])[1]) + " from your business number" : composer === "logtext" ? "What did you text them? For texts sent from your own phone." : "What did you talk about?"}"></textarea>
+      <div class="mention-wrap"><div id="mention-pick" class="mention-pick" hidden></div><textarea id="comp-text" rows="3" placeholder="${composer === "note" ? "Add a note. Type @ to tell someone on the team." : composer === "text" ? "Text " + esc((c.phones[0] || ["", "them"])[1]) + " from your business number" : composer === "logtext" ? "What did you text them? For texts sent from your own phone." : "What did you talk about?"}"></textarea></div>
       <div class="comp-foot"><span class="muted sm">${composer === "text" ? "Replies show up in Messages and here." : composer === "logtext" ? "Records the text here without sending anything." : "Email stays in Gmail. Sent and received emails show up here automatically."}</span><button class="btn primary" data-save="1">${composer === "note" ? "Save note" : composer === "text" ? "Send text" : composer === "logtext" ? "Log text" : "Log call"}</button></div>
     </div>
     <div class="tl-filters">${[["all", "All"], ["note", "Notes"], ["text", "Texts"], ["call", "Calls"], ["email", "Emails"], ["deal", "Deal activity"]].map(([k, l]) => `<button data-tlf="${k}" aria-pressed="${tlFilter === k}">${l} <span>${count(k)}</span></button>`).join("")}</div>
-    ${list.length ? `<ol class="tl">${list.map(i => `<li><span class="tk ${i.k}">${KIND[i.k]}</span><div><div>${esc(i.txt)}</div><div class="muted sm">${fmt(d(i.dt))}${i.who ? " · " + WHO[i.who] : ""}</div></div></li>`).join("")}</ol>` : `<p class="empty">Nothing here yet.</p>`}
+    ${list.length ? `<ol class="tl">${list.map(i => `<li><span class="tk ${i.k}">${KIND[i.k]}</span><div><div>${mentionHtml(i.txt)}</div><div class="muted sm">${fmt(d(i.dt))}${i.who ? " · " + WHO[i.who] : ""}</div></div></li>`).join("")}</ol>` : `<p class="empty">Nothing here yet.</p>`}
   </div>`;
 }
 
@@ -1261,6 +1276,7 @@ document.addEventListener("click", e => {
   if (b.dataset.back) { if (HQ.from && HQ.from !== "deals" && typeof show === "function") { show(HQ.from); return; } openContact = null; editing = null; try { history.replaceState(null, "", location.pathname); } catch (_) {} render(); return; }
   if (b.dataset.ctab) { ctab[openContact] = b.dataset.ctab; editing = null; render(); return; }
   if (b.dataset.comp) { composer = b.dataset.comp; render(); const t = el("comp-text"); if (t) t.focus(); return; }
+  if (b.dataset.mpick) { const ta = el("comp-text"), pos = ta.selectionStart, before = ta.value.slice(0, pos).replace(/@([A-Za-z]*)$/, "@" + b.dataset.mpick + " "); ta.value = before + ta.value.slice(pos); ta.focus(); ta.setSelectionRange(before.length, before.length); el("mention-pick").hidden = true; return; }
   if (b.dataset.tlf) { tlFilter = b.dataset.tlf; render(); return; }
   if (b.dataset.save) {
     const ta = el("comp-text"), txt = ta && ta.value.trim();
@@ -1268,8 +1284,10 @@ document.addEventListener("click", e => {
     const c = contact(openContact);
     const kind = composer === "call" ? "call" : composer === "logtext" ? "text" : composer;
     const out = composer === "call" ? el("call-outcome").value + ": " : composer === "logtext" ? "Logged: " : "";
-    c.history.unshift([iso(TODAY), kind, out + txt, "LP"]);
-    toast(composer === "note" ? "Note saved." : composer === "text" ? "Text sent." : composer === "logtext" ? "Text logged." : "Call logged.");
+    c.history.unshift([iso(TODAY), kind, out + txt, HQ.me]);
+    const told = composer === "text" ? [] : HQ.mention(openContact, txt), names = told.map(t => t[1].split(" ")[0]).join(" and ");
+    const base = composer === "note" ? "Note saved." : composer === "text" ? "Text sent." : composer === "logtext" ? "Text logged." : "Call logged.";
+    toast(!told.length ? base : HQ.settings.gmailConnected ? `${base} ${names} notified in HQ and by email (${told.map(t => t[2]).filter(Boolean).join(", ")}).` : `${base} ${names} will see it in HQ. Connect Gmail in Admin to email them too.`);
     render(); return;
   }
   if (b.dataset.ptask) { const t = contact(openContact).tasks[+b.dataset.ptask]; t.s = t.s === "open" ? "done" : "open"; render(); return; }
@@ -1289,7 +1307,7 @@ document.addEventListener("click", e => {
   if (b.dataset.draft) { const t = dl.tasks[+b.dataset.draft]; toast(`Opens a pre-filled ${t.kind}: "${t.t}". You review, then send.`); return; }
   if (b.dataset.toast) { toast(b.dataset.toast); return; }
   if (b.id === "role-admin" || b.id === "role-assistant") {
-    role = b.id === "role-admin" ? "admin" : "assistant";
+    role = b.id === "role-admin" ? "admin" : "assistant"; HQ.me = role === "admin" ? "LP" : "AS";
     el("role-admin").setAttribute("aria-pressed", role === "admin");
     el("role-assistant").setAttribute("aria-pressed", role === "assistant");
     render(); return;
@@ -1341,4 +1359,6 @@ function fromHash() {
 window.addEventListener("hashchange", fromHash);
 render();
 fromHash();
+document.addEventListener("input", e => { if (e.target.id === "comp-text") showMentionPick(); });
+document.addEventListener("keydown", e => { if (e.target.id === "comp-text" && e.key === "Escape" && el("mention-pick")) el("mention-pick").hidden = true; });
 </script>

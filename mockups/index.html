@@ -395,6 +395,12 @@ body { background: var(--bg); }
 #pg-deals .doc-n { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; display: block; }
 #pg-deals .doc-a { display: flex; gap: 12px; margin-top: 2px; }
 #pg-deals .linkbtn.danger { color: var(--bad); }
+#pg-deals .mention-wrap { position: relative; }
+#pg-deals .mention-pick { position: absolute; left: 8px; bottom: calc(100% + 4px); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgb(0 0 0 / .12); padding: 4px; z-index: 12; min-width: 220px; display: flex; flex-direction: column; }
+#pg-deals .mention-pick[hidden] { display: none; }
+#pg-deals .mention-pick button { border: 0; background: none; text-align: left; padding: 7px 8px; border-radius: 6px; display: flex; gap: 8px; align-items: center; font-size: 13.5px; }
+#pg-deals .mention-pick button:hover { background: var(--sunken); }
+#pg-deals .mention { color: var(--accent); background: var(--accent-soft); padding: 0 3px; border-radius: 4px; }
 #pg-deals .ptask { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: start; font-size: 13px; padding-top: 6px; border-top: 1px solid var(--line); }
 #pg-deals .ptask:first-of-type { border-top: 0; }
 #pg-deals .ptask.done .title { color: var(--muted); text-decoration: line-through; }
@@ -964,6 +970,17 @@ body { background: var(--bg); }
 .tools-menu .tm-foot { border-top: 1px solid #e2dbcf; margin-top: 4px; padding-top: 4px; }
 .tools-menu .tm-foot button { border: 0; background: none; width: 100%; text-align: left; padding: 8px 10px; border-radius: 7px; color: #5f6447; font-weight: 700; font-size: 13px; cursor: pointer; }
 .tools-menu .tm-foot button:hover { background: #f2ece4; }
+.bell-btn { margin-left: auto; position: relative; border: 0; background: none; color: #e2dbcf; padding: 8px; cursor: pointer; display: grid; place-items: center; }
+.bell-btn:hover { color: #fff; }
+.bell-n { position: absolute; top: 2px; right: 0; background: #cc7855; color: #fff; font-size: 10.5px; font-weight: 800; min-width: 17px; height: 17px; border-radius: 999px; display: grid; place-items: center; padding: 0 4px; }
+.bell-n[hidden] { display: none; }
+.bell-menu { min-width: 320px; max-width: 380px; }
+.bell-menu .bm-h { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px 8px; border-bottom: 1px solid #e2dbcf; margin-bottom: 4px; }
+.bell-menu .bm-h button { border: 0; background: none; color: #5f6447; font-weight: 700; font-size: 12.5px; cursor: pointer; }
+.bell-menu .bm-i { border: 0; background: none; width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 7px; font-size: 13.5px; cursor: pointer; color: #383232; font-family: inherit; }
+.bell-menu .bm-i small { color: #6f6863; font-size: 12.5px; }
+.bell-menu .bm-i.unread { background: #e8ede2; }
+.bell-menu .bm-i:hover { background: #f2ece4; }
 
 </style>
 <div class="pg" id="pg-people" hidden>
@@ -1110,7 +1127,8 @@ window.HQ.settings = window.HQ.settings || {
     Buyer: ["Consult scheduled", "Consult complete", "Rep signed", "Showing homes", "Submitting offers"],
     Listing: ["Consult scheduled", "Consult complete", "Listing signed / Prep", "Coming soon", "Active"],
   },
-  team: [["LP", "Luke Pettersen"], ["AS", "Alyssa Chakiton"]],
+  team: [["LP", "Luke Pettersen", "luke@pettyhomes.com"], ["AS", "Alyssa Chakiton", "assistant@pettyhomes.com"]],
+  gmailConnected: true, // Admin → Integrations; @mentions are emailed only when Gmail is connected
 };
 window.HQ.contacts = window.HQ.contacts || {};
 window.HQ.files = window.HQ.files || [];
@@ -1122,6 +1140,15 @@ window.HQ.newContact = (name, extra) => {
 };
 // Book a phone call: adds the appointment (Google Calendar invite to the client and the team)
 // and starts every template set to "When a phone call is booked", timed from today and the call date.
+// @mentions: whoever's first name follows @ in a note gets an HQ notification, plus a Gmail email when connected.
+window.HQ.me = "LP";
+window.HQ.notifications = [];
+window.HQ.mention = (cid, text) => {
+  const team = window.HQ.settings.team, c = window.HQ.contacts[cid];
+  const hits = team.filter(([k, n]) => k !== window.HQ.me && new RegExp("@" + n.split(" ")[0] + "\\b", "i").test(text));
+  hits.forEach(([k]) => window.HQ.notifications.unshift({ id: Date.now() + k, to: k, from: window.HQ.me, cid, name: c ? c.name : "", text, read: false }));
+  return hits;
+};
 window.HQ.bookCall = (cid, { date, start, end, title }) => {
   const c = window.HQ.contacts[cid]; if (!c) return 0;
   const last = c.name.split("&")[0].trim().split(" ").pop();
@@ -1789,6 +1816,15 @@ function ptaskHtml(t, i) {
 }
 
 const KIND = { note: "Note", text: "Text", call: "Call", missed: "Missed call", email: "Email", stage: "Status", done: "Step done" };
+const mentionHtml = txt => esc(txt).replace(/@([A-Za-z]+)/g, (m, n) => HQ.settings.team.some(t => t[1].split(" ")[0].toLowerCase() === n.toLowerCase()) ? `<b class="mention">${m}</b>` : m);
+// @ autocomplete in the note box: lists the team, picking one inserts "@First ".
+function mentionQuery(ta) { const m = /(^|\s)@([A-Za-z]*)$/.exec(ta.value.slice(0, ta.selectionStart)); return m ? m[2] : null; }
+function showMentionPick() {
+  const ta = el("comp-text"), box = el("mention-pick"); if (!ta || !box) return;
+  const q = composer === "text" ? null : mentionQuery(ta), hits = q === null ? [] : HQ.settings.team.filter(([k, n]) => n.toLowerCase().includes(q.toLowerCase()));
+  box.hidden = !hits.length;
+  box.innerHTML = hits.map(([k, n]) => `<button type="button" data-mpick="${esc(n.split(" ")[0])}"><span class="av ${k === "AS" ? "as" : ""}">${k}</span>${esc(n)}</button>`).join("");
+}
 function timelinePane(c, myFiles) {
   const items = c.history.map(([dt, k, txt, who]) => ({ dt, k, txt, who }));
   myFiles.forEach(dl => {
@@ -1806,11 +1842,11 @@ function timelinePane(c, myFiles) {
     <div class="composer">
       <div class="comp-tabs">${[["note", "Note"], ["text", "Send text"], ["logtext", "Log text"], ["call", "Log call"]].map(([k, l]) => `<button data-comp="${k}" aria-pressed="${composer === k}">${l}</button>`).join("")}</div>
       ${composer === "call" ? `<div class="comp-row"><select id="call-outcome" aria-label="Call outcome"><option>Talked</option><option>Left voicemail</option><option>No answer</option></select></div>` : ""}
-      <textarea id="comp-text" rows="3" placeholder="${composer === "note" ? "Add a note. Type @alyssa to notify." : composer === "text" ? "Text " + esc((c.phones[0] || ["", "them"])[1]) + " from your business number" : composer === "logtext" ? "What did you text them? For texts sent from your own phone." : "What did you talk about?"}"></textarea>
+      <div class="mention-wrap"><div id="mention-pick" class="mention-pick" hidden></div><textarea id="comp-text" rows="3" placeholder="${composer === "note" ? "Add a note. Type @ to tell someone on the team." : composer === "text" ? "Text " + esc((c.phones[0] || ["", "them"])[1]) + " from your business number" : composer === "logtext" ? "What did you text them? For texts sent from your own phone." : "What did you talk about?"}"></textarea></div>
       <div class="comp-foot"><span class="muted sm">${composer === "text" ? "Replies show up in Messages and here." : composer === "logtext" ? "Records the text here without sending anything." : "Email stays in Gmail. Sent and received emails show up here automatically."}</span><button class="btn primary" data-save="1">${composer === "note" ? "Save note" : composer === "text" ? "Send text" : composer === "logtext" ? "Log text" : "Log call"}</button></div>
     </div>
     <div class="tl-filters">${[["all", "All"], ["note", "Notes"], ["text", "Texts"], ["call", "Calls"], ["email", "Emails"], ["deal", "Deal activity"]].map(([k, l]) => `<button data-tlf="${k}" aria-pressed="${tlFilter === k}">${l} <span>${count(k)}</span></button>`).join("")}</div>
-    ${list.length ? `<ol class="tl">${list.map(i => `<li><span class="tk ${i.k}">${KIND[i.k]}</span><div><div>${esc(i.txt)}</div><div class="muted sm">${fmt(d(i.dt))}${i.who ? " · " + WHO[i.who] : ""}</div></div></li>`).join("")}</ol>` : `<p class="empty">Nothing here yet.</p>`}
+    ${list.length ? `<ol class="tl">${list.map(i => `<li><span class="tk ${i.k}">${KIND[i.k]}</span><div><div>${mentionHtml(i.txt)}</div><div class="muted sm">${fmt(d(i.dt))}${i.who ? " · " + WHO[i.who] : ""}</div></div></li>`).join("")}</ol>` : `<p class="empty">Nothing here yet.</p>`}
   </div>`;
 }
 
@@ -2273,6 +2309,7 @@ document.addEventListener("click", e => {
   if (b.dataset.back) { if (HQ.from && HQ.from !== "deals" && typeof show === "function") { show(HQ.from); return; } openContact = null; editing = null; try { history.replaceState(null, "", location.pathname); } catch (_) {} render(); return; }
   if (b.dataset.ctab) { ctab[openContact] = b.dataset.ctab; editing = null; render(); return; }
   if (b.dataset.comp) { composer = b.dataset.comp; render(); const t = el("comp-text"); if (t) t.focus(); return; }
+  if (b.dataset.mpick) { const ta = el("comp-text"), pos = ta.selectionStart, before = ta.value.slice(0, pos).replace(/@([A-Za-z]*)$/, "@" + b.dataset.mpick + " "); ta.value = before + ta.value.slice(pos); ta.focus(); ta.setSelectionRange(before.length, before.length); el("mention-pick").hidden = true; return; }
   if (b.dataset.tlf) { tlFilter = b.dataset.tlf; render(); return; }
   if (b.dataset.save) {
     const ta = el("comp-text"), txt = ta && ta.value.trim();
@@ -2280,8 +2317,10 @@ document.addEventListener("click", e => {
     const c = contact(openContact);
     const kind = composer === "call" ? "call" : composer === "logtext" ? "text" : composer;
     const out = composer === "call" ? el("call-outcome").value + ": " : composer === "logtext" ? "Logged: " : "";
-    c.history.unshift([iso(TODAY), kind, out + txt, "LP"]);
-    toast(composer === "note" ? "Note saved." : composer === "text" ? "Text sent." : composer === "logtext" ? "Text logged." : "Call logged.");
+    c.history.unshift([iso(TODAY), kind, out + txt, HQ.me]);
+    const told = composer === "text" ? [] : HQ.mention(openContact, txt), names = told.map(t => t[1].split(" ")[0]).join(" and ");
+    const base = composer === "note" ? "Note saved." : composer === "text" ? "Text sent." : composer === "logtext" ? "Text logged." : "Call logged.";
+    toast(!told.length ? base : HQ.settings.gmailConnected ? `${base} ${names} notified in HQ and by email (${told.map(t => t[2]).filter(Boolean).join(", ")}).` : `${base} ${names} will see it in HQ. Connect Gmail in Admin to email them too.`);
     render(); return;
   }
   if (b.dataset.ptask) { const t = contact(openContact).tasks[+b.dataset.ptask]; t.s = t.s === "open" ? "done" : "open"; render(); return; }
@@ -2301,7 +2340,7 @@ document.addEventListener("click", e => {
   if (b.dataset.draft) { const t = dl.tasks[+b.dataset.draft]; toast(`Opens a pre-filled ${t.kind}: "${t.t}". You review, then send.`); return; }
   if (b.dataset.toast) { toast(b.dataset.toast); return; }
   if (b.id === "role-admin" || b.id === "role-assistant") {
-    role = b.id === "role-admin" ? "admin" : "assistant";
+    role = b.id === "role-admin" ? "admin" : "assistant"; HQ.me = role === "admin" ? "LP" : "AS";
     el("role-admin").setAttribute("aria-pressed", role === "admin");
     el("role-assistant").setAttribute("aria-pressed", role === "assistant");
     render(); return;
@@ -2353,6 +2392,8 @@ function fromHash() {
 window.addEventListener("hashchange", fromHash);
 render();
 fromHash();
+document.addEventListener("input", e => { if (e.target.id === "comp-text") showMentionPick(); });
+document.addEventListener("keydown", e => { if (e.target.id === "comp-text" && e.key === "Escape" && el("mention-pick")) el("mention-pick").hidden = true; });
 
 return { open(h) { try { history.replaceState(null, "", h); } catch (_) {}
   const m = (h || "").match(/^#contact-([\w-]+)$/);
@@ -2690,7 +2731,7 @@ document.addEventListener("click", e => {
   if (b.dataset.whotoggle) { whoOpen = !whoOpen; whoQ = ""; render(); const q = el("who-q"); if (q) q.focus(); return; }
   if (b.dataset.who) { whoF = b.dataset.who; whoOpen = false; render(); return; }
   if (b.id === "as-lp" || b.id === "as-as") {
-    me = b.id === "as-lp" ? "LP" : "AS";
+    me = b.id === "as-lp" ? "LP" : "AS"; HQ.me = me;
     whoF = me === "LP" ? "everyone" : "me";
     el("as-lp").setAttribute("aria-pressed", me === "LP");
     el("as-as").setAttribute("aria-pressed", me === "AS");
@@ -3138,7 +3179,7 @@ const V = {
   integrations() {
     return `<h1>Integrations</h1>
     <div class="cards">
-      <div class="box icard"><h3>Google Workspace <span class="st on">Connected</span></h3><p>Sign-in, Gmail and Calendar for pettyhomes.com. Emails show on contact timelines; deal deadlines go to Calendar.</p><div class="sm">luke@pettyhomes.com, assistant@pettyhomes.com</div><button class="btn" data-toast="Choose which calendar gets deal deadlines">Calendar settings</button></div>
+      <div class="box icard"><h3>Google Workspace <span class="st ${HQ.settings.gmailConnected ? "on" : ""}">${HQ.settings.gmailConnected ? "Connected" : "Not connected"}</span></h3><p>Sign-in, Gmail and Calendar for pettyhomes.com. Emails show on contact timelines; deal deadlines go to Calendar. When Gmail is connected, an @mention in a note also emails that person.</p><div class="sm">${HQ.settings.team.map(t => t[2]).filter(Boolean).join(", ")}</div><button class="btn" data-toast="Choose which calendar gets deal deadlines">Calendar settings</button> <button class="btn" data-gmail="1">${HQ.settings.gmailConnected ? "Disconnect Gmail" : "Connect Gmail"}</button></div>
       <div class="box icard"><h3>Business texting <span class="st on">Connected</span></h3><p>Texts and missed calls in Messages.</p><div class="sm num">(612) 555-0100 · Twilio</div><button class="btn" data-toast="Set office hours and the missed-call auto-reply">Texting settings</button></div>
       <div class="box icard"><h3>Website leads <span class="st off">Not connected</span></h3><p>Send WordPress form submissions to HQ. Each one creates a person (source Website) and a follow-up task.</p><div class="code">https://hq.pettyhomes.com/api/leads/wp_7f3a…</div><button class="btn" data-toast="Copied. Paste it into your form plugin's webhook setting.">Copy webhook URL</button></div>
       <div class="box icard"><h3>Follow Up Boss import <span class="st off">Not started</span></h3><p>Bring over people, notes, tags and templates when you're ready. Nothing moves until you start it.</p><button class="btn" data-toast="Import is planned for after the build is approved">Start import</button></div>
@@ -3149,7 +3190,7 @@ function render() { side(); el("main").innerHTML = V[sec](); }
 let tt; function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
 const pair = s => s.split(":");
 // Assignee lists everywhere come from the users here.
-function syncTeam() { HQ.settings.team.splice(0, HQ.settings.team.length, ...state.users.map(([n]) => [n.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase(), n])); }
+function syncTeam() { HQ.settings.team.splice(0, HQ.settings.team.length, ...state.users.map(([n, e]) => [n.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase(), n, e])); }
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
   if (ds.sec) { sec = ds.sec; state.tplFilter = "All"; render(); return; }
@@ -3167,6 +3208,7 @@ document.addEventListener("click", e => {
     if (ds.pasadd) { secs.push({ name: "New section", fields: [] }); render(); return; }
     if (ds.pasx) { secs.splice(+ds.pasx, 1); render(); return; }
     if (ds.pasu || ds.pasd) { const i = +(ds.pasu || ds.pasd), j = i + (ds.pasu ? -1 : 1); [secs[i], secs[j]] = [secs[j], secs[i]]; render(); return; } }
+  if (ds.gmail) { HQ.settings.gmailConnected = !HQ.settings.gmailConnected; render(); toast(HQ.settings.gmailConnected ? "Gmail connected. @mentions will be emailed too." : "Gmail disconnected. @mentions still show in HQ."); return; }
   if (ds.tooladd) { const n = el("tl-name").value.trim(), u = el("tl-url").value.trim(); if (!n) { el("tl-name").focus(); return; } if (!u) { el("tl-url").focus(); return; } HQ.settings.tools.push([n, u]); render(); el("tl-name").focus(); return; }
   if (ds.toolrm) { HQ.settings.tools.splice(+ds.toolrm, 1); render(); return; }
   if (ds.toolup || ds.tooldown) { const a = HQ.settings.tools, i = +(ds.toolup || ds.tooldown), j = i + (ds.toolup ? -1 : 1); [a[i], a[j]] = [a[j], a[i]]; render(); return; }
@@ -3316,6 +3358,31 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeTools(); });
 addEventListener("scroll", closeTools, true);
+
+// Bell: @mentions for whoever is viewing (HQ.me). Clicking one opens that person.
+document.querySelectorAll(".topnav").forEach(bar => {
+  const b = document.createElement("button"); b.className = "bell-btn"; b.type = "button"; b.setAttribute("aria-label", "Notifications"); b.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bell-n" hidden></span>';
+  bar.appendChild(b);
+});
+const myNotes = () => HQ.notifications.filter(n => n.to === HQ.me);
+function bellBadge() { const n = myNotes().filter(x => !x.read).length; document.querySelectorAll(".bell-n").forEach(x => { x.hidden = !n; x.textContent = n; }); }
+let bellMenu = null;
+function closeBell() { if (bellMenu) { bellMenu.remove(); bellMenu = null; } }
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".bell-btn");
+  if (btn) { const was = !!bellMenu; closeBell(); closeTools(); if (was) return;
+    const r = btn.getBoundingClientRect(), list = myNotes(), team = Object.fromEntries(HQ.settings.team.map(t => [t[0], t[1].split(" ")[0]]));
+    bellMenu = document.createElement("div"); bellMenu.className = "tools-menu bell-menu";
+    bellMenu.innerHTML = `<div class="bm-h"><b>Notifications</b>${list.some(n => !n.read) ? '<button type="button" data-bellread="1">Mark all read</button>' : ""}</div>` + (list.length ? list.map(n => `<button type="button" class="bm-i ${n.read ? "" : "unread"}" data-bellopen="${n.id}"><span><b>${toolsEsc(team[n.from] || "Someone")}</b> mentioned you on <b>${toolsEsc(n.name)}</b></span><small>${toolsEsc(n.text.length > 120 ? n.text.slice(0, 120) + "…" : n.text)}</small></button>`).join("") : `<div class="tm-empty">Nothing yet. When someone types @${toolsEsc((HQ.settings.team.find(t => t[0] === HQ.me) || ["", "you"])[1].split(" ")[0])} in a note, it shows up here.</div>`);
+    document.body.appendChild(bellMenu);
+    bellMenu.style.top = (r.bottom + 4) + "px"; bellMenu.style.left = Math.max(8, Math.min(r.right - bellMenu.offsetWidth, innerWidth - bellMenu.offsetWidth - 8)) + "px"; return; }
+  const op = e.target.closest("[data-bellopen]");
+  if (op) { const n = HQ.notifications.find(x => String(x.id) === op.dataset.bellopen); closeBell(); if (n) { n.read = true; show("deals", "#contact-" + n.cid); } bellBadge(); return; }
+  if (e.target.closest("[data-bellread]")) { myNotes().forEach(n => n.read = true); closeBell(); bellBadge(); return; }
+  if (bellMenu && !e.target.closest(".bell-menu")) closeBell();
+  setTimeout(bellBadge);
+});
+addEventListener("scroll", closeBell, true);
 
 const start = location.hash.replace("#", "");
 show(INIT[start] ? start : "deals", /^#contact-/.test(location.hash) ? location.hash : null);

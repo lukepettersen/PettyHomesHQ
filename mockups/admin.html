@@ -386,7 +386,7 @@ const V = {
   integrations() {
     return `<h1>Integrations</h1>
     <div class="cards">
-      <div class="box icard"><h3>Google Workspace <span class="st on">Connected</span></h3><p>Sign-in, Gmail and Calendar for pettyhomes.com. Emails show on contact timelines; deal deadlines go to Calendar.</p><div class="sm">luke@pettyhomes.com, assistant@pettyhomes.com</div><button class="btn" data-toast="Choose which calendar gets deal deadlines">Calendar settings</button></div>
+      <div class="box icard"><h3>Google Workspace <span class="st ${HQ.settings.gmailConnected ? "on" : ""}">${HQ.settings.gmailConnected ? "Connected" : "Not connected"}</span></h3><p>Sign-in, Gmail and Calendar for pettyhomes.com. Emails show on contact timelines; deal deadlines go to Calendar. When Gmail is connected, an @mention in a note also emails that person.</p><div class="sm">${HQ.settings.team.map(t => t[2]).filter(Boolean).join(", ")}</div><button class="btn" data-toast="Choose which calendar gets deal deadlines">Calendar settings</button> <button class="btn" data-gmail="1">${HQ.settings.gmailConnected ? "Disconnect Gmail" : "Connect Gmail"}</button></div>
       <div class="box icard"><h3>Business texting <span class="st on">Connected</span></h3><p>Texts and missed calls in Messages.</p><div class="sm num">(612) 555-0100 · Twilio</div><button class="btn" data-toast="Set office hours and the missed-call auto-reply">Texting settings</button></div>
       <div class="box icard"><h3>Website leads <span class="st off">Not connected</span></h3><p>Send WordPress form submissions to HQ. Each one creates a person (source Website) and a follow-up task.</p><div class="code">https://hq.pettyhomes.com/api/leads/wp_7f3a…</div><button class="btn" data-toast="Copied. Paste it into your form plugin's webhook setting.">Copy webhook URL</button></div>
       <div class="box icard"><h3>Follow Up Boss import <span class="st off">Not started</span></h3><p>Bring over people, notes, tags and templates when you're ready. Nothing moves until you start it.</p><button class="btn" data-toast="Import is planned for after the build is approved">Start import</button></div>
@@ -397,7 +397,7 @@ function render() { side(); el("main").innerHTML = V[sec](); }
 let tt; function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
 const pair = s => s.split(":");
 // Assignee lists everywhere come from the users here.
-function syncTeam() { HQ.settings.team.splice(0, HQ.settings.team.length, ...state.users.map(([n]) => [n.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase(), n])); }
+function syncTeam() { HQ.settings.team.splice(0, HQ.settings.team.length, ...state.users.map(([n, e]) => [n.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase(), n, e])); }
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
   if (ds.sec) { sec = ds.sec; state.tplFilter = "All"; render(); return; }
@@ -415,6 +415,7 @@ document.addEventListener("click", e => {
     if (ds.pasadd) { secs.push({ name: "New section", fields: [] }); render(); return; }
     if (ds.pasx) { secs.splice(+ds.pasx, 1); render(); return; }
     if (ds.pasu || ds.pasd) { const i = +(ds.pasu || ds.pasd), j = i + (ds.pasu ? -1 : 1); [secs[i], secs[j]] = [secs[j], secs[i]]; render(); return; } }
+  if (ds.gmail) { HQ.settings.gmailConnected = !HQ.settings.gmailConnected; render(); toast(HQ.settings.gmailConnected ? "Gmail connected. @mentions will be emailed too." : "Gmail disconnected. @mentions still show in HQ."); return; }
   if (ds.tooladd) { const n = el("tl-name").value.trim(), u = el("tl-url").value.trim(); if (!n) { el("tl-name").focus(); return; } if (!u) { el("tl-url").focus(); return; } HQ.settings.tools.push([n, u]); render(); el("tl-name").focus(); return; }
   if (ds.toolrm) { HQ.settings.tools.splice(+ds.toolrm, 1); render(); return; }
   if (ds.toolup || ds.tooldown) { const a = HQ.settings.tools, i = +(ds.toolup || ds.tooldown), j = i + (ds.toolup ? -1 : 1); [a[i], a[j]] = [a[j], a[i]]; render(); return; }

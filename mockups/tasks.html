@@ -545,7 +545,7 @@ document.addEventListener("click", e => {
   if (b.dataset.whotoggle) { whoOpen = !whoOpen; whoQ = ""; render(); const q = el("who-q"); if (q) q.focus(); return; }
   if (b.dataset.who) { whoF = b.dataset.who; whoOpen = false; render(); return; }
   if (b.id === "as-lp" || b.id === "as-as") {
-    me = b.id === "as-lp" ? "LP" : "AS";
+    me = b.id === "as-lp" ? "LP" : "AS"; HQ.me = me;
     whoF = me === "LP" ? "everyone" : "me";
     el("as-lp").setAttribute("aria-pressed", me === "LP");
     el("as-as").setAttribute("aria-pressed", me === "AS");

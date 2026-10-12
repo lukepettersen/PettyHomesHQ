@@ -203,6 +203,17 @@ TOOLS_CSS = """
 .tools-menu .tm-foot { border-top: 1px solid #e2dbcf; margin-top: 4px; padding-top: 4px; }
 .tools-menu .tm-foot button { border: 0; background: none; width: 100%; text-align: left; padding: 8px 10px; border-radius: 7px; color: #5f6447; font-weight: 700; font-size: 13px; cursor: pointer; }
 .tools-menu .tm-foot button:hover { background: #f2ece4; }
+.bell-btn { margin-left: auto; position: relative; border: 0; background: none; color: #e2dbcf; padding: 8px; cursor: pointer; display: grid; place-items: center; }
+.bell-btn:hover { color: #fff; }
+.bell-n { position: absolute; top: 2px; right: 0; background: #cc7855; color: #fff; font-size: 10.5px; font-weight: 800; min-width: 17px; height: 17px; border-radius: 999px; display: grid; place-items: center; padding: 0 4px; }
+.bell-n[hidden] { display: none; }
+.bell-menu { min-width: 320px; max-width: 380px; }
+.bell-menu .bm-h { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px 8px; border-bottom: 1px solid #e2dbcf; margin-bottom: 4px; }
+.bell-menu .bm-h button { border: 0; background: none; color: #5f6447; font-weight: 700; font-size: 12.5px; cursor: pointer; }
+.bell-menu .bm-i { border: 0; background: none; width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 7px; font-size: 13.5px; cursor: pointer; color: #383232; font-family: inherit; }
+.bell-menu .bm-i small { color: #6f6863; font-size: 12.5px; }
+.bell-menu .bm-i.unread { background: #e8ede2; }
+.bell-menu .bm-i:hover { background: #f2ece4; }
 """
 TOOLS_JS = r"""
 // Tools: a dropdown of outside links you add in Admin -> Tools. Opens each in a new tab.
@@ -230,6 +241,31 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeTools(); });
 addEventListener("scroll", closeTools, true);
+
+// Bell: @mentions for whoever is viewing (HQ.me). Clicking one opens that person.
+document.querySelectorAll(".topnav").forEach(bar => {
+  const b = document.createElement("button"); b.className = "bell-btn"; b.type = "button"; b.setAttribute("aria-label", "Notifications"); b.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bell-n" hidden></span>';
+  bar.appendChild(b);
+});
+const myNotes = () => HQ.notifications.filter(n => n.to === HQ.me);
+function bellBadge() { const n = myNotes().filter(x => !x.read).length; document.querySelectorAll(".bell-n").forEach(x => { x.hidden = !n; x.textContent = n; }); }
+let bellMenu = null;
+function closeBell() { if (bellMenu) { bellMenu.remove(); bellMenu = null; } }
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".bell-btn");
+  if (btn) { const was = !!bellMenu; closeBell(); closeTools(); if (was) return;
+    const r = btn.getBoundingClientRect(), list = myNotes(), team = Object.fromEntries(HQ.settings.team.map(t => [t[0], t[1].split(" ")[0]]));
+    bellMenu = document.createElement("div"); bellMenu.className = "tools-menu bell-menu";
+    bellMenu.innerHTML = `<div class="bm-h"><b>Notifications</b>${list.some(n => !n.read) ? '<button type="button" data-bellread="1">Mark all read</button>' : ""}</div>` + (list.length ? list.map(n => `<button type="button" class="bm-i ${n.read ? "" : "unread"}" data-bellopen="${n.id}"><span><b>${toolsEsc(team[n.from] || "Someone")}</b> mentioned you on <b>${toolsEsc(n.name)}</b></span><small>${toolsEsc(n.text.length > 120 ? n.text.slice(0, 120) + "…" : n.text)}</small></button>`).join("") : `<div class="tm-empty">Nothing yet. When someone types @${toolsEsc((HQ.settings.team.find(t => t[0] === HQ.me) || ["", "you"])[1].split(" ")[0])} in a note, it shows up here.</div>`);
+    document.body.appendChild(bellMenu);
+    bellMenu.style.top = (r.bottom + 4) + "px"; bellMenu.style.left = Math.max(8, Math.min(r.right - bellMenu.offsetWidth, innerWidth - bellMenu.offsetWidth - 8)) + "px"; return; }
+  const op = e.target.closest("[data-bellopen]");
+  if (op) { const n = HQ.notifications.find(x => String(x.id) === op.dataset.bellopen); closeBell(); if (n) { n.read = true; show("deals", "#contact-" + n.cid); } bellBadge(); return; }
+  if (e.target.closest("[data-bellread]")) { myNotes().forEach(n => n.read = true); closeBell(); bellBadge(); return; }
+  if (bellMenu && !e.target.closest(".bell-menu")) closeBell();
+  setTimeout(bellBadge);
+});
+addEventListener("scroll", closeBell, true);
 """
 
 if __name__ == "__main__":
