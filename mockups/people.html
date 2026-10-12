@@ -58,6 +58,8 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
   .side-nav ul { flex-direction: row; gap: 6px; }
   .nav-i { white-space: nowrap; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; }
 }
+.chk-row { display: flex !important; flex-direction: row !important; align-items: center; gap: 8px; font-weight: 600; }
+.chk-row input { width: auto; }
 </style>
 <style>
 /* Layout: collections (folders of smart lists) on the left; table with a filter bar on the right. */
@@ -304,6 +306,8 @@ function personModal() {
     <p id="p-preview"></p>
     <div class="two"><label>Stage<select class="input" id="f-stage">${STAGES.map(s => `<option ${s === "Lead" ? "selected" : ""}>${esc(s)}</option>`).join("")}</select></label>
     <label>Source<select class="input" id="f-source">${HQ.settings.sources.map(s => `<option>${esc(s)}</option>`).join("")}</select></label></div>
+    <label class="chk-row"><input type="checkbox" id="f-call"> Phone call booked</label>
+    <div class="two" id="f-callwhen" hidden><label>Call date<input class="input" type="date" id="f-calldate" value="2026-10-13"></label><label>Time<input class="input" type="time" id="f-calltime" value="12:00"></label></div>
     <div class="foot"><button type="button" class="btn" data-close="1">Cancel</button><button class="btn primary" type="submit">Add</button></div>
   </form></div>`;
   el("f-first").focus();
@@ -316,6 +320,7 @@ function personModal() {
   };
   const preview = () => { el("p-preview").textContent = !el("p2").hidden && v("g-first") ? `Shows as "${display()}". Both names, phones and emails are searchable, and texts from either phone land on this contact.` : ""; };
   el("add-form").addEventListener("input", preview);
+  el("f-call").addEventListener("change", e => { el("f-callwhen").hidden = !e.target.checked; });
   el("add-form").addEventListener("submit", e => {
     e.preventDefault();
     const name = display(), two = !el("p2").hidden && v("g-first");
@@ -324,8 +329,9 @@ function personModal() {
     if (v("f-email")) emails.push([two ? v("f-first") : "", v("f-email")]);
     if (two && v("g-phone")) phones.push([v("g-first"), v("g-phone")]);
     if (two && v("g-email")) emails.push([v("g-first"), v("g-email")]);
-    HQ.newContact(name, { stage: el("f-stage").value, source: el("f-source").value, phones, emails });
-    el("modal").innerHTML = ""; toast(`Added ${name}.`); render();
+    const cid = HQ.newContact(name, { stage: el("f-stage").value, source: el("f-source").value, phones, emails });
+    let n = 0; if (el("f-call").checked) { const t = el("f-calltime").value, [h, m] = (t || "12:00").split(":").map(Number), end = String(h + (m >= 30 ? 1 : 0)).padStart(2, "0") + ":" + String((m + 30) % 60).padStart(2, "0"); n = HQ.bookCall(cid, { date: el("f-calldate").value, start: t, end }); }
+    el("modal").innerHTML = ""; toast(n ? `Added ${name}. Call booked, invite sent, ${n} tasks started.` : `Added ${name}.`); render();
   });
 }
 let tt; function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }

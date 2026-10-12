@@ -205,14 +205,14 @@ const state = {
   ],
   tplSel: 2, tplFilter: "All",
 };
-const ANCHORS = ["Start date", "Final Acceptance", "Inspection", "Written Statement", "HOA Rescission", "Closing"];
+const ANCHORS = ["Start date", "Phone call", "Final Acceptance", "Inspection", "Written Statement", "HOA Rescission", "Closing"];
 const TODAY_A = new Date(2026, 9, 12);
 const TPLS = () => HQ.templates;
 const curCk = () => TPLS().find(x => x.id === state.tplId) || TPLS()[0];
 const stepCount = x => x.phases.reduce((n, ph) => n + ph.steps.length, 0);
 const PA_TRIGGERS = [["Buyer · Under contract", "When a buyer-side purchase agreement is added"], ["Seller · Under contract", "When a seller-side purchase agreement is added"], ["Buyer · Closed", "When a buyer-side contract closes"], ["Seller · Closed", "When a seller-side contract closes"]];
 const UC_DATES = [["insp", "Inspection deadline"], ["hoa", "HOA doc rescission"], ["ws", "Written Statement"], ["close", "Closing"]];
-const trigOptions = () => Object.entries(state.pipes).flatMap(([p, st]) => st.map(x => `${p} · ${x}`)).concat(PA_TRIGGERS.map(x => x[0]));
+const trigOptions = () => Object.entries(state.pipes).flatMap(([p, st]) => st.map(x => `${p} · ${x}`)).concat(PA_TRIGGERS.map(x => x[0])).concat(["Phone call booked"]);
 const blankStep = () => ({ name: "New step", anchor: "Start date", days: 1, dir: "after", who: "Alyssa", type: "Task", tpl: "", cond: "Always", advance: "" });
 const applied = () => { const x = curCk(); if (state.ckApply && x.trigger) toast(`Open deals in ${x.trigger} get this change too.`); };
 let tplN = 100;
@@ -302,7 +302,7 @@ const V = {
         <div class="box ed-head">
           <input class="tname" data-tname="1" value="${esc(t.name)}" aria-label="Template name">
           <div class="toolbar">
-            <label class="lbl">Starts<select id="t-trigger"><option value="">By hand, from a contact</option>${Object.entries(state.pipes).map(([p, st]) => `<optgroup label="${p}s">${st.map(x => `<option value="${esc(p + " · " + x)}" ${t.trigger === p + " · " + x ? "selected" : ""}>When a ${p.toLowerCase()} moves to ${esc(x)}</option>`).join("")}</optgroup>`).join("")}<optgroup label="Purchase agreements">${PA_TRIGGERS.map(([v, l]) => `<option value="${v}" ${t.trigger === v ? "selected" : ""}>${l}</option>`).join("")}</optgroup></select></label>
+            <label class="lbl">Starts<select id="t-trigger"><option value="">By hand, from a contact</option>${Object.entries(state.pipes).map(([p, st]) => `<optgroup label="${p}s">${st.map(x => `<option value="${esc(p + " · " + x)}" ${t.trigger === p + " · " + x ? "selected" : ""}>When a ${p.toLowerCase()} moves to ${esc(x)}</option>`).join("")}</optgroup>`).join("")}<optgroup label="Purchase agreements">${PA_TRIGGERS.map(([v, l]) => `<option value="${v}" ${t.trigger === v ? "selected" : ""}>${l}</option>`).join("")}</optgroup><optgroup label="Appointments"><option value="Phone call booked" ${t.trigger === "Phone call booked" ? "selected" : ""}>When a phone call is booked</option></optgroup></select></label>
             <label class="lbl">Copy steps from<select id="ck-copy"><option value="">Choose a template…</option>${TPLS().filter(x => x !== t && stepCount(x)).map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></label>
             <span style="display:flex;gap:6px;margin-left:auto"><button class="btn" data-tdup="1">Duplicate</button><button class="btn" data-tdel="1">${state.ckPending === "tdel" ? "Click again to delete" : "Delete"}</button></span>
           </div>

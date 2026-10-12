@@ -60,6 +60,8 @@ body { background: var(--bg); }
 #pg-people .side-nav h4 { display: none; }
 #pg-people .side-nav ul { flex-direction: row; gap: 6px; }
 #pg-people .nav-i { white-space: nowrap; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; }}
+#pg-people .chk-row { display: flex !important; flex-direction: row !important; align-items: center; gap: 8px; font-weight: 600; }
+#pg-people .chk-row input { width: auto; }
 #pg-people .shell { max-width: 1500px; margin: 0 auto; padding-inline: 16px; padding-block: 14px 40px; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 18px; align-items: start; }
 @media (max-width: 860px) {#pg-people .shell { grid-template-columns: minmax(0, 1fr); }}
 #pg-people .main { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
@@ -1032,7 +1034,7 @@ window.HQ = window.HQ || (() => {
     newTasks: [],
     templates: [
       T("New lead follow-up", "", [{ name: "First contact", steps: [s("Call new lead", "Start date", 0, "on", "Luke", "Call"), s("Intro email", "Start date", 0, "on", "Alyssa", "Email", { tpl: "Website sign-up welcome" }), s("Schedule consult", "Start date", 2, "after", "Luke", "Task")] }]),
-      T("Phone call booked", "", [{ name: "Phone call", steps: [s("Initial phone call scheduled email", "Start date", 0, "on", "Alyssa", "Email", { tpl: "Initial phone call scheduled" }), s("Add call to Luke's calendar", "Start date", 0, "on", "Alyssa", "Task"), s("Hold phone call", "Start date", 1, "after", "Luke", "Call"), s("Schedule consult and start buyer or listing", "Start date", 1, "after", "Alyssa", "Task")] }]),
+      T("Phone call booked", "Phone call booked", [{ name: "Phone call", steps: [s("Initial phone call scheduled email", "Start date", 0, "on", "Alyssa", "Email", { tpl: "Initial phone call scheduled" }), s("Call reminder text", "Phone call", 0, "on", "Alyssa", "Text"), s("Hold phone call", "Phone call", 0, "on", "Luke", "Call"), s("Schedule consult and start buyer or listing", "Phone call", 1, "after", "Alyssa", "Task")] }]),
       T("Buyer · Consult scheduled", "Buyer · Consult scheduled", [{ name: "Before the consult", steps: [s("Agency disclosure + more info email", "Start date", 0, "on", "Alyssa", "Email"), s("Consult confirmation text", "Start date", 1, "after", "Luke", "Text"), s("Hold consult", "Start date", 2, "after", "Luke", "Task", { advance: "Consult complete" })] }]),
       T("Buyer · Consult complete", "Buyer · Consult complete", [{ name: "After the consult", steps: [s("Intro + Homespotter + legal name text", "Start date", 0, "on", "Alyssa", "Text", { tpl: "Intro + Homespotter + legal name" }), s("Buyer rep breakdown email", "Start date", 0, "on", "Alyssa", "Email", { tpl: "Buyer rep breakdown" }), s("Connect with lender?", "Start date", 1, "after", "Luke", "Task"), s("Send buyer rep to sign", "Start date", 1, "after", "Alyssa", "Task"), s("Buyer rep signed + saved", "Start date", 3, "after", "Alyssa", "Task", { advance: "Rep signed" })] }]),
       T("Buyer · Rep signed", "Buyer · Rep signed", [{ name: "Buyer rep", steps: [s("Email signed rep to clients", "Start date", 0, "on", "Alyssa", "Email"), s("Rename Gmail folder", "Start date", 0, "on", "Alyssa", "Task"), s("Set up home search", "Start date", 1, "after", "Luke", "Task", { advance: "Showing homes" })] }]),
@@ -1117,6 +1119,23 @@ window.HQ.newContact = (name, extra) => {
   const cid = "p" + (window.HQ.nextCid++);
   window.HQ.contacts[cid] = Object.assign({ name, stage: "Lead", follow: null, source: "", referred: "", mailing: name, tags: [], phones: [], emails: [], address: "", birthdays: [], homeiversary: "", tasks: [], history: [], assigned: "Luke Pettersen", created: new Date(2026, 9, 12) }, extra || {});
   return cid;
+};
+// Book a phone call: adds the appointment (Google Calendar invite to the client and the team)
+// and starts every template set to "When a phone call is booked", timed from today and the call date.
+window.HQ.bookCall = (cid, { date, start, end, title }) => {
+  const c = window.HQ.contacts[cid]; if (!c) return 0;
+  const last = c.name.split("&")[0].trim().split(" ").pop();
+  const invite = [c.name.split("&")[0].trim()].concat(window.HQ.settings.team.map(t => t[1]));
+  (c.appts = c.appts || []).push({ type: "Phone call", title: title || `${last} - Phone call`, date, start, end, where: (c.phones[0] || [])[1] || "", who: invite });
+  const iso = x => x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0") + "-" + String(x.getDate()).padStart(2, "0");
+  const [y, m, d] = date.split("-").map(Number), callDay = new Date(y, m - 1, d), today = new Date(2026, 9, 12);
+  const initials = n => (window.HQ.settings.team.find(([, nm]) => nm.split(" ")[0] === n) || window.HQ.settings.team[0])[0];
+  let n = 0;
+  window.HQ.templates.filter(t => t.trigger === "Phone call booked").forEach(t => window.HQ.expand(t, today, { "Phone call": callDay }).forEach(x => {
+    c.tasks.push({ t: x.t, due: x.due ? iso(x.due) : null, waiting: x.waiting, who: initials(x.who), kind: x.type === "Text" ? "text" : x.type === "Email" ? "email" : "task", time: x.t === "Hold phone call" && start ? (([h, mm]) => `${h % 12 || 12}${mm ? ":" + String(mm).padStart(2, "0") : ""}${h >= 12 ? "pm" : "am"}`)(start.split(":").map(Number)) : undefined, s: "open" }); n++;
+  }));
+  c.history.unshift([iso(today), "note", `Phone call booked for ${callDay.toDateString().slice(0, 10)}${start ? " at " + start : ""}. Invite sent.`, "AS"]);
+  return n;
 };
 window.HQ.deleteContact = cid => {
   delete window.HQ.contacts[cid];
@@ -1310,6 +1329,8 @@ function personModal() {
     <p id="p-preview"></p>
     <div class="two"><label>Stage<select class="input" id="f-stage">${STAGES.map(s => `<option ${s === "Lead" ? "selected" : ""}>${esc(s)}</option>`).join("")}</select></label>
     <label>Source<select class="input" id="f-source">${HQ.settings.sources.map(s => `<option>${esc(s)}</option>`).join("")}</select></label></div>
+    <label class="chk-row"><input type="checkbox" id="f-call"> Phone call booked</label>
+    <div class="two" id="f-callwhen" hidden><label>Call date<input class="input" type="date" id="f-calldate" value="2026-10-13"></label><label>Time<input class="input" type="time" id="f-calltime" value="12:00"></label></div>
     <div class="foot"><button type="button" class="btn" data-close="1">Cancel</button><button class="btn primary" type="submit">Add</button></div>
   </form></div>`;
   el("f-first").focus();
@@ -1322,6 +1343,7 @@ function personModal() {
   };
   const preview = () => { el("p-preview").textContent = !el("p2").hidden && v("g-first") ? `Shows as "${display()}". Both names, phones and emails are searchable, and texts from either phone land on this contact.` : ""; };
   el("add-form").addEventListener("input", preview);
+  el("f-call").addEventListener("change", e => { el("f-callwhen").hidden = !e.target.checked; });
   el("add-form").addEventListener("submit", e => {
     e.preventDefault();
     const name = display(), two = !el("p2").hidden && v("g-first");
@@ -1330,8 +1352,9 @@ function personModal() {
     if (v("f-email")) emails.push([two ? v("f-first") : "", v("f-email")]);
     if (two && v("g-phone")) phones.push([v("g-first"), v("g-phone")]);
     if (two && v("g-email")) emails.push([v("g-first"), v("g-email")]);
-    HQ.newContact(name, { stage: el("f-stage").value, source: el("f-source").value, phones, emails });
-    el("modal").innerHTML = ""; toast(`Added ${name}.`); render();
+    const cid = HQ.newContact(name, { stage: el("f-stage").value, source: el("f-source").value, phones, emails });
+    let n = 0; if (el("f-call").checked) { const t = el("f-calltime").value, [h, m] = (t || "12:00").split(":").map(Number), end = String(h + (m >= 30 ? 1 : 0)).padStart(2, "0") + ":" + String((m + 30) % 60).padStart(2, "0"); n = HQ.bookCall(cid, { date: el("f-calldate").value, start: t, end }); }
+    el("modal").innerHTML = ""; toast(n ? `Added ${name}. Call booked, invite sent, ${n} tasks started.` : `Added ${name}.`); render();
   });
 }
 let tt; function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
@@ -1687,13 +1710,14 @@ function apptHtml(a, c) {
   const dt = d(a.date), n = diff(dt, TODAY), day = n === 0 ? "Today" : n === 1 ? "Tomorrow" : n > 1 && n < 7 ? ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][dt.getDay()] : fmt(dt);
   const time = a.start ? `${fmtTime(a.start)}${a.end ? " - " + fmtTime(a.end) : ""} ` : "";
   const who = (a.who || [c.name.split("&")[0].trim(), "Luke Pettersen", "Alyssa Chakiton"]).map(n => n.split(" ").map(x => x[0]).join("").slice(0, 2).toUpperCase());
-  return `<div class="appt"><div class="appt-h"><b>${esc(a.title)}</b><span class="gcal" title="On Google Calendar">G</span></div>
+  return `<div class="appt"><div class="appt-h"><b>${a.type === "Phone call" ? "☎ " : ""}${esc(a.title)}</b><span class="gcal" title="On Google Calendar">G</span></div>
     <div class="sm ${n === 0 ? "td" : "muted"}">◷ ${time}${day}</div>${a.where ? `<div class="sm muted">⌖ ${esc(a.where)}</div>` : ""}
     <div class="appt-f"><span class="avs">${who.map(x => `<span class="av">${x}</span>`).join("")}</span>${a.auto ? `<span class="sm muted">From contract</span>` : `<button class="rm-x" data-delappt="${a.i}" aria-label="Delete appointment">×</button>`}</div></div>`;
 }
 function apptCard(c, files) {
   const all = appts(c, files), up = all.filter(a => d(a.date) >= TODAY), past = all.filter(a => d(a.date) < TODAY);
   return `<div class="card-s"><h3>Appointments <span class="muted">${up.length}</span><button class="plus" data-apptopen="1" aria-label="Add appointment">+</button></h3>
+    <button class="btn" data-bookcall="1">☎ Book phone call</button>
     ${up.map(a => apptHtml(a, c)).join("") || `<p class="muted sm">Nothing scheduled. Contract dates show up here once a purchase agreement is added.</p>`}
     ${past.length ? `<button class="morelink" data-pastappt="1">${showPastAppts ? "Hide" : "Past appointments"} (${past.length})</button>${showPastAppts ? past.map(a => apptHtml(a, c)).join("") : ""}` : ""}</div>`;
 }
@@ -1704,7 +1728,7 @@ function filesCard(c) {
     ${docs.map((f, i) => `<div class="doc"><span class="doc-t">${esc((f.name.split(".").pop() || "file").toUpperCase().slice(0, 4))}</span><div><button class="doc-n" data-filedl="${i}">${esc(f.name)}</button><div class="sm muted">${short(d(f.date))}</div>
       <div class="doc-a"><button class="linkbtn" data-filedl="${i}">Download</button><button class="linkbtn danger" data-filedel="${i}">${confirmDel === "file" + i ? "Click again to delete" : "Delete"}</button></div></div></div>`).join("") || `<p class="muted sm">No files yet. Add the PA, counters, pre-approval and disclosures here.</p>`}</div>`;
 }
-let miniModal = null; // "task" | "appt"
+let miniModal = null; // "task" | "appt" | "call"
 function miniModalHtml() {
   const c = contact(openContact); if (!miniModal || !c) return "";
   const team = HQ.settings.team;
@@ -1716,7 +1740,15 @@ function miniModalHtml() {
     <div class="mini-dt"><input id="mt-date" type="date" value="${iso(TODAY)}" aria-label="Date"><input id="mt-time" type="time" aria-label="Time"></div>
     <p class="muted sm" style="margin:0">For ${esc(c.name)}. It also shows on the Tasks page under Clients.</p>
     <div class="foot"><button type="button" class="btn" data-mclose="1">Cancel</button><button class="btn primary" type="submit">Create task</button></div></form></div>`;
-  const pa = deals.find(x => x.kind === "pa" && x.cid === openContact && x.status === "Active");
+  const pa = deals.find(x => x.kind === "pa" && x.cid === openContact && x.status === "Active"), isCall = miniModal === "call";
+  const tpls = HQ.templates.filter(t => t.trigger === "Phone call booked");
+  if (isCall) return `<div class="modal-bg" data-mclose="1"><form class="modal deal-modal minim" id="mini-form" autocomplete="off">
+    <div class="mini-h"><h2>Book phone call</h2><button type="button" class="x" data-mclose="1" aria-label="Close">×</button></div>
+    <input id="ma-title" value="${esc(lastName(c))} - Phone call" aria-label="Title" required>
+    <div class="mini-dt"><input id="ma-date" type="date" value="${iso(add(TODAY, 1))}" aria-label="Date"><input id="ma-start" type="time" value="12:00" aria-label="Start"><input id="ma-end" type="time" value="12:30" aria-label="End"></div>
+    <p class="sm" style="margin:0">Sends a Google Calendar invite to <b>${esc(c.name)}</b>${(c.emails[0] || [])[1] ? ` (${esc(c.emails[0][1])})` : ` <span class="od">(no email on file, so only the team gets it)</span>`} and the team.</p>
+    <p class="muted sm" style="margin:0">${tpls.length ? `Starts ${tpls.map(t => `"${esc(t.name)}"`).join(" + ")}: ${tpls.reduce((n, t) => n + t.phases.reduce((m, p) => m + p.steps.length, 0), 0)} tasks timed from today and the call.` : "No template starts when a call is booked. Add one in Admin → Task templates."}</p>
+    <div class="foot"><button type="button" class="btn" data-mclose="1">Cancel</button><button class="btn primary" type="submit">Book call</button></div></form></div>`;
   return `<div class="modal-bg" data-mclose="1"><form class="modal deal-modal minim" id="mini-form" autocomplete="off">
     <div class="mini-h"><h2>Create appointment</h2><button type="button" class="x" data-mclose="1" aria-label="Close">×</button></div>
     <input id="ma-title" value="${esc(lastName(c))} - " aria-label="Title" required>
@@ -1741,6 +1773,7 @@ function saveMini() {
     miniModal = null; renderMini(); render(); toast("Task created. It's on the Tasks page under Clients too."); return;
   }
   const title = el("ma-title").value.trim(); if (!title) { el("ma-title").focus(); return; }
+  if (miniModal === "call") { const n = HQ.bookCall(openContact, { date: el("ma-date").value || iso(add(TODAY, 1)), start: el("ma-start").value, end: el("ma-end").value, title }); miniModal = null; renderMini(); render(); toast(`Call booked and invite sent.${n ? ` ${n} tasks started.` : ""}`); return; }
   (c.appts = c.appts || []).push({ title, date: el("ma-date").value || iso(TODAY), start: el("ma-start").value, end: el("ma-end").value, where: el("ma-where").value.trim(), who: [...document.querySelectorAll("[data-inv]")].filter(x => x.checked).map(x => x.dataset.inv) });
   miniModal = null; renderMini(); render(); toast("Appointment created and added to Google Calendar.");
 }
@@ -2213,6 +2246,7 @@ document.addEventListener("click", e => {
   if (b.dataset.alltasks) { showAllTasks = !showAllTasks; render(); return; }
   if (b.dataset.applyopen) { miniModal = "task"; renderMini(); return; }
   if (b.dataset.apptopen) { miniModal = "appt"; renderMini(); return; }
+  if (b.dataset.bookcall) { miniModal = "call"; renderMini(); return; }
   if (b.dataset.delappt) { contact(openContact).appts.splice(+b.dataset.delappt, 1); render(); toast("Appointment deleted and removed from Google Calendar."); return; }
   if (b.dataset.pastappt) { showPastAppts = !showPastAppts; render(); return; }
   if (b.dataset.fileadd) { el("file-in").click(); return; }
@@ -2915,14 +2949,14 @@ const state = {
   ],
   tplSel: 2, tplFilter: "All",
 };
-const ANCHORS = ["Start date", "Final Acceptance", "Inspection", "Written Statement", "HOA Rescission", "Closing"];
+const ANCHORS = ["Start date", "Phone call", "Final Acceptance", "Inspection", "Written Statement", "HOA Rescission", "Closing"];
 const TODAY_A = new Date(2026, 9, 12);
 const TPLS = () => HQ.templates;
 const curCk = () => TPLS().find(x => x.id === state.tplId) || TPLS()[0];
 const stepCount = x => x.phases.reduce((n, ph) => n + ph.steps.length, 0);
 const PA_TRIGGERS = [["Buyer · Under contract", "When a buyer-side purchase agreement is added"], ["Seller · Under contract", "When a seller-side purchase agreement is added"], ["Buyer · Closed", "When a buyer-side contract closes"], ["Seller · Closed", "When a seller-side contract closes"]];
 const UC_DATES = [["insp", "Inspection deadline"], ["hoa", "HOA doc rescission"], ["ws", "Written Statement"], ["close", "Closing"]];
-const trigOptions = () => Object.entries(state.pipes).flatMap(([p, st]) => st.map(x => `${p} · ${x}`)).concat(PA_TRIGGERS.map(x => x[0]));
+const trigOptions = () => Object.entries(state.pipes).flatMap(([p, st]) => st.map(x => `${p} · ${x}`)).concat(PA_TRIGGERS.map(x => x[0])).concat(["Phone call booked"]);
 const blankStep = () => ({ name: "New step", anchor: "Start date", days: 1, dir: "after", who: "Alyssa", type: "Task", tpl: "", cond: "Always", advance: "" });
 const applied = () => { const x = curCk(); if (state.ckApply && x.trigger) toast(`Open deals in ${x.trigger} get this change too.`); };
 let tplN = 100;
@@ -3012,7 +3046,7 @@ const V = {
         <div class="box ed-head">
           <input class="tname" data-tname="1" value="${esc(t.name)}" aria-label="Template name">
           <div class="toolbar">
-            <label class="lbl">Starts<select id="t-trigger"><option value="">By hand, from a contact</option>${Object.entries(state.pipes).map(([p, st]) => `<optgroup label="${p}s">${st.map(x => `<option value="${esc(p + " · " + x)}" ${t.trigger === p + " · " + x ? "selected" : ""}>When a ${p.toLowerCase()} moves to ${esc(x)}</option>`).join("")}</optgroup>`).join("")}<optgroup label="Purchase agreements">${PA_TRIGGERS.map(([v, l]) => `<option value="${v}" ${t.trigger === v ? "selected" : ""}>${l}</option>`).join("")}</optgroup></select></label>
+            <label class="lbl">Starts<select id="t-trigger"><option value="">By hand, from a contact</option>${Object.entries(state.pipes).map(([p, st]) => `<optgroup label="${p}s">${st.map(x => `<option value="${esc(p + " · " + x)}" ${t.trigger === p + " · " + x ? "selected" : ""}>When a ${p.toLowerCase()} moves to ${esc(x)}</option>`).join("")}</optgroup>`).join("")}<optgroup label="Purchase agreements">${PA_TRIGGERS.map(([v, l]) => `<option value="${v}" ${t.trigger === v ? "selected" : ""}>${l}</option>`).join("")}</optgroup><optgroup label="Appointments"><option value="Phone call booked" ${t.trigger === "Phone call booked" ? "selected" : ""}>When a phone call is booked</option></optgroup></select></label>
             <label class="lbl">Copy steps from<select id="ck-copy"><option value="">Choose a template…</option>${TPLS().filter(x => x !== t && stepCount(x)).map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></label>
             <span style="display:flex;gap:6px;margin-left:auto"><button class="btn" data-tdup="1">Duplicate</button><button class="btn" data-tdel="1">${state.ckPending === "tdel" ? "Click again to delete" : "Delete"}</button></span>
           </div>

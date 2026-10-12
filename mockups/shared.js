@@ -7,7 +7,7 @@ window.HQ = window.HQ || (() => {
     newTasks: [],
     templates: [
       T("New lead follow-up", "", [{ name: "First contact", steps: [s("Call new lead", "Start date", 0, "on", "Luke", "Call"), s("Intro email", "Start date", 0, "on", "Alyssa", "Email", { tpl: "Website sign-up welcome" }), s("Schedule consult", "Start date", 2, "after", "Luke", "Task")] }]),
-      T("Phone call booked", "", [{ name: "Phone call", steps: [s("Initial phone call scheduled email", "Start date", 0, "on", "Alyssa", "Email", { tpl: "Initial phone call scheduled" }), s("Add call to Luke's calendar", "Start date", 0, "on", "Alyssa", "Task"), s("Hold phone call", "Start date", 1, "after", "Luke", "Call"), s("Schedule consult and start buyer or listing", "Start date", 1, "after", "Alyssa", "Task")] }]),
+      T("Phone call booked", "Phone call booked", [{ name: "Phone call", steps: [s("Initial phone call scheduled email", "Start date", 0, "on", "Alyssa", "Email", { tpl: "Initial phone call scheduled" }), s("Call reminder text", "Phone call", 0, "on", "Alyssa", "Text"), s("Hold phone call", "Phone call", 0, "on", "Luke", "Call"), s("Schedule consult and start buyer or listing", "Phone call", 1, "after", "Alyssa", "Task")] }]),
       T("Buyer · Consult scheduled", "Buyer · Consult scheduled", [{ name: "Before the consult", steps: [s("Agency disclosure + more info email", "Start date", 0, "on", "Alyssa", "Email"), s("Consult confirmation text", "Start date", 1, "after", "Luke", "Text"), s("Hold consult", "Start date", 2, "after", "Luke", "Task", { advance: "Consult complete" })] }]),
       T("Buyer · Consult complete", "Buyer · Consult complete", [{ name: "After the consult", steps: [s("Intro + Homespotter + legal name text", "Start date", 0, "on", "Alyssa", "Text", { tpl: "Intro + Homespotter + legal name" }), s("Buyer rep breakdown email", "Start date", 0, "on", "Alyssa", "Email", { tpl: "Buyer rep breakdown" }), s("Connect with lender?", "Start date", 1, "after", "Luke", "Task"), s("Send buyer rep to sign", "Start date", 1, "after", "Alyssa", "Task"), s("Buyer rep signed + saved", "Start date", 3, "after", "Alyssa", "Task", { advance: "Rep signed" })] }]),
       T("Buyer · Rep signed", "Buyer · Rep signed", [{ name: "Buyer rep", steps: [s("Email signed rep to clients", "Start date", 0, "on", "Alyssa", "Email"), s("Rename Gmail folder", "Start date", 0, "on", "Alyssa", "Task"), s("Set up home search", "Start date", 1, "after", "Luke", "Task", { advance: "Showing homes" })] }]),
@@ -92,6 +92,23 @@ window.HQ.newContact = (name, extra) => {
   const cid = "p" + (window.HQ.nextCid++);
   window.HQ.contacts[cid] = Object.assign({ name, stage: "Lead", follow: null, source: "", referred: "", mailing: name, tags: [], phones: [], emails: [], address: "", birthdays: [], homeiversary: "", tasks: [], history: [], assigned: "Luke Pettersen", created: new Date(2026, 9, 12) }, extra || {});
   return cid;
+};
+// Book a phone call: adds the appointment (Google Calendar invite to the client and the team)
+// and starts every template set to "When a phone call is booked", timed from today and the call date.
+window.HQ.bookCall = (cid, { date, start, end, title }) => {
+  const c = window.HQ.contacts[cid]; if (!c) return 0;
+  const last = c.name.split("&")[0].trim().split(" ").pop();
+  const invite = [c.name.split("&")[0].trim()].concat(window.HQ.settings.team.map(t => t[1]));
+  (c.appts = c.appts || []).push({ type: "Phone call", title: title || `${last} - Phone call`, date, start, end, where: (c.phones[0] || [])[1] || "", who: invite });
+  const iso = x => x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0") + "-" + String(x.getDate()).padStart(2, "0");
+  const [y, m, d] = date.split("-").map(Number), callDay = new Date(y, m - 1, d), today = new Date(2026, 9, 12);
+  const initials = n => (window.HQ.settings.team.find(([, nm]) => nm.split(" ")[0] === n) || window.HQ.settings.team[0])[0];
+  let n = 0;
+  window.HQ.templates.filter(t => t.trigger === "Phone call booked").forEach(t => window.HQ.expand(t, today, { "Phone call": callDay }).forEach(x => {
+    c.tasks.push({ t: x.t, due: x.due ? iso(x.due) : null, waiting: x.waiting, who: initials(x.who), kind: x.type === "Text" ? "text" : x.type === "Email" ? "email" : "task", time: x.t === "Hold phone call" && start ? (([h, mm]) => `${h % 12 || 12}${mm ? ":" + String(mm).padStart(2, "0") : ""}${h >= 12 ? "pm" : "am"}`)(start.split(":").map(Number)) : undefined, s: "open" }); n++;
+  }));
+  c.history.unshift([iso(today), "note", `Phone call booked for ${callDay.toDateString().slice(0, 10)}${start ? " at " + start : ""}. Invite sent.`, "AS"]);
+  return n;
 };
 window.HQ.deleteContact = cid => {
   delete window.HQ.contacts[cid];
