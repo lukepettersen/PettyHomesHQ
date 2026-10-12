@@ -245,7 +245,8 @@ body { background: var(--bg); }
 #pg-deals .ptabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--coral, var(--accent)); }
 #pg-deals .pcols { display: grid; grid-template-columns: repeat(var(--n), minmax(170px, 1fr)); gap: 10px; overflow-x: auto; padding-bottom: 6px; }
 #pg-deals .pcol { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-#pg-deals .pcol-h { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 2px 4px; border-bottom: 2px solid var(--line); font-size: 13.5px; }
+#pg-deals .pcol-h { display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border-top: 4px solid var(--bar, var(--line)); background: var(--surface); border-radius: 6px; box-shadow: 0 0 0 1px var(--line); font-size: 13.5px; }
+#pg-deals .pi-av { display: flex; gap: 4px; margin-top: 4px; }
 #pg-deals .pcol-b { display: flex; flex-direction: column; gap: 6px; }
 #pg-deals .pcol-e { color: var(--muted); font-size: 12.5px; padding: 6px 2px; }
 #pg-deals .pitem { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 8px 10px; text-align: left; display: flex; flex-direction: column; gap: 2px; font-size: 13px; cursor: pointer; }
@@ -933,8 +934,13 @@ window.HQ = window.HQ || (() => {
     newTasks: [],
     templates: [
       T("New lead follow-up", "", [{ name: "First contact", steps: [s("Call new lead", "Start date", 0, "on", "Luke", "Call"), s("Intro email", "Start date", 0, "on", "Alyssa", "Email", { tpl: "Website sign-up welcome" }), s("Schedule consult", "Start date", 2, "after", "Luke", "Task")] }]),
-      T("Buyer · Consult", "Buyer · Consult", [{ name: "Before the consult", steps: [s("Agency disclosure + more info email", "Start date", 0, "on", "Alyssa", "Email"), s("Consult confirmation text", "Start date", 1, "after", "Luke", "Text")] }, { name: "After the consult", steps: [s("Intro + Homespotter + legal name text", "Start date", 0, "on", "Alyssa", "Text", { tpl: "Intro + Homespotter + legal name" }), s("Connect with lender?", "Start date", 1, "after", "Luke", "Task")] }]),
-      T("Buyer · Rep signed", "Buyer · Rep signed", [{ name: "Buyer rep", steps: [s("Send buyer rep to sign", "Start date", 0, "on", "Alyssa", "Task"), s("Buyer rep breakdown email", "Start date", 0, "on", "Alyssa", "Email", { tpl: "Buyer rep breakdown" }), s("Buyer rep signed + saved", "Start date", 1, "after", "Alyssa", "Task")] }, { name: "Searching", steps: [s("Set up home search", "Start date", 1, "after", "Luke", "Task"), s("Check in on showings", "Start date", 14, "after", "Luke", "Call"), s("Buyer rep check-in", "Start date", 30, "after", "Luke", "Call")] }]),
+      T("Buyer · Consult scheduled", "Buyer · Consult scheduled", [{ name: "Before the consult", steps: [s("Agency disclosure + more info email", "Start date", 0, "on", "Alyssa", "Email"), s("Consult confirmation text", "Start date", 1, "after", "Luke", "Text"), s("Hold consult", "Start date", 2, "after", "Luke", "Task", { advance: "Consult complete" })] }]),
+      T("Buyer · Consult complete", "Buyer · Consult complete", [{ name: "After the consult", steps: [s("Intro + Homespotter + legal name text", "Start date", 0, "on", "Alyssa", "Text", { tpl: "Intro + Homespotter + legal name" }), s("Buyer rep breakdown email", "Start date", 0, "on", "Alyssa", "Email", { tpl: "Buyer rep breakdown" }), s("Connect with lender?", "Start date", 1, "after", "Luke", "Task"), s("Send buyer rep to sign", "Start date", 1, "after", "Alyssa", "Task"), s("Buyer rep signed + saved", "Start date", 3, "after", "Alyssa", "Task", { advance: "Rep signed" })] }]),
+      T("Buyer · Rep signed", "Buyer · Rep signed", [{ name: "Buyer rep", steps: [s("Email signed rep to clients", "Start date", 0, "on", "Alyssa", "Email"), s("Rename Gmail folder", "Start date", 0, "on", "Alyssa", "Task"), s("Set up home search", "Start date", 1, "after", "Luke", "Task", { advance: "Showing homes" })] }]),
+      T("Buyer · Showing homes", "Buyer · Showing homes", [{ name: "Showing homes", steps: [s("Check in on showings", "Start date", 7, "after", "Luke", "Call"), s("Buyer rep check-in", "Start date", 30, "after", "Luke", "Call")] }]),
+      T("Buyer · Submitting offers", "Buyer · Submitting offers", [{ name: "Offer", steps: [s("Purchase agreement breakdown email", "Start date", 0, "on", "Alyssa", "Email"), s("Offer sent to sign", "Start date", 0, "on", "Luke", "Task"), s("Lead-paint pamphlet email", "Start date", 0, "on", "Alyssa", "Email", { cond: "Built before 1978" }), s("Follow up with listing agent", "Start date", 1, "after", "Luke", "Call")] }]),
+      T("Listing · Consult scheduled", "Listing · Consult scheduled", [{ name: "Before the consult", steps: [s("Agency disclosure email", "Start date", 0, "on", "Alyssa", "Email"), s("Prep CMA", "Start date", 1, "after", "Luke", "Task"), s("Hold consult", "Start date", 3, "after", "Luke", "Task", { advance: "Consult complete" })] }]),
+      T("Listing · Consult complete", "Listing · Consult complete", [{ name: "After the consult", steps: [s("CMA + net sheet email", "Start date", 0, "on", "Luke", "Email"), s("Intro text with assistant", "Start date", 0, "on", "Alyssa", "Text"), s("Send listing agreement to sign", "Start date", 1, "after", "Alyssa", "Task"), s("Listing agreement signed + saved", "Start date", 3, "after", "Alyssa", "Task", { advance: "Listing signed / Prep" })] }]),
       T("Buyer · Under contract", "Buyer · Under contract", [
         { name: "Under Contract", steps: [s("Purchase agreement accepted email", "Final Acceptance", 0, "on", "Alyssa", "Email", { tpl: "Purchase agreement accepted" }), s("Lender intro email", "Final Acceptance", 0, "on", "Luke", "Email"), s("Request earnest money", "Final Acceptance", 1, "after", "Alyssa", "Text", { tpl: "Earnest money" }), s("Lead-paint pamphlet email", "Final Acceptance", 1, "after", "Alyssa", "Email", { cond: "Built before 1978" })] },
         { name: "Inspection", steps: [s("Schedule inspection", "Final Acceptance", 1, "after", "Luke", "Task"), s("Day-of-inspection text", "Inspection", 3, "before", "Alyssa", "Text", { tpl: "Day-of-inspection" }), s("Review inspection report with clients", "Inspection", 2, "before", "Luke", "Task"), s("Signed amendment to lender + title", "Inspection", 0, "on", "Alyssa", "Email")] },
@@ -943,10 +949,9 @@ window.HQ = window.HQ || (() => {
         { name: "Closing", steps: [s("Order closing gift", "Closing", 14, "before", "Luke", "Task"), s("Final walkthrough", "Closing", 1, "before", "Luke", "Task"), s("Closing day", "Closing", 0, "on", "Luke", "Task", { advance: "Closed" })] },
       ]),
       T("Buyer · Post-close", "Buyer · Closed", [{ name: "Post-close", steps: [s("\"How was the move?\" text", "Start date", 1, "after", "Luke", "Text"), s("Thank-you card", "Start date", 3, "after", "Luke", "Task"), s("Zillow review request", "Start date", 5, "after", "Alyssa", "Text"), s("Google review request", "Start date", 21, "after", "Alyssa", "Email")] }]),
-      T("Listing · Prep", "Listing · Prep", [{ name: "Prep", steps: [s("Withhold listing in MLS", "Start date", 0, "on", "Alyssa", "Task"), s("Schedule photos", "Start date", 1, "after", "Alyssa", "Task"), s("Drop off lockbox", "Start date", 2, "after", "Luke", "Task"), s("Disclosures + lead paint", "Start date", 3, "after", "Alyssa", "Task", { cond: "Built before 1978" })] }, { name: "Media", steps: [s("Photos to clients", "Start date", 5, "after", "Alyssa", "Email"), s("Upload to MLS", "Start date", 6, "after", "Alyssa", "Task", { advance: "Coming soon" })] }]),
+      T("Listing · Prep", "Listing · Listing signed / Prep", [{ name: "Prep", steps: [s("Withhold listing in MLS", "Start date", 0, "on", "Alyssa", "Task"), s("Schedule photos", "Start date", 1, "after", "Alyssa", "Task"), s("Drop off lockbox", "Start date", 2, "after", "Luke", "Task"), s("Disclosures + lead paint", "Start date", 3, "after", "Alyssa", "Task", { cond: "Built before 1978" })] }, { name: "Media", steps: [s("Photos to clients", "Start date", 5, "after", "Alyssa", "Email"), s("Upload to MLS", "Start date", 6, "after", "Alyssa", "Task", { advance: "Coming soon" })] }]),
       T("Listing · Coming soon", "Listing · Coming soon", [{ name: "Launch", steps: [s("Showing instructions", "Start date", 0, "on", "Alyssa", "Task"), s("Coming-soon email", "Start date", 0, "on", "Alyssa", "Email"), s("Sign install", "Start date", 1, "after", "Luke", "Task"), s("Go active in MLS", "Start date", 4, "after", "Alyssa", "Task", { advance: "Active" })] }]),
       T("Seller · Under contract", "Seller · Under contract", [{ name: "Under Contract", steps: [s("Mark contingent in MLS", "Final Acceptance", 0, "on", "Alyssa", "Task"), s("Purchase agreement accepted email", "Final Acceptance", 0, "on", "Alyssa", "Email", { tpl: "Purchase agreement accepted" })] }, { name: "Closing", steps: [s("Closing reminder email", "Closing", 14, "before", "Alyssa", "Email"), s("Closing day", "Closing", 0, "on", "Luke", "Task", { advance: "Closed" })] }]),
-      T("Buyer · Offer out", "Buyer · Offer out", [{ name: "Offer", steps: [s("Purchase agreement breakdown email", "Start date", 0, "on", "Alyssa", "Email"), s("Offer sent to sign", "Start date", 0, "on", "Luke", "Task"), s("Follow up with listing agent", "Start date", 1, "after", "Luke", "Call")] }]),
       T("Listing · Active", "Listing · Active", [{ name: "On the market", steps: [s("Check showing feedback", "Start date", 3, "after", "Alyssa", "Task"), s("Weekly seller update", "Start date", 7, "after", "Luke", "Email"), s("Price review with sellers", "Start date", 14, "after", "Luke", "Call")] }]),
       T("Seller · Post-close", "Seller · Closed", [{ name: "Post-close", steps: [s("Mark closed in MLS", "Start date", 0, "on", "Alyssa", "Task"), s("Thank-you card", "Start date", 3, "after", "Luke", "Task"), s("Zillow review request", "Start date", 7, "after", "Alyssa", "Text")] }]),
       T("Open house follow-up", "", [{ name: "Follow-up", steps: [s("Thanks for coming text", "Start date", 0, "on", "Alyssa", "Text"), s("Send similar listings", "Start date", 1, "after", "Alyssa", "Email"), s("Follow-up call", "Start date", 3, "after", "Luke", "Call")] }]),
@@ -1207,12 +1212,12 @@ let role = "admin", editing = null, openMenu = null, ucFilter = "all", showClose
 const expanded = {}, engOpen = {};
 
 // Client files: a buyer representation or a listing, plus purchase agreements ("pa") under one of them.
-const STATUS = { buyer: ["Consult", "Rep signed", "Searching", "Offer out"], listing: ["Prep", "Coming soon", "Active"] };
+const STATUS = { buyer: ["Consult scheduled", "Consult complete", "Rep signed", "Showing homes", "Submitting offers"], listing: ["Consult scheduled", "Consult complete", "Listing signed / Prep", "Coming soon", "Active"] };
 const MS_NAMES = { fa: "Final Acceptance", insp: "Inspection", hoa: "HOA Rescission", ws: "Written Statement", close: "Closing" };
 const ANCHOR_KEY = { "Final Acceptance": "fa", "Inspection": "insp", "Written Statement": "ws", "HOA Rescission": "hoa", "Closing": "close" };
 
 const deals = [
-  { id: 1, kind: "buyer", cid: "calloway", name: "Jordan & Priya Calloway", status: "Searching", since: "2026-08-28",
+  { id: 1, kind: "buyer", cid: "calloway", name: "Jordan & Priya Calloway", status: "Showing homes", since: "2026-08-28",
     info: { areas: "SW Minneapolis", range: "$375–425k", repSigned: "2026-08-28", repExpires: "2027-02-28", bac: "2.5%", preapproved: "Yes", lender: "Dana Kim · Northfield Lending" } },
   { id: 2, kind: "pa", parent: 1, side: "buyer", cid: "calloway", name: "Jordan & Priya Calloway", status: "Active", line: "4127 Upton Ave S #3, Minneapolis",
     price: 412500, em: 8000, sc: 5000, bac: "2.5%", comm: 10312.5, fin: "Conventional",
@@ -1221,9 +1226,9 @@ const deals = [
     people: [["Dana Kim · Northfield Lending", "Lender"], ["Lakeview Title", "Title"], ["Marcus Holt · Bluewater Realty", "Listing agent"]] },
   { id: 3, kind: "listing", cid: "calloway", name: "Jordan & Priya Calloway", status: "Active", since: "2026-10-05", line: "2201 Lyndale Ave S #407, Minneapolis", price: 289000,
     info: { lcSigned: "2026-09-30", lcExpires: "2027-03-31", comm: "2.5%", bac: "2.5%", photos: "2026-10-02", active: "2026-10-05" }, facts: { ptype: "Condo", year: "1987", hoa: "Yes", newc: "No" } },
-  { id: 4, kind: "buyer", cid: "d11", name: "Owen Pryce", status: "Offer out", since: "2026-10-11",
+  { id: 4, kind: "buyer", cid: "d11", name: "Owen Pryce", status: "Submitting offers", since: "2026-10-11",
     info: { areas: "Golden Valley, St. Louis Park", range: "to $400k", repSigned: "2026-09-15", repExpires: "2027-03-15", bac: "2.5%", preapproved: "Yes", offer: "2215 Hillside Ave, Golden Valley · $389,000", respond: "2026-10-13" } },
-  { id: 5, kind: "listing", cid: "d24", name: "Carol Fisk & Dean Moreno", status: "Prep", since: "2026-10-08", line: "3318 47th Ave S, Minneapolis", price: 365000,
+  { id: 5, kind: "listing", cid: "d24", name: "Carol Fisk & Dean Moreno", status: "Listing signed / Prep", since: "2026-10-08", line: "3318 47th Ave S, Minneapolis", price: 365000,
     info: { lcSigned: "2026-10-08", lcExpires: "2027-04-08", comm: "2.5%", bac: "2.5%", photos: "2026-10-15" }, facts: { ptype: "Single family", year: "1926", hoa: "No", newc: "No" } },
   { id: 6, kind: "buyer", cid: "d16", name: "Kara Voss", status: "Closed", since: "2026-06-01", info: { areas: "Minneapolis", range: "$350–400k" } },
   { id: 7, kind: "pa", parent: 6, side: "buyer", cid: "d16", name: "Kara Voss", status: "Closed", line: "3816 Grand Ave S, Minneapolis", price: 376000, closed: "2026-09-29", ms: {} },
@@ -1342,6 +1347,7 @@ function pItem(file, eng) {
     <span class="muted sm">${esc(sub)}</span>
     ${meta ? `<span class="muted sm">${esc(meta)}</span>` : ""}
     <span class="pi-n ${od ? "od" : ""}">${n ? `${esc(n.t)} · ${od ? "overdue" : due ? short(due) : "waiting"}` : "All caught up"}</span>
+    <span class="pi-av">${[...new Set(openTasks(file).map(t => t.who))].sort().map(w => `<span class="av ${w === "AS" ? "as" : ""}" title="${WHO[w]}">${w}</span>`).join("")}</span>
   </button>`;
 }
 function renderActive() {
@@ -1350,11 +1356,11 @@ function renderActive() {
   const pas = deals.filter(x => x.kind === "pa" && x.status === "Active");
   const closed = deals.filter(x => x.kind === "pa" && x.status === "Closed");
   let cols;
-  if (pview === "uc") cols = UC_PHASES.map(([, l]) => [l, pas.filter(p => ucPhase(p) === l).map(p => pItem(p))]);
+  if (pview === "uc") cols = UC_PHASES.map(([, l]) => { const ps = pas.filter(p => ucPhase(p) === l); return [l, ps.map(p => pItem(p)), ps.reduce((t, p) => t + p.price, 0)]; });
   else {
     const kind = pview === "buyers" ? "buyer" : "listing", list = pview === "buyers" ? buyers : listings;
-    cols = STATUS[kind].map(st => [st, list.filter(e => !activePA(e) && e.status === st).map(e => pItem(e, e))])
-      .concat([["Under contract", list.filter(activePA).map(e => pItem(activePA(e), e))]]);
+    cols = STATUS[kind].map(st => { const es = list.filter(e => !activePA(e) && e.status === st); return [st, es.map(e => pItem(e, e)), es.reduce((t, e) => t + (e.price || 0), 0)]; })
+      .concat([["Under contract", list.filter(activePA).map(e => pItem(activePA(e), e)), list.filter(activePA).reduce((t, e) => t + activePA(e).price, 0)]]);
   }
   const vol = pas.reduce((s, x) => s + (x.price || 0), 0);
   const tabs = [["buyers", "Buyers", buyers.length], ["sellers", "Sellers", listings.length], ["uc", "Under contract", pas.length]];
@@ -1364,7 +1370,7 @@ function renderActive() {
     </div>
     <div class="ptabs" role="tablist">${tabs.map(([k, l, n]) => `<button role="tab" data-pview="${k}" aria-selected="${pview === k}">${l} <span>${n}</span></button>`).join("")}</div>
     <p class="muted sm" style="margin:0">${pview === "uc" ? "Grouped by the next contract date still open. " : ""}Shows where each client is. To change a status, open the client.</p>
-    <div class="pcols" style="--n:${cols.length}">${cols.map(([l, items]) => `<section class="pcol"><div class="pcol-h"><b>${esc(l)}</b><span class="muted">${items.length}</span></div><div class="pcol-b">${items.join("") || `<span class="pcol-e">None</span>`}</div></section>`).join("")}</div>
+    <div class="pcols" style="--n:${cols.length}">${cols.map(([l, items, total], i) => `<section class="pcol"><div class="pcol-h" style="--bar:${i === cols.length - 1 && pview !== "uc" ? "var(--coral)" : ["var(--mint)", "var(--moss)", "var(--misty)", "var(--mint)", "var(--moss)"][i % 5]}"><b>${esc(l)}</b><span class="muted sm">${items.length} · ${total ? kprice(total) : "$0"}</span></div><div class="pcol-b">${items.join("") || `<span class="pcol-e">None</span>`}</div></section>`).join("")}</div>
     <div class="closed-row"><button class="linkbtn" data-showclosed="1">${showClosed ? "Hide" : "Show"} closed in the last 30 days (${closed.length})</button>
       ${showClosed ? `<div class="pclosed">${closed.map(dl => `<button class="pitem" data-deal="${dl.id}"><span class="pi-t"><span class="sidechip ${dl.side}">${dl.side === "buyer" ? "Buyer" : "Seller"}</span><b>${esc(dl.line.split(",")[0])}</b></span><span class="muted sm">${esc(dl.name)} · ${kprice(dl.price)}</span><span class="pi-n">Closed ${short(d(dl.closed))}</span></button>`).join("")}</div>` : ""}</div>`;
 }
@@ -1789,11 +1795,12 @@ function formGroups() {
   }
   if (f.mode === "buyer") {
     const i = STATUS.buyer.indexOf(f.status), g = [["What they're looking for", F.search]];
-    if (f.status === "Consult") g.push(["Consult", F.consult]);
-    if (i >= 1) g.push(["Buyer rep", F.rep]);
-    if (f.status === "Offer out") g.push(["The offer", F.offer]);
+    if (f.status === "Consult scheduled") g.push(["Consult", F.consult]);
+    if (i >= 2) g.push(["Buyer rep", F.rep]);
+    if (f.status === "Submitting offers") g.push(["The offer", F.offer]);
     return g;
   }
+  if (STATUS.listing.indexOf(f.status) < 2) return [["The home", [["address", "Property address", "text", "Street, city", true], ["price", "Estimated value", "money"], ["timeframe", "Timeframe", TF]]]].concat(f.status === "Consult scheduled" ? [["Consult", F.consult]] : []);
   return [["The listing", F.listing], ["The property", F.facts]];
 }
 const formTrigger = () => dealForm.mode === "pa" ? `${sideOf(deals.find(x => x.id === dealForm.engId)) === "buyer" ? "Buyer" : "Seller"} · Under contract` : `${dealForm.mode === "buyer" ? "Buyer" : "Listing"} · ${dealForm.status}`;
@@ -1837,7 +1844,7 @@ function dealModalHtml() {
 }
 function openForm(mode, opts = {}) {
   const base = { fin: "Conventional", ptype: "Single family", hoa: "No", newc: "No", timeframe: "0–3 months", preapproved: "Not yet" };
-  dealForm = { mode, cid: opts.cid || openContact || allContacts()[0][0], status: mode === "buyer" ? "Consult" : mode === "listing" ? "Prep" : null, engId: opts.engId, v: Object.assign(base, opts.v || {}) };
+  dealForm = { mode, cid: opts.cid || openContact || allContacts()[0][0], status: mode === "buyer" ? "Consult scheduled" : mode === "listing" ? "Consult scheduled" : null, engId: opts.engId, v: Object.assign(base, opts.v || {}) };
   renderDealModal();
 }
 function editForm(dl) {
@@ -1949,7 +1956,7 @@ document.addEventListener("click", e => {
     const pa = deals.find(x => x.id === +b.dataset.paterm), eng = deals.find(x => x.id === pa.parent);
     if (pa._confirm !== "term") { pa._confirm = "term"; toast("Click Fell through again to confirm."); return; }
     pa.status = "Terminated"; pa.ended = iso(TODAY); pa.tasks.forEach(t => { if (t.s === "open") t.s = "na"; });
-    eng.status = eng.kind === "buyer" ? "Searching" : "Active"; render(); toast(`Contract marked as fell through. ${eng.kind === "buyer" ? "Buyer is back to Searching" : "Listing is back to Active"}; the contract stays in history.`); return;
+    eng.status = eng.kind === "buyer" ? "Showing homes" : "Active"; render(); toast(`Contract marked as fell through. ${eng.kind === "buyer" ? "Buyer is back to Showing homes" : "Listing is back to Active"}; the contract stays in history.`); return;
   }
   if (b.dataset.paclose) {
     const pa = deals.find(x => x.id === +b.dataset.paclose), eng = deals.find(x => x.id === pa.parent), c = contact(pa.cid);
@@ -2002,6 +2009,7 @@ document.addEventListener("click", e => {
     const t = dl.tasks[+b.dataset.toggle];
     if (eff(dl, t) === "waived") { toast("Cleared by a waived deadline."); return; }
     t.s = t.s === "open" ? "done" : "open";
+    if (t.s === "done" && t.advance && dl.kind !== "pa" && STATUS[dl.kind].includes(t.advance) && STATUS[dl.kind].indexOf(t.advance) > STATUS[dl.kind].indexOf(dl.status)) { setStatus(dl, t.advance); return; }
     if (t.s === "done") toast("Done. Logged to the timeline and cleared from Tasks.");
     render(); return;
   }
@@ -2525,7 +2533,7 @@ const state = {
   users: [["Luke Pettersen", "luke@pettyhomes.com", "Admin", "Active"], ["Alyssa Chakiton", "assistant@pettyhomes.com", "Assistant", "Active"]],
   roles: ["Admin", "Assistant"],
   perms: [["See commissions", true, false], ["Delete people and deals", true, false], ["Manage users and roles", true, false], ["Edit checklist templates", true, true], ["Edit text and email templates", true, true], ["Export data", true, false], ["Send texts", true, true]],
-  pipes: { Buyer: ["Consult", "Rep signed", "Searching", "Offer out"], Listing: ["Prep", "Coming soon", "Active"] },
+  pipes: { Buyer: ["Consult scheduled", "Consult complete", "Rep signed", "Showing homes", "Submitting offers"], Listing: ["Consult scheduled", "Consult complete", "Listing signed / Prep", "Coming soon", "Active"] },
   tplId: "t4", ckApply: true, ckPending: null,
   reminders: [
     ["Birthday", "Text happy birthday", 0, "on", "Luke", "Text", "Everyone"],

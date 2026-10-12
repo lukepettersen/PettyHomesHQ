@@ -166,7 +166,7 @@ const state = {
   users: [["Luke Pettersen", "luke@pettyhomes.com", "Admin", "Active"], ["Alyssa Chakiton", "assistant@pettyhomes.com", "Assistant", "Active"]],
   roles: ["Admin", "Assistant"],
   perms: [["See commissions", true, false], ["Delete people and deals", true, false], ["Manage users and roles", true, false], ["Edit checklist templates", true, true], ["Edit text and email templates", true, true], ["Export data", true, false], ["Send texts", true, true]],
-  pipes: { Buyer: ["Consult", "Rep signed", "Searching", "Offer out"], Listing: ["Prep", "Coming soon", "Active"] },
+  pipes: { Buyer: ["Consult scheduled", "Consult complete", "Rep signed", "Showing homes", "Submitting offers"], Listing: ["Consult scheduled", "Consult complete", "Listing signed / Prep", "Coming soon", "Active"] },
   tplId: "t4", ckApply: true, ckPending: null,
   reminders: [
     ["Birthday", "Text happy birthday", 0, "on", "Luke", "Text", "Everyone"],
