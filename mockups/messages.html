@@ -199,7 +199,7 @@ function renderInfo() {
 }
 function render() { renderList(); renderThread(); renderInfo(); if (cur === null) el("shell").classList.remove("thread-open"); }
 let tt; function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
-function addTask(c, t) { if (!person(c)) { toast("Add them to People first so the task has a name on it."); return; } HQ.newTasks.push({ cid: c.cid, name: person(c).name, t, due: "2026-10-12", who: "LP" }); person(c).tasks.push({ t, due: "2026-10-12", who: "LP", s: "open" }); toast(`Task added: ${t}. It's on the Tasks page.`); }
+function addTask(c, t) { if (!person(c)) { toast("Add them to People first so the task has a name on it."); return; } person(c).tasks.push({ t, due: "2026-10-12", who: "LP", s: "open" }); toast(`Task added: ${t}. It's on the Tasks page.`); }
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
   if (confirmDel && !ds.delconv) confirmDel = false;

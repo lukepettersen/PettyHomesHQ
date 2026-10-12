@@ -373,6 +373,25 @@ body { background: var(--bg); }
 #pg-deals .tk.missed { color: var(--bad); }
 #pg-deals .tk.email { color: var(--warn); }
 #pg-deals .tk.done { color: var(--ok); }
+#pg-deals .minim { width: min(560px, 100%); gap: 14px; }
+#pg-deals .mini-h { display: flex; justify-content: space-between; align-items: center; }
+#pg-deals .mini-h .x { border: 0; background: none; font-size: 22px; color: var(--muted); line-height: 1; }
+#pg-deals .minim > input, #pg-deals .minim select { padding: 9px 10px !important; font-size: 14px !important; }
+#pg-deals .mini-dt { display: flex; gap: 10px; flex-wrap: wrap; }
+#pg-deals .mini-dt input { width: auto !important; flex: 1 1 130px; padding: 9px 10px !important; }
+#pg-deals .appt { display: flex; flex-direction: column; gap: 3px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 13px; }
+#pg-deals .appt:first-of-type { border-top: 0; padding-top: 0; }
+#pg-deals .appt-h { display: flex; justify-content: space-between; gap: 8px; }
+#pg-deals .gcal { font-weight: 800; color: var(--muted); font-size: 13px; }
+#pg-deals .appt-f { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
+#pg-deals .avs { display: flex; gap: 3px; }
+#pg-deals .avs .av { width: 22px; height: 22px; font-size: 9.5px; }
+#pg-deals .doc { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; align-items: start; padding-top: 8px; border-top: 1px solid var(--line); font-size: 13px; }
+#pg-deals .doc:first-of-type { border-top: 0; padding-top: 0; }
+#pg-deals .doc-t { height: 52px; border-radius: 6px; background: var(--sunken); display: grid; place-items: center; font-weight: 800; font-size: 12px; color: var(--muted); }
+#pg-deals .doc-n { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; display: block; }
+#pg-deals .doc-a { display: flex; gap: 12px; margin-top: 2px; }
+#pg-deals .linkbtn.danger { color: var(--bad); }
 #pg-deals .ptask { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: start; font-size: 13px; padding-top: 6px; border-top: 1px solid var(--line); }
 #pg-deals .ptask:first-of-type { border-top: 0; }
 #pg-deals .ptask.done .title { color: var(--muted); text-decoration: line-through; }
@@ -775,6 +794,8 @@ body { background: var(--bg); }
 #pg-admin .sec-name { font-weight: 700; font-size: 15px; border: 1px solid transparent; background: none; padding: 4px 6px; border-radius: 6px; min-width: 0; }
 #pg-admin .sec-name:hover, #pg-admin .sec-name:focus { border-color: var(--line); background: var(--bg); }
 #pg-admin .paforms-gap .box { margin-bottom: 12px; }
+#pg-admin .cards.stack { display: flex; flex-direction: column; gap: 14px; }
+#pg-admin .cards.stack td input, #pg-admin .cards.stack td select { width: 100%; min-width: 220px; }
 #pg-admin .pill { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
 #pg-admin .side-nav { display: flex; flex-direction: column; gap: 12px; }
 #pg-admin .side-nav h4 { margin: 0 0 4px; padding: 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
@@ -932,7 +953,7 @@ body { background: var(--bg); }
 <header class="topnav"><div class="brand"><svg viewBox="0 0 118 165" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M 59.1 39.6 L 78.6 59.1 L 117.6 59.1 L 78.6 20.1 L 59.1 0.6 L 39.5 20.1 L 0.5 59.1 L 39.6 59.1 Z M 59.1 39.6"/><path fill="currentColor" d="M 89.1 102.1 L 37.6 102.1 L 37.6 129.6 L 117.6 129.6 L 117.6 65.9 L 89.1 65.9 Z M 89.1 102.1"/><path fill="currentColor" d="M 28.6 99.2 L 14.4 85 L 0.1 70.6 L 0.1 163 L 28.6 163 Z M 28.6 99.2"/><path fill="currentColor" d="M 19.1 80.4 L 33.1 94.4 L 80.6 94.4 L 80.6 65.9 L 4.7 65.9 Z M 19.1 80.4"/></svg><span class="wm">Petty Homes</span><span class="hq">HQ</span></div><nav aria-label="Main"><a href="people.html">People</a><a href="deals.html" class="on">Pipeline</a><a href="tasks.html">Tasks</a><a href="messages.html">Messages</a><a href="admin.html">Admin</a></nav></header>
 
 <main class="wrap" id="app"></main>
-<div id="deal-modal"></div>
+<div id="deal-modal"></div><div id="mini-modal"></div>
 <div id="toast" class="toast" hidden></div>
 </div>
 <div class="pg" id="pg-tasks" hidden>
@@ -1481,7 +1502,7 @@ const cidOf = dl => dl.cid || "d" + dl.id;
 const EXTRA = {};
 function contact(cid) { return CONTACTS[cid]; }
 
-let openContact = null, ctab = {}, tlFilter = "all", composer = "note", applyOpen = false, confirmDel = null;
+let showAllTasks = false, openContact = null, ctab = {}, tlFilter = "all", composer = "note", confirmDel = null;
 const WHO = { LP: "Luke", AS: "Alyssa" };
 
 function renderContact() {
@@ -1508,19 +1529,22 @@ function renderContact() {
       </section>
       <aside class="cright">
         <div class="card-s">
-          <h3>Tasks <span class="muted">${c.tasks.filter(t => t.s === "open").length}</span><button class="plus" data-applyopen="1" aria-label="Add task">+</button></h3>
-          ${c.tasks.length ? c.tasks.map((t, i) => ptaskHtml(t, i)).join("") : `<p class="muted sm">No tasks outside their files.</p>`}
-          ${applyOpen ? `<div class="apply"><input id="ct-new" placeholder="Task for ${esc(c.name.split(" ")[0])}" aria-label="New task"><input id="ct-due" type="date" value="${iso(TODAY)}" aria-label="Due"><button class="btn primary" data-applytpl="1">Add</button><button class="btn" data-applycancel="1">Cancel</button></div>`
-            : `<button class="btn" data-applyopen="1">+ Add task</button>`}
+          ${(() => { const all = personTasks(c, myFiles), shown = showAllTasks ? all : all.slice(0, 6);
+            return `<h3>Tasks <span class="muted">${all.length}</span><button class="plus" data-applyopen="1" aria-label="Add task">+</button></h3>
+          ${shown.map(x => x.dl ? ftaskHtml(x.dl, x.t) : ptaskHtml(x.t, c.tasks.indexOf(x.t))).join("") || `<p class="muted sm">Nothing open. Everything for ${esc(c.name.split(" ")[0])} shows here, including checklist steps.</p>`}
+          ${all.length > 6 ? `<button class="morelink" data-alltasks="1">${showAllTasks ? "Show fewer" : `Show all ${all.length}`}</button>` : ""}`; })()}
+          <button class="btn" data-applyopen="1">+ Add task</button>
         </div>
         <div class="card-s">
-          <h3>Buying &amp; selling <span class="muted">${myFiles.length}</span></h3>
+          <h3>Pipeline <span class="muted">${myFiles.length}</span></h3>
           ${myFiles.map(dl => `<button class="deal-li" data-ctab="${isActive(dl) ? "deal-" + dl.id : dl.kind === "pa" && isActive(deals.find(x => x.id === dl.parent)) ? "deal-" + dl.parent : "timeline"}">
             <span><span class="sidechip ${sideOf(dl)}">${dl.kind === "pa" ? "Contract" : dl.kind === "buyer" ? "Buyer" : "Listing"}</span> ${esc(fileLabel(dl))}</span>
             ${dl.price ? `<span class="muted sm">${kprice(dl.price)}</span>` : ""}
           </button>`).join("") || `<p class="muted sm">Not buying or selling yet.</p>`}
-          <div class="row-btns"><button class="btn" data-start="buyer">+ Start buyer</button><button class="btn" data-start="listing">+ Start listing</button></div>
+          <div class="row-btns"><button class="btn" data-start="buyer">+ Add buyer</button><button class="btn" data-start="listing">+ Add seller</button></div>
         </div>
+        ${apptCard(c, myFiles)}
+        ${filesCard(c)}
       </aside>
     </div>`;
 }
@@ -1540,9 +1564,7 @@ function checklistHtml(dl) {
   if (!expanded[dl.id]) { const f = phases.find(p => dl.tasks.some(t => t.phase === p && eff(dl, t) === "open")); expanded[dl.id] = new Set(f ? [f] : []); }
   const done = dl.tasks.filter(t => eff(dl, t) !== "open").length;
   if (!dl.tasks.length) return `<p class="empty">No checklist for this status yet. Add a template for it in Admin → Task templates.</p>`;
-  return `<div class="subh">Up next</div>
-    ${open.length ? open.slice(0, 3).map(t => rowHtml(dl, t)).join("") : `<p class="empty">All caught up.</p>`}
-    <div class="subh" style="margin-top:6px">Checklist · ${done} of ${dl.tasks.length} done</div>
+  return `<div class="subh">Checklist · ${done} of ${dl.tasks.length} done</div>
     <div class="fullcl">${phases.map(p => phaseHtml(dl, p)).join("")}</div>`;
 }
 
@@ -1588,6 +1610,94 @@ function factsInline(dl) {
   });
   const f = dl.facts || {}; extra.push(["Property", [f.ptype, f.year && "built " + f.year, f.hoa === "Yes" && "HOA", f.newc === "Yes" && "New construction"].filter(Boolean).join(" · ")]);
   return core.concat(extra).map(([k, v]) => `<span><em>${esc(k)}</em> ${v === null ? `<i class="hid">hidden</i>` : `<b class="num">${esc(v || "—")}</b>`}</span>`).join("");
+}
+
+// Everything open for a person: their own tasks plus the open steps on their files, soonest first.
+function personTasks(c, files) {
+  const own = c.tasks.filter(t => t.s === "open").map(t => ({ t, due: t.due ? d(t.due) : null }));
+  const steps = files.filter(dl => dl.kind === "pa" ? dl.status === "Active" : isActive(dl)).flatMap(dl => openTasks(dl).map(t => ({ t, dl, due: dueOf(dl, t) })));
+  return own.concat(steps).sort((a, b) => (a.due || 8.64e15) - (b.due || 8.64e15));
+}
+function ftaskHtml(dl, t) {
+  const due = dueOf(dl, t), n = due ? diff(due, TODAY) : null, file = dl.kind === "pa" ? "Contract" : dl.kind === "buyer" ? "Buyer" : "Listing";
+  return `<div class="ptask"><button class="check" data-dl="${dl.id}" data-toggle="${t.id}" aria-label="Mark done: ${esc(t.t)}"></button><div><div class="title">${esc(t.t)}</div><div class="sm ${n !== null && n < 0 ? "od" : n === 0 ? "td" : "muted"}">${!due ? "Waits for " + esc(MS_NAMES[t.a]) : n === 0 ? "Today" : fmt(due)} · ${WHO[t.who]} · ${file} checklist</div></div></div>`;
+}
+/* ---------- Appointments + files (contact page, right column) ---------- */
+const lastName = c => c.name.split("&")[0].trim().split(" ").pop();
+const fmtTime = hm => { if (!hm) return ""; let [h, m] = hm.split(":").map(Number); const ap = h >= 12 ? "pm" : "am"; h = h % 12 || 12; return h + (m ? ":" + String(m).padStart(2, "0") : "") + ap; };
+// Contract dates go on Google Calendar automatically; anything else is added by hand.
+function appts(c, files) {
+  const out = (c.appts || []).map((a, i) => Object.assign({ i }, a));
+  files.filter(dl => dl.kind === "pa" && dl.status === "Active").forEach(pa => {
+    const ln = lastName(c), at = (pa.form || {}).inspAt;
+    if (at) out.push({ title: `${ln} - Inspection`, date: at.slice(0, 10), start: at.slice(11, 16), where: pa.line, auto: true });
+    if (pa.ms.insp) out.push({ title: `${ln} - Inspection Deadline at 11:59pm`, date: pa.ms.insp, where: pa.line, auto: true });
+    if (pa.ms.ws) out.push({ title: `${ln} - Written Statement Deadline`, date: pa.ms.ws, where: pa.line, auto: true });
+    if (pa.ms.close) out.push({ title: `${ln} - Close Date HOLD`, date: pa.ms.close, where: pa.line, auto: true });
+  });
+  return out.sort((a, b) => (a.date + (a.start || "")) > (b.date + (b.start || "")) ? 1 : -1);
+}
+let showPastAppts = false;
+function apptHtml(a, c) {
+  const dt = d(a.date), n = diff(dt, TODAY), day = n === 0 ? "Today" : n === 1 ? "Tomorrow" : n > 1 && n < 7 ? ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][dt.getDay()] : fmt(dt);
+  const time = a.start ? `${fmtTime(a.start)}${a.end ? " - " + fmtTime(a.end) : ""} ` : "";
+  const who = (a.who || [c.name.split("&")[0].trim(), "Luke Pettersen", "Alyssa Chakiton"]).map(n => n.split(" ").map(x => x[0]).join("").slice(0, 2).toUpperCase());
+  return `<div class="appt"><div class="appt-h"><b>${esc(a.title)}</b><span class="gcal" title="On Google Calendar">G</span></div>
+    <div class="sm ${n === 0 ? "td" : "muted"}">◷ ${time}${day}</div>${a.where ? `<div class="sm muted">⌖ ${esc(a.where)}</div>` : ""}
+    <div class="appt-f"><span class="avs">${who.map(x => `<span class="av">${x}</span>`).join("")}</span>${a.auto ? `<span class="sm muted">From contract</span>` : `<button class="rm-x" data-delappt="${a.i}" aria-label="Delete appointment">×</button>`}</div></div>`;
+}
+function apptCard(c, files) {
+  const all = appts(c, files), up = all.filter(a => d(a.date) >= TODAY), past = all.filter(a => d(a.date) < TODAY);
+  return `<div class="card-s"><h3>Appointments <span class="muted">${up.length}</span><button class="plus" data-apptopen="1" aria-label="Add appointment">+</button></h3>
+    ${up.map(a => apptHtml(a, c)).join("") || `<p class="muted sm">Nothing scheduled. Contract dates show up here once a purchase agreement is added.</p>`}
+    ${past.length ? `<button class="morelink" data-pastappt="1">${showPastAppts ? "Hide" : "Past appointments"} (${past.length})</button>${showPastAppts ? past.map(a => apptHtml(a, c)).join("") : ""}` : ""}</div>`;
+}
+function filesCard(c) {
+  const docs = c.docs || [];
+  return `<div class="card-s"><h3>Files <span class="muted">${docs.length}</span><button class="plus" data-fileadd="1" aria-label="Add file">+</button></h3>
+    <input type="file" id="file-in" multiple hidden>
+    ${docs.map((f, i) => `<div class="doc"><span class="doc-t">${esc((f.name.split(".").pop() || "file").toUpperCase().slice(0, 4))}</span><div><button class="doc-n" data-filedl="${i}">${esc(f.name)}</button><div class="sm muted">${short(d(f.date))}</div>
+      <div class="doc-a"><button class="linkbtn" data-filedl="${i}">Download</button><button class="linkbtn danger" data-filedel="${i}">${confirmDel === "file" + i ? "Click again to delete" : "Delete"}</button></div></div></div>`).join("") || `<p class="muted sm">No files yet. Add the PA, counters, pre-approval and disclosures here.</p>`}</div>`;
+}
+let miniModal = null; // "task" | "appt"
+function miniModalHtml() {
+  const c = contact(openContact); if (!miniModal || !c) return "";
+  const team = HQ.settings.team;
+  if (miniModal === "task") return `<div class="modal-bg" data-mclose="1"><form class="modal deal-modal minim" id="mini-form" autocomplete="off">
+    <div class="mini-h"><h2>Create task</h2><button type="button" class="x" data-mclose="1" aria-label="Close">×</button></div>
+    <input id="mt-name" placeholder="Task name" aria-label="Task name" required>
+    <div class="dm-top"><select id="mt-type" aria-label="Type">${["Follow up", "Call", "Text", "Email", "Showing", "Closing", "Other"].map(x => `<option>${x}</option>`).join("")}</select>
+      <select id="mt-who" aria-label="Assigned to">${team.map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join("")}</select></div>
+    <div class="mini-dt"><input id="mt-date" type="date" value="${iso(TODAY)}" aria-label="Date"><input id="mt-time" type="time" aria-label="Time"></div>
+    <p class="muted sm" style="margin:0">For ${esc(c.name)}. It also shows on the Tasks page under Clients.</p>
+    <div class="foot"><button type="button" class="btn" data-mclose="1">Cancel</button><button class="btn primary" type="submit">Create task</button></div></form></div>`;
+  const pa = deals.find(x => x.kind === "pa" && x.cid === openContact && x.status === "Active");
+  return `<div class="modal-bg" data-mclose="1"><form class="modal deal-modal minim" id="mini-form" autocomplete="off">
+    <div class="mini-h"><h2>Create appointment</h2><button type="button" class="x" data-mclose="1" aria-label="Close">×</button></div>
+    <input id="ma-title" value="${esc(lastName(c))} - " aria-label="Title" required>
+    <div class="mini-dt"><input id="ma-date" type="date" value="${iso(TODAY)}" aria-label="Date"><input id="ma-start" type="time" value="09:00" aria-label="Start"><input id="ma-end" type="time" value="10:00" aria-label="End"></div>
+    <input id="ma-where" value="${esc(pa ? pa.line : c.address || "")}" placeholder="Location" aria-label="Location">
+    <div class="sm" style="display:flex;flex-wrap:wrap;gap:10px"><b class="muted">Invite</b>${[c.name.split("&")[0].trim()].concat(team.map(t => t[1])).map((n, i) => `<label class="chk"><input type="checkbox" data-inv="${esc(n)}" checked> ${esc(n)}</label>`).join("")}</div>
+    <p class="muted sm" style="margin:0">Adds it to Google Calendar and sends the invites.</p>
+    <div class="foot"><button type="button" class="btn" data-mclose="1">Cancel</button><button class="btn primary" type="submit">Create appointment</button></div></form></div>`;
+}
+function renderMini() {
+  el("mini-modal").innerHTML = miniModalHtml();
+  const f = el("mini-form"); if (!f) return;
+  f.addEventListener("submit", e => { e.preventDefault(); saveMini(); });
+  const first = el("mt-name") || el("ma-title"); first.focus(); first.setSelectionRange(first.value.length, first.value.length);
+}
+function saveMini() {
+  const c = contact(openContact);
+  if (miniModal === "task") {
+    const t = el("mt-name").value.trim(); if (!t) { el("mt-name").focus(); return; }
+    const type = el("mt-type").value;
+    c.tasks.push({ t, type, kind: type === "Text" ? "text" : type === "Email" ? "email" : "task", due: el("mt-date").value || iso(TODAY), time: fmtTime(el("mt-time").value), who: el("mt-who").value, s: "open" });
+    miniModal = null; renderMini(); render(); toast("Task created. It's on the Tasks page under Clients too."); return;
+  }
+  const title = el("ma-title").value.trim(); if (!title) { el("ma-title").focus(); return; }
+  (c.appts = c.appts || []).push({ title, date: el("ma-date").value || iso(TODAY), start: el("ma-start").value, end: el("ma-end").value, where: el("ma-where").value.trim(), who: [...document.querySelectorAll("[data-inv]")].filter(x => x.checked).map(x => x.dataset.inv) });
+  miniModal = null; renderMini(); render(); toast("Appointment created and added to Google Calendar.");
 }
 
 function ptaskHtml(t, i) {
@@ -2010,10 +2120,12 @@ function openCard(dealId) {
 }
 
 document.addEventListener("click", e => {
+  const mc = e.target.closest("[data-mclose]");
+  if (mc && (e.target === mc || mc.tagName === "BUTTON")) { miniModal = null; renderMini(); return; }
   const bg = e.target.closest("[data-dclose]");
   if (bg && (e.target === bg || bg.tagName === "BUTTON")) { dealForm = null; renderDealModal(); return; }
   const b = e.target.closest("button"); if (!b) return;
-  if (confirmDel && !b.dataset.deleng && !b.dataset.delperson) confirmDel = null;
+  if (confirmDel && !b.dataset.deleng && !b.dataset.delperson && !b.dataset.filedel) confirmDel = null;
   const dl = b.dataset.dl ? deals.find(x => x.id === +b.dataset.dl) : null;
   if (b.dataset.pview) { pview = b.dataset.pview; render(); return; }
   if (b.dataset.showclosed) { showClosed = !showClosed; render(); return; }
@@ -2046,20 +2158,20 @@ document.addEventListener("click", e => {
     pa.status = "Closed"; pa.closed = iso(TODAY); eng.status = "Closed"; c.stage = "Past Client";
     if (pa.side === "buyer") c.homeiversary = fmt(TODAY).replace(/^\w+ /, "") + ", 2026";
     const post = stepsFor(`${pa.side === "buyer" ? "Buyer" : "Seller"} · Closed`, pa.facts, TODAY).tasks.map(t => ({ t: t.t, due: t.fixed, who: t.who, s: "open" }));
-    c.tasks.push(...post); if (typeof HQ !== "undefined") HQ.newTasks.push(...post.filter(t => t.due).map(t => Object.assign({ cid: pa.cid, name: c.name }, t)));
+    c.tasks.push(...post);
     ctab[openContact] = "timeline"; render(); toast(`Closed! ${c.name} is now a Past Client.${post.length ? ` ${post.length} post-close tasks added.` : ""}`); return;
   }
   if (b.dataset.deal) { openCard(+b.dataset.deal); return; }
   if (b.dataset.pside) { readDealForm(); dealForm.side = b.dataset.pside; renderDealModal(); return; }
   if (b.dataset.pstep) { readDealForm(); dealForm.step = +b.dataset.pstep; renderDealModal(); return; }
-  if (b.dataset.applyopen) { applyOpen = true; render(); const i = el("ct-new"); if (i) i.focus(); return; }
-  if (b.dataset.applycancel) { applyOpen = false; render(); return; }
-  if (b.dataset.applytpl) {
-    const c = contact(openContact), i = el("ct-new"), t = i.value.trim(); if (!t) { i.focus(); return; }
-    const task = { t, due: el("ct-due").value || iso(TODAY), who: "LP", s: "open" };
-    c.tasks.push(task); HQ.newTasks.push(Object.assign({ cid: openContact, name: c.name }, task));
-    applyOpen = false; render(); toast(`Task added. It's on the Tasks page under Clients too.`); return;
-  }
+  if (b.dataset.alltasks) { showAllTasks = !showAllTasks; render(); return; }
+  if (b.dataset.applyopen) { miniModal = "task"; renderMini(); return; }
+  if (b.dataset.apptopen) { miniModal = "appt"; renderMini(); return; }
+  if (b.dataset.delappt) { contact(openContact).appts.splice(+b.dataset.delappt, 1); render(); toast("Appointment deleted and removed from Google Calendar."); return; }
+  if (b.dataset.pastappt) { showPastAppts = !showPastAppts; render(); return; }
+  if (b.dataset.fileadd) { el("file-in").click(); return; }
+  if (b.dataset.filedl) { toast(`Downloads ${contact(openContact).docs[+b.dataset.filedl].name}.`); return; }
+  if (b.dataset.filedel) { const i = +b.dataset.filedel; if (confirmDel !== "file" + i) { confirmDel = "file" + i; render(); return; } const f = contact(openContact).docs.splice(i, 1)[0]; confirmDel = null; render(); toast(`Deleted ${f.name}.`); return; }
   if (b.dataset.editcard) { const c = contact(openContact); editCard = b.dataset.editcard; draft = JSON.parse(JSON.stringify(c)); draft.assigned = draft.assigned || "Luke Pettersen"; draft.newMode = {}; render(); return; }
   if (b.dataset.cancelcard) { editCard = null; draft = null; render(); return; }
   if (b.dataset.savecard) { saveCard(b.dataset.savecard); return; }
@@ -2109,6 +2221,7 @@ document.addEventListener("click", e => {
 });
 
 document.addEventListener("change", e => {
+  if (e.target.id === "file-in") { const c = contact(openContact); (c.docs = c.docs || []).unshift(...[...e.target.files].map(f => ({ name: f.name, date: iso(TODAY) }))); const n = e.target.files.length; render(); if (n) toast(`${n} file${n === 1 ? "" : "s"} added.`); return; }
   const ds = e.target.dataset;
   if (dealForm && (ds.df !== undefined || ds.dstatus || ds.dcid)) {
     readDealForm();
@@ -2139,8 +2252,7 @@ function addTag() {
   tagAdding = false; toast(isNew ? `Created new tag "${v}".` : `Tagged "${v}".`); render();
 }
 document.addEventListener("keydown", e => {
-  if (e.target.id === "ct-new" && e.key === "Enter") { e.preventDefault(); document.querySelector("[data-applytpl]").click(); return; }
-  if (e.target.id === "ct-new" && e.key === "Escape") { applyOpen = false; render(); return; } if (e.target.id === "tag-in" && e.key === "Enter") { e.preventDefault(); addTag(); } if (e.target.id === "tag-in" && e.key === "Escape") { tagAdding = false; render(); } });
+  if (e.key === "Escape" && miniModal) { miniModal = null; renderMini(); return; } if (e.target.id === "tag-in" && e.key === "Enter") { e.preventDefault(); addTag(); } if (e.target.id === "tag-in" && e.key === "Escape") { tagAdding = false; render(); } });
 
 // Deep link from the Tasks mockup: deals.html#contact-calloway
 function fromHash() {
@@ -2181,7 +2293,34 @@ function syncLinks() {
   Object.keys(LINKS).forEach(k => { if (!HQ.contacts[k]) { delete LINKS[k]; delete CID[k]; } });
 }
 
-let tasks = []; // starts empty
+// One task list everywhere: tasks typed here with no client, plus every client's tasks and file checklist steps (live, shared with the contact page).
+let own = [], tasks = [], seq = 0;
+const MSN = { fa: "Final Acceptance", insp: "Inspection deadline", ws: "Written Statement", hoa: "HOA rescission", close: "Closing" };
+const wraps = {};
+function gather() {
+  const out = own.slice();
+  Object.entries(HQ.contacts).forEach(([cid, c]) => c.tasks.forEach(t => {
+    if (!t.due) return;
+    if (t.id === undefined) t.id = "c" + (seq++);
+    t.link = cid; t.kind = t.kind || "task"; t.p = t.p || 0; t.done = t.s === "done"; out.push(t);
+  }));
+  HQ.files.forEach(dl => dl.tasks.forEach(t => {
+    if (!["open", "done"].includes(t.s) || (t.a && dl.msStatus && dl.msStatus[t.a] === "waived")) return;
+    const due = t.fixed ? t.fixed : t.a && dl.ms && dl.ms[t.a] ? iso(add(d(dl.ms[t.a]), t.o)) : null; if (!due) return;
+    const key = "f" + dl.id + "-" + t.id, w = wraps[key] = wraps[key] || { id: key, p: 0 };
+    const file = dl.kind === "pa" ? (dl.side === "buyer" ? "Buyer contract" : "Seller contract") : dl.kind === "buyer" ? "Buyer checklist" : "Listing checklist";
+    Object.assign(w, { t: t.t, due, who: t.who, link: dl.cid, kind: t.kind || "task", ref: t, done: t.s === "done",
+      step: { phase: t.phase, file, rule: t.a ? `${MSN[t.a]} ${t.o === 0 ? "day of" : (t.o > 0 ? "+ " : "− ") + Math.abs(t.o) + " days"}` : "set when the checklist started" } });
+    out.push(w);
+  }));
+  tasks = out;
+}
+const byId = id => tasks.find(x => String(x.id) === String(id));
+function delTask(t) {
+  if (t.ref) { HQ.files.forEach(dl => { const i = dl.tasks.indexOf(t.ref); if (i >= 0) dl.tasks.splice(i, 1); }); return; }
+  if (t.link && HQ.contacts[t.link]) { const a = HQ.contacts[t.link].tasks, i = a.indexOf(t); if (i >= 0) { a.splice(i, 1); return; } }
+  own = own.filter(x => x !== t);
+}
 let nextId = 0;
 
 // People past their follow-up frequency.
@@ -2240,9 +2379,10 @@ function rowHtml(t) {
   if (L && view !== "clients") meta.push(`<span class="link ${L.kind}">${esc(L.label)}</span>`);
   if (t.subs && t.subs.length) meta.push(`<span>☐ ${t.subs.filter(s => s[1]).length}/${t.subs.length}</span>`);
   if (t.repeat) meta.push(`<span>↻ ${t.repeat}</span>`);
+  if (t.step) meta.push(`<span class="listtag">${esc(t.step.file)}</span>`);
   if (t.auto) meta.push(`<span class="listtag">From Important Dates</span>`);
   const dueTxt = (n === 0 ? "Today" : n === 1 ? "Tomorrow" : n < 0 ? short(d(t.due)) : fmt(d(t.due))) + (t.time ? " " + t.time : "");
-  return `<div class="row ${t.done ? "done" : ""} ${sel === t.id ? "sel" : ""}">
+  return `<div class="row ${t.done ? "done" : ""} ${String(sel) === String(t.id) ? "sel" : ""}">
     <button class="check p${t.p}" data-done="${t.id}" aria-label="Complete: ${esc(t.t)}">${t.done ? '<svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ""}</button>
     <button class="body" data-open="${t.id}"><span class="t">${esc(t.t)}</span>${meta.length ? `<span class="meta">${meta.join("")}</span>` : ""}</button>
     <span class="r"><span class="due date ${n < 0 && !t.done ? "overdue" : ""}">${dueTxt}</span><span class="av ${t.who === "AS" ? "as" : ""}" title="${PEOPLE[t.who]}">${t.who}</span></span>
@@ -2304,7 +2444,7 @@ function renderMain() {
 
 function renderDetail() {
   const box = el("detail"), shell = el("shell");
-  const t = tasks.find(x => x.id === sel);
+  const t = byId(sel);
   if (!t) { box.hidden = true; shell.classList.remove("with-detail"); return; }
   box.hidden = false; shell.classList.add("with-detail"); shell.classList.toggle("wide", view === "today");
   const L = t.link && LINKS[t.link];
@@ -2315,12 +2455,12 @@ function renderDetail() {
       <button class="x" data-close="1" aria-label="Close">×</button>
     </div>
     ${t.step ? `<div class="from" style="margin-top:12px">
-      <span>From the <b>${esc(L.label)}</b> deal checklist · ${esc(t.step.phase)}</span>
-      <span>Timing: ${esc(t.step.rule)}. Moves automatically if that date changes.</span>
+      <span>From <b>${esc(L.label)}</b>'s ${esc(t.step.file.toLowerCase())} · ${esc(t.step.phase)}</span>
+      <span>Timing: ${esc(t.step.rule)}. Change the date on their page and this moves with it.</span>
       <span class="acts"><a class="btn" href="deals.html#contact-${CID[t.link]}" style="text-decoration:none">Open contact</a>${t.kind !== "task" ? `<button class="btn primary" data-toast="Opens a pre-filled ${t.kind} to review and send">Draft ${t.kind}</button>` : ""}</span>
     </div>` : ""}
     <div class="fields">
-      <label for="d-due">Due</label><input type="date" id="d-due" value="${t.due}">
+      <label for="d-due">Due</label><input type="date" id="d-due" value="${t.due}" ${t.ref && t.ref.a ? "disabled" : ""}>
       <label for="d-time">Time</label><input id="d-time" value="${t.time || ""}" placeholder="None">
       <label for="d-repeat">Repeat</label><select id="d-repeat">${["", "Daily", "Weekly", "Monthly", "Yearly"].map(r => `<option value="${r}" ${t.repeat === r || (!t.repeat && !r) ? "selected" : ""}>${r || "Never"}</option>`).join("")}</select>
       <label for="d-list">List</label><select id="d-list"><option value="">None (sorted automatically)</option>${LISTS.map(l => `<option ${t.list === l ? "selected" : ""}>${esc(l)}</option>`).join("")}<option value="__new">+ New list…</option></select>
@@ -2336,7 +2476,7 @@ function renderDetail() {
     <div class="sec"><button class="btn danger-btn" data-deltask="${t.id}">${confirmDel === "task" + t.id ? "Click again to delete" : "Delete task"}</button></div>`;
 }
 
-function render() { syncLinks(); syncTouches(); if (sel !== null && !tasks.some(t => t.id === sel)) sel = null; renderSide(); renderMain(); renderDetail(); }
+function render() { syncLinks(); syncTouches(); gather(); if (sel !== null && !byId(sel)) sel = null; renderSide(); renderMain(); renderDetail(); }
 
 /* ---------- Quick add parsing ---------- */
 function parse(text) {
@@ -2382,8 +2522,8 @@ function addTask(text) {
   if (p.list && !LISTS.includes(p.list)) LISTS.push(p.list);
   const list = p.list || (view.startsWith("list:") ? view.slice(5) : undefined);
   const repeat = p.repeat || (view === "recurring" ? "Weekly" : undefined);
-  const t = { id: nextId++, t: p.t, due: p.due || iso(TODAY), time: p.time, who: p.who || me, link: p.link, list, p: p.p || 0, repeat, kind: "task", done: false };
-  tasks.push(t);
+  const t = { t: p.t, due: p.due || iso(TODAY), time: p.time, who: p.who || me, list, p: p.p || 0, repeat, kind: "task", done: false };
+  if (p.link && HQ.contacts[p.link]) { t.s = "open"; HQ.contacts[p.link].tasks.push(t); t.link = p.link; } else { t.id = nextId++; own.push(t); }
   const k = catOf(t);
   toast(`Added "${t.t}" to ${catName(k)}, due ${fmt(d(t.due))}${view === "recurring" && !p.repeat ? ", repeats weekly (change it in the task)" : ""}${view === "clients" && !t.link ? '. No client matched, so it went to Personal. Use "re" + a name to link one' : ""}.`);
   render();
@@ -2409,7 +2549,7 @@ let tt;
 function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2800); }
 
 document.addEventListener("click", e => {
-  const b = e.target.closest("button"); if (!b) return;
+  const b = e.target.closest("button"); if (!b) return; gather();
   if (b.dataset.view) { view = b.dataset.view; sel = null; render(); return; }
   if (b.dataset.newlist) { newListOpen = true; renderSide(); el("nl-name").focus(); return; }
   if (b.dataset.nlsave) { saveNewList(); return; }
@@ -2422,19 +2562,20 @@ document.addEventListener("click", e => {
     el("as-as").setAttribute("aria-pressed", me === "AS");
     sel = null; render(); return;
   }
-  if (b.dataset.open) { sel = +b.dataset.open; render(); return; }
+  if (b.dataset.open) { sel = b.dataset.open; render(); return; }
   if (confirmDel && !b.dataset.deltask && !b.dataset.dellist) confirmDel = null;
   if (b.dataset.close) { sel = null; render(); return; }
-  if (b.dataset.addsub) { const t = tasks.find(x => x.id === sel), v = el("sub-new").value.trim(); if (!v) { el("sub-new").focus(); return; } (t.subs = t.subs || []).push([v, false]); render(); el("sub-new").focus(); return; }
-  if (b.dataset.deltask) { const id = +b.dataset.deltask; if (confirmDel !== "task" + id) { confirmDel = "task" + id; renderDetail(); return; } tasks = tasks.filter(x => x.id !== id); sel = null; confirmDel = null; render(); toast("Task deleted."); return; }
+  if (b.dataset.addsub) { const t = byId(sel), v = el("sub-new").value.trim(); if (!v) { el("sub-new").focus(); return; } (t.subs = t.subs || []).push([v, false]); render(); el("sub-new").focus(); return; }
+  if (b.dataset.deltask) { const id = b.dataset.deltask; if (confirmDel !== "task" + id) { confirmDel = "task" + id; renderDetail(); return; } delTask(byId(id)); sel = null; confirmDel = null; render(); toast("Task deleted."); return; }
   if (b.dataset.renlist) { renamingList = true; renderMain(); const i = el("list-name"); i.focus(); i.select(); return; }
-  if (b.dataset.savelist) { const old = view.slice(5), n = el("list-name").value.trim(); if (n && n !== old && !LISTS.includes(n)) { if (old in onToday) { onToday[n] = onToday[old]; delete onToday[old]; } LISTS[LISTS.indexOf(old)] = n; tasks.forEach(t => { if (t.list === old) t.list = n; }); view = "list:" + n; } renamingList = false; render(); return; }
-  if (b.dataset.dellist) { const l = view.slice(5); if (confirmDel !== "list") { confirmDel = "list"; renderMain(); return; } LISTS.splice(LISTS.indexOf(l), 1); delete onToday[l]; tasks.forEach(t => { if (t.list === l) delete t.list; }); confirmDel = null; view = "today"; render(); toast(`Deleted "${l}". Its tasks are kept, just not in a list.`); return; }
+  if (b.dataset.savelist) { const old = view.slice(5), n = el("list-name").value.trim(); if (n && n !== old && !LISTS.includes(n)) { if (old in onToday) { onToday[n] = onToday[old]; delete onToday[old]; } LISTS[LISTS.indexOf(old)] = n; gather(); tasks.forEach(t => { if (t.list === old) t.list = n; }); view = "list:" + n; } renamingList = false; render(); return; }
+  if (b.dataset.dellist) { const l = view.slice(5); if (confirmDel !== "list") { confirmDel = "list"; renderMain(); return; } LISTS.splice(LISTS.indexOf(l), 1); delete onToday[l]; gather(); tasks.forEach(t => { if (t.list === l) delete t.list; }); confirmDel = null; view = "today"; render(); toast(`Deleted "${l}". Its tasks are kept, just not in a list.`); return; }
   if (b.dataset.done) {
-    const t = tasks.find(x => x.id === +b.dataset.done);
+    const t = byId(b.dataset.done);
     t.done = !t.done; t.justDone = t.done;
+    if (t.ref) t.ref.s = t.done ? "done" : "open"; else if (t.s) t.s = t.done ? "done" : "open";
     if (t.done && t.repeat) toast(`Done. Next one created (${t.repeat.toLowerCase()}).`);
-    else if (t.done && t.step) toast(`Done. Also checked off on the ${LINKS[t.link].label} checklist and logged to the timeline.`);
+    else if (t.done && t.step) toast(`Done. Also checked off on ${LINKS[t.link].label}'s ${t.step.file.toLowerCase()}.`);
     render(); return;
   }
   if (b.dataset.touch) { const p = touches[+b.dataset.touch]; HQ.contacts[p.cid].history.unshift([iso(TODAY), "call", "Touch logged from Tasks", me]); toast(`Touch logged for ${p.n}. Next one due in ${p.f}.`); render(); return; }
@@ -2442,16 +2583,16 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("change", e => {
   if (e.target.id === "list-ontoday") { const l = view.slice(5); onToday[l] = e.target.checked; toast(e.target.checked ? `"${l}" now has its own column on Today.` : `"${l}" is hidden from Today. Its due tasks show under Personal.`); render(); return; }
-  const t = tasks.find(x => x.id === sel); if (!t) return;
+  gather(); const t = byId(sel); if (!t) return;
   const id = e.target.id, v = e.target.value;
   if (e.target.dataset.sub !== undefined) { t.subs[+e.target.dataset.sub][1] = e.target.checked; render(); return; }
   if (id === "d-due" && v) t.due = v;
   if (id === "d-time") t.time = v;
   if (id === "d-repeat") t.repeat = v || undefined;
   if (id === "d-p") t.p = +v;
-  if (id === "d-who") t.who = v;
+  if (id === "d-who") { t.who = v; if (t.ref) t.ref.who = v; }
   if (id === "d-list") { if (v === "__new") { const n = "New list " + (LISTS.length + 1); LISTS.push(n); t.list = n; toast(`Created "${n}". Rename it from the sidebar later.`); } else t.list = v || undefined; }
-  if (id === "d-title") t.t = v;
+  if (id === "d-title") { t.t = v; if (t.ref) t.ref.t = v; }
   if (id === "d-notes") { t.notes = v; return; }
   render();
 });
@@ -2462,7 +2603,7 @@ function drain() {
   const n = HQ.newTasks.length;
   HQ.newTasks.splice(0).forEach(x => {
     const key = x.cid;
-    tasks.push({ id: nextId++, t: x.t, due: x.due || iso(TODAY), who: x.who, link: key, p: 0, kind: "task", done: false });
+    own.push({ id: nextId++, t: x.t, due: x.due || iso(TODAY), who: x.who, link: key, p: 0, kind: "task", done: false });
   });
   return n;
 }
@@ -2554,7 +2695,7 @@ function renderInfo() {
 }
 function render() { renderList(); renderThread(); renderInfo(); if (cur === null) el("shell").classList.remove("thread-open"); }
 let tt; function toast(m) { const t = el("toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
-function addTask(c, t) { if (!person(c)) { toast("Add them to People first so the task has a name on it."); return; } HQ.newTasks.push({ cid: c.cid, name: person(c).name, t, due: "2026-10-12", who: "LP" }); person(c).tasks.push({ t, due: "2026-10-12", who: "LP", s: "open" }); toast(`Task added: ${t}. It's on the Tasks page.`); }
+function addTask(c, t) { if (!person(c)) { toast("Add them to People first so the task has a name on it."); return; } person(c).tasks.push({ t, due: "2026-10-12", who: "LP", s: "open" }); toast(`Task added: ${t}. It's on the Tasks page.`); }
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
   if (confirmDel && !ds.delconv) confirmDel = false;
@@ -2697,7 +2838,7 @@ const V = {
   pipelines() {
     const uc = HQ.settings.ucPhases, ucT = TPLS().filter(x => / · Under contract$/.test(x.trigger));
     return `<h1>Client statuses</h1><p>The columns on each Pipeline tab. Buyers and sellers move through their statuses from the contact page. Once a purchase agreement is added they move to Under Contract/Pending, where the column follows the contract dates. Each status can start a task template.</p>
-    <div class="cards">${Object.entries(state.pipes).map(([p, st]) => `<div class="box"><h2>${p === "Listing" ? "Seller" : p} Pipeline</h2><div class="tbl-wrap"><table><tbody>
+    <div class="cards stack">${Object.entries(state.pipes).map(([p, st]) => `<div class="box"><h2>${p === "Listing" ? "Seller" : p} Pipeline</h2><div class="tbl-wrap"><table><tbody>
       ${st.map((s, i) => `<tr><td class="muted" style="width:28px">${i + 1}</td><td><input data-stage="${p}:${i}" value="${esc(s)}"></td><td style="white-space:nowrap">${(() => { const ts = TPLS().filter(x => x.trigger === p + " · " + s); return ts.length ? ts.map(x => `<button class="linkbtn" data-tplid="${x.id}" data-gosec="1">${esc(x.name)} (${stepCount(x)})</button>`).join(", ") : `<button class="linkbtn" data-gock="${p}|${esc(s)}">+ Add template</button>`; })()}</td><td style="width:90px;white-space:nowrap"><button class="rm" data-up="${p}:${i}" aria-label="Move up">↑</button><button class="rm" data-down="${p}:${i}" aria-label="Move down">↓</button><button class="rm" data-rmstage="${p}:${i}" aria-label="Remove">×</button></td></tr>`).join("")}
     </tbody></table></div><div class="addrow"><button class="btn" data-addstage="${p}">+ Add status</button></div></div>`).join("")}
       <div class="box"><h2>Under Contract/Pending Pipeline</h2><div class="tbl-wrap"><table><thead><tr><th></th><th>Column</th><th>A contract stays here until</th><th></th></tr></thead><tbody>

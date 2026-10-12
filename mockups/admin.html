@@ -51,6 +51,8 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 
 .sec-name { font-weight: 700; font-size: 15px; border: 1px solid transparent; background: none; padding: 4px 6px; border-radius: 6px; min-width: 0; }
 .sec-name:hover, .sec-name:focus { border-color: var(--line); background: var(--bg); }
 .paforms-gap .box { margin-bottom: 12px; }
+.cards.stack { display: flex; flex-direction: column; gap: 14px; }
+.cards.stack td input, .cards.stack td select { width: 100%; min-width: 220px; }
 .pill { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
 .side-nav { display: flex; flex-direction: column; gap: 12px; }
 .side-nav h4 { margin: 0 0 4px; padding: 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
@@ -247,7 +249,7 @@ const V = {
   pipelines() {
     const uc = HQ.settings.ucPhases, ucT = TPLS().filter(x => / · Under contract$/.test(x.trigger));
     return `<h1>Client statuses</h1><p>The columns on each Pipeline tab. Buyers and sellers move through their statuses from the contact page. Once a purchase agreement is added they move to Under Contract/Pending, where the column follows the contract dates. Each status can start a task template.</p>
-    <div class="cards">${Object.entries(state.pipes).map(([p, st]) => `<div class="box"><h2>${p === "Listing" ? "Seller" : p} Pipeline</h2><div class="tbl-wrap"><table><tbody>
+    <div class="cards stack">${Object.entries(state.pipes).map(([p, st]) => `<div class="box"><h2>${p === "Listing" ? "Seller" : p} Pipeline</h2><div class="tbl-wrap"><table><tbody>
       ${st.map((s, i) => `<tr><td class="muted" style="width:28px">${i + 1}</td><td><input data-stage="${p}:${i}" value="${esc(s)}"></td><td style="white-space:nowrap">${(() => { const ts = TPLS().filter(x => x.trigger === p + " · " + s); return ts.length ? ts.map(x => `<button class="linkbtn" data-tplid="${x.id}" data-gosec="1">${esc(x.name)} (${stepCount(x)})</button>`).join(", ") : `<button class="linkbtn" data-gock="${p}|${esc(s)}">+ Add template</button>`; })()}</td><td style="width:90px;white-space:nowrap"><button class="rm" data-up="${p}:${i}" aria-label="Move up">↑</button><button class="rm" data-down="${p}:${i}" aria-label="Move down">↓</button><button class="rm" data-rmstage="${p}:${i}" aria-label="Remove">×</button></td></tr>`).join("")}
     </tbody></table></div><div class="addrow"><button class="btn" data-addstage="${p}">+ Add status</button></div></div>`).join("")}
       <div class="box"><h2>Under Contract/Pending Pipeline</h2><div class="tbl-wrap"><table><thead><tr><th></th><th>Column</th><th>A contract stays here until</th><th></th></tr></thead><tbody>
