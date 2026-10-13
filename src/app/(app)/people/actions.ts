@@ -1,0 +1,145 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { db } from "@/server/db";
+import { guarded, UserError } from "@/server/safe";
+import { logActivity } from "@/server/activity";
+import { coupleName, dateFromIso, normalizeEmail, normalizePhone } from "@/lib/normalize";
+
+const trimmed = (max = 200) => z.string().trim().max(max);
+const optionalId = z.string().trim().max(40).optional().nullable().transform((v) => v || null);
+const contactRow = z.object({ label: trimmed(40).default(""), value: trimmed(200) });
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date");
+
+function cleanPhones(rows: z.infer<typeof contactRow>[]) {
+  return rows.filter((r) => r.value).map((r, position) => ({ label: r.label || "Mobile", number: r.value, normalized: normalizePhone(r.value), position }));
+}
+function cleanEmails(rows: z.infer<typeof contactRow>[]) {
+  return rows.filter((r) => r.value).map((r, position) => {
+    if (!z.string().email().safeParse(r.value).success) throw new UserError(`"${r.value}" isn't a valid email.`);
+    return { label: r.label, address: r.value, normalized: normalizeEmail(r.value), position };
+  });
+}
+
+// ---------- Add person ----------
+const createSchema = z.object({
+  first: trimmed(80).min(1, "Add a first name"),
+  last: trimmed(80).default(""),
+  phone: trimmed(40).default(""),
+  email: trimmed(200).default(""),
+  second: z.object({ first: trimmed(80), last: trimmed(80), phone: trimmed(40), email: trimmed(200) }).optional(),
+  stageId: optionalId,
+  sourceId: optionalId,
+});
+
+export async function createPerson(input: z.input<typeof createSchema>) {
+  return guarded(null, async (user) => {
+    const v = createSchema.parse(input);
+    const two = v.second?.first ? v.second : undefined;
+    const name = coupleName({ first: v.first, last: v.last }, two);
+    const phones = cleanPhones([{ label: two ? v.first : "Mobile", value: v.phone }, ...(two ? [{ label: two.first, value: two.phone }] : [])]);
+    const emails = cleanEmails([{ label: two ? v.first : "", value: v.email }, ...(two ? [{ label: two.first, value: two.email }] : [])]);
+    const p = await db.person.create({
+      data: { name, mailingName: name, stageId: v.stageId, sourceId: v.sourceId, createdById: user.id, assignedToId: user.id, phones: { create: phones }, emails: { create: emails } },
+    });
+    await logActivity(user.id, "create", "person", p.id, `Added ${name}`);
+    revalidatePath("/people");
+    return { id: p.id, name };
+  });
+}
+
+// ---------- Contact info card ----------
+const infoSchema = z.object({ id: z.string(), name: trimmed(160).min(1, "Name can't be empty"), address: trimmed(300).default(""), phones: z.array(contactRow).max(10), emails: z.array(contactRow).max(10) });
+
+export async function updateContactInfo(input: z.input<typeof infoSchema>) {
+  return guarded(null, async (user) => {
+    const v = infoSchema.parse(input);
+    const phones = cleanPhones(v.phones), emails = cleanEmails(v.emails);
+    await db.$transaction([
+      db.phone.deleteMany({ where: { personId: v.id } }),
+      db.email.deleteMany({ where: { personId: v.id } }),
+      db.person.update({ where: { id: v.id, deletedAt: null }, data: { name: v.name, address: v.address || null, phones: { create: phones }, emails: { create: emails } } }),
+    ]);
+    await logActivity(user.id, "update", "person", v.id, `Updated contact info for ${v.name}`);
+    revalidatePath(`/people/${v.id}`);
+  });
+}
+
+// ---------- Details card ----------
+const detailsSchema = z.object({ id: z.string(), stageId: optionalId, sourceId: optionalId, assignedToId: optionalId, followUpDays: z.coerce.number().int().min(0).max(3650).nullable(), mailingName: trimmed(160).default(""), referredBy: trimmed(160).default("") });
+
+export async function updateDetails(input: z.input<typeof detailsSchema>) {
+  return guarded(null, async (user) => {
+    const v = detailsSchema.parse(input);
+    const p = await db.person.update({
+      where: { id: v.id, deletedAt: null },
+      data: { stageId: v.stageId, sourceId: v.sourceId, assignedToId: v.assignedToId, followUpDays: v.followUpDays || null, mailingName: v.mailingName || null, referredBy: v.referredBy || null },
+    });
+    await logActivity(user.id, "update", "person", v.id, `Updated details for ${p.name}`);
+    revalidatePath(`/people/${v.id}`);
+  });
+}
+
+// ---------- Tags ----------
+export async function addTag(personId: string, tagName: string) {
+  return guarded(null, async (user) => {
+    const name = trimmed(60).min(1, "Type a tag").parse(tagName);
+    const existing = await db.tag.findFirst({ where: { name: { equals: name, mode: "insensitive" } } });
+    const tag = existing ?? (await db.tag.create({ data: { name } }));
+    await db.personTag.upsert({ where: { personId_tagId: { personId, tagId: tag.id } }, update: {}, create: { personId, tagId: tag.id } });
+    await logActivity(user.id, "update", "person", personId, `Added tag ${tag.name}`);
+    revalidatePath(`/people/${personId}`);
+  });
+}
+
+export async function removeTag(personId: string, tagName: string) {
+  return guarded(null, async (user) => {
+    const tag = await db.tag.findUnique({ where: { name: tagName } });
+    if (tag) await db.personTag.deleteMany({ where: { personId, tagId: tag.id } });
+    await logActivity(user.id, "update", "person", personId, `Removed tag ${tagName}`);
+    revalidatePath(`/people/${personId}`);
+  });
+}
+
+// ---------- Important Dates ----------
+const datesSchema = z.object({ id: z.string(), birthdays: z.array(z.object({ whose: trimmed(60), date: isoDate })).max(12), homeiversary: isoDate.or(z.literal("")) });
+
+export async function updateImportantDates(input: z.input<typeof datesSchema>) {
+  return guarded(null, async (user) => {
+    const v = datesSchema.parse(input);
+    const rows = [
+      ...v.birthdays.map((b) => ({ kind: "birthday", whose: b.whose, date: dateFromIso(b.date) })),
+      ...(v.homeiversary ? [{ kind: "homeiversary", whose: "", date: dateFromIso(v.homeiversary) }] : []),
+    ];
+    await db.$transaction([db.importantDate.deleteMany({ where: { personId: v.id } }), db.importantDate.createMany({ data: rows.map((r) => ({ ...r, personId: v.id })) })]);
+    await logActivity(user.id, "update", "person", v.id, "Updated important dates");
+    revalidatePath(`/people/${v.id}`);
+  });
+}
+
+// ---------- Timeline (notes, logged calls, logged texts) ----------
+const entrySchema = z.object({ personId: z.string(), kind: z.enum(["note", "call", "text"]), body: trimmed(10000).min(1, "Type something first"), outcome: trimmed(40).optional() });
+
+export async function addTimelineEntry(input: z.input<typeof entrySchema>) {
+  return guarded(null, async (user) => {
+    const v = entrySchema.parse(input);
+    const person = await db.person.findFirst({ where: { id: v.personId, deletedAt: null }, select: { id: true, name: true } });
+    if (!person) throw new UserError("That person was deleted.");
+    await db.$transaction([
+      db.timelineEntry.create({ data: { personId: v.personId, kind: v.kind, body: v.body, outcome: v.kind === "call" ? v.outcome ?? null : null, authorId: user.id } }),
+      db.person.update({ where: { id: v.personId }, data: { lastContactAt: new Date() } }),
+    ]);
+    await logActivity(user.id, "create", "timeline", v.personId, `Logged ${v.kind} for ${person.name}`);
+    revalidatePath(`/people/${v.personId}`);
+  });
+}
+
+// ---------- Delete (to Trash) ----------
+export async function deletePerson(personId: string) {
+  return guarded("deleteRecords", async (user) => {
+    const p = await db.person.update({ where: { id: personId, deletedAt: null }, data: { deletedAt: new Date() } });
+    await logActivity(user.id, "delete", "person", personId, `Moved ${p.name} to Trash`);
+    revalidatePath("/people");
+  });
+}

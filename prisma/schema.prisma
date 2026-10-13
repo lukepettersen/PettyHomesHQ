@@ -1,4 +1,4 @@
-// PettyHomes HQ database. Phase 0: team members, roles and the activity log.
+// PettyHomes HQ database. See SPEC.md for what each part does.
 // Migrations must be non-destructive (see CLAUDE.md).
 
 generator client {
@@ -27,17 +27,24 @@ model Role {
 }
 
 model User {
-  id          String        @id @default(cuid())
-  email       String        @unique
-  name        String
-  isOwner     Boolean       @default(false)
-  status      UserStatus    @default(INVITED)
-  roleId      String
-  role        Role          @relation(fields: [roleId], references: [id])
-  lastLoginAt DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  activity    ActivityLog[]
+  id              String          @id @default(cuid())
+  email           String          @unique
+  name            String
+  isOwner         Boolean         @default(false)
+  status          UserStatus      @default(INVITED)
+  roleId          String
+  role            Role            @relation(fields: [roleId], references: [id])
+  lastLoginAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  activity        ActivityLog[]
+  assignedPeople  Person[]        @relation("PersonAssignee")
+  createdPeople   Person[]        @relation("PersonCreator")
+  timeline        TimelineEntry[]
+  tasksAssigned   Task[]          @relation("TaskAssignee")
+  tasksCreated    Task[]          @relation("TaskCreator")
+  notifications   Notification[]  @relation("NotificationTo")
+  notificationsBy Notification[]  @relation("NotificationFrom")
 }
 
 model ActivityLog {
@@ -52,4 +59,242 @@ model ActivityLog {
 
   @@index([entity, entityId])
   @@index([createdAt])
+}
+
+// ---------- Settings (editable in Admin) ----------
+
+model Stage {
+  id       String   @id @default(cuid())
+  name     String   @unique
+  position Int      @default(0)
+  people   Person[]
+}
+
+model Source {
+  id       String   @id @default(cuid())
+  name     String   @unique
+  position Int      @default(0)
+  people   Person[]
+}
+
+model FollowUpOption {
+  id       String @id @default(cuid())
+  days     Int    @unique
+  position Int    @default(0)
+}
+
+model Tag {
+  id        String      @id @default(cuid())
+  name      String      @unique
+  createdAt DateTime    @default(now())
+  people    PersonTag[]
+}
+
+model ToolLink {
+  id       String @id @default(cuid())
+  name     String
+  url      String
+  position Int    @default(0)
+}
+
+// Birthday / homeiversary rules that create Important dates tasks.
+model DateReminder {
+  id        String @id @default(cuid())
+  dateKind  String // "birthday" | "homeiversary"
+  title     String
+  days      Int    @default(0)
+  direction String @default("on") // "before" | "on" | "after"
+  assignee  String @default("") // team member first name, "" = person's assignee
+  kind      String @default("task") // "task" | "text" | "email"
+  appliesTo String @default("Everyone") // "Everyone" or a stage name
+  position  Int    @default(0)
+}
+
+model CustomField {
+  id       String        @id @default(cuid())
+  name     String
+  type     String        @default("text") // text | number | date | dropdown | checkbox
+  options  String[]
+  position Int           @default(0)
+  values   CustomValue[]
+}
+
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+// ---------- People ----------
+
+model Person {
+  id            String          @id @default(cuid())
+  name          String
+  mailingName   String?
+  address       String?
+  stageId       String?
+  stage         Stage?          @relation(fields: [stageId], references: [id])
+  sourceId      String?
+  source        Source?         @relation(fields: [sourceId], references: [id])
+  referredBy    String?
+  followUpDays  Int?
+  assignedToId  String?
+  assignedTo    User?           @relation("PersonAssignee", fields: [assignedToId], references: [id])
+  createdById   String?
+  createdBy     User?           @relation("PersonCreator", fields: [createdById], references: [id])
+  lastContactAt DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  deletedAt     DateTime?
+  phones        Phone[]
+  emails        Email[]
+  dates         ImportantDate[]
+  tags          PersonTag[]
+  timeline      TimelineEntry[]
+  tasks         Task[]
+  customValues  CustomValue[]
+  notifications Notification[]
+
+  @@index([deletedAt])
+  @@index([name])
+}
+
+model Phone {
+  id         String @id @default(cuid())
+  personId   String
+  person     Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  label      String @default("Mobile")
+  number     String
+  normalized String // digits only, for matching texts and calls
+  position   Int    @default(0)
+
+  @@index([normalized])
+}
+
+model Email {
+  id         String @id @default(cuid())
+  personId   String
+  person     Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  label      String @default("")
+  address    String
+  normalized String // lowercase, for matching emails
+  position   Int    @default(0)
+
+  @@index([normalized])
+}
+
+model ImportantDate {
+  id       String   @id @default(cuid())
+  personId String
+  person   Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  kind     String // "birthday" | "homeiversary"
+  whose    String   @default("")
+  date     DateTime @db.Date
+}
+
+model PersonTag {
+  personId String
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  tagId    String
+  tag      Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([personId, tagId])
+}
+
+model CustomValue {
+  personId String
+  person   Person      @relation(fields: [personId], references: [id], onDelete: Cascade)
+  fieldId  String
+  field    CustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  value    String
+
+  @@id([personId, fieldId])
+}
+
+// Notes, logged calls and texts (later: emails, texts from Messages, deal activity).
+model TimelineEntry {
+  id        String    @id @default(cuid())
+  personId  String
+  person    Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  kind      String // "note" | "call" | "text" | "email" | "system"
+  body      String
+  outcome   String?
+  authorId  String?
+  author    User?     @relation(fields: [authorId], references: [id])
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  @@index([personId, createdAt])
+}
+
+// @mentions in notes.
+model Notification {
+  id        String    @id @default(cuid())
+  toId      String
+  to        User      @relation("NotificationTo", fields: [toId], references: [id], onDelete: Cascade)
+  fromId    String?
+  from      User?     @relation("NotificationFrom", fields: [fromId], references: [id])
+  personId  String?
+  person    Person?   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  text      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([toId, readAt])
+}
+
+// ---------- Smart lists ----------
+
+model Collection {
+  id       String      @id @default(cuid())
+  name     String
+  position Int         @default(0)
+  lists    SmartList[]
+}
+
+model SmartList {
+  id           String     @id @default(cuid())
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  name         String
+  position     Int        @default(0)
+  filters      Json       @default("[]")
+}
+
+// ---------- Tasks ----------
+
+model TaskList {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  position    Int     @default(0)
+  showOnToday Boolean @default(true)
+  tasks       Task[]
+}
+
+model Task {
+  id          String    @id @default(cuid())
+  title       String
+  notes       String    @default("")
+  kind        String    @default("task") // task | call | text | email | showing | closing | other
+  dueDate     DateTime? @db.Date
+  dueTime     String? // "14:00"
+  repeat      String? // DAILY | WEEKLY | MONTHLY | YEARLY
+  priority    Int       @default(0)
+  subtasks    Json      @default("[]")
+  listId      String?
+  list        TaskList? @relation(fields: [listId], references: [id], onDelete: SetNull)
+  personId    String?
+  person      Person?   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  assigneeId  String?
+  assignee    User?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdById String?
+  createdBy   User?     @relation("TaskCreator", fields: [createdById], references: [id])
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([dueDate])
+  @@index([personId])
+  @@index([assigneeId, completedAt])
 }

@@ -7,7 +7,7 @@ the source of truth for behavior. The approved screens are in `mockups/` (open
 ## Status
 
 SPEC.md approved 2026-10-13. Build in the phases in SPEC.md §16, one pull request at a time.
-Current phase: **0** (scaffold, sign-in, CI, Railway, ops docs).
+Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact page cards + timeline, Admin users/roles, stages/sources/follow-up, tags). Next: piece 2 (smart list editing, search everywhere, trash, export), piece 3 (Tasks), piece 4 (mentions/bell, date reminders, Tools, custom fields, phone layout).
 
 ## Working with the owner
 
@@ -80,7 +80,7 @@ Current phase: **0** (scaffold, sign-in, CI, Railway, ops docs).
 - Production start: `prisma migrate deploy && prisma db seed && next start`
 - Release gate: `npm audit --omit=dev --audit-level=high`
 
-## Code map (Phase 0)
+## Code map
 
 - `src/server/auth.ts` — Auth.js options, `requireUser()`, `requirePermission()`
 - `src/server/access.ts` — who may sign in (unit tested)
@@ -88,6 +88,11 @@ Current phase: **0** (scaffold, sign-in, CI, Railway, ops docs).
 - `src/server/db.ts` — Prisma client (pg adapter); generated client in `src/generated/` (gitignored)
 - `src/proxy.ts` — redirects signed-out users to /login
 - `prisma/schema.prisma`, `prisma/migrations/`, `prisma/seed.ts`, `prisma.config.ts`
+- `src/server/safe.ts` — `guarded(permission, fn)` wraps every server action (session, permission, friendly errors)
+- `src/server/activity.ts` — activity log writer; `src/server/people.ts` — People queries
+- `src/lib/normalize.ts`, `src/lib/filters.ts` — pure helpers (phones, names, dates in Central time, smart list filters), unit tested
+- `src/app/(app)/` — signed-in pages: `people/` (list, `[id]` contact page, `actions.ts`), `admin/` (users, lists, tags, `actions.ts`)
+- Local testing: mint a session cookie with `next-auth/jwt` `encode()` using `NEXTAUTH_SECRET` (no Google needed)
 - Owner setup and ops runbook: `docs/ops.md`
 
 ## Mockups
