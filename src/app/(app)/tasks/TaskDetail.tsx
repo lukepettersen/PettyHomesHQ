@@ -63,6 +63,12 @@ export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSa
         <button type="button" onClick={onClose} aria-label="Close" className="px-1 text-xl leading-none muted hover:text-charcoal">×</button>
       </div>
 
+      {task.step && (
+        <p className="mx-3.5 mt-3 flex flex-col gap-1 rounded-md bg-sunken px-3 py-2 text-[12.5px] muted">
+          <span>From {task.personName ? <b className="text-charcoal">{task.personName}</b> : "a person"}&apos;s {task.step.source.toLowerCase()}{task.step.phase ? ` · ${task.step.phase}` : ""}</span>
+          {task.step.timing && <span>Timing: {task.step.timing}.{task.step.locked ? " Change the date on their page and this moves with it." : ""}</span>}
+        </p>
+      )}
       {task.cat === "dates" && (
         <p className="mx-3.5 mt-3 rounded-md bg-sunken px-3 py-2 text-[12.5px] muted">
           From {task.personName ? <b className="text-charcoal">{task.personName}</b> : "a person"}&apos;s Important Dates, using the rules in Admin → Date reminders.
@@ -71,7 +77,7 @@ export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSa
 
       <div className="grid grid-cols-[96px_minmax(0,1fr)] items-center gap-x-2.5 gap-y-2 px-3.5 py-3 text-sm">
         <label htmlFor="d-due" className="text-xs font-semibold muted">Due</label>
-        <input id="d-due" type="date" className={field} value={d.due} onChange={(e) => set({ due: e.target.value })} />
+        <input id="d-due" type="date" className={field} value={d.due} disabled={task.step?.locked} title={task.step?.locked ? "Set by a contract date" : undefined} onChange={(e) => set({ due: e.target.value })} />
         <label htmlFor="d-time" className="text-xs font-semibold muted">Time</label>
         <input id="d-time" className={field} placeholder="None" value={d.time} onChange={(e) => set({ time: e.target.value })} />
         <label htmlFor="d-repeat" className="text-xs font-semibold muted">Repeat</label>

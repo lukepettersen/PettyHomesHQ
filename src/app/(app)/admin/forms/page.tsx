@@ -1,9 +1,12 @@
+import { adminGate } from "../gate";
 import { loadForm } from "@/server/pa";
 import { FormsClient } from "./FormsClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
+  const denied = await adminGate();
+  if (denied) return denied;
   const [buyer, seller] = await Promise.all([loadForm("buyer"), loadForm("seller")]);
   return (
     <>

@@ -5,6 +5,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { DEFAULT_ROLES } from "../src/server/permissions";
 import { DEFAULT_FORMS } from "../src/lib/pa";
+import { STARTER_TEMPLATES } from "./starterTemplates";
 
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
 
@@ -67,6 +68,19 @@ async function main() {
   }
   for (const side of ["buyer", "seller"] as const) {
     if (!(await db.paForm.findUnique({ where: { side } }))) await db.paForm.create({ data: { side, sections: DEFAULT_FORMS[side] } });
+  }
+  // Starter task templates, once, matched to the statuses by name (SPEC.md §8).
+  if ((await db.taskTemplate.count()) === 0) {
+    const statuses = await db.pipelineStatus.findMany();
+    const statusId = (kind: string, name: string) => statuses.find((x) => x.kind === kind && x.name === name)?.id;
+    for (const [position, t] of STARTER_TEMPLATES.entries()) {
+      const trigger = typeof t.trigger === "object" && t.trigger ? (statusId(t.trigger.status.kind, t.trigger.status.name) ? `status:${statusId(t.trigger.status.kind, t.trigger.status.name)}` : null) : t.trigger;
+      const phases = t.phases.map((ph) => ({
+        ...ph,
+        steps: ph.steps.map(({ advanceName, ...st }) => ({ ...st, ...(advanceName && statusId(t.advanceKind, String(advanceName)) ? { advance: statusId(t.advanceKind, String(advanceName)) } : {}) })),
+      }));
+      await db.taskTemplate.create({ data: { name: t.name, trigger, phases, position } });
+    }
   }
   // Trash: anything deleted more than 30 days ago is removed for good.
   const cutoff = new Date(Date.now() - 30 * 86400000);

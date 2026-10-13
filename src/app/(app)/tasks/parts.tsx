@@ -40,6 +40,7 @@ export function TaskLine({ task, today, team, selected, showPerson = true, onTog
           {subs > 0 && <span>☐ {task.subtasks.filter((s) => s.done).length}/{subs}</span>}
           {task.repeat && <span>↻ {repeatLabel(task.repeat)}</span>}
           {task.cat === "dates" && <span className="rounded bg-sunken px-1.5">From Important Dates</span>}
+          {task.step && <span className="rounded bg-sunken px-1.5">{task.step.source}</span>}
         </span>
       </button>
       <span className="col-start-2 flex items-center gap-2 sm:col-start-3">

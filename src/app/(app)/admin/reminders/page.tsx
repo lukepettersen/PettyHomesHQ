@@ -1,9 +1,12 @@
+import { adminGate } from "../gate";
 import { db } from "@/server/db";
 import { RemindersClient } from "./RemindersClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
+  const denied = await adminGate();
+  if (denied) return denied;
   const [reminders, stages, team] = await Promise.all([
     db.dateReminder.findMany({ orderBy: { position: "asc" } }),
     db.stage.findMany({ orderBy: { position: "asc" } }),

@@ -1,9 +1,12 @@
+import { adminGate } from "../gate";
 import { integrationStatus, textingEnabled } from "@/server/integrations";
 import { TextingSwitch } from "./TextingSwitch";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
+  const denied = await adminGate();
+  if (denied) return denied;
   const [list, texting] = [integrationStatus(), await textingEnabled()];
   return (
     <>

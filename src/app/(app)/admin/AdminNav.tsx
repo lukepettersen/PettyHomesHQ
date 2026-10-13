@@ -3,18 +3,22 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+type Can = { settings: boolean; templates: boolean; trash: boolean };
+const NEEDS: Record<string, keyof Can> = { "/admin/templates": "templates", "/admin/trash": "trash" };
+
 const SECTIONS: [string, [string, string | null][]][] = [
   ["Team", [["Users & roles", "/admin/users"], ["Trash", "/admin/trash"]]],
   ["People", [["Stages, sources & follow-up", "/admin/lists"], ["Tags", "/admin/tags"], ["Date reminders", "/admin/reminders"], ["Custom fields", "/admin/fields"]]],
-  ["Deals", [["Client statuses", "/admin/statuses"], ["Purchase agreement forms", "/admin/forms"], ["Task templates", null]]],
+  ["Deals", [["Client statuses", "/admin/statuses"], ["Purchase agreement forms", "/admin/forms"], ["Task templates", "/admin/templates"]]],
   ["Connections", [["Tools menu", "/admin/tools"], ["Integrations", "/admin/integrations"]]],
 ];
 
-export function AdminNav() {
+export function AdminNav({ can }: { can: Can }) {
   const path = usePathname();
+  const allowed = (href: string) => can[NEEDS[href] ?? "settings"];
   return (
     <nav aria-label="Admin sections" className="flex flex-col gap-3 md:sticky md:top-3 md:self-start">
-      {SECTIONS.map(([group, items]) => (
+      {SECTIONS.map(([group, all]) => [group, all.filter(([, href]) => !href || allowed(href))] as const).filter(([, items]) => items.some(([, h]) => h)).map(([group, items]) => (
         <div key={group}>
           <h4 className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wider muted">{group}</h4>
           {items.map(([label, href]) => href ? (

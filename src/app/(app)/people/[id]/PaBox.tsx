@@ -11,7 +11,7 @@ const STATUS_STYLE: Record<string, string> = { met: "bg-accent-soft text-accent"
 const CORE = new Set(["address", "price", "em", "sc", "fin", "commission", "bac", "ptype", "year", "hoa", "newc", ...KEY_DATES.map(([k]) => k)]);
 
 /** The contract on a file: key-date tiles, facts, people, Edit · Fell through · Mark closed (SPEC.md §7.4). */
-export function PaBox({ pa, personName, fileKind, fileLine, forms, today, canSeeCommission }: { pa: PaView; personName: string; fileKind: "buyer" | "listing"; fileLine: string; forms: Record<Side, PaSection[]>; today: string; canSeeCommission: boolean }) {
+export function PaBox({ pa, personName, fileKind, fileLine, forms, today, canSeeCommission, children }: { children?: React.ReactNode; pa: PaView; personName: string; fileKind: "buyer" | "listing"; fileLine: string; forms: Record<Side, PaSection[]>; today: string; canSeeCommission: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState<"" | "close" | "fell">("");
@@ -60,6 +60,7 @@ export function PaBox({ pa, personName, fileKind, fileLine, forms, today, canSee
           {people.map(([k, x]) => <div key={k} className="flex gap-1.5"><dt className="muted">{k}</dt><dd>{x}</dd></div>)}
         </dl>
       )}
+      {children}
       {msg && <p role="status" className="mt-2 text-sm text-accent">{msg}</p>}
       {error && <p role="alert" className="mt-2 text-sm text-bad">{error}</p>}
       {editing && <PaWizard fileId={pa.fileId} fileKind={fileKind} personName={personName} fileLine={fileLine} pa={pa} forms={forms} canSeeCommission={canSeeCommission}

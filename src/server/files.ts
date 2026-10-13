@@ -5,6 +5,7 @@ import type { SessionUser } from "@/server/auth";
 import { isoFromDate, todayCentral } from "@/lib/normalize";
 import { toFileView, type FileView } from "@/lib/files";
 import { toPaView, ucColumn, type PaView } from "@/lib/pa";
+import { LIVE_STEPS } from "@/server/tasks";
 
 export type StatusRow = { id: string; kind: string; name: string; untilDate: string | null };
 
@@ -44,7 +45,7 @@ export async function loadPipeline(user: SessionUser): Promise<{ files: Pipeline
   ]);
   const personIds = [...new Set([...files.map((f) => f.personId), ...pas.map((p) => p.file.personId)])];
   const tasks = await db.task.findMany({
-    where: { personId: { in: personIds }, completedAt: null, deletedAt: null },
+    where: { personId: { in: personIds }, completedAt: null, deletedAt: null, ...LIVE_STEPS },
     orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }, { priority: "desc" }],
     include: { assignee: { select: { name: true } } },
   });

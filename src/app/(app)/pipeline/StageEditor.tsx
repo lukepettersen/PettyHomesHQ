@@ -13,14 +13,16 @@ export function StageEditor({ kind, rows: initial, counts, onDone }: { kind: "bu
   const router = useRouter();
   const [rows, setRows] = useState<Row[]>(initial.map((r) => ({ key: r.id, id: r.id, name: r.name, untilDate: r.untilDate })));
   const [error, setError] = useState("");
+  const [warned, setWarned] = useState(false);
   const [pending, start] = useTransition();
   const uc = kind === "uc";
   const patch = (i: number, p: Partial<Row>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...p } : r)));
   const move = (i: number, d: number) => { const n = [...rows]; [n[i], n[i + d]] = [n[i + d], n[i]]; setRows(n); };
   const save = () => start(async () => {
     setError("");
-    const r = await saveStages({ kind, rows: rows.map((x) => ({ id: x.id, name: x.name, untilDate: uc ? (x.untilDate as never) : null })) });
+    const r = await saveStages({ kind, rows: rows.map((x) => ({ id: x.id, name: x.name, untilDate: uc ? (x.untilDate as never) : null })), force: warned });
     if (!r.ok) { setError(r.error); return; }
+    if (r.data?.warning) { setError(r.data.warning); setWarned(true); return; }
     router.refresh(); onDone();
   });
   return (

@@ -266,6 +266,19 @@ Principles:
 - **Automatic tag changes on close** *(new)*: a step type "Add/remove tags" so closing adds
   Past Client, Email Newsletter, Mailers, Petty Homes Event List, Real Estate Health Check
   and removes Buyer / Seller / Under contract.
+- **How it behaves (built 2026-10-14):**
+  - A file gets each template once; moving back to a status doesn't add its steps again.
+    Template edits apply to deals that reach that point afterwards; existing tasks stay.
+  - Steps timed from a contract date can't be re-dated by hand; they move with the contract.
+    Waiving a date closes its open steps. Fell through removes the contract's open steps;
+    Mark closed checks them off and starts the post-close template as the person's tasks.
+  - Steps from closed files or ended contracts no longer show as open tasks.
+  - "When done: move deal to…" only moves a file that isn't under contract. Closing a
+    contract is always done with Mark closed.
+  - Duplicating a template makes a by-hand copy so two templates don't both start.
+  - Templates can also be applied by hand from a contact's Tasks card (start date, optional
+    file). Admin → Task templates is open to roles with "Edit task templates".
+  - "When a phone call is booked" templates start once booking calls is built (§10).
 
 ## 9. Tasks
 

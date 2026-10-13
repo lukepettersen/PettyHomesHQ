@@ -6,6 +6,8 @@ import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { loadDateTasks, loadTeam } from "@/server/tasks";
+import { CONTRACT_ANCHORS } from "@/lib/templates";
+import { applyTemplate, contractAnchors, factsOf, loadTemplates, moveFile } from "@/server/automation";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
 import { categoryOf, longIso, nextDue, parseQuickAdd, parseTime, stripPersonWord, type Repeat } from "@/lib/tasks";
 
@@ -121,7 +123,7 @@ export async function completeTask(taskId: string) {
   return guarded(null, async (user) => {
     const t = await db.task.findFirst({ where: { id: id.parse(taskId), deletedAt: null } });
     if (!t) throw new UserError("That task was deleted.");
-    if (t.completedAt) return { nextId: null as string | null };
+    if (t.completedAt) return { nextId: null as string | null, movedTo: null as string | null };
     let nextId: string | null = null;
     await db.$transaction(async (tx) => {
       await tx.task.update({ where: { id: t.id }, data: { completedAt: new Date() } });
@@ -137,8 +139,20 @@ export async function completeTask(taskId: string) {
       }
     });
     await logActivity(user.id, "update", "task", t.id, `Completed "${t.title}"`);
+    // A checklist step marked "When done: move deal to…" moves the file (SPEC.md §7.1).
+    let movedTo: string | null = null;
+    if (t.advanceStatusId && t.fileId) {
+      const file = await db.clientFile.findFirst({ where: { id: t.fileId, deletedAt: null, closedAt: null }, include: { contracts: { where: { state: "active", deletedAt: null }, select: { id: true } } } });
+      const status = await db.pipelineStatus.findUnique({ where: { id: t.advanceStatusId } });
+      if (file && status && file.statusId !== status.id && !file.contracts.length && status.kind === file.kind) {
+        await moveFile(file.id, status.id, user.id);
+        await logActivity(user.id, "update", "clientFile", file.id, `Moved to ${status.name} when "${t.title}" was done`);
+        movedTo = status.name;
+        revalidatePath("/pipeline");
+      }
+    }
     refresh(t.personId);
-    return { nextId };
+    return { nextId, movedTo };
   });
 }
 
@@ -197,9 +211,11 @@ export async function updateTask(input: z.input<typeof updateSchema>) {
     const before = v.id.startsWith("date:") ? await materializeDateTask(v.id, user.id) : await db.task.findFirst({ where: { id: v.id, deletedAt: null } });
     if (!before) throw new UserError("That task was deleted.");
     if (v.listId && !(await db.taskList.findFirst({ where: { id: v.listId, builtin: null } }))) throw new UserError("That list was deleted.");
+    // Steps timed from a contract date keep that date; it changes from the contract.
+    const locked = !!before.anchor && CONTRACT_ANCHORS.includes(before.anchor as never);
     const t = await db.task.update({
       where: { id: before.id },
-      data: { title: v.title, notes: v.notes, dueDate: v.due ? dateFromIso(v.due) : null, dueTime: v.time, repeat: v.repeat, priority: v.priority, listId: v.listId, assigneeId: v.assigneeId, subtasks: v.subtasks },
+      data: { title: v.title, notes: v.notes, dueDate: locked ? before.dueDate : v.due ? dateFromIso(v.due) : null, dueTime: v.time, repeat: v.repeat, priority: v.priority, listId: v.listId, assigneeId: v.assigneeId, subtasks: v.subtasks },
     });
     const changed = [before.title !== t.title && "title", (before.dueDate?.getTime() ?? 0) !== (t.dueDate?.getTime() ?? 0) && "due date", before.assigneeId !== t.assigneeId && "assignee", before.listId !== t.listId && "list", before.repeat !== t.repeat && "repeat"].filter(Boolean);
     await logActivity(user.id, "update", "task", t.id, `Updated "${t.title}"${changed.length ? ` (${changed.join(", ")})` : ""}`);
@@ -302,5 +318,28 @@ export async function setListOnToday(input: { id: string; on: boolean }) {
     const l = await db.taskList.update({ where: { id: id.parse(input.id) }, data: { showOnToday: !!input.on } });
     await logActivity(user.id, "update", "taskList", l.id, `${input.on ? "Showed" : "Hid"} "${l.name}" on Today`);
     refresh();
+  });
+}
+
+// ---------- Apply a template by hand (contact page → Tasks card) ----------
+const applySchema = z.object({ personId: id, templateId: id, start: isoDate, fileId: id.nullable() });
+
+export async function applyTemplateToPerson(input: z.input<typeof applySchema>) {
+  return guarded(null, async (user) => {
+    const v = applySchema.parse(input);
+    const person = await db.person.findFirst({ where: { id: v.personId, deletedAt: null }, select: { id: true, name: true } });
+    if (!person) throw new UserError("That person was deleted.");
+    const t = (await loadTemplates()).find((x) => x.id === v.templateId);
+    if (!t) throw new UserError("That template was deleted.");
+    // Linked to a file, contract-date steps use its active contract's dates.
+    const file = v.fileId ? await db.clientFile.findFirst({ where: { id: v.fileId, personId: v.personId, deletedAt: null }, include: { contracts: { where: { state: "active", deletedAt: null } } } }) : null;
+    const pa = file?.contracts[0];
+    const n = await db.$transaction((tx) => applyTemplate(tx, t, {
+      personId: person.id, fileId: file?.id ?? null, paId: pa?.id ?? null, start: v.start,
+      dates: pa ? contractAnchors(pa) : {}, facts: factsOf(pa ? pa.answers : file?.info),
+    }, user.id));
+    await logActivity(user.id, "create", "task", null, `Applied template "${t.name}" to ${person.name} (${n} tasks)`);
+    refresh(person.id);
+    return { count: n, name: t.name };
   });
 }

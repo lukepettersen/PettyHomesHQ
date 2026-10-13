@@ -1,3 +1,4 @@
+import { adminGate } from "../gate";
 import { db } from "@/server/db";
 import { loadStatuses } from "@/server/files";
 import { StatusesClient } from "./StatusesClient";
@@ -5,6 +6,8 @@ import { StatusesClient } from "./StatusesClient";
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
+  const denied = await adminGate();
+  if (denied) return denied;
   const [statuses, counts] = await Promise.all([
     loadStatuses(),
     db.clientFile.groupBy({ by: ["statusId"], where: { deletedAt: null, closedAt: null, person: { deletedAt: null } }, _count: true }),

@@ -1,9 +1,12 @@
+import { adminGate } from "../gate";
 import { db } from "@/server/db";
 import { ToolsClient } from "./ToolsClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
+  const denied = await adminGate();
+  if (denied) return denied;
   const tools = await db.toolLink.findMany({ orderBy: { position: "asc" } });
   return (
     <>

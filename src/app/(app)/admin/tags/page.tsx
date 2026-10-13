@@ -1,9 +1,12 @@
+import { adminGate } from "../gate";
 import { db } from "@/server/db";
 import { TagsClient } from "./TagsClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
+  const denied = await adminGate();
+  if (denied) return denied;
   const tags = await db.tag.findMany({ orderBy: { name: "asc" }, include: { _count: { select: { people: { where: { person: { deletedAt: null } } } } } } });
   return (
     <>

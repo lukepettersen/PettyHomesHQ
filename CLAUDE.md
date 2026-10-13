@@ -7,7 +7,7 @@ the source of truth for behavior. The approved screens are in `mockups/` (open
 ## Status
 
 SPEC.md approved 2026-10-13. Build in the phases in SPEC.md §16, one pull request at a time.
-Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact page cards + timeline, Admin users/roles, stages/sources/follow-up, tags); piece 2 (smart list editing, bulk actions, search, Trash, CSV export); piece 3 (Tasks page, quick add, contact Tasks card, Create task pop-up); piece 4 (@mentions + bell, Date reminders, Tools menu, custom fields, phone layout). Phase 1 is complete. Phase 2 in progress: 2.1 done (client files, statuses, Pipeline board, Admin → Client statuses); 2.2 done (purchase agreements, Admin forms editor, key dates, Under Contract, Mark closed / Fell through); next 2.3 task templates, 2.4 appointments, worker (pg-boss) and file bucket.
+Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact page cards + timeline, Admin users/roles, stages/sources/follow-up, tags); piece 2 (smart list editing, bulk actions, search, Trash, CSV export); piece 3 (Tasks page, quick add, contact Tasks card, Create task pop-up); piece 4 (@mentions + bell, Date reminders, Tools menu, custom fields, phone layout). Phase 1 is complete. Phase 2 in progress: 2.1 done (client files, statuses, Pipeline board, Admin → Client statuses); 2.2 done (purchase agreements, Admin forms editor, key dates, Under Contract, Mark closed / Fell through); 2.3 done (task templates, automations, Admin → Task templates, Admin → Integrations); next 2.4 appointments, worker (pg-boss) and file bucket.
 
 ## Working with the owner
 
@@ -98,6 +98,8 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 - `src/lib/mentions.ts`, `src/server/notifications.ts`, `src/components/Bell.tsx` — @mentions and the bell
 - `src/lib/files.ts` (questions per status, commission stripping via `toFileView`, tested), `src/server/files.ts`, actions in `src/app/(app)/pipeline/actions.ts`
 - `src/lib/pa.ts` (PA forms, Show only if, cleaning, key dates, UC column, `toPaView` commission stripping; tested), `src/server/pa.ts`, `src/app/(app)/pipeline/paActions.ts`
+- `src/lib/templates.ts` (steps, anchors, conditions, expand; tested), `src/server/automation.ts` (runTrigger, applyTemplate, redateContract, moveFile), `prisma/starterTemplates.ts`
+- Admin pages check their own permission with `adminGate()` in `src/app/(app)/admin/gate.tsx`
 - `src/lib/customFields.ts` — custom field types and value cleaning
 - Owner setup and ops runbook: `docs/ops.md`
 

@@ -293,6 +293,18 @@ model Task {
   createdById String?
   createdBy   User?     @relation("TaskCreator", fields: [createdById], references: [id])
   sourceKey   String?   @unique // "date:<importantDateId>:<reminderId>:<year>" for Important dates tasks
+  // Checklist steps (SPEC.md §8): which file/contract and template step made this task,
+  // and what its due date counts from, so it re-dates when that date changes.
+  fileId          String?
+  file            ClientFile?        @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  paId            String?
+  pa              PurchaseAgreement? @relation(fields: [paId], references: [id], onDelete: Cascade)
+  templateId      String?
+  stepId          String?
+  phase           String?
+  anchor          String? // start | phoneCall | finalAcceptance | inspection | writtenStatement | hoaRescission | closing
+  offsetDays      Int?
+  advanceStatusId String? // move the file to this status when done
   completedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -301,6 +313,8 @@ model Task {
   @@index([dueDate])
   @@index([personId])
   @@index([assigneeId, completedAt])
+  @@index([fileId])
+  @@index([paId])
 }
 
 // ---------- Pipeline (Phase 2) ----------
@@ -337,6 +351,7 @@ model ClientFile {
   deletedAt   DateTime?
   commission  FileCommission?
   contracts   PurchaseAgreement[]
+  tasks       Task[]
 
   @@index([personId])
   @@index([kind, closedAt])
@@ -381,6 +396,7 @@ model PurchaseAgreement {
   updatedAt          DateTime       @updatedAt
   deletedAt          DateTime?
   commission         PaCommission?
+  tasks              Task[]
 
   @@index([fileId])
   @@index([state])
@@ -392,4 +408,15 @@ model PaCommission {
   pa         PurchaseAgreement @relation(fields: [paId], references: [id], onDelete: Cascade)
   commission String            @default("")
   bac        String            @default("")
+}
+
+// Task templates: phases of steps that become tasks (SPEC.md §8). Phases JSON: see src/lib/templates.ts.
+model TaskTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  trigger   String? // status:<id> | pa:buyer | pa:seller | closed:buyer | closed:seller | phonecall | null (apply by hand)
+  phases    Json     @default("[]")
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

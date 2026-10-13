@@ -92,7 +92,9 @@ export function TasksApp(p: Props) {
     const realId = t.virtual ? (r.data as { id: string }).id : t.id;
     const nextId = t.virtual ? null : (r.data as { nextId: string | null }).nextId;
     setJustDone((j) => ({ ...j, [t.id]: { row: t, realId, nextId } }));
+    const movedTo = t.virtual ? null : (r.data as { movedTo?: string | null }).movedTo;
     if (nextId && t.repeat) setToast(`Done. Next one created (${repeatLabel(t.repeat).toLowerCase()}).`);
+    else if (movedTo) setToast(`Done. ${t.personName ?? "Their file"} moved to ${movedTo}.`);
     refresh();
   });
 

@@ -4,12 +4,19 @@ import { SaveBar } from "@/components/SaveBar";
 import type { StatusRow } from "@/server/files";
 import { saveStages } from "../../pipeline/actions";
 import { UNTIL_OPTIONS } from "../../pipeline/StageEditor";
+import { useRef } from "react";
 import { useRows } from "../useRows";
 
 type Row = { id: string | null; name: string; untilDate: string | null };
 
 export function StatusesClient({ title, kind, rows, counts }: { title: string; kind: "buyer" | "listing" | "uc"; rows: StatusRow[]; counts: Record<string, number> }) {
-  const t = useRows<Row>(rows.map((r) => ({ id: r.id, name: r.name, untilDate: r.untilDate })), (list) => saveStages({ kind, rows: list.map((r) => ({ ...r, untilDate: r.untilDate as never })) }));
+  const warned = useRef(false);
+  const t = useRows<Row>(rows.map((r) => ({ id: r.id, name: r.name, untilDate: r.untilDate })), async (list) => {
+    const r = await saveStages({ kind, rows: list.map((x) => ({ ...x, untilDate: x.untilDate as never })), force: warned.current });
+    if (r.ok && r.data?.warning) { warned.current = true; return { ok: false as const, error: r.data.warning }; }
+    warned.current = false;
+    return r.ok ? { ok: true as const } : r;
+  });
   return (
     <section className="card mb-4">
       <div className="border-b border-misty px-4 py-3">

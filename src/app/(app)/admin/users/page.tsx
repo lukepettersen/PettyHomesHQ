@@ -1,3 +1,4 @@
+import { adminGate } from "../gate";
 import { db } from "@/server/db";
 import { PERMISSIONS } from "@/server/permissions";
 import { TeamClient } from "./TeamClient";
@@ -5,6 +6,8 @@ import { TeamClient } from "./TeamClient";
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
+  const denied = await adminGate();
+  if (denied) return denied;
   const [users, roles] = await Promise.all([db.user.findMany({ orderBy: [{ isOwner: "desc" }, { name: "asc" }] }), db.role.findMany({ orderBy: { name: "asc" } })]);
   return (
     <>

@@ -11,9 +11,11 @@ import { deleteFile, setFileStatus } from "../../pipeline/actions";
 import { PaWizard } from "../../pipeline/PaWizard";
 import { PaBox } from "./PaBox";
 import type { PaSection, PaView, Side } from "@/lib/pa";
+import type { TaskRow, TeamMember } from "@/server/tasks";
+import { Checklist } from "./Checklist";
 
 type Props = { personId: string; personName: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean; canDelete: boolean; timeline: React.ReactNode;
-  contracts: PaView[]; forms: Record<Side, PaSection[]>; today: string };
+  contracts: PaView[]; forms: Record<Side, PaSection[]>; today: string; checklists: TaskRow[]; team: TeamMember[] };
 
 /** Middle column: a tab per active buyer/listing file, then Timeline (SPEC.md §6.3). */
 export function FileTabs(p: Props) {
@@ -50,7 +52,7 @@ export function SideChip({ kind }: { kind: string }) {
   return <span className={`rounded px-1.5 text-[11px] font-bold uppercase tracking-wide ${kind === "buyer" ? "bg-accent-soft text-accent" : "bg-[#f6e3d9] text-[#9a4f2e]"}`}>{kind === "buyer" ? "Buyer" : kind === "listing" ? "Listing" : kind}</span>;
 }
 
-function FilePane({ file, personId, personName, statuses, canSeeCommission, canDelete, onDeleted, contracts, forms, today }: Props & { file: FileView; onDeleted: () => void }) {
+function FilePane({ file, personId, personName, statuses, canSeeCommission, canDelete, onDeleted, contracts, forms, today, checklists, team }: Props & { file: FileView; onDeleted: () => void }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [addingPa, setAddingPa] = useState(false);
@@ -97,13 +99,16 @@ function FilePane({ file, personId, personName, statuses, canSeeCommission, canD
       )}
       {facts.length === 0 && <p className="mt-3 text-sm muted">Nothing filled in yet. Use Edit to add details.</p>}
       {activePa ? (
-        <PaBox pa={activePa} personName={personName} fileKind={file.kind} fileLine={fileLine(file)} forms={forms} today={today} canSeeCommission={canSeeCommission} />
+        <PaBox pa={activePa} personName={personName} fileKind={file.kind} fileLine={fileLine(file)} forms={forms} today={today} canSeeCommission={canSeeCommission}>
+          <Checklist title={activePa.side === "buyer" ? "Buyer contract checklist" : "Seller contract checklist"} tasks={checklists.filter((t) => t.paId === activePa.id)} today={today} team={team} />
+        </PaBox>
       ) : (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-misty px-3 py-2.5">
           <span><b>Offer accepted?</b> <span className="text-sm muted">Add the purchase agreement to put {personName.split(" ")[0]} under contract.</span></span>
           <button type="button" className="btn btn-primary" onClick={() => setAddingPa(true)}>+ Add purchase agreement</button>
         </div>
       )}
+      <Checklist title={file.kind === "buyer" ? "Buyer checklist" : "Listing checklist"} tasks={checklists.filter((t) => t.fileId === file.id && !t.paId)} today={today} team={team} />
       {earlier.length > 0 && (
         <div className="mt-3">
           <h4 className="text-xs font-semibold uppercase tracking-wider muted">Earlier contracts</h4>

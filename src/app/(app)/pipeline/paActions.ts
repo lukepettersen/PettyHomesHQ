@@ -8,6 +8,7 @@ import { logActivity } from "@/server/activity";
 import { hasPermission } from "@/server/permissions";
 import { loadForm } from "@/server/pa";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
+import { closeStepsForWaived, contractAnchors, factsOf, redateContract, runTrigger } from "@/server/automation";
 import { cleanPaAnswers, formProblem, KEY_DATES, type DateKey, type DateStatus, type PaSection } from "@/lib/pa";
 
 const id = z.string().trim().min(1).max(40);
@@ -40,7 +41,8 @@ export async function addPurchaseAgreement(input: z.input<typeof addSchema>) {
     const canComm = hasPermission(user.permissions, "seeCommissions");
     const c = clean(await loadForm(v.side), v.answers, canComm);
     const today = isoFromDate(todayCentral());
-    const pa = await db.purchaseAgreement.create({
+    const pa = await db.$transaction(async (tx) => {
+     const created = await tx.purchaseAgreement.create({
       data: {
         fileId: file.id, side: v.side, address: c.address, price: c.price, answers: c.answers, writtenStatementNA: c.writtenStatementNA, ...dateData(c.dates),
         // Dates already in the past when the contract is entered count as met.
@@ -48,10 +50,15 @@ export async function addPurchaseAgreement(input: z.input<typeof addSchema>) {
         createdById: user.id,
         ...(canComm && (c.commission.commission || c.commission.bac) ? { commission: { create: c.commission } } : {}),
       },
+     });
+     const n = await runTrigger(tx, `pa:${v.side}`, {
+       personId: file.personId, fileId: file.id, paId: created.id, start: c.dates.finalAcceptance ?? today, dates: c.dates, facts: factsOf(c.answers),
+     }, user.id);
+     return { ...created, n };
     });
-    await logActivity(user.id, "create", "purchaseAgreement", pa.id, `Added ${v.side}-side purchase agreement for ${file.person.name}: ${c.address}`);
+    await logActivity(user.id, "create", "purchaseAgreement", pa.id, `Added ${v.side}-side purchase agreement for ${file.person.name}: ${c.address}${pa.n ? ` (${pa.n} tasks)` : ""}`);
     refresh(file.personId);
-    return { id: pa.id };
+    return { id: pa.id, tasks: pa.n };
   });
 }
 
@@ -81,6 +88,7 @@ export async function updatePurchaseAgreement(input: z.input<typeof editSchema>)
         data: { address: c.address, price: c.price, answers: c.answers, writtenStatementNA: c.writtenStatementNA, ...dateData(c.dates), dateStatus: status, originalDates: orig },
       });
       if (canComm) await tx.paCommission.upsert({ where: { paId: pa.id }, update: c.commission, create: { paId: pa.id, ...c.commission } });
+      await redateContract(tx, pa.id);
     });
     await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Updated purchase agreement for ${pa.file.person.name}${moved.length ? ` (moved ${moved.join(", ")})` : ""}`);
     refresh(pa.file.personId);
@@ -104,7 +112,11 @@ export async function setKeyDate(input: z.input<typeof dateSchema>) {
       date = v.date;
     } else if (v.date) date = v.date;
     status[v.key] = v.status as DateStatus;
-    await db.purchaseAgreement.update({ where: { id: pa.id }, data: { [v.key]: date ? dateFromIso(date) : null, dateStatus: status, originalDates: orig } });
+    await db.$transaction(async (tx) => {
+      await tx.purchaseAgreement.update({ where: { id: pa.id }, data: { [v.key]: date ? dateFromIso(date) : null, dateStatus: status, originalDates: orig } });
+      await redateContract(tx, pa.id);
+      if (v.status === "waived") await closeStepsForWaived(tx, pa.id, v.key);
+    });
     await logActivity(user.id, "update", "purchaseAgreement", pa.id, `${label(v.key)} for ${pa.file.person.name}: ${v.status}${date ? ` (${date})` : ""}`);
     refresh(pa.file.personId);
   });
@@ -127,6 +139,10 @@ export async function markClosed(paId: string) {
         await tx.importantDate.deleteMany({ where: { personId: pa.file.personId, kind: "homeiversary" } });
         await tx.importantDate.create({ data: { personId: pa.file.personId, kind: "homeiversary", date: closedOn } });
       }
+      // The contract's own open steps are done; the post-close template starts.
+      await tx.task.updateMany({ where: { paId: pa.id, completedAt: null, deletedAt: null }, data: { completedAt: new Date() } });
+      // Post-close tasks belong to the person, not the closed file, so they stay visible.
+      await runTrigger(tx, `closed:${pa.side}`, { personId: pa.file.personId, fileId: null, paId: null, start: isoFromDate(closedOn), dates: contractAnchors(pa), facts: factsOf(pa.answers) }, user.id);
     });
     await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Marked closed: ${pa.address} for ${pa.file.person.name}`);
     refresh(pa.file.personId);
@@ -139,7 +155,11 @@ export async function fellThrough(paId: string) {
     const pa = await db.purchaseAgreement.findFirst({ where: { id: id.parse(paId), deletedAt: null, state: "active" }, include: { file: { include: { person: { select: { name: true } } } } } });
     if (!pa) throw new UserError("That contract is no longer active.");
     // The file goes back to the status it had before the contract (it never changed).
-    await db.purchaseAgreement.update({ where: { id: pa.id }, data: { state: "fell_through", endedOn: todayCentral() } });
+    await db.$transaction([
+      db.purchaseAgreement.update({ where: { id: pa.id }, data: { state: "fell_through", endedOn: todayCentral() } }),
+      // Its open checklist steps no longer apply.
+      db.task.updateMany({ where: { paId: pa.id, completedAt: null, deletedAt: null }, data: { deletedAt: new Date() } }),
+    ]);
     await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Fell through: ${pa.address} for ${pa.file.person.name}`);
     refresh(pa.file.personId);
   });

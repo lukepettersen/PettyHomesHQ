@@ -8,6 +8,7 @@ import { logActivity } from "@/server/activity";
 import { hasPermission } from "@/server/permissions";
 import { cleanAnswers, groupsFor, type FileKind } from "@/lib/files";
 import { isoFromDate, todayCentral } from "@/lib/normalize";
+import { factsOf, moveFile, runTrigger } from "@/server/automation";
 
 const id = z.string().trim().min(1).max(40);
 const kindSchema = z.enum(["buyer", "listing"]);
@@ -51,11 +52,12 @@ export async function startFile(input: z.input<typeof startSchema>) {
       // Starting a file tags the person Buyer or Seller (closing removes it, SPEC.md §8).
       const tag = await tx.tag.upsert({ where: { name: tagName }, update: {}, create: { name: tagName } });
       await tx.personTag.upsert({ where: { personId_tagId: { personId: v.personId, tagId: tag.id } }, update: {}, create: { personId: v.personId, tagId: tag.id } });
-      return f;
+      const n = await runTrigger(tx, `status:${status.id}`, { personId: v.personId, fileId: f.id, start: isoFromDate(todayCentral()), facts: factsOf(c.info) }, user.id);
+      return { ...f, n };
     });
-    await logActivity(user.id, "create", "clientFile", file.id, `Started a ${v.kind} for ${person.name} at ${status.name}`);
+    await logActivity(user.id, "create", "clientFile", file.id, `Started a ${v.kind} for ${person.name} at ${status.name}${file.n ? ` (${file.n} tasks)` : ""}`);
     refresh(v.personId);
-    return { id: file.id };
+    return { id: file.id, tasks: file.n };
   });
 }
 
@@ -89,6 +91,7 @@ export async function updateFile(input: z.input<typeof editSchema>) {
         const data = { ...(shown.has("commission") ? { commission: c.commission.commission } : {}), ...(shown.has("bac") ? { bac: c.commission.bac } : {}) };
         await tx.fileCommission.upsert({ where: { fileId: f.id }, update: data, create: { fileId: f.id, ...data } });
       }
+      if (status.id !== f.statusId) await runTrigger(tx, `status:${status.id}`, { personId: f.personId, fileId: f.id, start: isoFromDate(todayCentral()), facts: factsOf(info) }, user.id);
     });
     await logActivity(user.id, "update", "clientFile", f.id, `Updated ${f.person.name}'s ${kind}${status.id !== f.statusId ? ` (status → ${status.name})` : ""}`);
     refresh(f.personId);
@@ -102,12 +105,10 @@ export async function setFileStatus(input: { id: string; statusId: string }) {
     if (!f) throw new UserError("That file was closed or deleted.");
     const { status } = await statusIn(f.kind as FileKind, id.parse(input.statusId));
     if (status.id === f.statusId) return { name: status.name };
-    const info = { ...((f.info && typeof f.info === "object" ? f.info : {}) as Record<string, string>) };
-    if (f.kind === "listing" && status.name === "Active" && !info.active) info.active = isoFromDate(todayCentral());
-    await db.clientFile.update({ where: { id: f.id }, data: { statusId: status.id, statusSince: new Date(), info } });
-    await logActivity(user.id, "update", "clientFile", f.id, `Moved ${f.person.name}'s ${f.kind} from ${f.status?.name ?? "no status"} to ${status.name}`);
+    const n = await moveFile(f.id, status.id, user.id);
+    await logActivity(user.id, "update", "clientFile", f.id, `Moved ${f.person.name}'s ${f.kind} from ${f.status?.name ?? "no status"} to ${status.name}${n ? ` (${n} tasks)` : ""}`);
     refresh(f.personId);
-    return { name: status.name };
+    return { name: status.name, tasks: n };
   });
 }
 
@@ -125,6 +126,7 @@ const UNTIL = ["inspection", "hoaRescission", "writtenStatement", "closing"] as 
 const stagesSchema = z.object({
   kind: z.enum(["buyer", "listing", "uc"]),
   rows: z.array(z.object({ id: id.nullable(), name: z.string().trim().min(1, "Stages need a name").max(60), untilDate: z.enum(UNTIL).nullable() })).min(1, "Keep at least one stage").max(20),
+  force: z.boolean().optional(),
 });
 
 export async function saveStages(input: z.input<typeof stagesSchema>) {
@@ -139,9 +141,16 @@ export async function saveStages(input: z.input<typeof stagesSchema>) {
       const n = gone._count.files;
       if (n) throw new UserError(`${n} client${n === 1 ? " is" : "s are"} in "${gone.name}". Move them first.`);
     }
+    // Warn first when a deleted stage starts a template (SPEC.md §17); saving again detaches it.
+    const goneIds = existing.filter((e) => !keep.has(e.id)).map((e) => e.id);
+    const attached = goneIds.length ? await db.taskTemplate.findMany({ where: { trigger: { in: goneIds.map((g) => `status:${g}`) } } }) : [];
+    if (attached.length && !v.force) {
+      return { warning: `${attached.map((t) => `"${t.name}"`).join(", ")} start${attached.length === 1 ? "s" : ""} at a stage you're deleting. Save again to delete the stage; the template${attached.length === 1 ? "" : "s"} will then only apply by hand.` };
+    }
     await db.$transaction(async (tx) => {
       const removed = existing.filter((e) => !keep.has(e.id)).map((e) => e.id);
       if (removed.length) {
+        await tx.taskTemplate.updateMany({ where: { trigger: { in: removed.map((g) => `status:${g}`) } }, data: { trigger: null } });
         await tx.clientFile.updateMany({ where: { statusId: { in: removed } }, data: { statusId: null } }); // closed/trashed files keep working
         await tx.pipelineStatus.deleteMany({ where: { id: { in: removed } } });
       }
@@ -154,6 +163,7 @@ export async function saveStages(input: z.input<typeof stagesSchema>) {
     });
     const label = { buyer: "Buyer Pipeline", listing: "Seller Pipeline", uc: "Under Contract/Pending Pipeline" }[v.kind];
     await logActivity(user.id, "update", "pipelineStatus", null, `Saved ${label}: ${v.rows.map((r) => r.name).join(", ")}`);
-    revalidatePath("/pipeline"); revalidatePath("/admin/statuses");
+    revalidatePath("/pipeline"); revalidatePath("/admin/statuses"); revalidatePath("/admin/templates");
+    return { warning: null as string | null };
   });
 }

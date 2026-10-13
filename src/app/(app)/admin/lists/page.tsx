@@ -1,9 +1,12 @@
+import { adminGate } from "../gate";
 import { db } from "@/server/db";
 import { ListsClient } from "./ListsClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
+  const denied = await adminGate();
+  if (denied) return denied;
   const [stages, sources, follow, stageCounts, sourceCounts] = await Promise.all([
     db.stage.findMany({ orderBy: { position: "asc" } }),
     db.source.findMany({ orderBy: { position: "asc" } }),
