@@ -97,6 +97,8 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 - `src/app/(app)/` — signed-in pages: `people/` (list, `[id]` contact page, `actions.ts`), `admin/` (users, lists, tags, `actions.ts`)
 - Local testing: mint a session cookie with `next-auth/jwt` `encode()` using `NEXTAUTH_SECRET` (no Google needed)
 - `src/lib/mentions.ts`, `src/server/notifications.ts`, `src/components/Bell.tsx` — @mentions and the bell
+- `src/components/AlarmCenter.tsx` + `src/app/api/alarms/route.ts` — task alarms (pop-up and chime when a timed task comes due)
+- `src/components/AlarmCenter.tsx` + `src/app/api/alarms/route.ts` — task alarms (pop-up and chime when a timed task comes due)
 - `src/lib/files.ts` (questions per status, commission stripping via `toFileView`, tested), `src/server/files.ts`, actions in `src/app/(app)/pipeline/actions.ts`
 - `src/lib/pa.ts` (PA forms, Show only if, cleaning, key dates, UC column, `toPaView` commission stripping; tested), `src/server/pa.ts`, `src/app/(app)/pipeline/paActions.ts`
 - `src/lib/templates.ts` (steps, anchors, conditions, expand; tested), `src/server/automation.ts` (runTrigger, applyTemplate, redateContract, moveFile), `prisma/starterTemplates.ts`

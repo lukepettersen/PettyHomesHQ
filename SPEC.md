@@ -328,6 +328,12 @@ Principles:
 - **Important dates tasks** come from each person's birthdays and homeiversary and the rules
   in Admin → Date reminders (default: text happy birthday/homeiversary on the day to
   everyone; send card 7 days before to Past Clients). Shown up to 60 days ahead.
+- **Task alarms:** a task with a set time rings for the person it's assigned to when it comes
+  due: a pop-up over every page (Done · Snooze 5 min · Open contact · Dismiss), a chime that
+  repeats every 2 seconds, a flashing tab title, and a desktop notification once they click
+  "Turn on". A task that came due in the last 3 hours (computer asleep) still rings. HQ must
+  be open in a browser tab, and the browser only plays sound after one click on the page.
+  Moving the task to a new time rings again.
 
 ## 10. Appointments
 

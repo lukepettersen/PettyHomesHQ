@@ -3,6 +3,7 @@ import { db } from "@/server/db";
 import { hasPermission } from "@/server/permissions";
 import { loadBell } from "@/server/notifications";
 import { TopBar } from "@/components/TopBar";
+import { AlarmCenter } from "@/components/AlarmCenter";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <>
       <TopBar name={user.name} tools={tools.map((t) => ({ name: t.name, url: t.url }))} canEditTools={hasPermission(user.permissions, "manageUsers")} bell={bell} />
       {children}
+      <AlarmCenter />
     </>
   );
 }
