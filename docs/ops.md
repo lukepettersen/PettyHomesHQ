@@ -54,8 +54,7 @@ You need: your luke@pettyhomes.com Google account (Workspace admin) and your Git
 ### C. Check it works
 
 1. Open HQ's address → **Sign in with Google** → luke@pettyhomes.com → you see "Welcome, Luke".
-2. Alyssa signs in with assistant@pettyhomes.com → she sees "Commissions are hidden for your
-   role."
+2. Alyssa signs in with assistant@pettyhomes.com → she sees "Welcome, Alyssa".
 3. Try a personal Gmail account → it's refused with "That Google account isn't on the Petty
    Homes team."
 
