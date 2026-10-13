@@ -6,15 +6,15 @@ the source of truth for behavior. The approved screens are in `mockups/` (open
 
 ## Status
 
-Spec written, awaiting owner approval. **Do not write app code until the owner approves
-SPEC.md.** Build in the phases in SPEC.md §16, one pull request at a time.
+SPEC.md approved 2026-10-13. Build in the phases in SPEC.md §16, one pull request at a time.
+Current phase: **0** (scaffold, sign-in, CI, Railway, ops docs).
 
 ## Working with the owner
 
 - The owner (Luke) is not a developer. Explain choices in plain language, recommend one
   option, and keep summaries short.
 - Don't add features beyond SPEC.md without asking. If something is unclear, add it to
-  SPEC.md §17 Open questions and ask.
+  SPEC.md §18 Open questions and ask.
 - When behavior changes, update SPEC.md in the same pull request.
 - Never ask the owner to paste API keys, tokens or passwords into chat. They go in Railway
   environment variables; tell the owner exactly where to add them.
@@ -22,12 +22,12 @@ SPEC.md.** Build in the phases in SPEC.md §16, one pull request at a time.
 
 ## Stack
 
-- Next.js (App Router) + TypeScript (strict) + Tailwind.
-- PostgreSQL on Railway via Prisma. Migrations are versioned and **non-destructive**
+- Next.js 16 (App Router) + TypeScript (strict) + Tailwind 4. Auth.js (next-auth v4).
+- PostgreSQL on Railway via Prisma 7 (pg driver adapter, config in `prisma.config.ts`). Migrations are versioned and **non-destructive**
   (add columns/tables; backfill; never drop data without an explicit owner-approved plan).
 - Auth.js with Google; only `@pettyhomes.com` emails may sign in (check `hd` claim and the
   email domain server-side).
-- Worker service: pg-boss for queued and scheduled jobs (date-based task due dates,
+- Worker service (from Phase 1): pg-boss for queued and scheduled jobs (date-based task due dates,
   reminders, notification emails, nightly backups).
 - Files: private S3-compatible bucket; signed URLs that expire.
 - Tests: Vitest (unit/integration), Playwright (key flows).
@@ -74,7 +74,21 @@ SPEC.md.** Build in the phases in SPEC.md §16, one pull request at a time.
 
 ## Commands
 
-Filled in at scaffold (Phase 0): install, dev, test, lint, typecheck, migrate, seed.
+- `npm install` (runs `prisma generate`), `npm run dev`
+- `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`
+- `npm run db:migrate` (new migration), `npm run db:seed` (idempotent roles + team)
+- Production start: `prisma migrate deploy && prisma db seed && next start`
+- Release gate: `npm audit --omit=dev --audit-level=high`
+
+## Code map (Phase 0)
+
+- `src/server/auth.ts` — Auth.js options, `requireUser()`, `requirePermission()`
+- `src/server/access.ts` — who may sign in (unit tested)
+- `src/server/permissions.ts` — permission keys and default roles
+- `src/server/db.ts` — Prisma client (pg adapter); generated client in `src/generated/` (gitignored)
+- `src/proxy.ts` — redirects signed-out users to /login
+- `prisma/schema.prisma`, `prisma/migrations/`, `prisma/seed.ts`, `prisma.config.ts`
+- Owner setup and ops runbook: `docs/ops.md`
 
 ## Mockups
 

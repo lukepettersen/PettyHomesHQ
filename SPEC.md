@@ -1,6 +1,6 @@
 # PettyHomes HQ — Spec
 
-**Status:** draft for owner approval. No app code until this is approved.
+**Status:** approved by the owner 2026-10-13. Changes go through pull requests that update this file.
 **Source of truth for behavior.** The clickable mockup (`mockups/index.html`, published at
 https://claude.ai/artifact/Eo9TfrwXfjGPyfV1wTKq5J) shows the agreed screens; where the
 mockup and this file differ, this file wins. Background: `docs/fub-review.md`,
@@ -98,7 +98,7 @@ Principles:
   Mint Tulip `#aac1a1`, Burnt Charcoal `#383232`, Close to Coral `#cc7855`, Rabbit Gray
   `#bbbbb3`; Mukta Mahee font; P-house logo.
 - Desktop first; works in a phone browser. A phone-friendly contact page and Today view are
-  a Phase 1 item *(see Open questions)*.
+  a Phase 1 item *(decided, §17)*.
 
 ## 6. People
 
@@ -251,8 +251,8 @@ Principles:
   editor.
 - Seeded templates (from the FUB review, simplified): the five buyer status templates, five
   listing status templates, Buyer/Seller Under contract, Buyer/Seller Post-close, Phone call
-  booked. *(See Open questions for New lead follow-up, Open house follow-up, Past client
-  yearly check-in.)*
+  booked. New lead follow-up, Open house follow-up and Past client yearly check-in are kept
+  without triggers (§17).
 - Email/Text steps show **Draft email / Draft text**. In v1 this opens a pre-filled draft
   (merge fields from the person and contract) to review and send. Automatic sending is a
   later phase (§14).
@@ -306,7 +306,7 @@ Principles:
 - When Google is connected, appointments create Google Calendar events and invites; until
   then they're stored in HQ only.
 - *Later:* booking a call for someone who already has one upcoming becomes **Reschedule
-  call** *(see Open questions)*.
+  call** *(decided, §17)*.
 
 ## 11. Messages (texting) — built, off until Twilio is connected
 
@@ -389,23 +389,25 @@ merge. Each phase is usable on its own.
 
 | Phase | Scope | Done when |
 |---|---|---|
-| 0 | Repo scaffold, Railway project (app, worker, Postgres, bucket), Google sign-in, CI, backups, `docs/ops.md` | Owner and Alyssa can sign in; nobody else can |
-| 1 | People, smart lists, contact page, notes and @mentions (bell), Tasks (all of §9 except checklist steps), Admin (users/roles, stages, sources, tags, custom fields, date reminders, tools), search, trash, activity log, export, phone layout | Daily CRM use alongside FUB |
+| 0 | Repo scaffold, Railway project (app + Postgres), Google sign-in, CI, backups, `docs/ops.md` | Owner and Alyssa can sign in; nobody else can |
+| 1 | Worker service and file bucket, People, smart lists, contact page, notes and @mentions (bell), Tasks (all of §9 except checklist steps), Admin (users/roles, stages, sources, tags, custom fields, date reminders, tools), search, trash, activity log, export, phone layout | Daily CRM use alongside FUB |
 | 2 | Client files, statuses, PA forms + Admin editor, task templates and automations, Pipeline board + stage editing, appointments (HQ only), files, Important dates tasks, tag steps | Transactions run in HQ |
 | 3 | Google Calendar and Gmail (timeline, drafts with attachments, mention emails), Drive backup export | Email and calendar connected |
 | 4 | Messages + Twilio (built off; turned on when owner connects) | Texting live when ready |
 | 5 | FUB import, cut-over checklist, FUB cancelled | Fully moved |
 
-## 17. Open questions
+## 17. Decisions (owner approved 2026-10-13)
 
-1. **FUB agent database (8,000 imported agents):** import as Industry Partners or leave
-   behind?
-2. **Phone use:** how much is FUB used on a phone? Decides how much phone layout work goes
-   in Phase 1.
-3. **Reschedule call:** should booking a call for someone with one upcoming become
-   "Reschedule call" (moves the call, updates the invite, re-dates open tasks)?
-4. **Templates with no trigger** — New lead follow-up, Open house follow-up, Past client
-   yearly check-in: delete, give each a trigger (e.g. source = Open House), or keep for later?
-5. **Deleting a status** that a template is attached to: warn first?
-6. **Hold phone call** task should show the call time on the contact's Tasks card (mockup
-   shows date only).
+1. **FUB agent database (8,000 imported agents):** leave behind at import; can be imported
+   later.
+2. **Phone use:** contact page and Today get a phone-friendly layout in Phase 1.
+3. **Reschedule call:** booking a call for someone with one upcoming becomes "Reschedule
+   call" — moves the call, updates the invite, re-dates the open "Phone call booked" tasks.
+4. **Templates with no trigger** (New lead follow-up, Open house follow-up, Past client
+   yearly check-in): keep; deletable in Admin.
+5. **Deleting a status with a template attached:** warn first, naming the template.
+6. **Hold phone call** task shows the call time on the contact's Tasks card and Tasks page.
+
+## 18. Open questions
+
+None right now. New ones get added here.

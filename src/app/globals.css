@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+/* Petty Homes Visual Guidelines (SPEC.md §5) */
+@theme {
+  --color-moss: #727755;
+  --color-misty: #e2dbcf;
+  --color-mint: #aac1a1;
+  --color-charcoal: #383232;
+  --color-coral: #cc7855;
+  --color-rabbit: #bbbbb3;
+  --color-paper: #fbf6f2;
+  --color-sunken: #f2ece4;
+  --color-muted: #6f6863;
+  --color-accent: #5f6447;
+  --color-accent-soft: #e8ede2;
+  --color-bad: #ad3628;
+  --font-sans: "Mukta Mahee", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+html, body { background: var(--color-paper); color: var(--color-charcoal); }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }

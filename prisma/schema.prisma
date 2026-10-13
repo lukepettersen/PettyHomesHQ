@@ -1,0 +1,55 @@
+// PettyHomes HQ database. Phase 0: team members, roles and the activity log.
+// Migrations must be non-destructive (see CLAUDE.md).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  // Permission keys, see src/server/permissions.ts
+  permissions String[]
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id          String        @id @default(cuid())
+  email       String        @unique
+  name        String
+  isOwner     Boolean       @default(false)
+  status      UserStatus    @default(INVITED)
+  roleId      String
+  role        Role          @relation(fields: [roleId], references: [id])
+  lastLoginAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  activity    ActivityLog[]
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String // e.g. "sign_in", "create", "update", "delete"
+  entity    String // e.g. "user", "person"
+  entityId  String?
+  summary   String
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
