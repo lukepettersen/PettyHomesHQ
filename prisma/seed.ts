@@ -4,6 +4,7 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { DEFAULT_ROLES } from "../src/server/permissions";
+import { DEFAULT_FORMS } from "../src/lib/pa";
 
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
 
@@ -63,6 +64,9 @@ async function main() {
   if ((await db.pipelineStatus.count()) === 0) {
     for (const [kind, names] of STATUSES) await db.pipelineStatus.createMany({ data: names.map((name, position) => ({ kind, name, position })) });
     await db.pipelineStatus.createMany({ data: UC_COLUMNS.map(([name, untilDate], position) => ({ kind: "uc", name, untilDate, position })) });
+  }
+  for (const side of ["buyer", "seller"] as const) {
+    if (!(await db.paForm.findUnique({ where: { side } }))) await db.paForm.create({ data: { side, sections: DEFAULT_FORMS[side] } });
   }
   // Trash: anything deleted more than 30 days ago is removed for good.
   const cutoff = new Date(Date.now() - 30 * 86400000);

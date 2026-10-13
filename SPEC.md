@@ -236,6 +236,8 @@ Principles:
 - Commission shows as "2.7% · $8,424" (Admins only).
 - On the PA box: key-date tiles (Not set / + Add date, Met, Waived, Extended), facts line,
   people line, checklist, actions **Edit · Fell through · Mark closed**.
+  A key date that has passed counts as Met unless it was marked otherwise; moving a pending
+  date (Extend, or editing the PA) marks it Extended and shows the original date.
 - **Mark closed:** contract → Closed, file → Closed, person → Past Client; buyer side sets
   homeiversary to the close date; starts post-close template.
 - **Fell through:** contract ends; file returns to its pre-contract status.

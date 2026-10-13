@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PipelinePage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const [user, sp] = await Promise.all([requireUser(), searchParams]);
-  const [cards, statuses] = await Promise.all([loadPipeline(user), loadStatuses()]);
+  const [board, statuses] = await Promise.all([loadPipeline(user), loadStatuses()]);
   const tab = sp.tab === "sellers" || sp.tab === "uc" ? sp.tab : "buyers";
-  return <PipelineBoard cards={cards} statuses={statuses} today={isoFromDate(todayCentral())} initialTab={tab} canEditStages={hasPermission(user.permissions, "manageUsers")} />;
+  return <PipelineBoard cards={board.files} contracts={board.contracts} closed={board.closed} statuses={statuses} today={isoFromDate(todayCentral())} initialTab={tab} canEditStages={hasPermission(user.permissions, "manageUsers")} />;
 }

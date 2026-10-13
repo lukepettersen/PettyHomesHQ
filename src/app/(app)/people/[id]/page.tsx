@@ -6,6 +6,7 @@ import { hasPermission } from "@/server/permissions";
 import { loadOptions } from "@/server/people";
 import { loadPersonTasks } from "@/server/tasks";
 import { loadPersonFiles, loadStatuses } from "@/server/files";
+import { loadForm, loadPersonContracts } from "@/server/pa";
 import { daysAgo, isoFromDate } from "@/lib/normalize";
 import { InfoCard, DetailsCard, CustomFieldsCard, TagsCard, DatesCard, DeletePerson } from "./cards";
 import { Timeline } from "./Timeline";
@@ -21,7 +22,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
   const { id } = await params;
   const [backHref, backLabel] = BACK[(await searchParams).from ?? ""] ?? BACK.people;
   const user = await requireUser();
-  const [p, options, tasks, fields, files, statuses] = await Promise.all([
+  const [p, options, tasks, fields, files, statuses, contracts, buyerForm, sellerForm] = await Promise.all([
     db.person.findFirst({
       where: { id, deletedAt: null },
       include: {
@@ -36,6 +37,9 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
     db.customField.findMany({ orderBy: { position: "asc" } }),
     loadPersonFiles(id, user),
     loadStatuses(),
+    loadPersonContracts(id, user),
+    loadForm("buyer"),
+    loadForm("seller"),
   ]);
   const canSeeCommission = hasPermission(user.permissions, "seeCommissions");
   const fileStatuses = { buyer: statuses.buyer, listing: statuses.listing };
@@ -66,12 +70,12 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
 
         <section className="order-3 min-w-0 lg:order-2">
           <FileTabs personId={p.id} personName={p.name} files={files} statuses={fileStatuses} canSeeCommission={canSeeCommission}
-            canDelete={hasPermission(user.permissions, "deleteRecords")} timeline={<Timeline personId={p.id} team={tasks.team.map((m) => ({ id: m.id, name: m.name }))} entries={p.timeline.map((e) => ({ id: e.id, kind: e.kind, body: e.body, outcome: e.outcome, author: e.author?.name ?? null, at: e.createdAt.toISOString() }))} />} />
+            canDelete={hasPermission(user.permissions, "deleteRecords")} contracts={contracts} forms={{ buyer: buyerForm, seller: sellerForm }} today={tasks.today} timeline={<Timeline personId={p.id} team={tasks.team.map((m) => ({ id: m.id, name: m.name }))} entries={p.timeline.map((e) => ({ id: e.id, kind: e.kind, body: e.body, outcome: e.outcome, author: e.author?.name ?? null, at: e.createdAt.toISOString() }))} />} />
         </section>
 
         <aside className="order-2 flex min-w-0 flex-col gap-3 lg:sticky lg:top-3 lg:order-3">
           <TasksCard personId={p.id} personName={p.name} rows={tasks.rows} team={tasks.team} today={tasks.today} meId={user.id} />
-          <PipelineCard personId={p.id} personName={p.name} files={files} statuses={fileStatuses} canSeeCommission={canSeeCommission} />
+          <PipelineCard personId={p.id} personName={p.name} files={files} contracts={contracts} statuses={fileStatuses} canSeeCommission={canSeeCommission} />
         </aside>
       </div>
     </div>

@@ -6,9 +6,10 @@ import { fileLine, kMoney, type FileKind, type FileView } from "@/lib/files";
 import type { StatusRow } from "@/server/files";
 import { FileForm } from "../../pipeline/FileForm";
 import { SideChip } from "./FileTabs";
+import type { PaView } from "@/lib/pa";
 
 /** Contact page → Pipeline: this person's buyer and listing files, + Add buyer / + Add seller. */
-export function PipelineCard({ personId, personName, files, statuses, canSeeCommission }: { personId: string; personName: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean }) {
+export function PipelineCard({ personId, personName, files, contracts, statuses, canSeeCommission }: { personId: string; personName: string; files: FileView[]; contracts: PaView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean }) {
   const router = useRouter();
   const [adding, setAdding] = useState<FileKind | null>(null);
   const [msg, setMsg] = useState("");
@@ -19,11 +20,22 @@ export function PipelineCard({ personId, personName, files, statuses, canSeeComm
         {files.map((f) => (
           <li key={f.id} className="flex items-start justify-between gap-2 border-t border-misty/60 py-1.5 text-sm first:border-0">
             <span className="min-w-0"><SideChip kind={f.kind} /> <span className={f.closedAt ? "muted" : ""}>{f.kind === "buyer" ? fileLine(f) : (f.address ?? "Listing").split(",")[0]}</span>
-              <span className="block text-xs muted">{f.status}</span></span>
+              <span className="block text-xs muted">{contracts.some((c) => c.fileId === f.id && c.state === "active") ? "Under contract" : f.status}</span></span>
             {f.price ? <span className="text-xs muted">{kMoney(f.price)}</span> : null}
           </li>
         ))}
       </ul>
+      {contracts.length > 0 && (
+        <ul className="flex flex-col">
+          {contracts.map((c) => (
+            <li key={c.id} className="flex items-start justify-between gap-2 border-t border-misty/60 py-1.5 text-sm">
+              <span className="min-w-0"><SideChip kind="Contract" /> {c.address.split(",")[0]}
+                <span className="block text-xs muted">{c.state === "active" ? "Under contract" : c.state === "closed" ? `Closed${c.endedOn ? ` ${c.endedOn.slice(5).replace("-", "/")}` : ""}` : "Fell through"}</span></span>
+              <span className="text-xs muted">{kMoney(c.price)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       {files.length === 0 && <p className="mt-1 text-sm muted">Not buying or selling yet.</p>}
       <div className="mt-2 flex flex-wrap gap-2">
         <button type="button" className="btn" onClick={() => setAdding("buyer")}>+ Add buyer</button>

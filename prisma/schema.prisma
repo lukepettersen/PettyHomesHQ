@@ -336,6 +336,7 @@ model ClientFile {
   updatedAt   DateTime        @updatedAt
   deletedAt   DateTime?
   commission  FileCommission?
+  contracts   PurchaseAgreement[]
 
   @@index([personId])
   @@index([kind, closedAt])
@@ -347,4 +348,48 @@ model FileCommission {
   file       ClientFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
   commission String     @default("")
   bac        String     @default("")
+}
+
+// Purchase agreement form definitions, editable in Admin (one per side). Sections JSON: see src/lib/pa.ts.
+model PaForm {
+  side      String   @id // buyer | seller
+  sections  Json
+  updatedAt DateTime @updatedAt
+}
+
+// A contract under a buyer or listing file (SPEC.md §7.4). Key dates are typed date columns.
+model PurchaseAgreement {
+  id                 String         @id @default(cuid())
+  fileId             String
+  file               ClientFile     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  side               String // buyer | seller
+  state              String         @default("active") // active | closed | fell_through
+  address            String
+  price              Int
+  answers            Json           @default("{}") // other form answers, validated against PaForm
+  finalAcceptance    DateTime?      @db.Date
+  inspection         DateTime?      @db.Date
+  writtenStatement   DateTime?      @db.Date
+  writtenStatementNA Boolean        @default(false)
+  hoaRescission      DateTime?      @db.Date
+  closing            DateTime?      @db.Date
+  dateStatus         Json           @default("{}") // { inspection: "met" | "waived" | "extended" | "pending" }
+  originalDates      Json           @default("{}") // date before an extension
+  endedOn            DateTime?      @db.Date // closed or fell through
+  createdById        String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  deletedAt          DateTime?
+  commission         PaCommission?
+
+  @@index([fileId])
+  @@index([state])
+}
+
+// Commission % and BAC for a contract, only read for users with "See commissions".
+model PaCommission {
+  paId       String            @id
+  pa         PurchaseAgreement @relation(fields: [paId], references: [id], onDelete: Cascade)
+  commission String            @default("")
+  bac        String            @default("")
 }
