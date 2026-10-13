@@ -188,8 +188,8 @@ Principles:
 - Seller (listing): Consult scheduled → Consult complete → Listing signed / Prep → Coming
   soon → Active.
 - **Under Contract/Pending** columns (editable, each held until a contract date is met):
-  Inspection (until Inspection deadline) → HOA review (until HOA doc rescission) →
-  Financing (until Written Statement) → Closing (until Closing). A contract sits in the
+  **Inspection** (until Inspection deadline) → **Pending** (until Closing), then the
+  automatic **Closed in {year}** column (owner's choice, 2026-10-14). A contract sits in the
   first column whose date is still open; with nothing open it sits in the last column.
 
 ### 7.3 Pipeline page (read-only board)

@@ -29,7 +29,7 @@ const STATUSES: [string, string[]][] = [
   ["buyer", ["Consult scheduled", "Consult complete", "Rep signed", "Showing homes", "Submitting offers"]],
   ["listing", ["Consult scheduled", "Consult complete", "Listing signed / Prep", "Coming soon", "Active"]],
 ];
-const UC_COLUMNS: [string, string][] = [["Inspection", "inspection"], ["HOA review", "hoaRescission"], ["Financing", "writtenStatement"], ["Closing", "closing"]];
+const UC_COLUMNS: [string, string][] = [["Inspection", "inspection"], ["Pending", "closing"]];
 type F = { field: string; op: string; value: string };
 const f = (field: string, op: string, value: string): F => ({ field, op, value });
 const COLLECTIONS: [string, [string, F[]][]][] = [
