@@ -1,5 +1,7 @@
 # PettyHomes HQ — Planning Notes
 
+> **Superseded by SPEC.md** (2026-10-13). Kept for history; SPEC.md and CLAUDE.md are current.
+
 Status: **planning only — no app code yet.** Detail behind these decisions is in
 `docs/fub-review.md`. Where the two differ, the latest owner decision is recorded here.
 
