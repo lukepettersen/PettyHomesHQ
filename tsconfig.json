@@ -37,6 +37,8 @@
   ],
   "exclude": [
     "node_modules",
-    "mockups"
+    "mockups",
+    "vitest.config.ts",
+    "**/*.test.ts"
   ]
 }
