@@ -92,6 +92,13 @@ Phase 0: ask for a change (Admin → Users & roles arrives in Phase 1). Only peo
 list with an @pettyhomes.com Google account can sign in. Removing someone (status
 **Disabled**) signs them out on their next page load.
 
+### Connect another platform (Admin → Integrations)
+Admin → Integrations lists each platform (Google, Twilio texting, Follow Up Boss, file storage),
+whether it's connected, and the exact Railway variable names it needs. To connect one: Railway →
+HQ app service → **Variables** → **New Variable**, paste the name and value, save. Railway
+restarts HQ and the page shows **Connected**. To disconnect, delete the variables. Keys are never
+shown in HQ or stored in its database. Texting also has an on/off switch on that page.
+
 ### Rotate a secret
 Create the new value (Google: Credentials → the HQ client → reset secret), update the
 Railway variable, Railway redeploys. Changing `NEXTAUTH_SECRET` signs everyone out.

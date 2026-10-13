@@ -7,7 +7,7 @@ const SECTIONS: [string, [string, string | null][]][] = [
   ["Team", [["Users & roles", "/admin/users"], ["Trash", "/admin/trash"]]],
   ["People", [["Stages, sources & follow-up", "/admin/lists"], ["Tags", "/admin/tags"], ["Date reminders", "/admin/reminders"], ["Custom fields", "/admin/fields"]]],
   ["Deals", [["Client statuses", "/admin/statuses"], ["Purchase agreement forms", "/admin/forms"], ["Task templates", null]]],
-  ["Connections", [["Tools menu", "/admin/tools"], ["Integrations", null]]],
+  ["Connections", [["Tools menu", "/admin/tools"], ["Integrations", "/admin/integrations"]]],
 ];
 
 export function AdminNav() {

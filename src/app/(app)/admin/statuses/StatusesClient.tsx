@@ -14,7 +14,7 @@ export function StatusesClient({ title, kind, rows, counts }: { title: string; k
     <section className="card mb-4">
       <div className="border-b border-misty px-4 py-3">
         <h2 className="font-bold">{title}</h2>
-        {kind === "uc" && <p className="text-sm muted">A contract sits in the first column whose date is still open; with nothing open it sits in the last column.</p>}
+        {kind === "uc" && <p className="text-sm muted">Each column holds a contract <b>until</b> its date is met or waived, then the contract moves to the next column. A contract skips a column whose date doesn&apos;t apply (no HOA, or Written Statement marked N/A). When every date is done it waits in the last column until it&apos;s marked closed.</p>}
       </div>
       <ul>
         {t.rows.map((r, i) => {
