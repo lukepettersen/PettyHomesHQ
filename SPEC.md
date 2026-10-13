@@ -396,8 +396,8 @@ merge. Each phase is usable on its own.
 | Phase | Scope | Done when |
 |---|---|---|
 | 0 | Repo scaffold, Railway project (app + Postgres), Google sign-in, CI, backups, `docs/ops.md` | Owner and Alyssa can sign in; nobody else can |
-| 1 | Worker service and file bucket, People, smart lists, contact page, notes and @mentions (bell), Tasks (all of §9 except checklist steps), Admin (users/roles, stages, sources, tags, custom fields, date reminders, tools), search, trash, activity log, export, phone layout | Daily CRM use alongside FUB |
-| 2 | Client files, statuses, PA forms + Admin editor, task templates and automations, Pipeline board + stage editing, appointments (HQ only), files, Important dates tasks, tag steps | Transactions run in HQ |
+| 1 | People, smart lists, contact page, notes and @mentions (bell), Tasks (all of §9 except checklist steps), Admin (users/roles, stages, sources, tags, custom fields, date reminders, tools), search, trash, activity log, export, phone layout | Daily CRM use alongside FUB |
+| 2 | Worker service and file bucket, client files, statuses, PA forms + Admin editor, task templates and automations, Pipeline board + stage editing, appointments (HQ only), files, Important dates tasks, tag steps | Transactions run in HQ |
 | 3 | Google Calendar and Gmail (timeline, drafts with attachments, mention emails), Drive backup export | Email and calendar connected |
 | 4 | Messages + Twilio (built off; turned on when owner connects) | Texting live when ready |
 | 5 | FUB import, cut-over checklist, FUB cancelled | Fully moved |
@@ -413,6 +413,9 @@ merge. Each phase is usable on its own.
    yearly check-in): keep; deletable in Admin.
 5. **Deleting a status with a template attached:** warn first, naming the template.
 6. **Hold phone call** task shows the call time on the contact's Tasks card and Tasks page.
+7. **Worker service and file bucket** move from Phase 1 to the start of Phase 2, when files
+   and automations need them (owner approved 2026-10-13). Until then Trash is cleaned up on
+   app start and when Trash is opened.
 
 ## 18. Open questions
 

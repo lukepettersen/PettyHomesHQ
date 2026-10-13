@@ -7,7 +7,7 @@ the source of truth for behavior. The approved screens are in `mockups/` (open
 ## Status
 
 SPEC.md approved 2026-10-13. Build in the phases in SPEC.md §16, one pull request at a time.
-Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact page cards + timeline, Admin users/roles, stages/sources/follow-up, tags); piece 2 (smart list editing, bulk actions, search, Trash, CSV export); piece 3 (Tasks page, quick add, contact Tasks card, Create task pop-up); piece 4 (@mentions + bell, Date reminders, Tools menu, custom fields, phone layout). Still open in Phase 1: worker service (pg-boss) and file bucket.
+Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact page cards + timeline, Admin users/roles, stages/sources/follow-up, tags); piece 2 (smart list editing, bulk actions, search, Trash, CSV export); piece 3 (Tasks page, quick add, contact Tasks card, Create task pop-up); piece 4 (@mentions + bell, Date reminders, Tools menu, custom fields, phone layout). Phase 1 is complete; next is Phase 2, starting with the worker service (pg-boss) and file bucket (moved from Phase 1, SPEC.md §17).
 
 ## Working with the owner
 
@@ -27,7 +27,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
   (add columns/tables; backfill; never drop data without an explicit owner-approved plan).
 - Auth.js with Google; only `@pettyhomes.com` emails may sign in (check `hd` claim and the
   email domain server-side).
-- Worker service (from Phase 1): pg-boss for queued and scheduled jobs (date-based task due dates,
+- Worker service (from Phase 2): pg-boss for queued and scheduled jobs (date-based task due dates,
   reminders, notification emails, nightly backups).
 - Files: private S3-compatible bucket; signed URLs that expire.
 - Tests: Vitest (unit/integration), Playwright (key flows).
