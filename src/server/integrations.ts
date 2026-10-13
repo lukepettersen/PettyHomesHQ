@@ -53,7 +53,7 @@ const DEFS: Omit<Integration, "connected" | "missing" | "detail">[] = [
       { name: "S3_ACCESS_KEY_ID", help: "An access key limited to that bucket" },
       { name: "S3_SECRET_ACCESS_KEY", help: "The secret for that access key" },
     ],
-    note: "Set up together with the Files card; exact steps will be in docs/ops.md.",
+    note: "Recommended: Cloudflare R2 (create a private bucket and an API token for it, then add the five variables). Step-by-step in docs/ops.md.",
   },
 ];
 

@@ -16,11 +16,13 @@ export default async function Page() {
   const tasks = await db.task.findMany({ where: { deletedAt: { not: null }, OR: [{ personId: null }, { person: { deletedAt: null } }] }, orderBy: { deletedAt: "desc" }, include: { person: { select: { name: true } } } });
   const files = await db.clientFile.findMany({ where: { deletedAt: { not: null }, person: { deletedAt: null } }, orderBy: { deletedAt: "desc" }, include: { person: { select: { name: true } } } });
   const fileRows = files.map((f) => ({ id: f.id, name: `${f.person.name} · ${f.kind === "buyer" ? "Buyer" : "Listing"}`, detail: f.address ?? undefined, left: TRASH_DAYS - (daysAgo(f.deletedAt) ?? 0) }));
+  const documents = await db.document.findMany({ where: { deletedAt: { not: null }, person: { deletedAt: null } }, orderBy: { deletedAt: "desc" }, include: { person: { select: { name: true } } } });
+  const docRows = documents.map((d) => ({ id: d.id, name: d.name, detail: d.person.name, left: TRASH_DAYS - (daysAgo(d.deletedAt) ?? 0) }));
   const taskRows = tasks.map((t) => ({ id: t.id, name: t.title, detail: t.person?.name, left: TRASH_DAYS - (daysAgo(t.deletedAt) ?? 0) }));
   return (
     <>
       <h1 className="text-2xl font-extrabold">Trash</h1>
-      <p className="mb-4 mt-1 text-sm muted">Deleted people, files and tasks stay here for {TRASH_DAYS} days, then they&apos;re removed for good (a person&apos;s notes and tasks go with them).</p>
+      <p className="mb-4 mt-1 text-sm muted">Deleted people, buyer/listing files, documents and tasks stay here for {TRASH_DAYS} days, then they&apos;re removed for good (a person&apos;s notes and tasks go with them).</p>
       <h2 className="mb-2 font-bold">People</h2>
       <div className="card">
         {rows.length ? rows.map((r) => <TrashRow key={r.id} {...r} />) : <p className="p-6 text-center muted">No deleted people.</p>}
@@ -28,6 +30,10 @@ export default async function Page() {
       <h2 className="mt-6 mb-2 font-bold">Buyer and listing files</h2>
       <div className="card">
         {fileRows.length ? fileRows.map((r) => <TrashRow key={r.id} kind="file" {...r} />) : <p className="p-6 text-center muted">No deleted files.</p>}
+      </div>
+      <h2 className="mt-6 mb-2 font-bold">Documents</h2>
+      <div className="card">
+        {docRows.length ? docRows.map((r) => <TrashRow key={r.id} kind="document" {...r} />) : <p className="p-6 text-center muted">No deleted documents.</p>}
       </div>
       <h2 className="mt-6 mb-2 font-bold">Tasks</h2>
       <div className="card">

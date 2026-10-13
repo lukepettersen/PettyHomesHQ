@@ -92,7 +92,8 @@ async function main() {
   }
   // Trash: anything deleted more than 30 days ago is removed for good.
   const cutoff = new Date(Date.now() - 30 * 86400000);
-  const purged = await db.person.deleteMany({ where: { deletedAt: { lt: cutoff } } });
+  // People with stored files are purged by the app (it removes the files from the bucket first).
+  const purged = await db.person.deleteMany({ where: { deletedAt: { lt: cutoff }, documents: { none: {} } } });
   await db.task.deleteMany({ where: { deletedAt: { lt: cutoff } } });
   await db.clientFile.deleteMany({ where: { deletedAt: { lt: cutoff } } });
   console.log(`Seeded roles, team and default settings. Purged ${purged.count} from Trash.`);

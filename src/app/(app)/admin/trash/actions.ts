@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/server/db";
 import { guarded } from "@/server/safe";
 import { logActivity } from "@/server/activity";
+import { deleteDocumentForever } from "@/server/trash";
 
 export async function restorePerson(id: string) {
   return guarded("deleteRecords", async (user) => {
@@ -49,6 +50,22 @@ export async function deleteFileForever(id: string) {
   return guarded("deleteRecords", async (user) => {
     const f = await db.clientFile.delete({ where: { id, deletedAt: { not: null } }, include: { person: { select: { name: true } } } });
     await logActivity(user.id, "delete", "clientFile", id, `Permanently deleted ${f.person.name}'s ${f.kind}`);
+    revalidatePath("/admin/trash");
+  });
+}
+
+export async function restoreDocument(id: string) {
+  return guarded("deleteRecords", async (user) => {
+    const d = await db.document.update({ where: { id, deletedAt: { not: null } }, data: { deletedAt: null } });
+    await logActivity(user.id, "restore", "document", id, `Restored "${d.name}" from Trash`);
+    revalidatePath("/admin/trash"); revalidatePath(`/people/${d.personId}`);
+  });
+}
+
+export async function deleteDocumentForeverAction(id: string) {
+  return guarded("deleteRecords", async (user) => {
+    const d = await deleteDocumentForever(id);
+    if (d) await logActivity(user.id, "delete", "document", id, `Permanently deleted "${d.name}"`);
     revalidatePath("/admin/trash");
   });
 }

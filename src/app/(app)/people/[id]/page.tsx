@@ -17,6 +17,8 @@ import { TasksCard } from "./TasksCard";
 import { FileTabs } from "./FileTabs";
 import { PipelineCard } from "./PipelineCard";
 import { AppointmentsCard } from "./AppointmentsCard";
+import { FilesCard } from "./FilesCard";
+import { storageConnected } from "@/server/storage";
 
 const BACK: Record<string, [string, string]> = { tasks: ["/tasks", "Tasks"], people: ["/people", "People"], pipeline: ["/pipeline", "Pipeline"] };
 
@@ -53,6 +55,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
   const [appts, buyerFileForm, listingFileForm, taskLists] = await Promise.all([loadPersonAppointments(id, p.name), loadFileForm("buyer"), loadFileForm("listing"),
     db.taskList.findMany({ where: { builtin: null }, orderBy: { position: "asc" } })]);
   const fileForms = { buyer: buyerFileForm, listing: listingFileForm };
+  const docs = await db.document.findMany({ where: { personId: id, deletedAt: null }, orderBy: { createdAt: "desc" } });
 
   const birthdays = p.dates.filter((d) => d.kind === "birthday").map((d) => ({ whose: d.whose, date: isoFromDate(d.date) }));
   const home = p.dates.find((d) => d.kind === "homeiversary");
@@ -89,6 +92,8 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
           <AppointmentsCard calendarConnected={!!(await calendarConnection())} fileForms={fileForms} personId={p.id} personName={p.name} appts={appts} today={tasks.today} phone={p.phones[0]?.number ?? ""} address={p.address ?? ""} hasEmail={p.emails.length > 0}
             team={tasks.team.map((m) => m.name)} callTemplates={templates.filter((t) => ["phonecall", "buyerconsult", "sellerconsult"].includes(t.trigger ?? "")).map((t) => ({ name: t.name, trigger: t.trigger!, steps: t.phases.reduce((n, ph) => n + ph.steps.length, 0) }))}
             activeKinds={files.filter((f) => !f.closedAt).map((f) => f.kind)} statuses={fileStatuses} canSeeCommission={canSeeCommission} />
+          <FilesCard personId={p.id} connected={storageConnected()} isAdmin={hasPermission(user.permissions, "manageUsers")}
+            docs={docs.map((d) => ({ id: d.id, name: d.name, size: d.size, date: d.createdAt.toISOString().slice(0, 10) }))} />
         </aside>
       </div>
     </div>

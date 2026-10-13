@@ -106,6 +106,22 @@ Credentials → the HQ OAuth client → Authorized redirect URIs → add
 Calendar** and approve. The connection is stored encrypted (key derived from `NEXTAUTH_SECRET`;
 changing that secret means connecting again). Disconnect from the same page.
 
+### File storage (Files card)
+HQ stores files in a private S3-compatible bucket. Recommended: **Cloudflare R2** (low cost, no
+download fees).
+1. dash.cloudflare.com → sign up / sign in → **R2 Object Storage** → **Create bucket** → name it
+   `pettyhomes-hq-files` (location: automatic). Leave public access **off**.
+2. R2 → **Manage R2 API tokens** → **Create API token** → permission **Object Read & Write**,
+   limited to that bucket → Create. Keep the page open.
+3. Railway → HQ app → **Variables** → add (values from that page; never send them in chat):
+   `S3_ENDPOINT` = the "S3 API" endpoint (`https://<account id>.r2.cloudflarestorage.com`),
+   `S3_REGION` = `auto`, `S3_BUCKET` = `pettyhomes-hq-files`,
+   `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` = the token's access key and secret.
+4. Admin → Integrations shows File storage **Connected**; the Files card on contacts turns on.
+Uploads are limited to 25 MB and program files are refused. Downloads go through HQ (sign-in
+required) and use links that expire after 5 minutes. Deleted files sit in Trash for 30 days,
+then are removed from the bucket.
+
 ### Rotate a secret
 Create the new value (Google: Credentials → the HQ client → reset secret), update the
 Railway variable, Railway redeploys. Changing `NEXTAUTH_SECRET` signs everyone out.

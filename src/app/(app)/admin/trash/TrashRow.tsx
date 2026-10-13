@@ -2,11 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { deleteFileForever, deleteForever, deleteTaskForever, restoreFile, restorePerson, restoreTask } from "./actions";
+import { deleteDocumentForeverAction, deleteFileForever, deleteForever, deleteTaskForever, restoreDocument, restoreFile, restorePerson, restoreTask } from "./actions";
 
-export function TrashRow({ id, name, left, kind = "person", detail }: { id: string; name: string; left: number; kind?: "person" | "task" | "file"; detail?: string }) {
-  const restore = kind === "task" ? restoreTask : kind === "file" ? restoreFile : restorePerson;
-  const purge = kind === "task" ? deleteTaskForever : kind === "file" ? deleteFileForever : deleteForever;
+export function TrashRow({ id, name, left, kind = "person", detail }: { id: string; name: string; left: number; kind?: "person" | "task" | "file" | "document"; detail?: string }) {
+  const restore = { task: restoreTask, file: restoreFile, document: restoreDocument, person: restorePerson }[kind];
+  const purge = { task: deleteTaskForever, file: deleteFileForever, document: deleteDocumentForeverAction, person: deleteForever }[kind];
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();

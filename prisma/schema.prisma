@@ -157,6 +157,7 @@ model Person {
   notifications Notification[]
   files         ClientFile[]
   appointments  Appointment[]
+  documents     Document[]
 
   @@index([deletedAt])
   @@index([name])
@@ -483,4 +484,20 @@ model MessageTemplate {
   updatedAt DateTime @updatedAt
 
   @@unique([kind, name])
+}
+
+// Files on a contact (SPEC.md §6.3 Files card), stored in the private bucket under `key`.
+model Document {
+  id           String    @id @default(cuid())
+  personId     String
+  person       Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  name         String
+  size         Int
+  contentType  String
+  key          String    @unique
+  uploadedById String?
+  createdAt    DateTime  @default(now())
+  deletedAt    DateTime?
+
+  @@index([personId])
 }
