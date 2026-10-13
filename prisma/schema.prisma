@@ -450,3 +450,21 @@ model FileFormDef {
   sections  Json
   updatedAt DateTime @updatedAt
 }
+
+// Google Calendar connection for the team (one, approved by an Admin). The refresh token is encrypted
+// with a key derived from NEXTAUTH_SECRET (src/server/crypto.ts); it is never shown or logged.
+model GoogleConnection {
+  id           String   @id @default("calendar")
+  userId       String
+  email        String
+  refreshToken String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Which Google Calendar event belongs to which HQ item ("appt:<id>", "pa:<id>:closing", …).
+model CalendarLink {
+  key       String   @id
+  eventId   String
+  updatedAt DateTime @updatedAt
+}
