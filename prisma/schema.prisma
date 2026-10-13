@@ -306,6 +306,7 @@ model Task {
   phase           String?
   anchor          String? // start | phoneCall | finalAcceptance | inspection | writtenStatement | hoaRescission | closing
   offsetDays      Int?
+  offsetMinutes   Int? // "N minutes before" the anchor's time (phone call); the due time moves with it
   advanceStatusId String? // move the file to this status when done
   completedAt DateTime?
   createdAt   DateTime  @default(now())

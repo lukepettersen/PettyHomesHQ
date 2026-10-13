@@ -2,7 +2,7 @@ import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
-import { CONTRACT_ANCHORS, expand, offsetOf, type Anchor, type Facts, type Phase, type Template } from "@/lib/templates";
+import { CONTRACT_ANCHORS, expand, offsetOf, timeBefore, type Anchor, type Facts, type Phase, type Template } from "@/lib/templates";
 
 // Task templates in action (SPEC.md §8): start checklists on triggers, re-date steps when contract
 // dates change, and apply "Add/remove tags" steps.
@@ -28,7 +28,8 @@ export async function runTrigger(tx: Tx, trigger: string, ctx: Ctx, userId: stri
 }
 
 /** Creates the template's tasks for a person (and file/contract). Tag steps run right away. */
-export async function applyTemplate(tx: Tx, t: Template, ctx: Ctx, userId: string, opts: { once?: boolean } = {}): Promise<number> {
+export async function applyTemplate(tx: Tx, t: Template, ctxIn: Ctx, userId: string, opts: { once?: boolean } = {}): Promise<number> {
+  let ctx = ctxIn;
   if (opts.once && ctx.fileId) {
     const already = await tx.task.findFirst({ where: { templateId: t.id, fileId: ctx.fileId, ...(ctx.paId ? { paId: ctx.paId } : {}) }, select: { id: true } });
     if (already) return 0;
@@ -38,6 +39,11 @@ export async function applyTemplate(tx: Tx, t: Template, ctx: Ctx, userId: strin
     tx.person.findUniqueOrThrow({ where: { id: ctx.personId }, select: { assignedToId: true } }),
   ]);
   const who = (first: string) => (first ? team.find((u) => u.name.split(/\s+/)[0].toLowerCase() === first.toLowerCase())?.id : undefined) ?? person.assignedToId ?? userId;
+  // Steps timed from the consult use the booked consultation (or the file's consult date).
+  if (t.phases.some((p) => p.steps.some((x) => x.anchor === "consult")) && ctx.dates?.consult === undefined) {
+    const c = await consultFor(tx, ctx.personId, ctx.fileId ?? null);
+    ctx = { ...ctx, dates: { ...ctx.dates, consult: c?.date ?? null }, times: { ...ctx.times, consult: c?.time ?? null } };
+  }
   const { tasks } = expand(t, { start: ctx.start, ...ctx.dates }, ctx.facts ?? {});
   let n = 0;
   for (const spec of tasks) {
@@ -47,7 +53,8 @@ export async function applyTemplate(tx: Tx, t: Template, ctx: Ctx, userId: strin
       data: {
         title: s.name, kind: s.type, personId: ctx.personId, fileId: ctx.fileId ?? null, paId: ctx.paId ?? null,
         templateId: t.id, stepId: s.id, phase: spec.phase, anchor: s.dir === "none" ? null : s.anchor, offsetDays: s.dir === "none" ? null : offsetOf(s),
-        dueDate: spec.due ? dateFromIso(spec.due) : null, dueTime: spec.due && offsetOf(s) === 0 ? ctx.times?.[s.anchor] ?? null : null, assigneeId: who(s.assignee), advanceStatusId: s.advance || null, createdById: userId,
+        dueDate: spec.due ? dateFromIso(spec.due) : null, dueTime: !spec.due ? null : s.dir === "minutesBefore" ? (ctx.times?.[s.anchor] ? timeBefore(ctx.times[s.anchor]!, s.minutes ?? 15) : null) : offsetOf(s) === 0 ? ctx.times?.[s.anchor] ?? null : null,
+        offsetMinutes: s.dir === "minutesBefore" ? s.minutes ?? 15 : null, assigneeId: who(s.assignee), advanceStatusId: s.advance || null, createdById: userId,
       },
     });
     n++;
@@ -106,3 +113,28 @@ export async function moveFile(fileId: string, statusId: string, userId: string)
   });
 }
 
+
+/**
+ * The consult a step can be timed from: the person's latest buyer/seller consultation appointment
+ * (matching the file's kind when there is one), else the file's "Consult date" answer.
+ */
+export async function consultFor(tx: Tx, personId: string, fileId: string | null): Promise<{ date: string; time: string | null } | null> {
+  const file = fileId ? await tx.clientFile.findUnique({ where: { id: fileId }, select: { kind: true, info: true } }) : null;
+  const types = file ? [file.kind === "listing" ? "seller" : "buyer"] : ["buyer", "seller"];
+  const appt = await tx.appointment.findFirst({ where: { personId, deletedAt: null, type: { in: types } }, orderBy: [{ date: "desc" }, { createdAt: "desc" }] });
+  if (appt) return { date: isoFromDate(appt.date), time: appt.start };
+  const info = (file?.info && typeof file.info === "object" ? file.info : {}) as Record<string, string>;
+  const v = info.consult;
+  return v ? { date: v.slice(0, 10), time: v.length > 10 ? v.slice(11, 16) : null } : null;
+}
+
+/** The consult was booked or moved: open steps timed from it get new due dates and times. */
+export async function redateConsult(tx: Tx, personId: string) {
+  const open = await tx.task.findMany({ where: { personId, anchor: "consult", completedAt: null, deletedAt: null } });
+  for (const t of open) {
+    const c = await consultFor(tx, personId, t.fileId);
+    const due = c ? new Date(dateFromIso(c.date).getTime() + (t.offsetDays ?? 0) * 86400000) : null;
+    const time = !c?.time ? null : t.offsetMinutes != null ? timeBefore(c.time, t.offsetMinutes) : (t.offsetDays ?? 0) === 0 ? c.time : t.dueTime;
+    await tx.task.update({ where: { id: t.id }, data: { dueDate: due, dueTime: time } });
+  }
+}

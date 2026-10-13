@@ -183,7 +183,7 @@ Principles:
     property details.
 - Status changes happen **only from the contact page** (status dropdown), or automatically
   when a checklist step marked "moves deal to" is completed.
-- **Buyer & listing forms are editable** in Admin → Buyer & listing forms *(owner request,
+- **Buyer and seller forms are editable** in Admin → Buyer and seller forms *(owner request,
   2026-10-15)*: sections and questions like the PA forms (type, hint, required, choices,
   Show only if), plus **Shown at** (every status or chosen statuses). The starting forms ask
   the questions listed above. Listing address can't be removed.
@@ -255,13 +255,16 @@ Principles:
 - A **template** = phases of steps. Each step: name, timing (days before/on/after an anchor
   date), assignee, type (Task, Call, Text, Email), linked text/email template, condition,
   and optional "moves deal to {status}".
-- **Anchor dates:** Start date, Phone call, Final Acceptance, Inspection, Written Statement,
-  HOA Rescission, Closing. Steps timed from a date that isn't set yet **wait for it**; when
+- **Anchor dates:** Start date, Phone call, Consult (the booked buyer/seller consultation, else
+  the file's consult date), Final Acceptance, Inspection, Written Statement, HOA Rescission,
+  Closing. Steps can also be due **5, 10, 15, 30 or 60 minutes before** the phone call or
+  consult; they move with it. Steps timed from a date that isn't set yet **wait for it**; when
   the date is set or changes, the step's due date updates.
 - **Conditions:** Always, HOA property, Built before 1978, New construction, FHA/VA loan,
   Condo/townhome. *(Later: Lead source is…, for the Stacie Rihl referral step.)*
 - **Triggers:** when a buyer/listing moves to a status; when a buyer-side or seller-side PA
-  is added; when a contract closes (each side); **when a phone call is booked**; or none.
+  is added; when a contract closes (each side); **when a phone call is booked**; **when a
+  buyer or seller consultation is booked**; or none.
 - Templates are listed, created, edited and deleted in Admin → Task templates, with a steps
   editor.
 - Seeded templates (from the FUB review, simplified): the five buyer status templates, five

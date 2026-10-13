@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { SaveBar } from "@/components/SaveBar";
 import type { StatusRow } from "@/server/files";
-import { ANCHORS, CONDS, expand, newId, STEP_TYPES, triggerLabel, type Phase, type Step, type Template } from "@/lib/templates";
+import { ANCHORS, CONDS, expand, MINUTE_OPTIONS, newId, STEP_TYPES, TIMED_ANCHORS, triggerLabel, type Phase, type Step, type Template } from "@/lib/templates";
 import { longIso } from "@/lib/tasks";
 import { deleteTemplate, duplicateTemplate, saveTemplate } from "./actions";
 
@@ -103,7 +103,11 @@ function Editor({ t: initial, statuses, team, tags, today, templates, messages, 
                 <option value="closed:buyer">When a buyer-side contract closes</option>
                 <option value="closed:seller">When a seller-side contract closes</option>
               </optgroup>
-              <optgroup label="Appointments"><option value="phonecall">When a phone call is booked</option></optgroup>
+              <optgroup label="Appointments">
+                <option value="phonecall">When a phone call is booked</option>
+                <option value="buyerconsult">When a buyer consultation is booked</option>
+                <option value="sellerconsult">When a seller consultation is booked</option>
+              </optgroup>
             </select>
           </label>
           <label className="label">Folder
@@ -163,12 +167,23 @@ function Editor({ t: initial, statuses, team, tags, today, templates, messages, 
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pl-14 max-sm:pl-0">
                 <span className="flex flex-wrap items-center gap-1 text-xs font-semibold muted">Due
-                  <input aria-label={`Days for ${s.name}`} type="number" min={0} max={730} className={`${field} w-16`} value={s.days} disabled={s.dir === "on" || s.dir === "none"} onChange={(e) => setStep(i, si, { days: Math.max(0, Number(e.target.value) || 0) })} />
-                  <select aria-label={`When ${s.name} is due`} className={field} value={s.dir} onChange={(e) => setStep(i, si, { dir: e.target.value as Step["dir"], days: e.target.value === "on" || e.target.value === "none" ? 0 : s.days || 1 })}>
-                    <option value="before">days before</option><option value="after">days after</option><option value="on">on the day of</option><option value="none">no due date</option>
+                  {s.dir === "minutesBefore" ? (
+                    <select aria-label={`Minutes for ${s.name}`} className={field} value={s.minutes ?? 15} onChange={(e) => setStep(i, si, { minutes: Number(e.target.value) })}>
+                      {MINUTE_OPTIONS.map((m) => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  ) : (
+                    <input aria-label={`Days for ${s.name}`} type="number" min={0} max={730} className={`${field} w-16`} value={s.days} disabled={s.dir === "on" || s.dir === "none"} onChange={(e) => setStep(i, si, { days: Math.max(0, Number(e.target.value) || 0) })} />
+                  )}
+                  <select aria-label={`When ${s.name} is due`} className={field} value={s.dir} onChange={(e) => {
+                    const dir = e.target.value as Step["dir"];
+                    // Minutes before only makes sense for the phone call, which has a time.
+                    setStep(i, si, dir === "minutesBefore" ? { dir, days: 0, minutes: s.minutes ?? 15, anchor: "phoneCall" } : { dir, minutes: undefined, days: dir === "on" || dir === "none" ? 0 : s.days || 1 });
+                  }}>
+                    <option value="before">days before</option><option value="after">days after</option><option value="on">on the day of</option>
+                    <option value="minutesBefore">minutes before</option><option value="none">no due date</option>
                   </select>
                   <select aria-label={`Date ${s.name} counts from`} className={field} value={s.anchor} disabled={s.dir === "none"} onChange={(e) => setStep(i, si, { anchor: e.target.value as Step["anchor"] })}>
-                    {ANCHORS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                    {ANCHORS.filter(([k]) => s.dir !== "minutesBefore" || TIMED_ANCHORS.includes(k)).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
                   </select>
                 </span>
                 <label className="flex items-center gap-1 text-xs font-semibold muted">Only when

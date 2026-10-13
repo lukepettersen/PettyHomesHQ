@@ -15,7 +15,7 @@ import { FileForm } from "../../pipeline/FileForm";
 
 type Props = {
   fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; appts: ApptView[]; today: string; phone: string; address: string; hasEmail: boolean; team: string[];
-  callTemplates: { name: string; steps: number }[]; calendarConnected: boolean; activeKinds: string[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean;
+  callTemplates: { name: string; steps: number; trigger: string }[]; calendarConnected: boolean; activeKinds: string[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean;
 };
 
 /** Contact page → Appointments: upcoming, then "Past appointments (N)"; + to book (SPEC.md §10). */
@@ -96,7 +96,8 @@ function BookModal({ type, personId, personName, today, phone, address, hasEmail
   const [thenFile, setThenFile] = useState(offerFile);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
-  const steps = callTemplates.reduce((n, t) => n + t.steps, 0);
+  const starts = callTemplates.filter((t) => t.trigger === (type === "call" ? "phonecall" : `${type}consult`));
+  const steps = starts.reduce((n, t) => n + t.steps, 0);
   const submit = (e: React.FormEvent) => {
     e.preventDefault(); setError("");
     start(async () => {
@@ -109,7 +110,8 @@ function BookModal({ type, personId, personName, today, phone, address, hasEmail
       const r = await bookAppointment({ personId, type, title: f.title, date: f.date, start: f.start || null, end: f.end || null, location: f.location, invitees: f.invitees });
       if (!r.ok) { setError(r.error); return; }
       const tasks = r.data!.tasks;
-      onBooked(type === "call" ? `Call booked.${tasks ? ` ${tasks} tasks started.` : ""}` : "Appointment booked.", thenFile && fileKind ? { kind: fileKind, consult: f.date } : undefined);
+      const started = tasks ? ` ${tasks} task${tasks === 1 ? "" : "s"} started.` : "";
+      onBooked(`${type === "call" ? "Call" : "Appointment"} booked.${started}`, thenFile && fileKind ? { kind: fileKind, consult: f.date } : undefined);
     });
   };
   return (
@@ -133,7 +135,8 @@ function BookModal({ type, personId, personName, today, phone, address, hasEmail
           ))}
         </fieldset>
         <p className="text-xs muted">{calendarConnected ? "Adds it to Google Calendar and sends the invites." : "Saved in HQ only. Connect Google Calendar in Admin → Integrations to add appointments to the calendar."}{calendarConnected && !hasEmail && ` There's no email on file for ${client}, so only the team gets the invite.`}</p>
-        {type === "call" && !edit && <p className="text-xs muted">{callTemplates.length ? `Starts ${callTemplates.map((t) => `"${t.name}"`).join(" + ")}: ${steps} tasks timed from today and the call.` : "No template starts when a call is booked. Add one in Admin → Task templates."}</p>}
+        {type === "call" && !edit && <p className="text-xs muted">{starts.length ? `Starts ${starts.map((t) => `"${t.name}"`).join(" + ")}: ${steps} tasks timed from today and the call.` : "No template starts when a call is booked. Add one in Admin → Task templates."}</p>}
+        {(type === "buyer" || type === "seller") && !edit && starts.length > 0 && <p className="text-xs muted">Starts {starts.map((t) => `"${t.name}"`).join(" + ")}: {steps} task{steps === 1 ? "" : "s"} timed from today and the consult.</p>}
         {offerFile && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={thenFile} onChange={(e) => setThenFile(e.target.checked)} /> Also start a {fileKind === "buyer" ? "buyer" : "listing"} at Consult scheduled (opens next)</label>}
         {error && <p role="alert" className="text-sm text-bad">{error}</p>}
         <div className="flex justify-end gap-2">

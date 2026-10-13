@@ -10,7 +10,7 @@ import { cleanFileAnswers, type FileKind } from "@/lib/files";
 import { loadFileForm } from "@/server/files";
 import { syncContract } from "@/server/google";
 import { isoFromDate, todayCentral } from "@/lib/normalize";
-import { factsOf, moveFile, runTrigger } from "@/server/automation";
+import { factsOf, moveFile, redateConsult, runTrigger } from "@/server/automation";
 
 const id = z.string().trim().min(1).max(40);
 const kindSchema = z.enum(["buyer", "listing"]);
@@ -93,6 +93,7 @@ export async function updateFile(input: z.input<typeof editSchema>) {
         const data = { ...(shown.has("commission") ? { commission: c.commission.commission } : {}), ...(shown.has("bac") ? { bac: c.commission.bac } : {}) };
         await tx.fileCommission.upsert({ where: { fileId: f.id }, update: data, create: { fileId: f.id, ...data } });
       }
+      await redateConsult(tx, f.personId); // the consult date may have changed
       if (status.id !== f.statusId) await runTrigger(tx, `status:${status.id}`, { personId: f.personId, fileId: f.id, start: isoFromDate(todayCentral()), facts: factsOf(info) }, user.id);
     });
     await logActivity(user.id, "update", "clientFile", f.id, `Updated ${f.person.name}'s ${kind}${status.id !== f.statusId ? ` (status → ${status.name})` : ""}`);
@@ -171,7 +172,7 @@ export async function saveStages(input: z.input<typeof stagesSchema>) {
   });
 }
 
-// ---------- Admin → Buyer & listing forms ----------
+// ---------- Admin → Buyer and seller forms ----------
 const fileFieldSchema = z.object({
   key: z.string().regex(/^[A-Za-z][\w]{0,40}$/), label: z.string().trim().max(80),
   type: z.enum(["text", "money", "number", "pct", "date", "date-na", "datetime", "yesno", "choice"]),

@@ -17,7 +17,7 @@ export function FileForm({ kind, personId, personName, fileId, statuses, statusI
   const [v, setV] = useState<Answers>({ ...(kind === "listing" ? { ptype: "Single family", hoa: "No", newc: "No" } : {}), ...answers });
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
-  // The questions for this status come from Admin → Buyer & listing forms.
+  // The questions for this status come from Admin → Buyer and seller forms.
   const groups = sectionsAt(form, status, v)
     .map((g) => ({ ...g, fields: g.fields.filter((q) => canSeeCommission || !["commission", "bac"].includes(q.key)) }))
     .filter((g) => g.fields.length);

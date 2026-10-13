@@ -5,10 +5,11 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
-import { runTrigger } from "@/server/automation";
+import { redateConsult, runTrigger } from "@/server/automation";
 import { syncAppointment } from "@/server/google";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
 import { formatTime, longIso } from "@/lib/tasks";
+import { timeBefore } from "@/lib/templates";
 
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Pick a time").nullable();
 const bookSchema = z.object({
@@ -36,6 +37,12 @@ export async function bookAppointment(input: z.input<typeof bookSchema>) {
         tasks = await runTrigger(tx, "phonecall", { personId: v.personId, start: isoFromDate(todayCentral()), dates: { phoneCall: v.date }, times: { phoneCall: v.start } }, user.id);
         await tx.timelineEntry.create({ data: { personId: v.personId, kind: "system", body: `Phone call booked for ${when}`, authorId: user.id } });
       }
+      if (v.type === "buyer" || v.type === "seller") {
+        // Templates that start when a consultation is booked; linked to their active file when there is one.
+        const file = await tx.clientFile.findFirst({ where: { personId: v.personId, kind: v.type === "buyer" ? "buyer" : "listing", deletedAt: null, closedAt: null }, orderBy: { createdAt: "desc" } });
+        tasks = await runTrigger(tx, `${v.type}consult`, { personId: v.personId, fileId: file?.id ?? null, start: isoFromDate(todayCentral()), dates: { consult: v.date }, times: { consult: v.start } }, user.id);
+        await redateConsult(tx, v.personId);
+      }
       return { id: a.id, tasks };
     });
     await logActivity(user.id, "create", "appointment", result.id, `Booked "${v.title}" for ${when}${result.tasks ? ` (${result.tasks} tasks)` : ""}`);
@@ -48,6 +55,7 @@ export async function bookAppointment(input: z.input<typeof bookSchema>) {
 export async function deleteAppointment(id: string) {
   return guarded(null, async (user) => {
     const a = await db.appointment.update({ where: { id: z.string().min(1).max(40).parse(id), deletedAt: null }, data: { deletedAt: new Date() } });
+    if (a.type === "buyer" || a.type === "seller") await redateConsult(db, a.personId);
     await logActivity(user.id, "delete", "appointment", a.id, `Deleted appointment "${a.title}"`);
     await syncAppointment(a.id);
     revalidatePath(`/people/${a.personId}`);
@@ -68,8 +76,9 @@ export async function updateAppointment(input: z.input<typeof editSchema>) {
     // A moved call re-dates the open steps timed from it.
     if (moved && a.type === "call") {
       const open = await db.task.findMany({ where: { personId: a.personId, anchor: "phoneCall", completedAt: null, deletedAt: null } });
-      for (const t of open) await db.task.update({ where: { id: t.id }, data: { dueDate: new Date(dateFromIso(v.date).getTime() + (t.offsetDays ?? 0) * 86400000), ...(t.offsetDays === 0 && t.dueTime ? { dueTime: v.start } : {}) } });
+      for (const t of open) await db.task.update({ where: { id: t.id }, data: { dueDate: new Date(dateFromIso(v.date).getTime() + (t.offsetDays ?? 0) * 86400000), ...(t.offsetMinutes != null ? { dueTime: v.start ? timeBefore(v.start, t.offsetMinutes) : null } : t.offsetDays === 0 && t.dueTime ? { dueTime: v.start } : {}) } });
     }
+    if (moved && (a.type === "buyer" || a.type === "seller")) await redateConsult(db, a.personId);
     await syncAppointment(a.id);
     await logActivity(user.id, "update", "appointment", a.id, `Updated appointment "${a.title}"${moved ? ` (now ${longIso(v.date)}${v.start ? ` ${formatTime(v.start)}` : ""})` : ""}`);
     revalidatePath(`/people/${a.personId}`); revalidatePath("/tasks");

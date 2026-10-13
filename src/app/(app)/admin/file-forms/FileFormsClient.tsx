@@ -13,7 +13,7 @@ export function FileFormsClient({ forms, statuses }: { forms: Record<FileKind, F
       <div role="tablist" aria-label="Form" className="mb-3 flex gap-1 border-b border-misty">
         {(["buyer", "listing"] as const).map((k) => (
           <button key={k} role="tab" type="button" aria-selected={kind === k} onClick={() => setKind(k)}
-            className={`-mb-px border-b-[3px] px-3 py-2 ${kind === k ? "border-coral font-semibold" : "border-transparent muted"}`}>{k === "buyer" ? "Buyer" : "Listing"}</button>
+            className={`-mb-px border-b-[3px] px-3 py-2 ${kind === k ? "border-coral font-semibold" : "border-transparent muted"}`}>{k === "buyer" ? "Buyer" : "Seller"}</button>
         ))}
       </div>
       <FormEditor key={kind} initial={forms[kind]} statuses={statuses[kind]} locked={FILE_LOCKED_KEYS[kind]} automation={FILE_AUTOMATION_KEYS}

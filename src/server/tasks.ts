@@ -59,7 +59,8 @@ function stepOf(t: DbTask): TaskRow["step"] {
   if (!t.templateId) return null;
   const source = t.pa ? (t.pa.side === "seller" ? "Seller contract" : "Buyer contract") : t.file ? (t.file.kind === "listing" ? "Listing checklist" : "Buyer checklist") : "Checklist";
   const off = t.offsetDays ?? 0;
-  const timing = t.anchor ? timingLabel({ anchor: t.anchor as Anchor, days: Math.abs(off), dir: off < 0 ? "before" : off > 0 ? "after" : "on" }) : null;
+  const timing = !t.anchor ? null : t.offsetMinutes != null ? timingLabel({ anchor: t.anchor as Anchor, days: 0, dir: "minutesBefore", minutes: t.offsetMinutes })
+    : timingLabel({ anchor: t.anchor as Anchor, days: Math.abs(off), dir: off < 0 ? "before" : off > 0 ? "after" : "on" });
   return { source, phase: t.phase, timing, locked: !!t.anchor && CONTRACT_ANCHORS.includes(t.anchor as Anchor) };
 }
 
