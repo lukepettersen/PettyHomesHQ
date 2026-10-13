@@ -283,6 +283,9 @@ Principles:
 - Task details: title, due date (locked for steps timed from a contract date), time, repeat,
   list, priority, assignee, linked person, checklist source and timing, subtasks, notes,
   delete. Save changes / Cancel.
+- Deleting a task (two-step) moves it to Trash; an Admin can restore it within 30 days.
+  Checking off a repeating task creates the next one; checked-off tasks stay visible (struck
+  through) until you switch lists, so a mis-click can be undone.
 - **Important dates tasks** come from each person's birthdays and homeiversary and the rules
   in Admin → Date reminders (default: text happy birthday/homeiversary on the day to
   everyone; send card 7 days before to Past Clients). Shown up to 60 days ahead.

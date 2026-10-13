@@ -7,7 +7,7 @@ the source of truth for behavior. The approved screens are in `mockups/` (open
 ## Status
 
 SPEC.md approved 2026-10-13. Build in the phases in SPEC.md §16, one pull request at a time.
-Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact page cards + timeline, Admin users/roles, stages/sources/follow-up, tags); piece 2 (smart list editing, bulk actions, search, Trash, CSV export). Next: piece 3 (Tasks), piece 4 (mentions/bell, date reminders, Tools, custom fields, phone layout).
+Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact page cards + timeline, Admin users/roles, stages/sources/follow-up, tags); piece 2 (smart list editing, bulk actions, search, Trash, CSV export); piece 3 (Tasks page, quick add, contact Tasks card, Create task pop-up). Next: piece 4 (mentions/bell, date reminders, Tools, custom fields, phone layout).
 
 ## Working with the owner
 
@@ -87,6 +87,8 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 - `src/server/permissions.ts` — permission keys and default roles
 - `src/server/db.ts` — Prisma client (pg adapter); generated client in `src/generated/` (gitignored)
 - `src/proxy.ts` — redirects signed-out users to /login
+- `src/lib/tasks.ts` — task rules: lists, quick-add parser, repeats, Important dates (unit tested)
+- `src/server/tasks.ts` — loads the Tasks board and a person's tasks; actions in `src/app/(app)/tasks/actions.ts`
 - `prisma/schema.prisma`, `prisma/migrations/`, `prisma/seed.ts`, `prisma.config.ts`
 - `src/server/safe.ts` — `guarded(permission, fn)` wraps every server action (session, permission, friendly errors)
 - `src/server/activity.ts` — activity log writer; `src/server/people.ts` — People queries

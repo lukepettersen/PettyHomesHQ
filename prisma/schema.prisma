@@ -266,6 +266,7 @@ model SmartList {
 model TaskList {
   id          String  @id @default(cuid())
   name        String  @unique
+  builtin     String? @unique // clients | touch | dates | recurring | misc (computed lists); null = a user list
   position    Int     @default(0)
   showOnToday Boolean @default(true)
   tasks       Task[]
@@ -275,7 +276,7 @@ model Task {
   id          String    @id @default(cuid())
   title       String
   notes       String    @default("")
-  kind        String    @default("task") // task | call | text | email | showing | closing | other
+  kind        String    @default("task") // task | followup | call | text | email | showing | closing | other
   dueDate     DateTime? @db.Date
   dueTime     String? // "14:00"
   repeat      String? // DAILY | WEEKLY | MONTHLY | YEARLY
@@ -289,6 +290,7 @@ model Task {
   assignee    User?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
   createdById String?
   createdBy   User?     @relation("TaskCreator", fields: [createdById], references: [id])
+  sourceKey   String?   @unique // "date:<importantDateId>:<reminderId>:<year>" for Important dates tasks
   completedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

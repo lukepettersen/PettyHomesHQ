@@ -1,0 +1,77 @@
+import { describe, expect, it } from "vitest";
+import { categoryOf, dueLabel, formatTime, importantDateTasks, nextDue, parseQuickAdd, parseTime, stripPersonWord } from "./tasks";
+
+const TODAY = "2026-10-13"; // a Tuesday
+
+describe("quick add", () => {
+  it("reads person, weekday and time", () => {
+    const p = parseQuickAdd("call lender re Ortiz Fri 9am", TODAY);
+    expect(p).toMatchObject({ due: "2026-10-16", time: "09:00", personWord: "Ortiz" });
+    expect(stripPersonWord(p.title, p.personWord!)).toBe("call lender");
+  });
+  it("reads repeats", () => {
+    expect(parseQuickAdd("rent check every month", TODAY)).toMatchObject({ title: "rent check", repeat: "MONTHLY" });
+    expect(parseQuickAdd("water plants daily", TODAY).repeat).toBe("DAILY");
+  });
+  it("reads list, priority and assignee", () => {
+    expect(parseQuickAdd("order signs #marketing !high @alyssa tomorrow", TODAY)).toMatchObject({ title: "order signs", list: "marketing", priority: 3, assignee: "alyssa", due: "2026-10-14" });
+  });
+  it("same weekday means next week; next week is +7", () => {
+    expect(parseQuickAdd("x tuesday", TODAY).due).toBe("2026-10-20");
+    expect(parseQuickAdd("x next week", TODAY).due).toBe("2026-10-20");
+  });
+  it("leaves plain words alone", () => {
+    expect(parseQuickAdd("renew license", TODAY)).toEqual({ title: "renew license" });
+  });
+});
+
+describe("dates and times", () => {
+  it("repeats to the next date, clamping month ends", () => {
+    expect(nextDue("2026-01-31", "MONTHLY")).toBe("2026-02-28");
+    expect(nextDue("2026-12-15", "MONTHLY")).toBe("2027-01-15");
+    expect(nextDue("2026-10-13", "WEEKLY")).toBe("2026-10-20");
+    expect(nextDue("2028-02-29", "YEARLY")).toBe("2029-02-28");
+  });
+  it("formats times and due labels", () => {
+    expect(parseTime("2:30 pm")).toBe("14:30");
+    expect(parseTime("12am")).toBe("00:00");
+    expect(parseTime("25")).toBeNull();
+    expect(formatTime("09:05")).toBe("9:05am");
+    expect(dueLabel("2026-10-13", "14:00", TODAY)).toBe("Today 2:00pm");
+    expect(dueLabel("2026-10-14", null, TODAY)).toBe("Tomorrow");
+    expect(dueLabel("2026-10-10", null, TODAY)).toBe("Oct 10");
+    expect(dueLabel("2026-10-16", null, TODAY)).toBe("Fri Oct 16");
+  });
+});
+
+describe("category", () => {
+  it("sorts each task into one list", () => {
+    expect(categoryOf({ sourceKey: "date:a:b:2026", personId: "p" })).toBe("dates");
+    expect(categoryOf({ repeat: "WEEKLY", personId: "p", listId: "l" })).toBe("recurring");
+    expect(categoryOf({ listId: "l", personId: "p" })).toBe("list:l");
+    expect(categoryOf({ personId: "p" })).toBe("clients");
+    expect(categoryOf({})).toBe("misc");
+  });
+});
+
+describe("important dates", () => {
+  const team = [{ id: "u1", name: "Luke Pettersen" }, { id: "u2", name: "Alyssa Chakiton" }];
+  const reminders = [
+    { id: "r1", dateKind: "birthday", title: "Text happy birthday", days: 0, direction: "on", assignee: "Luke", kind: "text", appliesTo: "Everyone" },
+    { id: "r2", dateKind: "birthday", title: "Send birthday card", days: 7, direction: "before", assignee: "Alyssa", kind: "task", appliesTo: "Past Client" },
+  ];
+  const base = { kind: "birthday", whose: "", personId: "p1", personName: "Sam & Lena Ortiz", assignedToId: null };
+  it("applies rules by stage within the window", () => {
+    const out = importantDateTasks([{ ...base, id: "d1", date: "1980-10-20", stage: "Past Client" }], reminders, team, TODAY);
+    expect(out.map((t) => [t.key, t.due, t.assigneeId])).toEqual([["date:d1:r1:2026", "2026-10-20", "u1"], ["date:d1:r2:2026", "2026-10-13", "u2"]]);
+    expect(out[0].title).toBe("Text happy birthday · Sam's birthday Oct 20");
+  });
+  it("skips rules for other stages and dates outside the window", () => {
+    expect(importantDateTasks([{ ...base, id: "d1", date: "1980-10-20", stage: "Lead" }], reminders, team, TODAY)).toHaveLength(1);
+    expect(importantDateTasks([{ ...base, id: "d2", date: "1980-06-01", stage: "Lead" }], reminders, team, TODAY)).toHaveLength(0);
+  });
+  it("wraps into next year", () => {
+    const out = importantDateTasks([{ ...base, id: "d3", date: "1990-01-05", whose: "Lena", stage: null }], reminders, team, "2026-12-20");
+    expect(out[0]).toMatchObject({ due: "2027-01-05", title: "Text happy birthday · Lena's birthday Jan 5" });
+  });
+});

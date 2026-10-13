@@ -4,16 +4,21 @@ import { db } from "@/server/db";
 import { requireUser } from "@/server/auth";
 import { hasPermission } from "@/server/permissions";
 import { loadOptions } from "@/server/people";
+import { loadPersonTasks } from "@/server/tasks";
 import { daysAgo, isoFromDate } from "@/lib/normalize";
 import { InfoCard, DetailsCard, TagsCard, DatesCard, DeletePerson } from "./cards";
 import { Timeline } from "./Timeline";
+import { TasksCard } from "./TasksCard";
+
+const BACK: Record<string, [string, string]> = { tasks: ["/tasks", "Tasks"], people: ["/people", "People"] };
 
 export const dynamic = "force-dynamic";
 
-export default async function ContactPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ContactPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ from?: string }> }) {
   const { id } = await params;
+  const [backHref, backLabel] = BACK[(await searchParams).from ?? ""] ?? BACK.people;
   const user = await requireUser();
-  const [p, options] = await Promise.all([
+  const [p, options, tasks] = await Promise.all([
     db.person.findFirst({
       where: { id, deletedAt: null },
       include: {
@@ -24,6 +29,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
       },
     }),
     loadOptions(),
+    loadPersonTasks(id),
   ]);
   if (!p) notFound();
 
@@ -32,7 +38,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="mx-auto max-w-[1500px] px-4 py-3">
-      <Link href="/people" className="link text-sm">← People</Link>
+      <Link href={backHref} className="link text-sm">← {backLabel}</Link>
       <div className="mt-2 grid grid-cols-1 items-start gap-3 lg:grid-cols-[290px_minmax(0,1fr)_300px]">
         <div className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-3">
           <InfoCard id={p.id} name={p.name} address={p.address ?? ""} lastContactDays={daysAgo(p.lastContactAt)}
@@ -50,7 +56,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
         </section>
 
         <aside className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-3">
-          <div className="card p-4"><h3 className="font-bold">Tasks</h3><p className="mt-1 text-sm muted">Tasks for this person arrive in the next update.</p></div>
+          <TasksCard personId={p.id} personName={p.name} rows={tasks.rows} team={tasks.team} today={tasks.today} meId={user.id} />
           <div className="card p-4"><h3 className="font-bold">Pipeline</h3><p className="mt-1 text-sm muted">Buyer and listing files arrive in Phase 2.</p></div>
         </aside>
       </div>

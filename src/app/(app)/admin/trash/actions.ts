@@ -20,3 +20,19 @@ export async function deleteForever(id: string) {
     revalidatePath("/admin/trash");
   });
 }
+
+export async function restoreTask(id: string) {
+  return guarded("deleteRecords", async (user) => {
+    const t = await db.task.update({ where: { id, deletedAt: { not: null } }, data: { deletedAt: null } });
+    await logActivity(user.id, "restore", "task", id, `Restored task "${t.title}" from Trash`);
+    revalidatePath("/admin/trash"); revalidatePath("/tasks");
+  });
+}
+
+export async function deleteTaskForever(id: string) {
+  return guarded("deleteRecords", async (user) => {
+    const t = await db.task.delete({ where: { id, deletedAt: { not: null } } });
+    await logActivity(user.id, "delete", "task", id, `Permanently deleted task "${t.title}"`);
+    revalidatePath("/admin/trash");
+  });
+}

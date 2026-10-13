@@ -21,6 +21,8 @@ const REMINDERS = [
   { dateKind: "homeiversary", title: "Text happy homeiversary", days: 0, direction: "on", assignee: "Luke", kind: "text", appliesTo: "Everyone" },
   { dateKind: "homeiversary", title: "Send homeiversary card", days: 7, direction: "before", assignee: "Alyssa", kind: "task", appliesTo: "Past Client" },
 ];
+// Built-in task lists (SPEC.md §9). Rows exist so they can be ordered with user lists and hidden from Today.
+const BUILTIN_LISTS: [string, string][] = [["clients", "Clients"], ["touch", "Due for a touch"], ["dates", "Important dates"], ["recurring", "Recurring"], ["misc", "Misc"]];
 type F = { field: string; op: string; value: string };
 const f = (field: string, op: string, value: string): F => ({ field, op, value });
 const COLLECTIONS: [string, [string, F[]][]][] = [
@@ -49,8 +51,14 @@ async function main() {
       await db.collection.create({ data: { name, position: ci, lists: { create: lists.map(([n, filters], position) => ({ name: n, position, filters })) } } });
     }
   }
+  for (const [i, [builtin, name]] of BUILTIN_LISTS.entries()) {
+    const exists = await db.taskList.findUnique({ where: { builtin } });
+    if (!exists) await db.taskList.create({ data: { builtin, name: (await db.taskList.findUnique({ where: { name } })) ? `${name} (built in)` : name, position: i } });
+  }
   // Trash: anything deleted more than 30 days ago is removed for good.
-  const purged = await db.person.deleteMany({ where: { deletedAt: { lt: new Date(Date.now() - 30 * 86400000) } } });
+  const cutoff = new Date(Date.now() - 30 * 86400000);
+  const purged = await db.person.deleteMany({ where: { deletedAt: { lt: cutoff } } });
+  await db.task.deleteMany({ where: { deletedAt: { lt: cutoff } } });
   console.log(`Seeded roles, team and default settings. Purged ${purged.count} from Trash.`);
 }
 
