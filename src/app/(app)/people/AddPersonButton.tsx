@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { createPerson } from "./actions";
 import { bookAppointment } from "./apptActions";
 import { addMinutes, defaultTitle } from "@/lib/appointments";
-import { HALF_HOURS } from "@/components/TimeSelect";
+import { TIMES } from "@/components/TimeSelect";
 import { formatTime as fmtTime } from "@/lib/tasks";
 import type { Options } from "@/server/people";
 import { Modal } from "@/components/Modal";
@@ -76,7 +76,7 @@ export function AddPersonButton({ options }: { options: Options }) {
             <fieldset className="grid grid-cols-2 gap-2">
               <legend className="mb-1 text-xs font-semibold muted">Phone call booked (optional)</legend>
               <label className="label">Call date<input className="input" type="date" name="callDate" /></label>
-              <label className="label">Call time<select className="input" name="callTime" defaultValue="12:00"><option value="">No time</option>{HALF_HOURS.map((t) => <option key={t} value={t}>{fmtTime(t)}</option>)}</select></label>
+              <label className="label">Call time<select className="input" name="callTime" defaultValue="12:00"><option value="">No time</option>{TIMES.map((t) => <option key={t} value={t}>{fmtTime(t)}</option>)}</select></label>
             </fieldset>
             {error && <p role="alert" className="text-sm text-bad">{error}</p>}
             <div className="flex justify-end gap-2">

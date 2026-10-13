@@ -67,7 +67,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 ## Conventions
 
 - Match the mockup's wording and layout; branding tokens in SPEC.md §5.
-- Times always show on a 12-hour clock in Central time ("8:00pm"), never 24-hour. Time pickers use 30-minute steps.
+- Times always show on a 12-hour clock in Central time ("8:00pm"), never 24-hour. Time pickers use 15-minute steps.
 - Explicit Save/Cancel for edits (SPEC.md §5 save rule); two-step confirm on deletes.
 - Accessible: real buttons/labels, keyboard reachable, visible focus.
 - Keep components small; server logic in `src/server/*`, UI in `src/app` and

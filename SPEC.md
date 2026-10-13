@@ -319,7 +319,7 @@ Principles:
 - **Quick add** with natural language: "call lender re Ortiz Fri 9am", "rent check every
   month", `#list`, `!high`, `@alyssa`, today/tomorrow/weekday/next week.
 - Assignee filter: Everyone / Me / each team member.
-- Task details: title, due date (locked for steps timed from a contract date), time (12-hour, 30-minute steps; the Create task pop-up has the same picker), repeat,
+- Task details: title, due date (locked for steps timed from a contract date), time (12-hour, 15-minute steps; the Create task pop-up has the same picker), repeat,
   list, priority, assignee, linked person, checklist source and timing, subtasks, notes,
   delete. Save changes / Cancel.
 - Deleting a task (two-step) moves it to Trash; an Admin can restore it within 30 days.
@@ -341,7 +341,7 @@ Principles:
   consultation, Book showing, Other appointment**.
 - Title fills in as **"Last Name - Appointment"**, or "Last/Last" for a couple with
   different last names (e.g. "Ortiz/Brooks - Phone Call"). Editable; Other requires a name.
-- Times are picked in 30-minute steps (also the PA inspection appointment, which starts
+- Times are picked in 15-minute steps (also the PA inspection appointment, which starts
   at 12:00pm). Appointments can be edited; moving a booked call moves its steps.
 - Fields: date, start, end (call 30 min, others 60), location (phone number for calls,
   property address for showings), invitees (client + team, tick to include).
