@@ -115,13 +115,28 @@ export function Timeline({ personId, entries, team, email }: { personId: string;
             <li key={e.id} className="grid grid-cols-[70px_minmax(0,1fr)] gap-3 border-t border-misty py-2.5 text-sm first:border-0">
               <span className="text-xs font-bold uppercase tracking-wide muted">{KIND_LABEL[e.kind] ?? e.kind}</span>
               <div>
-                <div className="whitespace-pre-wrap break-words">{e.outcome ? <b>{e.outcome}: </b> : null}{splitMentions(e.body, team).map((part, i) => part.mention ? <mark key={i} className="rounded bg-accent-soft px-0.5 font-semibold text-accent">{part.text}</mark> : part.text)}</div>
+                {e.kind === "email" ? <EmailBody body={e.body} /> : <div className="whitespace-pre-wrap break-words">{e.outcome ? <b>{e.outcome}: </b> : null}{splitMentions(e.body, team).map((part, i) => part.mention ? <mark key={i} className="rounded bg-accent-soft px-0.5 font-semibold text-accent">{part.text}</mark> : part.text)}</div>}
                 <div className="text-xs muted">{new Date(e.at).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}{e.author ? ` · ${e.author}` : ""}</div>
               </div>
             </li>
           ))}
         </ol>
       ) : <p className="mt-3 text-sm muted">Nothing here yet.</p>}
+    </div>
+  );
+}
+
+/** An email on the timeline: "From/To … · Subject" in bold, the message shortened until opened. */
+function EmailBody({ body }: { body: string }) {
+  const [open, setOpen] = useState(false);
+  const i = body.indexOf("\n\n");
+  const head = i < 0 ? body : body.slice(0, i), text = i < 0 ? "" : body.slice(i + 2);
+  const long = text.length > 280 || text.split("\n").length > 4;
+  return (
+    <div className="break-words">
+      <b className="font-semibold">{head}</b>
+      {text && <div className={`whitespace-pre-wrap ${open || !long ? "" : "line-clamp-4"}`}>{text}</div>}
+      {long && <button type="button" className="text-xs font-semibold text-accent hover:underline" onClick={() => setOpen(!open)}>{open ? "Show less" : "Show full email"}</button>}
     </div>
   );
 }

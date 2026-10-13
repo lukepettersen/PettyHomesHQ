@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
+import { FormatBar } from "@/components/FormatBar";
 import { fillEmailTemplate, sendEmail } from "../emailActions";
 
 /** Timeline → Email: pick a template (optional), check it over, send from the connected Gmail (SPEC.md §12). */
@@ -16,6 +17,8 @@ export function EmailComposer({ personId, emails, templates, sendsFrom }: { pers
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [pending, start] = useTransition();
+  const [signature, setSignature] = useState(true);
+  const box = useRef<HTMLTextAreaElement>(null);
 
   if (!sendsFrom) return <p className="mt-2 rounded-md bg-sunken px-3 py-2 text-sm muted">Gmail isn&apos;t connected yet. An Admin can connect it in Admin → Integrations (Connect Google), then emails send from here and show on the timeline.</p>;
   if (!emails.length) return <p className="mt-2 rounded-md bg-sunken px-3 py-2 text-sm muted">No email address on file. Add one to their contact first.</p>;
@@ -33,7 +36,7 @@ export function EmailComposer({ personId, emails, templates, sendsFrom }: { pers
     if (!confirm) { setConfirm(true); return; }
     setConfirm(false); setError("");
     start(async () => {
-      const r = await sendEmail({ personId, to, subject, body });
+      const r = await sendEmail({ personId, to, subject, body, signature });
       if (!r.ok) { setError(r.error); return; }
       setNotice(`Sent to ${to.join(", ")}.`); setSubject(""); setBody(""); setTemplateId(""); setMissing([]); router.refresh();
     });
@@ -54,7 +57,13 @@ export function EmailComposer({ personId, emails, templates, sendsFrom }: { pers
         </select>
       </label>
       <label className="label">Subject<input className="input" value={subject} onChange={(e) => { setConfirm(false); setSubject(e.target.value); }} /></label>
-      <label className="label">Message<textarea className="input min-h-40 font-normal" value={body} onChange={(e) => { setConfirm(false); setBody(e.target.value); }} /></label>
+      <div className="label">Message
+        <div>
+          <FormatBar box={box} value={body} onChange={(v) => { setConfirm(false); setBody(v); }} />
+          <textarea ref={box} aria-label="Message" className="input min-h-40 rounded-t-none font-normal" value={body} onChange={(e) => { setConfirm(false); setBody(e.target.value); }} />
+        </div>
+      </div>
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={signature} onChange={(e) => setSignature(e.target.checked)} /> Add my Gmail signature</label>
       {missing.length > 0 && <p className="text-sm text-[#9a6400]">Not filled in (nothing on file): {missing.join(", ")}. Check the message before sending.</p>}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs muted">Sends from {sendsFrom}. A copy is in its Gmail Sent folder and here on the timeline.</span>

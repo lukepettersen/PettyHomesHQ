@@ -4,19 +4,24 @@ import { seal, unseal } from "@/server/crypto";
 import { isoFromDate } from "@/lib/normalize";
 import { contractAppointments } from "@/lib/appointments";
 import { apptEvent, contractKey, inviteeEmails, type GEvent } from "@/lib/calendar";
-import { buildMime } from "@/lib/email";
+import { addressesIn, buildMime, messageText } from "@/lib/email";
 
 // Google Calendar (SPEC.md §12). Off until configured: every call here quietly does nothing when Google
 // isn't connected, and a Google error never stops HQ from saving.
 
 export const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 export const GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send";
+export const GMAIL_READ_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"; // emails on timelines, and the Gmail signature
+export const hasScope = (c: { scopes: string } | null, scope: string) => !!c && c.scopes.split(/\s+/).includes(scope);
 export const googleKeysSet = () => !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET;
 export const redirectUri = () => `${(process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "")}/api/google/callback`;
 
 export async function calendarConnection() {
   if (!googleKeysSet()) return null;
-  return db.googleConnection.findUnique({ where: { id: "calendar" } });
+  const c = await db.googleConnection.findUnique({ where: { id: "calendar" } });
+  // Google doesn't always say which account approved (Calendar events access can't read it): use the HQ user who connected.
+  if (c && !c.email) c.email = (await db.user.findUnique({ where: { id: c.userId }, select: { email: true } }))?.email ?? "";
+  return c;
 }
 
 /** Swaps the one-time code from Google's consent screen for a refresh token, and stores it encrypted. */
@@ -27,8 +32,9 @@ export async function connectWithCode(code: string, userId: string) {
   });
   const tok = await r.json() as { access_token?: string; refresh_token?: string; expires_in?: number; scope?: string; error?: string };
   if (!r.ok || !tok.refresh_token || !tok.access_token) throw new Error(tok.error ?? "Google didn't return a refresh token");
-  const cal = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary", { headers: { Authorization: `Bearer ${tok.access_token}` } });
-  const email = cal.ok ? ((await cal.json()) as { id?: string }).id ?? "" : "";
+  // Which account approved: Gmail's profile when reading Gmail was allowed, else the connecting HQ user (filled in on read).
+  const prof = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", { headers: { Authorization: `Bearer ${tok.access_token}` } }).catch(() => null);
+  const email = prof?.ok ? ((await prof.json()) as { emailAddress?: string }).emailAddress ?? "" : "";
   await db.googleConnection.upsert({ where: { id: "calendar" }, update: { userId, email, refreshToken: seal(tok.refresh_token), scopes: tok.scope ?? "" }, create: { id: "calendar", userId, email, refreshToken: seal(tok.refresh_token), scopes: tok.scope ?? "" } });
   cached = { token: tok.access_token, until: Date.now() + (tok.expires_in ?? 3000) * 1000 - 60000 };
   return email;
@@ -136,17 +142,38 @@ export function syncContract(paId: string) {
 /** Gmail: the connected Google account may send email (it approved the Gmail send permission). */
 export async function emailConnection() {
   const c = await calendarConnection();
-  return c && c.scopes.split(/\s+/).includes(GMAIL_SEND_SCOPE) ? c : null;
+  return hasScope(c, GMAIL_SEND_SCOPE) ? c : null;
+}
+
+async function gmail(path: string): Promise<Response | null> {
+  const token = await accessToken().catch(() => null);
+  if (!token) return null;
+  return fetch(`https://gmail.googleapis.com/gmail/v1/users/me/${path}`, { headers: { Authorization: `Bearer ${token}` } });
+}
+
+let sigCache: { html: string | null; until: number } | null = null;
+/** The connected account's Gmail signature (HTML), added to emails sent from HQ. */
+async function gmailSignature(email: string): Promise<string | null> {
+  if (sigCache && sigCache.until > Date.now()) return sigCache.html;
+  if (!hasScope(await calendarConnection(), GMAIL_READ_SCOPE)) return null;
+  try {
+    const r = await gmail("settings/sendAs");
+    if (!r?.ok) return null;
+    const list = ((await r.json()) as { sendAs?: { sendAsEmail: string; isPrimary?: boolean; signature?: string }[] }).sendAs ?? [];
+    const html = (list.find((s) => s.sendAsEmail.toLowerCase() === email.toLowerCase()) ?? list.find((s) => s.isPrimary))?.signature || null;
+    sigCache = { html, until: Date.now() + 10 * 60000 };
+    return html;
+  } catch { return null; }
 }
 
 /** Sends a plain-text email from the connected Gmail account. It lands in that account's Sent folder. */
-export async function sendGmail(m: { to: string[]; subject: string; body: string }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+export async function sendGmail(m: { to: string[]; subject: string; body: string; signature?: boolean }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const c = await emailConnection();
   if (!c) return { ok: false, error: "Gmail isn't connected. An Admin can reconnect Google in Admin → Integrations." };
   const token = await accessToken().catch(() => null);
   if (!token) return { ok: false, error: "Google didn't let HQ in. An Admin can reconnect Google in Admin → Integrations." };
   let raw: string;
-  try { raw = buildMime({ from: c.email, ...m }); } catch (e) { return { ok: false, error: (e as Error).message }; }
+  try { raw = buildMime({ from: c.email, ...m, signatureHtml: m.signature === false ? null : await gmailSignature(c.email) }); } catch (e) { return { ok: false, error: (e as Error).message }; }
   try {
     const r = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
       method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ raw }),
@@ -159,4 +186,72 @@ export async function sendGmail(m: { to: string[]; subject: string; body: string
   } catch {
     return { ok: false, error: "Couldn't reach Gmail. Try again in a minute." };
   }
+}
+
+type GMsg = { id: string; internalDate?: string; payload?: { headers?: { name: string; value: string }[] } & Parameters<typeof messageText>[0] };
+const SYNC_EVERY = 3 * 60000, FIRST_LOOKBACK = 30 * 86400000;
+
+/**
+ * Emails to or from a person's saved addresses go on their timeline (SPEC.md §12). Runs at most every
+ * 3 minutes for the team (whoever has HQ open triggers it); never fails loudly.
+ */
+export async function syncGmail(): Promise<number> {
+  try {
+    const c = await calendarConnection();
+    if (!hasScope(c, GMAIL_READ_SCOPE)) return 0;
+    const now = Date.now(), last = c!.gmailSyncedAt;
+    if (last && now - last.getTime() < SYNC_EVERY) return 0;
+    // Claim this run so two tabs don't sync at the same time.
+    const claimed = await db.googleConnection.updateMany({ where: { id: "calendar", gmailSyncedAt: last }, data: { gmailSyncedAt: new Date(now) } });
+    if (!claimed.count) return 0;
+    try { return await syncSince(last ? last.getTime() - 10 * 60000 : now - FIRST_LOOKBACK, c!.email, c!.userId); }
+    catch (e) { await db.googleConnection.update({ where: { id: "calendar" }, data: { gmailSyncedAt: last } }); throw e; }
+  } catch (e) {
+    console.error("Gmail: sync failed", e instanceof Error ? e.message : "unknown");
+    return 0;
+  }
+}
+
+async function syncSince(fromMs: number, accountEmail: string, accountUserId: string): Promise<number> {
+  const ids: string[] = [];
+  let page = "";
+  for (let i = 0; i < 5; i++) {
+    const r = await gmail(`messages?maxResults=100&q=${encodeURIComponent(`after:${Math.floor(fromMs / 1000)} -in:chats -in:spam -in:trash`)}${page ? `&pageToken=${page}` : ""}`);
+    if (!r?.ok) throw new Error(`list ${r?.status ?? "no token"}`);
+    const j = (await r.json()) as { messages?: { id: string }[]; nextPageToken?: string };
+    ids.push(...(j.messages ?? []).map((m) => m.id));
+    if (!j.nextPageToken) break;
+    page = j.nextPageToken;
+  }
+  if (!ids.length) return 0;
+  // Skip messages already on a timeline (sent from HQ, or synced before).
+  const seen = new Set((await db.timelineEntry.findMany({ where: { OR: ids.map((id) => ({ gmailId: { startsWith: `${id}:` } })) }, select: { gmailId: true } })).map((e) => e.gmailId!.split(":")[0]));
+  const team = new Set((await db.user.findMany({ select: { email: true } })).map((u) => u.email.toLowerCase()).concat(accountEmail.toLowerCase()));
+  let added = 0;
+  for (const id of ids.filter((x) => !seen.has(x))) {
+    const r = await gmail(`messages/${id}?format=full`);
+    if (!r?.ok) continue;
+    const m = (await r.json()) as GMsg;
+    const h = (n: string) => m.payload?.headers?.find((x) => x.name.toLowerCase() === n)?.value ?? "";
+    const from = addressesIn(h("from")), to = addressesIn(`${h("to")}, ${h("cc")}`);
+    const outbound = from.some((a) => team.has(a));
+    const theirs = [...from, ...to].filter((a) => !team.has(a));
+    if (!theirs.length) continue;
+    const matches = await db.email.findMany({ where: { normalized: { in: theirs }, person: { deletedAt: null } }, select: { personId: true, normalized: true } });
+    const people = [...new Set(matches.map((x) => x.personId))];
+    if (!people.length) continue;
+    const at = new Date(Number(m.internalDate) || Date.now());
+    const subject = h("subject").replace(/[\r\n]+/g, " ").slice(0, 300) || "(no subject)";
+    const text = messageText(m.payload ?? {});
+    for (const personId of people) {
+      const mine = matches.filter((x) => x.personId === personId).map((x) => x.normalized);
+      const line = outbound ? `To ${to.filter((a) => mine.includes(a)).join(", ") || mine[0]}` : `From ${from[0]}`;
+      try {
+        await db.timelineEntry.create({ data: { personId, kind: "email", gmailId: `${id}:${personId}`, body: `${line} · ${subject}\n\n${text}`, createdAt: at, authorId: outbound ? accountUserId : null } });
+        await db.person.updateMany({ where: { id: personId, OR: [{ lastContactAt: null }, { lastContactAt: { lt: at } }] }, data: { lastContactAt: at } });
+        added++;
+      } catch { /* already added by another run */ }
+    }
+  }
+  return added;
 }

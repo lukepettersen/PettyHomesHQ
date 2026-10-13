@@ -2,7 +2,7 @@ import { adminGate } from "../gate";
 import { integrationStatus, textingEnabled } from "@/server/integrations";
 import { TextingSwitch } from "./TextingSwitch";
 import { CalendarControls } from "./CalendarControls";
-import { calendarConnection, GMAIL_SEND_SCOPE } from "@/server/google";
+import { calendarConnection, GMAIL_READ_SCOPE, GMAIL_SEND_SCOPE, hasScope } from "@/server/google";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +38,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ g
             <p className="text-sm">{i.what}</p>
             {i.detail && <p className="text-sm muted">Number: {i.detail}</p>}
             {i.id === "texting" && <TextingSwitch connected={i.connected} on={texting} />}
-            {i.id === "google" && <CalendarControls keysSet={i.connected} email={cal?.email ?? null} connected={!!cal} gmail={!!cal && cal.scopes.split(/\s+/).includes(GMAIL_SEND_SCOPE)} />}
+            {i.id === "google" && <CalendarControls keysSet={i.connected} email={cal?.email ?? null} connected={!!cal} gmail={{ send: hasScope(cal, GMAIL_SEND_SCOPE), read: hasScope(cal, GMAIL_READ_SCOPE) }} />}
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider muted">{i.connected ? "Railway variables (all set)" : "Add in Railway → Variables"}</h3>
               <ul className="mt-1 flex flex-col gap-1 text-sm">

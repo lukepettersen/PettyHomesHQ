@@ -222,6 +222,7 @@ model TimelineEntry {
   person    Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
   kind      String // "note" | "call" | "text" | "email" | "system" | "task" (a completed task)
   taskId    String? // for "task" entries: the task that was completed
+  gmailId   String?   @unique // for "email" entries: the Gmail message, so syncing never adds it twice
   body      String
   outcome   String?
   authorId  String?
@@ -278,24 +279,24 @@ model TaskList {
 }
 
 model Task {
-  id          String    @id @default(cuid())
-  title       String
-  notes       String    @default("")
-  kind        String    @default("task") // task | followup | call | text | email | showing | closing | other
-  dueDate     DateTime? @db.Date
-  dueTime     String? // "14:00"
-  repeat      String? // DAILY | WEEKLY | MONTHLY | YEARLY
-  priority    Int       @default(0)
-  subtasks    Json      @default("[]")
-  listId      String?
-  list        TaskList? @relation(fields: [listId], references: [id], onDelete: SetNull)
-  personId    String?
-  person      Person?   @relation(fields: [personId], references: [id], onDelete: Cascade)
-  assigneeId  String?
-  assignee    User?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  createdById String?
-  createdBy   User?     @relation("TaskCreator", fields: [createdById], references: [id])
-  sourceKey   String?   @unique // "date:<importantDateId>:<reminderId>:<year>" for Important dates tasks
+  id              String             @id @default(cuid())
+  title           String
+  notes           String             @default("")
+  kind            String             @default("task") // task | followup | call | text | email | showing | closing | other
+  dueDate         DateTime?          @db.Date
+  dueTime         String? // "14:00"
+  repeat          String? // DAILY | WEEKLY | MONTHLY | YEARLY
+  priority        Int                @default(0)
+  subtasks        Json               @default("[]")
+  listId          String?
+  list            TaskList?          @relation(fields: [listId], references: [id], onDelete: SetNull)
+  personId        String?
+  person          Person?            @relation(fields: [personId], references: [id], onDelete: Cascade)
+  assigneeId      String?
+  assignee        User?              @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdById     String?
+  createdBy       User?              @relation("TaskCreator", fields: [createdById], references: [id])
+  sourceKey       String?            @unique // "date:<importantDateId>:<reminderId>:<year>" for Important dates tasks
   // Checklist steps (SPEC.md §8): which file/contract and template step made this task,
   // and what its due date counts from, so it re-dates when that date changes.
   fileId          String?
@@ -309,10 +310,10 @@ model Task {
   offsetDays      Int?
   offsetMinutes   Int? // "N minutes before" the anchor's time (phone call); the due time moves with it
   advanceStatusId String? // move the file to this status when done
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  deletedAt       DateTime?
 
   @@index([dueDate])
   @@index([personId])
@@ -337,21 +338,21 @@ model PipelineStatus {
 
 // A buyer representation or a listing for one person (SPEC.md §7.1).
 model ClientFile {
-  id          String          @id @default(cuid())
+  id          String              @id @default(cuid())
   personId    String
-  person      Person          @relation(fields: [personId], references: [id], onDelete: Cascade)
+  person      Person              @relation(fields: [personId], references: [id], onDelete: Cascade)
   kind        String // buyer | listing
   statusId    String?
-  status      PipelineStatus? @relation(fields: [statusId], references: [id])
-  statusSince DateTime        @default(now())
+  status      PipelineStatus?     @relation(fields: [statusId], references: [id])
+  statusSince DateTime            @default(now())
   address     String? // listing
   price       Int? // listing: list price or estimated value, whole dollars
-  info        Json            @default("{}") // status questions (areas, range, dates…), validated in src/lib/files.ts
+  info        Json                @default("{}") // status questions (areas, range, dates…), validated in src/lib/files.ts
   closedAt    DateTime?
   createdById String?
-  createdBy   User?           @relation(fields: [createdById], references: [id])
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  createdBy   User?               @relation(fields: [createdById], references: [id])
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
   deletedAt   DateTime?
   commission  FileCommission?
   contracts   PurchaseAgreement[]
@@ -378,26 +379,26 @@ model PaForm {
 
 // A contract under a buyer or listing file (SPEC.md §7.4). Key dates are typed date columns.
 model PurchaseAgreement {
-  id                 String         @id @default(cuid())
+  id                 String        @id @default(cuid())
   fileId             String
-  file               ClientFile     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  file               ClientFile    @relation(fields: [fileId], references: [id], onDelete: Cascade)
   side               String // buyer | seller
-  state              String         @default("active") // active | closed | fell_through
+  state              String        @default("active") // active | closed | fell_through
   address            String
   price              Int
-  answers            Json           @default("{}") // other form answers, validated against PaForm
-  finalAcceptance    DateTime?      @db.Date
-  inspection         DateTime?      @db.Date
-  writtenStatement   DateTime?      @db.Date
-  writtenStatementNA Boolean        @default(false)
-  hoaRescission      DateTime?      @db.Date
-  closing            DateTime?      @db.Date
-  dateStatus         Json           @default("{}") // { inspection: "met" | "waived" | "extended" | "pending" }
-  originalDates      Json           @default("{}") // date before an extension
-  endedOn            DateTime?      @db.Date // closed or fell through
+  answers            Json          @default("{}") // other form answers, validated against PaForm
+  finalAcceptance    DateTime?     @db.Date
+  inspection         DateTime?     @db.Date
+  writtenStatement   DateTime?     @db.Date
+  writtenStatementNA Boolean       @default(false)
+  hoaRescission      DateTime?     @db.Date
+  closing            DateTime?     @db.Date
+  dateStatus         Json          @default("{}") // { inspection: "met" | "waived" | "extended" | "pending" }
+  originalDates      Json          @default("{}") // date before an extension
+  endedOn            DateTime?     @db.Date // closed or fell through
   createdById        String?
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
   deletedAt          DateTime?
   commission         PaCommission?
   tasks              Task[]
@@ -457,13 +458,14 @@ model FileFormDef {
 // Google Calendar connection for the team (one, approved by an Admin). The refresh token is encrypted
 // with a key derived from NEXTAUTH_SECRET (src/server/crypto.ts); it is never shown or logged.
 model GoogleConnection {
-  id           String   @id @default("calendar")
-  userId       String
-  email        String
-  refreshToken String
-  scopes       String   @default("") // what Google allowed, space separated (Calendar; Gmail send)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String    @id @default("calendar")
+  userId        String
+  email         String
+  refreshToken  String
+  scopes        String    @default("") // what Google allowed, space separated (Calendar; Gmail send/read)
+  gmailSyncedAt DateTime? // emails up to this time are on timelines
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 // Which Google Calendar event belongs to which HQ item ("appt:<id>", "pa:<id>:closing", …).

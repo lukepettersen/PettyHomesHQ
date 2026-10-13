@@ -399,9 +399,17 @@ Principles:
   checkboxes, optional template with merge fields, Subject, Message, **Send email** with a
   two-step confirm). Task **Draft email** has **Send email** too, which also checks off the
   task. Mail goes from the connected account, lands in its Sent folder and shows on the
-  timeline (filter: Emails). HQ only sends to addresses saved on that person. Plain text.
-- **Gmail** (Phase 3, still to build):
-  - Emails to/from a person's addresses show on their timeline.
+  timeline (filter: Emails). HQ only sends to addresses saved on that person.
+- **Formatting** *(built 2026-10-16)*: email messages and email templates have a Bold / Link /
+  • List bar (stored as **bold**, [words](https://…), "- " lines); web addresses become links.
+  Emails go out as HTML with a plain-text copy. "Add my Gmail signature" (on by default)
+  adds the connected account's Gmail signature.
+- **Emails on timelines** *(built 2026-10-16)*: every few minutes while anyone has HQ open,
+  emails in the connected Gmail to or from a person's saved addresses (last 30 days on the
+  first run) go on their timeline as Email entries ("From …" / "To …" · subject, the new
+  message without the quoted thread, "Show full email"), and count as last contact. Needs
+  Gmail read access (Reconnect Google). Only the connected account's mailbox is read.
+- **Gmail** (still to build):
   - @mention notification emails.
   - "Draft email" creates a Gmail draft with the template filled in and attachments from
     the person's Files.

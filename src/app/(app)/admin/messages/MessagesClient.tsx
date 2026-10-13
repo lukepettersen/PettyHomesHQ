@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { SaveBar } from "@/components/SaveBar";
 import { fill, sampleValues, type MergeField } from "@/lib/merge";
+import { toHtml } from "@/lib/email";
+import { FormatBar } from "@/components/FormatBar";
 import { deleteMessageTemplate, saveMessageTemplate } from "./actions";
 
 type Kind = "email" | "text";
@@ -81,9 +83,18 @@ function Editor({ t: initial, fields, onDirty, onSaved, onDeleted }: { t: Msg; f
           <label className="label">Folder<input className="input" value={t.folder} placeholder="e.g. BPC, BUC" onChange={(e) => set({ folder: e.target.value })} /></label>
         </div>
         {t.kind === "email" && <label className="label">Subject<input className="input" value={t.subject} onChange={(e) => set({ subject: e.target.value })} /></label>}
-        <label className="label">Message
-          <textarea ref={body} className="input min-h-48 font-normal" value={t.body} onChange={(e) => set({ body: e.target.value })} />
-        </label>
+        {t.kind === "email" ? (
+          <div className="label">Message
+            <div>
+              <FormatBar box={body} value={t.body} onChange={(v) => set({ body: v })} />
+              <textarea ref={body} aria-label="Message" className="input min-h-48 rounded-t-none font-normal" value={t.body} onChange={(e) => set({ body: e.target.value })} />
+            </div>
+          </div>
+        ) : (
+          <label className="label">Message
+            <textarea ref={body} className="input min-h-48 font-normal" value={t.body} onChange={(e) => set({ body: e.target.value })} />
+          </label>
+        )}
         <div>
           <span className="text-xs font-semibold muted">Insert a merge field (every question on your forms is one):</span>
           {[...new Set(fields.map((f) => f.group))].map((g) => (
@@ -108,7 +119,10 @@ function Editor({ t: initial, fields, onDirty, onSaved, onDeleted }: { t: Msg; f
       <section className="card p-4">
         <h2 className="font-bold">Preview <span className="text-sm font-normal muted">with sample details</span></h2>
         {t.kind === "email" && <p className="mt-2 text-sm"><b>Subject:</b> {subj.text || <span className="muted">(none)</span>}</p>}
-        <p className="mt-2 whitespace-pre-wrap rounded-md bg-sunken p-3 text-sm">{preview.text || <span className="muted">Nothing written yet.</span>}</p>
+        {t.kind === "email" && preview.text
+          // toHtml escapes everything typed and only adds bold, links and lists, so this is safe to show.
+          ? <div className="mt-2 rounded-md bg-sunken p-3 text-sm [&_a]:text-accent [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: toHtml(preview.text) }} />
+          : <p className="mt-2 whitespace-pre-wrap rounded-md bg-sunken p-3 text-sm">{preview.text || <span className="muted">Nothing written yet.</span>}</p>}
       </section>
       <SaveBar dirty={dirty} pending={pending} error={error} onDiscard={() => { if (isNew) { onDirty(false); onDeleted(); } else { setT(initial); onDirty(false); } setError(""); }}
         onSave={() => start(async () => { setError(""); const r = await saveMessageTemplate(t); if (!r.ok) { setError(r.error); return; } onDirty(false); onSaved(r.data!.id); })} />

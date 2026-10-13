@@ -108,7 +108,8 @@ changing that secret means connecting again). Disconnect from the same page.
 
 ### Gmail (sending email from HQ)
 One-time: Google Cloud → APIs & Services → Library → **Gmail API** → Enable. In HQ: Admin →
-Integrations → **Reconnect Google** and approve (the approval screen now also asks to send email).
+Integrations → **Reconnect Google** and approve (the approval screen also asks to send and read
+email; reading puts emails to/from contacts on their timelines and adds your Gmail signature).
 Emails send from the connected account (the one that clicked Connect), land in its Sent folder and
 go on the person's timeline. HQ only emails addresses saved on that person.
 

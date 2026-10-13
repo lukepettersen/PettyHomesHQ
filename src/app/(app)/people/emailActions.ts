@@ -8,6 +8,7 @@ import { logActivity } from "@/server/activity";
 import { mergeFor } from "@/server/merge";
 import { sendGmail } from "@/server/google";
 import { fill } from "@/lib/merge";
+import { toPlain } from "@/lib/email";
 import { completeTask } from "../tasks/actions";
 
 const id = z.string().trim().min(1).max(40);
@@ -28,6 +29,7 @@ const sendSchema = z.object({
   personId: id, taskId: z.string().trim().max(200).nullable().optional(),
   to: z.array(z.string().trim().email("That isn't an email address.").max(200)).min(1, "Pick who to send it to.").max(10),
   subject: z.string().trim().min(1, "Add a subject.").max(300), body: z.string().trim().min(1, "Write a message.").max(20000),
+  signature: z.boolean().optional(),
 });
 
 /**
@@ -42,10 +44,10 @@ export async function sendEmail(input: z.input<typeof sendSchema>) {
     const theirs = new Set(p.emails.map((e) => e.address.toLowerCase()));
     const to = [...new Set(v.to.map((x) => x.toLowerCase()))];
     if (to.some((x) => !theirs.has(x))) throw new UserError(`HQ only emails addresses saved on ${p.name}. Add the address to their contact first.`);
-    const r = await sendGmail({ to, subject: v.subject, body: v.body });
+    const r = await sendGmail({ to, subject: v.subject, body: v.body, signature: v.signature });
     if (!r.ok) throw new UserError(r.error);
     await db.$transaction([
-      db.timelineEntry.create({ data: { personId: p.id, kind: "email", body: `To ${to.join(", ")} · ${v.subject}\n\n${v.body}`, authorId: user.id } }),
+      db.timelineEntry.create({ data: { personId: p.id, kind: "email", gmailId: r.id ? `${r.id}:${p.id}` : null, body: `To ${to.join(", ")} · ${v.subject}\n\n${toPlain(v.body)}`, authorId: user.id } }),
       db.person.update({ where: { id: p.id }, data: { lastContactAt: new Date() } }),
     ]);
     await logActivity(user.id, "create", "email", p.id, `Emailed ${p.name}: "${v.subject}"`);
