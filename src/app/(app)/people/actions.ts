@@ -6,6 +6,8 @@ import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { coupleName, dateFromIso, normalizeEmail, normalizePhone } from "@/lib/normalize";
+import { findMentions } from "@/lib/mentions";
+import { cleanFieldValue } from "@/lib/customFields";
 
 const trimmed = (max = 200) => z.string().trim().max(max);
 const optionalId = z.string().trim().max(40).optional().nullable().transform((v) => v || null);
@@ -126,11 +128,42 @@ export async function addTimelineEntry(input: z.input<typeof entrySchema>) {
     const v = entrySchema.parse(input);
     const person = await db.person.findFirst({ where: { id: v.personId, deletedAt: null }, select: { id: true, name: true } });
     if (!person) throw new UserError("That person was deleted.");
+    // @mentions notify each teammate named (not the author). Gmail emails follow in Phase 3.
+    const team = await db.user.findMany({ where: { status: { not: "DISABLED" } }, select: { id: true, name: true } });
+    const mentioned = findMentions(v.body, team).filter((m) => m.id !== user.id);
+    const snippet = v.body.length > 140 ? `${v.body.slice(0, 140)}…` : v.body;
     await db.$transaction([
       db.timelineEntry.create({ data: { personId: v.personId, kind: v.kind, body: v.body, outcome: v.kind === "call" ? v.outcome ?? null : null, authorId: user.id } }),
       db.person.update({ where: { id: v.personId }, data: { lastContactAt: new Date() } }),
+      ...mentioned.map((m) => db.notification.create({ data: { toId: m.id, fromId: user.id, personId: v.personId, text: `${user.name.split(" ")[0]} mentioned you on ${person.name}: "${snippet}"` } })),
     ]);
-    await logActivity(user.id, "create", "timeline", v.personId, `Logged ${v.kind} for ${person.name}`);
+    await logActivity(user.id, "create", "timeline", v.personId, `Logged ${v.kind} for ${person.name}${mentioned.length ? ` (mentioned ${mentioned.map((m) => m.name).join(", ")})` : ""}`);
+    revalidatePath(`/people/${v.personId}`);
+    return { mentioned: mentioned.map((m) => m.name.split(" ")[0]) };
+  });
+}
+
+// ---------- More details (custom fields) ----------
+const customSchema = z.object({ personId: z.string(), values: z.array(z.object({ fieldId: z.string().max(40), value: z.string().max(500) })).max(50) });
+
+export async function updateCustomValues(input: z.input<typeof customSchema>) {
+  return guarded(null, async (user) => {
+    const v = customSchema.parse(input);
+    const person = await db.person.findFirst({ where: { id: v.personId, deletedAt: null }, select: { id: true, name: true } });
+    if (!person) throw new UserError("That person was deleted.");
+    const fields = new Map((await db.customField.findMany()).map((f) => [f.id, f]));
+    const ops = v.values.map(({ fieldId, value }) => {
+      const f = fields.get(fieldId);
+      if (!f) throw new UserError("A field was removed in Admin. Refresh the page.");
+      let clean: string;
+      try { clean = cleanFieldValue(f.type, f.options, value); } catch (e) { throw new UserError(`${f.name}: ${(e as Error).message}`); }
+      const key = { personId_fieldId: { personId: v.personId, fieldId } };
+      return clean
+        ? db.customValue.upsert({ where: key, create: { personId: v.personId, fieldId, value: clean }, update: { value: clean } })
+        : db.customValue.deleteMany({ where: { personId: v.personId, fieldId } });
+    });
+    await db.$transaction(ops);
+    await logActivity(user.id, "update", "person", v.personId, `Updated more details for ${person.name}`);
     revalidatePath(`/people/${v.personId}`);
   });
 }

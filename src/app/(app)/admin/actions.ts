@@ -7,6 +7,7 @@ import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { ALL_PERMISSIONS } from "@/server/permissions";
 import { allowedDomain } from "@/server/access";
+import { FIELD_TYPES } from "@/lib/customFields";
 
 const item = z.object({ id: z.string().optional(), name: z.string().trim().min(1, "Names can't be empty").max(80) });
 const items = z.array(item).max(100);
@@ -126,5 +127,82 @@ export async function saveTeam(input: { users: z.input<typeof userRow>[]; roles:
     });
     await logActivity(me.id, "update", "team", null, `Updated users (${users.length}) and roles (${roles.length})`);
     revalidatePath("/admin/users");
+  });
+}
+
+// ---------- Date reminders (SPEC.md §9, §13) ----------
+const reminderRow = z.object({
+  id: z.string().optional(),
+  dateKind: z.enum(["birthday", "homeiversary"]),
+  title: z.string().trim().min(1, "Each reminder needs a task name").max(120),
+  days: z.coerce.number().int().min(0).max(365),
+  direction: z.enum(["before", "on", "after"]),
+  assignee: z.string().trim().max(40), // team member first name; "" = the person's assignee
+  kind: z.enum(["task", "text", "email"]),
+  appliesTo: z.string().trim().min(1).max(80), // "Everyone" or a stage name
+});
+
+export async function saveDateReminders(input: z.input<typeof reminderRow>[]) {
+  return guarded("manageUsers", async (user) => {
+    const rows = z.array(reminderRow).max(50).parse(input);
+    const existing = await db.dateReminder.findMany({ select: { id: true } });
+    const keep = new Set(rows.filter((r) => r.id).map((r) => r.id));
+    await db.$transaction(async (tx) => {
+      await tx.dateReminder.deleteMany({ where: { id: { in: existing.filter((e) => !keep.has(e.id)).map((e) => e.id) } } });
+      for (const [position, { id, ...r }] of rows.entries()) {
+        const data = { ...r, days: r.direction === "on" ? 0 : r.days, position };
+        if (id) await tx.dateReminder.update({ where: { id }, data });
+        else await tx.dateReminder.create({ data });
+      }
+    });
+    await logActivity(user.id, "update", "dateReminder", null, `Updated date reminders (${rows.length})`);
+    revalidatePath("/admin/reminders"); revalidatePath("/tasks");
+  });
+}
+
+// ---------- Custom fields ----------
+const fieldRow = z.object({
+  id: z.string().optional(),
+  name: z.string().trim().min(1, "Each field needs a name").max(60),
+  type: z.enum(FIELD_TYPES),
+  options: z.array(z.string().trim().min(1).max(60)).max(50),
+});
+
+export async function saveCustomFields(input: z.input<typeof fieldRow>[]) {
+  return guarded("manageUsers", async (user) => {
+    const rows = z.array(fieldRow).max(50).parse(input);
+    noDuplicates(rows.map((r) => r.name));
+    for (const r of rows) if (r.type === "dropdown" && !r.options.length) throw new UserError(`Add choices for "${r.name}".`);
+    const existing = await db.customField.findMany({ select: { id: true } });
+    const keep = new Set(rows.filter((r) => r.id).map((r) => r.id));
+    await db.$transaction(async (tx) => {
+      // Removing a field removes its values from everyone (the page warns first).
+      await tx.customField.deleteMany({ where: { id: { in: existing.filter((e) => !keep.has(e.id)).map((e) => e.id) } } });
+      for (const [position, { id, ...r }] of rows.entries()) {
+        const data = { ...r, options: r.type === "dropdown" ? r.options : [], position };
+        if (id) await tx.customField.update({ where: { id }, data });
+        else await tx.customField.create({ data });
+      }
+    });
+    await logActivity(user.id, "update", "customField", null, `Updated custom fields: ${rows.map((r) => r.name).join(", ") || "none"}`);
+    revalidatePath("/admin/fields");
+  });
+}
+
+// ---------- Tools menu ----------
+const toolRow = z.object({
+  id: z.string().optional(),
+  name: z.string().trim().min(1, "Each tool needs a name").max(60),
+  url: z.string().trim().max(500).transform((u) => (/^[a-z][a-z0-9+.-]*:/i.test(u) ? u : `https://${u}`)).pipe(
+    z.string().url("Check the link").refine((u) => /^https?:\/\//i.test(u), "Links must start with http:// or https://"),
+  ),
+});
+
+export async function saveTools(input: z.input<typeof toolRow>[]) {
+  return guarded("manageUsers", async (user) => {
+    const rows = z.array(toolRow).max(50).parse(input);
+    await db.$transaction([db.toolLink.deleteMany({}), db.toolLink.createMany({ data: rows.map(({ name, url }, position) => ({ name, url, position })) })]);
+    await logActivity(user.id, "update", "toolLink", null, `Updated Tools menu (${rows.length} links)`);
+    revalidatePath("/", "layout");
   });
 }

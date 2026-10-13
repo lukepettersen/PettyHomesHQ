@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 
 const SECTIONS: [string, [string, string | null][]][] = [
   ["Team", [["Users & roles", "/admin/users"], ["Trash", "/admin/trash"]]],
-  ["People", [["Stages, sources & follow-up", "/admin/lists"], ["Tags", "/admin/tags"], ["Date reminders", null], ["Custom fields", null]]],
+  ["People", [["Stages, sources & follow-up", "/admin/lists"], ["Tags", "/admin/tags"], ["Date reminders", "/admin/reminders"], ["Custom fields", "/admin/fields"]]],
   ["Deals", [["Client statuses", null], ["Purchase agreement forms", null], ["Task templates", null]]],
-  ["Connections", [["Tools menu", null], ["Integrations", null]]],
+  ["Connections", [["Tools menu", "/admin/tools"], ["Integrations", null]]],
 ];
 
 export function AdminNav() {

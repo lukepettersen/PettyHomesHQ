@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { addTag, deletePerson, removeTag, updateContactInfo, updateDetails, updateImportantDates } from "../actions";
+import { addTag, deletePerson, removeTag, updateContactInfo, updateCustomValues, updateDetails, updateImportantDates } from "../actions";
 import type { Options } from "@/server/people";
 import { daysUntilNext, dateFromIso, firstName, initials, shortDate } from "@/lib/normalize";
 
@@ -131,6 +131,40 @@ export function DetailsCard(p: { id: string; options: Options; stageId: string |
         {row("Source", name(o.sources, p.sourceId))}
         {p.referredBy && row("Referred by", p.referredBy)}
         {row("Mailing name", p.mailingName)}
+      </dl>
+    </div>
+  );
+}
+
+export type CustomFieldValue = { fieldId: string; name: string; type: string; options: string[]; value: string };
+
+/** Custom fields from Admin → Custom fields. Hidden until at least one field exists. */
+export function CustomFieldsCard({ id, fields }: { id: string; fields: CustomFieldValue[] }) {
+  const e = useEdit();
+  if (!fields.length) return null;
+  if (e.editing) return (
+    <form className="card p-4" action={(f) => e.save(() => updateCustomValues({ personId: id, values: fields.map((x) => ({ fieldId: x.fieldId, value: x.type === "checkbox" ? (f.get(x.fieldId) ? "yes" : "") : String(f.get(x.fieldId) ?? "") })) }))}>
+      <CardHead title="More details" editing onEdit={() => {}} />
+      <div className="flex flex-col gap-2.5">
+        {fields.map((x) => x.type === "checkbox" ? (
+          <label key={x.fieldId} className="flex items-center gap-2 text-sm"><input type="checkbox" name={x.fieldId} defaultChecked={x.value === "yes"} /> {x.name}</label>
+        ) : (
+          <label key={x.fieldId} className="label">{x.name}
+            {x.type === "dropdown"
+              ? <select className="input" name={x.fieldId} defaultValue={x.value}><option value="">Not set</option>{x.options.map((o) => <option key={o}>{o}</option>)}</select>
+              : <input className="input" name={x.fieldId} type={x.type === "date" ? "date" : "text"} inputMode={x.type === "number" ? "decimal" : undefined} defaultValue={x.value} />}
+          </label>
+        ))}
+      </div>
+      <SaveRow pending={e.pending} error={e.error} onCancel={() => { e.setError(""); e.setEditing(false); }} />
+    </form>
+  );
+  const show = (x: CustomFieldValue) => !x.value ? null : x.type === "checkbox" ? "Yes" : x.type === "date" ? shortDate(dateFromIso(x.value), true) : x.type === "number" ? Number(x.value).toLocaleString("en-US") : x.value;
+  return (
+    <div className="card p-4">
+      <CardHead title="More details" editing={false} onEdit={() => e.setEditing(true)} />
+      <dl className="grid grid-cols-[110px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-sm">
+        {fields.map((x) => <div key={x.fieldId} className="contents"><dt className="muted">{x.name}</dt><dd className="break-words">{show(x) ?? <span className="muted">Not set</span>}</dd></div>)}
       </dl>
     </div>
   );

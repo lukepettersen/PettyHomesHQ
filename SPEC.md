@@ -84,7 +84,7 @@ Principles:
 - **Search from anywhere** in the top bar: people (name, phone, email), addresses and
   contracts. *(Not in the mockup; design during Phase 1.)*
 - **Tools ▾:** dropdown of external links the owner adds in Admin → Tools menu (name + link).
-  Opens in a new tab. Empty state: "+ Add a tool".
+  Opens in a new tab. Empty state: "+ Add a tool". Links must be http:// or https://.
 - **Bell:** @mentions for the signed-in user, unread count, "Mark all read"; clicking one
   opens that person.
 - Side menus stay on screen as you scroll.
@@ -99,6 +99,8 @@ Principles:
   `#bbbbb3`; Mukta Mahee font; P-house logo.
 - Desktop first; works in a phone browser. A phone-friendly contact page and Today view are
   a Phase 1 item *(decided, §17)*.
+  On a phone the contact page shows contact info, then Tasks, then Timeline, then the other
+  cards; the Tasks sidebar becomes a row of chips and task details open full screen.
 
 ## 6. People
 
@@ -118,7 +120,8 @@ Principles:
 - **Important Dates:** birthdays (any number; "Whose" + date picker) and homeiversary (date
   picker; set automatically when a buyer-side contract closes). Shown as "Sam's birthday ·
   Oct 20 · in 8 days".
-- Custom fields (defined in Admin).
+- Custom fields (defined in Admin; types Text, Number, Date, Dropdown, Checkbox), shown in a
+  "More details" card. Phase 1 covers people; deal fields come with Phase 2.
 - Created date, last contact (computed from notes, calls, texts, emails).
 
 ### 6.2 People page
