@@ -105,9 +105,9 @@ function Editor({ t: initial, statuses, team, tags, today, templates, messages, 
               </optgroup>
               <optgroup label="Appointments">
                 <option value="phonecall">When a phone call is booked</option>
-                <option value="buyerconsult">When a buyer consultation is booked</option>
-                <option value="sellerconsult">When a seller consultation is booked</option>
-                <option value="anyconsult">When a buyer or seller consultation is booked</option>
+                <option value="buyerconsult">When a Buyer consult is booked</option>
+                <option value="sellerconsult">When a Seller consult is booked</option>
+                <option value="anyconsult">When a Buyer consult or Seller consult is booked</option>
               </optgroup>
             </select>
           </label>
