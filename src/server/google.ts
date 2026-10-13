@@ -173,7 +173,10 @@ export async function sendGmail(m: { to: string[]; subject: string; body: string
   const token = await accessToken().catch(() => null);
   if (!token) return { ok: false, error: "Google didn't let HQ in. An Admin can reconnect Google in Admin → Integrations." };
   let raw: string;
-  try { raw = buildMime({ from: c.email, ...m, signatureHtml: m.signature === false ? null : await gmailSignature(c.email) }); } catch (e) { return { ok: false, error: (e as Error).message }; }
+  // "Luke Pettersen <luke@pettyhomes.com>": a real name as the sender looks less like a bulk mailer.
+  const name = (await db.user.findUnique({ where: { id: c.userId }, select: { name: true } }))?.name?.replace(/["<>\r\n]/g, "").trim();
+  const from = name ? (/^[\x20-\x7e]*$/.test(name) ? `"${name}" <${c.email}>` : `=?UTF-8?B?${Buffer.from(name).toString("base64")}?= <${c.email}>`) : c.email;
+  try { raw = buildMime({ from, ...m, signatureHtml: m.signature === false ? null : await gmailSignature(c.email) }); } catch (e) { return { ok: false, error: (e as Error).message }; }
   try {
     const r = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
       method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ raw }),
