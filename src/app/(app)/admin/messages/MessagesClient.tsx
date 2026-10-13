@@ -1,0 +1,112 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useRef, useState, useTransition } from "react";
+import { SaveBar } from "@/components/SaveBar";
+import { fill, MERGE_FIELDS, mergeValues, SAMPLE } from "@/lib/merge";
+import { deleteMessageTemplate, saveMessageTemplate } from "./actions";
+
+type Kind = "email" | "text";
+export type Msg = { id: string | null; kind: Kind; name: string; folder: string; subject: string; body: string };
+
+export function MessagesClient({ templates, initialKind, initialId }: { templates: Msg[]; initialKind: Kind; initialId: string | null }) {
+  const router = useRouter();
+  const [kind, setKind] = useState<Kind>(initialKind);
+  const [selId, setSelId] = useState<string | null>(initialId ?? templates.find((t) => t.kind === initialKind)?.id ?? null);
+  const [draftNew, setDraftNew] = useState<Msg | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [msg, setMsg] = useState("");
+  const list = templates.filter((t) => t.kind === kind);
+  const folders = [...new Set(list.map((t) => t.folder))];
+  const sel = draftNew ?? templates.find((t) => t.id === selId && t.kind === kind) ?? null;
+  const guard = (fn: () => void) => { if (dirty) { setMsg("Save or discard your changes first."); return; } setMsg(""); fn(); };
+  const url = (k: Kind, id: string | null) => window.history.replaceState(null, "", `/admin/messages?kind=${k}${id ? `&t=${id}` : ""}`);
+
+  return (
+    <>
+      <div role="tablist" aria-label="Template type" className="mb-3 flex gap-1 border-b border-misty">
+        {(["email", "text"] as const).map((k) => (
+          <button key={k} role="tab" type="button" aria-selected={kind === k} onClick={() => guard(() => { setKind(k); setDraftNew(null); const first = templates.find((t) => t.kind === k)?.id ?? null; setSelId(first); url(k, first); })}
+            className={`-mb-px border-b-[3px] px-3 py-2 ${kind === k ? "border-coral font-semibold" : "border-transparent muted"}`}>{k === "email" ? "Email templates" : "Text templates"} <span className="text-xs muted">{templates.filter((t) => t.kind === k).length}</span></button>
+        ))}
+      </div>
+      {msg && <p role="alert" className="mb-2 text-sm text-bad">{msg}</p>}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <aside className="card flex flex-col gap-1 p-2 lg:sticky lg:top-3">
+          <button type="button" className="btn btn-primary" onClick={() => guard(() => { setDraftNew({ id: null, kind, name: "", folder: "", subject: "", body: "" }); setSelId(null); })}>+ New {kind} template</button>
+          {folders.map((f) => (
+            <div key={f || "none"}>
+              {(f || folders.length > 1) && <h2 className="px-2.5 pt-2 text-[11px] font-semibold uppercase tracking-wider muted">{f || "No folder"}</h2>}
+              <ul>
+                {list.filter((t) => t.folder === f).map((t) => (
+                  <li key={t.id}><button type="button" aria-current={t.id === selId && !draftNew ? "true" : undefined} onClick={() => guard(() => { setDraftNew(null); setSelId(t.id); url(kind, t.id); })}
+                    className={`w-full rounded-md px-2.5 py-1.5 text-left text-sm ${t.id === selId && !draftNew ? "bg-accent-soft font-semibold text-accent" : "hover:bg-sunken"}`}>{t.name}</button></li>
+                ))}
+              </ul>
+            </div>
+          ))}
+          {list.length === 0 && <p className="px-2.5 py-2 text-xs muted">No {kind} templates yet.</p>}
+        </aside>
+        <div className="min-w-0">
+          {sel ? <Editor key={sel.id ?? "new"} t={sel} onDirty={setDirty} onSaved={(id) => { setDraftNew(null); setSelId(id); url(kind, id); router.refresh(); }} onDeleted={() => { setSelId(null); router.refresh(); }} />
+            : <div className="card p-6 muted">Pick a template, or create one with + New {kind} template.</div>}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Editor({ t: initial, onDirty, onSaved, onDeleted }: { t: Msg; onDirty: (d: boolean) => void; onSaved: (id: string) => void; onDeleted: () => void }) {
+  const [t, setT] = useState(initial);
+  const [error, setError] = useState("");
+  const [confirm, setConfirm] = useState(false);
+  const [pending, start] = useTransition();
+  const body = useRef<HTMLTextAreaElement>(null);
+  const isNew = !initial.id;
+  const dirty = isNew || JSON.stringify(t) !== JSON.stringify(initial);
+  const set = (p: Partial<Msg>) => { const n = { ...t, ...p }; setT(n); onDirty(isNew || JSON.stringify(n) !== JSON.stringify(initial)); };
+  const insert = (key: string) => {
+    const el = body.current, tag = `{${key}}`;
+    const at = el?.selectionStart ?? t.body.length;
+    set({ body: t.body.slice(0, at) + tag + t.body.slice(el?.selectionEnd ?? at) });
+    requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(at + tag.length, at + tag.length); });
+  };
+  const values = mergeValues(SAMPLE);
+  const preview = fill(t.body, values), subj = fill(t.subject, values);
+  return (
+    <div className="flex flex-col gap-3">
+      <section className="card flex flex-col gap-3 p-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+          <label className="label">Name<input className="input" value={t.name} placeholder={t.kind === "email" ? "e.g. Purchase agreement accepted" : "e.g. Consult confirmation"} onChange={(e) => set({ name: e.target.value })} /></label>
+          <label className="label">Folder<input className="input" value={t.folder} placeholder="e.g. BPC, BUC" onChange={(e) => set({ folder: e.target.value })} /></label>
+        </div>
+        {t.kind === "email" && <label className="label">Subject<input className="input" value={t.subject} onChange={(e) => set({ subject: e.target.value })} /></label>}
+        <label className="label">Message
+          <textarea ref={body} className="input min-h-48 font-normal" value={t.body} onChange={(e) => set({ body: e.target.value })} />
+        </label>
+        <div>
+          <span className="text-xs font-semibold muted">Insert a merge field:</span>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {MERGE_FIELDS.map(([k, l]) => <button key={k} type="button" className="chip hover:bg-misty" title={l} onClick={() => insert(k)}>{`{${k}}`}</button>)}
+          </div>
+        </div>
+        {t.kind === "text" && <p className="text-xs muted">{preview.text.length} characters{preview.text.length > 160 ? " (longer texts are sent as several messages)" : ""}.</p>}
+        {!isNew && (
+          <div>
+            <button type="button" className="btn btn-danger" disabled={pending} onBlur={() => setConfirm(false)}
+              onClick={() => { if (!confirm) { setConfirm(true); return; } start(async () => { const r = await deleteMessageTemplate(initial.id!); if (!r.ok) setError(r.error); else { onDirty(false); onDeleted(); } }); }}>
+              {confirm ? "Click again to delete" : "Delete template"}
+            </button>
+          </div>
+        )}
+      </section>
+      <section className="card p-4">
+        <h2 className="font-bold">Preview <span className="text-sm font-normal muted">with sample details</span></h2>
+        {t.kind === "email" && <p className="mt-2 text-sm"><b>Subject:</b> {subj.text || <span className="muted">(none)</span>}</p>}
+        <p className="mt-2 whitespace-pre-wrap rounded-md bg-sunken p-3 text-sm">{preview.text || <span className="muted">Nothing written yet.</span>}</p>
+      </section>
+      <SaveBar dirty={dirty} pending={pending} error={error} onDiscard={() => { if (isNew) { onDirty(false); onDeleted(); } else { setT(initial); onDirty(false); } setError(""); }}
+        onSave={() => start(async () => { setError(""); const r = await saveMessageTemplate(t); if (!r.ok) { setError(r.error); return; } onDirty(false); onSaved(r.data!.id); })} />
+    </div>
+  );
+}

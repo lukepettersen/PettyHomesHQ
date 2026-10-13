@@ -5,6 +5,7 @@ import type { ListRow, TaskRow, TeamMember } from "@/server/tasks";
 import { formatTime, PRIORITIES, REPEATS, type Subtask } from "@/lib/tasks";
 import { deleteTask, updateTask } from "./actions";
 import { CheckButton, PersonLink } from "./parts";
+import { DraftModal } from "./DraftModal";
 
 type Draft = { title: string; notes: string; due: string; time: string; repeat: string; priority: number; listId: string; assigneeId: string; subtasks: Subtask[] };
 
@@ -30,6 +31,8 @@ export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSa
   }
   const [newSub, setNewSub] = useState("");
   const [confirmDel, setConfirmDel] = useState(false);
+  const [drafting, setDrafting] = useState(false);
+  const canDraft = !task.virtual && (task.kind === "email" || task.kind === "text") && !!task.personId;
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const dirty = JSON.stringify(d) !== JSON.stringify(orig);
@@ -72,6 +75,12 @@ export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSa
           {task.step.timing && <span>Timing: {task.step.timing}.{task.step.locked ? " Change the date on their page and this moves with it." : ""}</span>}
         </p>
       )}
+      {canDraft && (
+        <div className="mx-3.5 mt-3">
+          <button type="button" className="btn btn-primary w-full" onClick={() => setDrafting(true)}>{task.kind === "email" ? "Draft email" : "Draft text"}</button>
+        </div>
+      )}
+      {drafting && <DraftModal taskId={task.id} onClose={() => setDrafting(false)} />}
       {task.cat === "dates" && (
         <p className="mx-3.5 mt-3 rounded-md bg-sunken px-3 py-2 text-[12.5px] muted">
           From {task.personName ? <b className="text-charcoal">{task.personName}</b> : "a person"}&apos;s Important Dates, using the rules in Admin → Date reminders.

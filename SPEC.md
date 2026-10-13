@@ -271,6 +271,10 @@ Principles:
 - Email/Text steps show **Draft email / Draft text**. In v1 this opens a pre-filled draft
   (merge fields from the person and contract) to review and send. Automatic sending is a
   later phase (§14).
+  Built: the step picks its message template from a dropdown; Draft shows the filled-in
+  message (template can be switched; empty merge fields are flagged) with **Copy** and **Open
+  in email** (the person's email app). Gmail drafts replace Open in email once Gmail is
+  connected. Merge fields never include commission or BAC.
 - **Automatic tag changes on close** *(new)*: a step type "Add/remove tags" so closing adds
   Past Client, Email Newsletter, Mailers, Petty Homes Event List, Real Estate Health Check
   and removes Buyer / Seller / Under contract.
@@ -393,7 +397,10 @@ Sections (left menu):
   to); Custom fields; Tags (live counts; rename and delete update everyone); Stages,
   sources & follow-up.
 - **Messaging:** Text templates; Email templates (subject, body, merge fields,
-  attachments).
+  attachments). *(Built 2026-10-15 as Admin → Text & email templates: name, folder, subject,
+  body, merge-field buttons, preview with sample details; open to "Edit text and email
+  templates". Attachments come with the Files card and Gmail drafts.)*
+- **Task templates have folders** to organize the list *(owner request)*.
 - **Connections:** Tools menu; Integrations (Google Workspace, Texting/Twilio, later
   website lead form).
 - All Admin edits use the unsaved-changes Save / Discard bar.

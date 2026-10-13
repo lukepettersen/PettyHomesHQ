@@ -16,7 +16,7 @@ const phasesOf = (v: unknown) => (Array.isArray(v) ? (v as Phase[]) : []);
 
 export async function loadTemplates(tx: Tx = db): Promise<Template[]> {
   const rows = await tx.taskTemplate.findMany({ orderBy: [{ position: "asc" }, { name: "asc" }] });
-  return rows.map((r) => ({ id: r.id, name: r.name, trigger: r.trigger, phases: phasesOf(r.phases) }));
+  return rows.map((r) => ({ id: r.id, name: r.name, trigger: r.trigger, folder: r.folder, phases: phasesOf(r.phases) }));
 }
 
 /** Starts every template for a trigger. A file only gets each template once. Returns the number of tasks made. */

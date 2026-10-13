@@ -7,7 +7,7 @@ the source of truth for behavior. The approved screens are in `mockups/` (open
 ## Status
 
 SPEC.md approved 2026-10-13. Build in the phases in SPEC.md §16, one pull request at a time.
-Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact page cards + timeline, Admin users/roles, stages/sources/follow-up, tags); piece 2 (smart list editing, bulk actions, search, Trash, CSV export); piece 3 (Tasks page, quick add, contact Tasks card, Create task pop-up); piece 4 (@mentions + bell, Date reminders, Tools menu, custom fields, phone layout). Phase 1 is complete. Phase 2 in progress: 2.1 done (client files, statuses, Pipeline board, Admin → Client statuses); 2.2 done (purchase agreements, Admin forms editor, key dates, Under Contract, Mark closed / Fell through); 2.3 done (task templates, automations, Admin → Task templates, Admin → Integrations); 2.4 in progress: appointments done, Buyer & listing forms editable (Admin); next message templates + drafts, Files card, worker (pg-boss). Texting (Messages) is on hold at the owner's request.
+Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact page cards + timeline, Admin users/roles, stages/sources/follow-up, tags); piece 2 (smart list editing, bulk actions, search, Trash, CSV export); piece 3 (Tasks page, quick add, contact Tasks card, Create task pop-up); piece 4 (@mentions + bell, Date reminders, Tools menu, custom fields, phone layout). Phase 1 is complete. Phase 2 in progress: 2.1 done (client files, statuses, Pipeline board, Admin → Client statuses); 2.2 done (purchase agreements, Admin forms editor, key dates, Under Contract, Mark closed / Fell through); 2.3 done (task templates, automations, Admin → Task templates, Admin → Integrations); 2.4 in progress: appointments done, Buyer & listing forms editable (Admin); Google Calendar done; message templates + drafts done; next Files card, worker (pg-boss). Texting (Messages) is on hold at the owner's request.
 
 ## Working with the owner
 
@@ -103,6 +103,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 - Admin pages check their own permission with `adminGate()` in `src/app/(app)/admin/gate.tsx`
 - `src/lib/appointments.ts` (names, contract dates; tested), `src/server/appointments.ts`, `src/app/(app)/people/apptActions.ts`
 - `src/lib/calendar.ts` (Google events; tested), `src/server/google.ts` (connect, encrypted token via `src/server/crypto.ts`, `syncAppointment`, `syncContract`), `src/app/api/google/*`
+- `src/lib/merge.ts` (merge fields; tested), Admin → Text & email templates in `src/app/(app)/admin/messages/`, Draft email/text in `src/app/(app)/tasks/DraftModal.tsx` + `draftActions.ts`
 - `src/lib/customFields.ts` — custom field types and value cleaning
 - Owner setup and ops runbook: `docs/ops.md`
 

@@ -7,11 +7,12 @@ export type Step = {
   id: string; name: string; assignee: string; // team member first name; "" = the person's assignee
   type: StepType; days: number; dir: "before" | "on" | "after" | "none"; anchor: Anchor; cond: Cond;
   advance?: string; // status id to move the file to when done
-  message?: string; // name of the text/email template it drafts (Messaging, later)
+  messageId?: string; // the text/email template it drafts (Admin → Text & email templates)
+  message?: string; // a template name typed before templates existed; shown until one is picked
   addTags?: string[]; removeTags?: string[]; // "Add/remove tags" steps
 };
 export type Phase = { id: string; name: string; steps: Step[] };
-export type Template = { id: string; name: string; trigger: string | null; phases: Phase[] };
+export type Template = { id: string; name: string; trigger: string | null; folder?: string; phases: Phase[] };
 
 export const ANCHORS: [Anchor, string][] = [["start", "Start date"], ["phoneCall", "Phone call"], ["finalAcceptance", "Final Acceptance"], ["inspection", "Inspection"], ["writtenStatement", "Written Statement"], ["hoaRescission", "HOA Rescission"], ["closing", "Closing"]];
 export const CONDS: [Cond, string][] = [["always", "Always"], ["hoa", "HOA property"], ["pre1978", "Built before 1978"], ["newc", "New construction"], ["fhava", "FHA / VA loan"], ["condo", "Condo / townhome"]];

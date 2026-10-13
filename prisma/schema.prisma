@@ -417,6 +417,7 @@ model TaskTemplate {
   id        String   @id @default(cuid())
   name      String
   trigger   String? // status:<id> | pa:buyer | pa:seller | closed:buyer | closed:seller | phonecall | null (apply by hand)
+  folder    String   @default("") // to organize templates in Admin
   phases    Json     @default("[]")
   position  Int      @default(0)
   createdAt DateTime @default(now())
@@ -467,4 +468,18 @@ model CalendarLink {
   key       String   @id
   eventId   String
   updatedAt DateTime @updatedAt
+}
+
+// Text and email templates (SPEC.md §13 Messaging). Bodies use merge fields like {first_name}; see src/lib/merge.ts.
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  kind      String // email | text
+  name      String
+  folder    String   @default("") // e.g. BPC, BUC, SPC, SUC, Leads
+  subject   String   @default("") // email only
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([kind, name])
 }

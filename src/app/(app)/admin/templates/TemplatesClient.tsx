@@ -8,7 +8,7 @@ import { ANCHORS, CONDS, expand, newId, STEP_TYPES, triggerLabel, type Phase, ty
 import { longIso } from "@/lib/tasks";
 import { deleteTemplate, duplicateTemplate, saveTemplate } from "./actions";
 
-type Props = { templates: Template[]; statuses: StatusRow[]; team: string[]; tags: string[]; today: string; initialId: string | null };
+type Props = { messages: { id: string; kind: string; name: string; folder: string }[]; templates: Template[]; statuses: StatusRow[]; team: string[]; tags: string[]; today: string; initialId: string | null };
 const blankStep = (): Step => ({ id: newId("s"), name: "New step", assignee: "", type: "task", days: 0, dir: "on", anchor: "start", cond: "always" });
 
 export function TemplatesClient(p: Props) {
@@ -17,15 +17,16 @@ export function TemplatesClient(p: Props) {
   const [dirty, setDirty] = useState(false);
   const [msg, setMsg] = useState("");
   const [, start] = useTransition();
-  const sel = p.templates.find((t) => t.id === selId) ?? null;
-  const auto = p.templates.filter((t) => t.trigger), manual = p.templates.filter((t) => !t.trigger);
+  const sel = p.templates.find((t) => t.id === selId) ?? p.templates[0] ?? null;
+  // Grouped by folder (named folders A–Z, then templates without one).
+  const folders = [...new Set(p.templates.map((t) => t.folder ?? ""))].sort((a, b) => (a ? (b ? a.localeCompare(b) : -1) : 1));
   const pick = (id: string) => {
     if (dirty) { setMsg("Save or discard your changes first."); return; }
     setMsg(""); setSelId(id); window.history.replaceState(null, "", `/admin/templates?t=${id}`);
   };
   const create = () => start(async () => {
     if (dirty) { setMsg("Save or discard your changes first."); return; }
-    const r = await saveTemplate({ id: null, name: "New template", trigger: null, phases: [{ id: newId("p"), name: "Steps", steps: [blankStep()] }] });
+    const r = await saveTemplate({ id: null, name: "New template", trigger: null, folder: sel?.folder ?? "", phases: [{ id: newId("p"), name: "Steps", steps: [blankStep()] }] });
     if (!r.ok) { setMsg(r.error); return; }
     setSelId(r.data!.id); router.refresh();
   });
@@ -33,8 +34,8 @@ export function TemplatesClient(p: Props) {
     const n = t.phases.reduce((x, ph) => x + ph.steps.length, 0);
     return (
       <li key={t.id}>
-        <button type="button" aria-current={t.id === selId ? "true" : undefined} onClick={() => pick(t.id)}
-          className={`flex w-full flex-col rounded-md px-2.5 py-1.5 text-left ${t.id === selId ? "bg-accent-soft" : "hover:bg-sunken"}`}>
+        <button type="button" aria-current={t.id === sel?.id ? "true" : undefined} onClick={() => pick(t.id)}
+          className={`flex w-full flex-col rounded-md px-2.5 py-1.5 text-left ${t.id === sel?.id ? "bg-accent-soft" : "hover:bg-sunken"}`}>
           <b className="text-sm">{t.name}</b>
           <span className="text-xs muted">{triggerLabel(t.trigger, p.statuses)} · {n} step{n === 1 ? "" : "s"}</span>
         </button>
@@ -45,20 +46,22 @@ export function TemplatesClient(p: Props) {
     <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
       <aside className="card flex flex-col gap-2 p-2 lg:sticky lg:top-3">
         <button type="button" className="btn btn-primary" onClick={create}>+ New template</button>
-        <h2 className="px-2.5 pt-1 text-[11px] font-semibold uppercase tracking-wider muted">Start automatically</h2>
-        <ul className="flex flex-col">{auto.map(item)}</ul>
-        <h2 className="px-2.5 pt-1 text-[11px] font-semibold uppercase tracking-wider muted">Apply by hand</h2>
-        <ul className="flex flex-col">{manual.length ? manual.map(item) : <li className="px-2.5 text-xs muted">None</li>}</ul>
+        {folders.map((f) => (
+          <div key={f || "none"}>
+            <h2 className="px-2.5 pt-2 text-[11px] font-semibold uppercase tracking-wider muted">{f || (folders.length > 1 ? "No folder" : "Templates")}</h2>
+            <ul className="flex flex-col">{p.templates.filter((t) => (t.folder ?? "") === f).map(item)}</ul>
+          </div>
+        ))}
       </aside>
       <div className="min-w-0">
         {msg && <p role="alert" className="mb-2 text-sm text-bad">{msg}</p>}
-        {sel ? <Editor key={sel.id + JSON.stringify(sel)} {...p} t={sel} onDirty={setDirty} onSelect={(id) => { setSelId(id); router.refresh(); }} /> : <div className="card p-6 muted">No templates yet. Create one with + New template.</div>}
+        {sel ? <Editor folders={folders.filter(Boolean)} key={sel.id + JSON.stringify(sel)} {...p} t={sel} onDirty={setDirty} onSelect={(id) => { setSelId(id); router.refresh(); }} /> : <div className="card p-6 muted">No templates yet. Create one with + New template.</div>}
       </div>
     </div>
   );
 }
 
-function Editor({ t: initial, statuses, team, tags, today, templates, onDirty, onSelect }: Props & { t: Template; onDirty: (d: boolean) => void; onSelect: (id: string | null) => void }) {
+function Editor({ t: initial, statuses, team, tags, today, templates, messages, folders, onDirty, onSelect }: Props & { folders: string[]; t: Template; onDirty: (d: boolean) => void; onSelect: (id: string | null) => void }) {
   const router = useRouter();
   const [t, setT] = useState<Template>(initial);
   const [error, setError] = useState("");
@@ -79,7 +82,7 @@ function Editor({ t: initial, statuses, team, tags, today, templates, onDirty, o
 
   const save = () => start(async () => {
     setError("");
-    const r = await saveTemplate({ id: t.id, name: t.name, trigger: t.trigger, phases: t.phases });
+    const r = await saveTemplate({ id: t.id, name: t.name, trigger: t.trigger, folder: t.folder ?? "", phases: t.phases });
     if (!r.ok) { setError(r.error); return; }
     onDirty(false); router.refresh();
   });
@@ -102,6 +105,10 @@ function Editor({ t: initial, statuses, team, tags, today, templates, onDirty, o
               </optgroup>
               <optgroup label="Appointments"><option value="phonecall">When a phone call is booked</option></optgroup>
             </select>
+          </label>
+          <label className="label">Folder
+            <input className="input w-44" list="template-folders" value={t.folder ?? ""} placeholder="e.g. Buyers" onChange={(e) => update({ ...t, folder: e.target.value })} />
+            <datalist id="template-folders">{folders.map((f) => <option key={f} value={f} />)}</datalist>
           </label>
           <label className="label">Copy steps from
             <select className="input w-auto" value="" onChange={(e) => { const src = templates.find((x) => x.id === e.target.value); if (src) update({ ...t, phases: [...t.phases, ...src.phases.map((ph) => ({ ...ph, id: newId("p"), steps: ph.steps.map((s) => ({ ...s, id: newId("s"), advance: undefined })) }))] }); }}>
@@ -178,7 +185,17 @@ function Editor({ t: initial, statuses, team, tags, today, templates, onDirty, o
                 )}
                 {(s.type === "email" || s.type === "text") && (
                   <label className="flex items-center gap-1 text-xs font-semibold muted">Message template
-                    <input className={`${field} w-56`} placeholder="Name of the text or email" value={s.message ?? ""} onChange={(e) => setStep(i, si, { message: e.target.value || undefined })} />
+                    {(() => {
+                      // A name typed before templates existed links to the template with that name, once it's created.
+                      const named = !s.messageId && s.message ? messages.find((m) => m.kind === s.type && m.name.toLowerCase() === s.message!.toLowerCase()) : undefined;
+                      return (
+                    <select className={`${field} max-w-64`} value={s.messageId ?? named?.id ?? (s.message ? "__legacy" : "")} onChange={(e) => setStep(i, si, e.target.value === "__legacy" ? {} : { messageId: e.target.value || undefined, message: e.target.value ? undefined : s.message })}>
+                      <option value="">None</option>
+                      {s.message && !s.messageId && !named && <option value="__legacy">&quot;{s.message}&quot; (not created yet)</option>}
+                      {messages.filter((m) => m.kind === s.type).map((m) => <option key={m.id} value={m.id}>{m.folder ? `${m.folder} · ` : ""}{m.name}</option>)}
+                    </select>
+                      );
+                    })()}
                   </label>
                 )}
                 {s.type === "tags" && (
