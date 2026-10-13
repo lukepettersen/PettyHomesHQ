@@ -104,6 +104,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 - Admin pages check their own permission with `adminGate()` in `src/app/(app)/admin/gate.tsx`
 - `src/lib/appointments.ts` (names, contract dates; tested), `src/server/appointments.ts`, `src/app/(app)/people/apptActions.ts`
 - `src/lib/calendar.ts` (Google events; tested), `src/server/google.ts` (connect, encrypted token via `src/server/crypto.ts`, `syncAppointment`, `syncContract`), `src/app/api/google/*`
+- Sending email: `src/lib/email.ts` (MIME; tested), `sendGmail` in `src/server/google.ts`, `src/app/(app)/people/emailActions.ts`, Timeline Email tab `people/[id]/EmailComposer.tsx`; merge values per person in `src/server/merge.ts` (`mergeFor`)
 - `src/lib/merge.ts` (merge fields; tested), Admin → Text & email templates in `src/app/(app)/admin/messages/`, Draft email/text in `src/app/(app)/tasks/DraftModal.tsx` + `draftActions.ts`
 - Files card: `src/lib/documents.ts` (tested), `src/server/storage.ts` (S3 client, signed downloads), `src/app/api/documents/*`, Trash purge removes stored objects (`src/server/trash.ts`)
 - `src/lib/customFields.ts` — custom field types and value cleaning

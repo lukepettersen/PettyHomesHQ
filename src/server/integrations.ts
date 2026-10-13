@@ -20,12 +20,12 @@ const set = (name: string) => !!process.env[name]?.trim();
 const DEFS: Omit<Integration, "connected" | "missing" | "detail">[] = [
   {
     id: "google", name: "Google Workspace",
-    what: "Sign-in for pettyhomes.com accounts, and Google Calendar: appointments and contract dates go on the calendar with invites. Gmail (emails on timelines, drafts, mention emails) comes later.",
+    what: "Sign-in for pettyhomes.com accounts, Google Calendar (appointments and contract dates with invites) and sending email from HQ through Gmail.",
     vars: [
       { name: "GOOGLE_CLIENT_ID", help: "Google Cloud → APIs & Services → Credentials → the HQ OAuth client" },
       { name: "GOOGLE_CLIENT_SECRET", help: "Same screen as the client ID" },
     ],
-    note: "For Calendar: in Google Cloud, enable the Google Calendar API and add the redirect address …/api/google/callback to the HQ OAuth client. Then click Connect Google Calendar.",
+    note: "In Google Cloud, enable the Google Calendar API and the Gmail API, and add the redirect address …/api/google/callback to the HQ OAuth client. Then click Connect Google (or Reconnect Google to turn on email).",
   },
   {
     id: "texting", name: "Business texting (Twilio)",

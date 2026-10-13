@@ -394,7 +394,13 @@ Principles:
 
 - **Sign-in** (Phase 1): Google, pettyhomes.com only.
 - **Calendar** (Phase 3): appointments and contract deadlines create events with invites.
-- **Gmail** (Phase 3):
+- **Sending email** *(built 2026-10-16)*: one Google connection (Admin → Integrations) covers
+  Calendar and Gmail send. Timeline has an **Email** tab (To: the person's addresses as
+  checkboxes, optional template with merge fields, Subject, Message, **Send email** with a
+  two-step confirm). Task **Draft email** has **Send email** too, which also checks off the
+  task. Mail goes from the connected account, lands in its Sent folder and shows on the
+  timeline (filter: Emails). HQ only sends to addresses saved on that person. Plain text.
+- **Gmail** (Phase 3, still to build):
   - Emails to/from a person's addresses show on their timeline.
   - @mention notification emails.
   - "Draft email" creates a Gmail draft with the template filled in and attachments from

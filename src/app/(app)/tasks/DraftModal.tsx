@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { Modal } from "@/components/Modal";
+import { useRouter } from "next/navigation";
 import { getDraft } from "./draftActions";
+import { sendEmail } from "../people/emailActions";
 
-type Draft = { kind: "email" | "text"; templateId: string | null; stepMessage: string | null; templates: { id: string; name: string }[]; to: string[]; subject: string; body: string; missing: string[] };
+type Draft = { kind: "email" | "text"; templateId: string | null; stepMessage: string | null; templates: { id: string; name: string }[]; to: string[]; subject: string; body: string; missing: string[]; personId: string | null; sendsFrom: string | null };
 
 /** Draft email / Draft text: the filled-in template to review, then copy or open in the email app. */
 export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () => void }) {
@@ -14,6 +16,18 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [pending, start] = useTransition();
+  const [confirm, setConfirm] = useState(false);
+  const router = useRouter();
+  const canSend = !!(d && d.kind === "email" && d.sendsFrom && d.personId && d.to.length);
+  const send = () => {
+    if (!confirm) { setConfirm(true); return; }
+    setConfirm(false); setError("");
+    start(async () => {
+      const r = await sendEmail({ personId: d!.personId!, taskId, to: d!.to, subject, body });
+      if (!r.ok) { setError(r.error); return; }
+      router.refresh(); onClose();
+    });
+  };
   const load = (templateId?: string | null) => start(async () => {
     const r = await getDraft({ taskId, templateId });
     if (!r.ok) { setError(r.error); return; }
@@ -41,11 +55,13 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
           {d.kind === "email" && <label className="label">Subject<input className="input" value={subject} onChange={(e) => setSubject(e.target.value)} /></label>}
           <label className="label">Message<textarea className="input min-h-56 font-normal" value={body} onChange={(e) => setBody(e.target.value)} /></label>
           {d.missing.length > 0 && <p className="text-sm text-[#9a6400]">Not filled in (nothing on file): {d.missing.join(", ")}. Check the message before sending.</p>}
-          <p className="text-xs muted">{d.kind === "email" ? "Nothing is sent from HQ yet. Open it in your email app, or copy it. Gmail drafts come once Gmail is connected." : "Copy it and send it from your phone, then check off the task."}</p>
+          <p className="text-xs muted">{d.kind === "email" ? (canSend ? `Send email sends it from ${d.sendsFrom}, puts it on the timeline and checks off this task.` : "Gmail isn't connected, so HQ can't send it. Open it in your email app, or copy it. An Admin can connect Gmail in Admin → Integrations.") : "Copy it and send it from your phone, then check off the task."}</p>
           <div className="flex flex-wrap justify-end gap-2">
             <button type="button" className="btn" onClick={onClose}>Close</button>
             <button type="button" className="btn" disabled={!body} onClick={copy}>{copied ? "Copied" : "Copy"}</button>
-            {d.kind === "email" && <a className={`btn btn-primary ${body ? "" : "pointer-events-none opacity-50"}`} href={mailto}>Open in email</a>}
+            {d.kind === "email" && <a className={`btn ${canSend ? "" : "btn-primary"} ${body ? "" : "pointer-events-none opacity-50"}`} href={mailto}>Open in email</a>}
+            {canSend && <button type="button" className="btn btn-primary" disabled={pending || !subject.trim() || !body.trim()} onClick={send} onBlur={() => setConfirm(false)}>
+              {pending ? "Sending…" : confirm ? `Click again to send to ${d.to.length === 1 ? d.to[0] : `${d.to.length} addresses`}` : "Send email"}</button>}
           </div>
         </div>
       )}

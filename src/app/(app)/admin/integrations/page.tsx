@@ -2,17 +2,17 @@ import { adminGate } from "../gate";
 import { integrationStatus, textingEnabled } from "@/server/integrations";
 import { TextingSwitch } from "./TextingSwitch";
 import { CalendarControls } from "./CalendarControls";
-import { calendarConnection } from "@/server/google";
+import { calendarConnection, GMAIL_SEND_SCOPE } from "@/server/google";
 
 export const dynamic = "force-dynamic";
 
 const GOOGLE_RESULT: Record<string, [boolean, string]> = {
-  connected: [true, "Google Calendar is connected. New and changed appointments and contract dates now go on the calendar."],
+  connected: [true, "Google is connected. Appointments and contract dates go on the calendar, and emails can be sent from HQ."],
   cancelled: [false, "Google Calendar wasn't connected: the approval was cancelled."],
-  expired: [false, "That approval link expired. Click Connect Google Calendar again."],
-  denied: [false, "Only an Admin can connect Google Calendar."],
+  expired: [false, "That approval link expired. Click Connect Google again."],
+  denied: [false, "Only an Admin can connect Google."],
   nokeys: [false, "Add the Google keys in Railway first."],
-  error: [false, "Google didn't finish connecting. Check that the Google Calendar API is enabled and the …/api/google/callback address is added in Google Cloud, then try again."],
+  error: [false, "Google didn't finish connecting. Check that the Google Calendar API and Gmail API are enabled and the …/api/google/callback address is added in Google Cloud, then try again."],
 };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ google?: string }> }) {
@@ -38,7 +38,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ g
             <p className="text-sm">{i.what}</p>
             {i.detail && <p className="text-sm muted">Number: {i.detail}</p>}
             {i.id === "texting" && <TextingSwitch connected={i.connected} on={texting} />}
-            {i.id === "google" && <CalendarControls keysSet={i.connected} email={cal?.email ?? null} connected={!!cal} />}
+            {i.id === "google" && <CalendarControls keysSet={i.connected} email={cal?.email ?? null} connected={!!cal} gmail={!!cal && cal.scopes.split(/\s+/).includes(GMAIL_SEND_SCOPE)} />}
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider muted">{i.connected ? "Railway variables (all set)" : "Add in Railway → Variables"}</h3>
               <ul className="mt-1 flex flex-col gap-1 text-sm">

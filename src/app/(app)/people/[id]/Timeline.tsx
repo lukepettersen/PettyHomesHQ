@@ -4,18 +4,21 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { addTimelineEntry } from "../actions";
 import { mentionLabel, mentionQuery, splitMentions, type Member } from "@/lib/mentions";
+import { EmailComposer } from "./EmailComposer";
 
 type Entry = { id: string; kind: string; body: string; outcome: string | null; author: string | null; at: string };
 const TABS: [Kind, string, string, string][] = [
   ["note", "Note", "Add a note.", "Save note"],
   ["text", "Log text", "What did you text them? For texts sent from your own phone.", "Log text"],
   ["call", "Log call", "What did you talk about?", "Log call"],
+  ["email", "Email", "", ""],
 ];
-type Kind = "note" | "text" | "call";
+type Kind = "note" | "text" | "call" | "email";
 const KIND_LABEL: Record<string, string> = { note: "Note", text: "Text", call: "Call", email: "Email", system: "Update", task: "Task done" };
-const FILTERS: [string, string][] = [["all", "All"], ["note", "Notes"], ["text", "Texts"], ["call", "Calls"], ["task", "Tasks"]];
+const FILTERS: [string, string][] = [["all", "All"], ["note", "Notes"], ["email", "Emails"], ["text", "Texts"], ["call", "Calls"], ["task", "Tasks"]];
+type EmailProps = { emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null };
 
-export function Timeline({ personId, entries, team }: { personId: string; entries: Entry[]; team: Member[] }) {
+export function Timeline({ personId, entries, team, email }: { personId: string; entries: Entry[]; team: Member[]; email: EmailProps }) {
   const [kind, setKind] = useState<Kind>("note");
   const [body, setBody] = useState("");
   const [outcome, setOutcome] = useState("Talked");
@@ -54,6 +57,7 @@ export function Timeline({ personId, entries, team }: { personId: string; entrie
   function save() {
     setError("");
     start(async () => {
+      if (kind === "email") return;
       const r = await addTimelineEntry({ personId, kind, body, outcome: kind === "call" ? outcome : undefined });
       if (!r.ok) { setError(r.error); return; }
       const names = r.data?.mentioned ?? [];
@@ -70,12 +74,13 @@ export function Timeline({ personId, entries, team }: { personId: string; entrie
             className={`rounded-md px-3 py-1.5 text-sm font-semibold ${kind === k ? "border border-misty bg-white" : "muted hover:text-charcoal"}`}>{label}</button>
         ))}
       </div>
+      {kind === "email" && <EmailComposer personId={personId} {...email} />}
       {kind === "call" && (
         <select className="input mt-2 w-auto" value={outcome} onChange={(e) => setOutcome(e.target.value)} aria-label="Call outcome">
           <option>Talked</option><option>Left voicemail</option><option>No answer</option>
         </select>
       )}
-      <div className="relative">
+      {kind !== "email" && <><div className="relative">
         <textarea ref={box} className="input mt-2 min-h-24" value={body} placeholder={`${tab[2]} Type @ to mention a teammate.`} aria-label={tab[1]}
           aria-controls={pick && matches.length ? "mention-list" : undefined}
           onChange={(e) => onType(e.target.value, e.target.selectionStart)} onKeyDown={onKey} onBlur={() => setTimeout(() => setPick(null), 150)} />
@@ -90,11 +95,11 @@ export function Timeline({ personId, entries, team }: { personId: string; entrie
         )}
       </div>
       <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="text-xs muted">Email stays in Gmail. Sent and received emails will show here once Gmail is connected.</span>
+        <span className="text-xs muted">Emails sent from HQ show here. Replies stay in Gmail for now.</span>
         <button type="button" className="btn btn-primary" disabled={pending || !body.trim()} onClick={save}>{pending ? "Saving…" : tab[3]}</button>
       </div>
       {error && <p role="alert" className="mt-2 text-sm text-bad">{error}</p>}
-      {notice && <p role="status" className="mt-2 text-sm text-accent">{notice}</p>}
+      {notice && <p role="status" className="mt-2 text-sm text-accent">{notice}</p>}</>}
 
       <div className="mt-4 flex flex-wrap gap-1.5">
         {FILTERS.map(([k, l]) => (

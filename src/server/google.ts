@@ -4,11 +4,13 @@ import { seal, unseal } from "@/server/crypto";
 import { isoFromDate } from "@/lib/normalize";
 import { contractAppointments } from "@/lib/appointments";
 import { apptEvent, contractKey, inviteeEmails, type GEvent } from "@/lib/calendar";
+import { buildMime } from "@/lib/email";
 
 // Google Calendar (SPEC.md §12). Off until configured: every call here quietly does nothing when Google
 // isn't connected, and a Google error never stops HQ from saving.
 
 export const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
+export const GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send";
 export const googleKeysSet = () => !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET;
 export const redirectUri = () => `${(process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "")}/api/google/callback`;
 
@@ -23,11 +25,11 @@ export async function connectWithCode(code: string, userId: string) {
     method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ code, client_id: process.env.GOOGLE_CLIENT_ID!, client_secret: process.env.GOOGLE_CLIENT_SECRET!, redirect_uri: redirectUri(), grant_type: "authorization_code" }),
   });
-  const tok = await r.json() as { access_token?: string; refresh_token?: string; expires_in?: number; error?: string };
+  const tok = await r.json() as { access_token?: string; refresh_token?: string; expires_in?: number; scope?: string; error?: string };
   if (!r.ok || !tok.refresh_token || !tok.access_token) throw new Error(tok.error ?? "Google didn't return a refresh token");
   const cal = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary", { headers: { Authorization: `Bearer ${tok.access_token}` } });
   const email = cal.ok ? ((await cal.json()) as { id?: string }).id ?? "" : "";
-  await db.googleConnection.upsert({ where: { id: "calendar" }, update: { userId, email, refreshToken: seal(tok.refresh_token) }, create: { id: "calendar", userId, email, refreshToken: seal(tok.refresh_token) } });
+  await db.googleConnection.upsert({ where: { id: "calendar" }, update: { userId, email, refreshToken: seal(tok.refresh_token), scopes: tok.scope ?? "" }, create: { id: "calendar", userId, email, refreshToken: seal(tok.refresh_token), scopes: tok.scope ?? "" } });
   cached = { token: tok.access_token, until: Date.now() + (tok.expires_in ?? 3000) * 1000 - 60000 };
   return email;
 }
@@ -129,4 +131,32 @@ export function syncContract(paId: string) {
     for (const [key, ev] of wanted) await upsertEvent(key, ev);
     for (const key of existing) if (!wanted.has(key)) await deleteEvent(key);
   });
+}
+
+/** Gmail: the connected Google account may send email (it approved the Gmail send permission). */
+export async function emailConnection() {
+  const c = await calendarConnection();
+  return c && c.scopes.split(/\s+/).includes(GMAIL_SEND_SCOPE) ? c : null;
+}
+
+/** Sends a plain-text email from the connected Gmail account. It lands in that account's Sent folder. */
+export async function sendGmail(m: { to: string[]; subject: string; body: string }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const c = await emailConnection();
+  if (!c) return { ok: false, error: "Gmail isn't connected. An Admin can reconnect Google in Admin → Integrations." };
+  const token = await accessToken().catch(() => null);
+  if (!token) return { ok: false, error: "Google didn't let HQ in. An Admin can reconnect Google in Admin → Integrations." };
+  let raw: string;
+  try { raw = buildMime({ from: c.email, ...m }); } catch (e) { return { ok: false, error: (e as Error).message }; }
+  try {
+    const r = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+      method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ raw }),
+    });
+    if (!r.ok) {
+      console.error("Gmail: send failed", r.status);
+      return { ok: false, error: r.status === 403 ? "Google refused. Check that the Gmail API is turned on in Google Cloud, then try again." : "Gmail didn't send it. Try again in a minute." };
+    }
+    return { ok: true, id: ((await r.json()) as { id?: string }).id ?? "" };
+  } catch {
+    return { ok: false, error: "Couldn't reach Gmail. Try again in a minute." };
+  }
 }

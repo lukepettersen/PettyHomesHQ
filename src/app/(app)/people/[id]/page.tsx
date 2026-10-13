@@ -7,7 +7,7 @@ import { loadOptions } from "@/server/people";
 import { loadChecklists, loadPersonTasks } from "@/server/tasks";
 import { loadTemplates } from "@/server/automation";
 import { loadPersonAppointments } from "@/server/appointments";
-import { calendarConnection } from "@/server/google";
+import { calendarConnection, emailConnection } from "@/server/google";
 import { loadFileForm, loadPersonFiles, loadStatuses } from "@/server/files";
 import { loadForm, loadPersonContracts } from "@/server/pa";
 import { daysAgo, isoFromDate } from "@/lib/normalize";
@@ -52,8 +52,9 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
   const canSeeCommission = hasPermission(user.permissions, "seeCommissions");
   const fileStatuses = { buyer: statuses.buyer, listing: statuses.listing };
   if (!p) notFound();
-  const [appts, buyerFileForm, listingFileForm, taskLists] = await Promise.all([loadPersonAppointments(id, p.name), loadFileForm("buyer"), loadFileForm("listing"),
-    db.taskList.findMany({ where: { builtin: null }, orderBy: { position: "asc" } })]);
+  const [appts, buyerFileForm, listingFileForm, taskLists, emailTemplates, gmail] = await Promise.all([loadPersonAppointments(id, p.name), loadFileForm("buyer"), loadFileForm("listing"),
+    db.taskList.findMany({ where: { builtin: null }, orderBy: { position: "asc" } }),
+    db.messageTemplate.findMany({ where: { kind: "email" }, orderBy: [{ folder: "asc" }, { name: "asc" }], select: { id: true, name: true, folder: true } }), emailConnection()]);
   const fileForms = { buyer: buyerFileForm, listing: listingFileForm };
   const docs = await db.document.findMany({ where: { personId: id, deletedAt: null }, orderBy: { createdAt: "desc" } });
 
@@ -82,7 +83,8 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
 
         <section className="order-3 min-w-0 lg:order-2">
           <FileTabs fileForms={fileForms} personId={p.id} personName={p.name} files={files} statuses={fileStatuses} canSeeCommission={canSeeCommission}
-            canDelete={hasPermission(user.permissions, "deleteRecords")} contracts={contracts} forms={{ buyer: buyerForm, seller: sellerForm }} today={tasks.today} checklists={checklists} team={tasks.team} timeline={<Timeline personId={p.id} team={tasks.team.map((m) => ({ id: m.id, name: m.name }))} entries={p.timeline.map((e) => ({ id: e.id, kind: e.kind, body: e.body, outcome: e.outcome, author: e.author?.name ?? null, at: e.createdAt.toISOString() }))} />} />
+            canDelete={hasPermission(user.permissions, "deleteRecords")} contracts={contracts} forms={{ buyer: buyerForm, seller: sellerForm }} today={tasks.today} checklists={checklists} team={tasks.team} timeline={<Timeline personId={p.id} team={tasks.team.map((m) => ({ id: m.id, name: m.name }))} entries={p.timeline.map((e) => ({ id: e.id, kind: e.kind, body: e.body, outcome: e.outcome, author: e.author?.name ?? null, at: e.createdAt.toISOString() }))}
+            email={{ emails: p.emails.map((e) => e.address), sendsFrom: gmail?.email ?? null, templates: emailTemplates.map((t) => ({ id: t.id, name: t.folder ? `${t.folder} · ${t.name}` : t.name })) }} />} />
         </section>
 
         <aside className="order-2 flex min-w-0 flex-col gap-3 lg:sticky lg:top-3 lg:order-3">

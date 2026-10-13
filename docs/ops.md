@@ -106,6 +106,12 @@ Credentials → the HQ OAuth client → Authorized redirect URIs → add
 Calendar** and approve. The connection is stored encrypted (key derived from `NEXTAUTH_SECRET`;
 changing that secret means connecting again). Disconnect from the same page.
 
+### Gmail (sending email from HQ)
+One-time: Google Cloud → APIs & Services → Library → **Gmail API** → Enable. In HQ: Admin →
+Integrations → **Reconnect Google** and approve (the approval screen now also asks to send email).
+Emails send from the connected account (the one that clicked Connect), land in its Sent folder and
+go on the person's timeline. HQ only emails addresses saved on that person.
+
 ### File storage (Files card)
 HQ stores files in a private S3-compatible bucket. Recommended: **Cloudflare R2** (low cost, no
 download fees).
