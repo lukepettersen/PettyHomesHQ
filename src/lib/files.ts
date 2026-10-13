@@ -90,6 +90,8 @@ export function cleanFileAnswers(form: FileSection[], statusId: string | null, r
 // ---------- Display ----------
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 export const shortDay = (iso: string) => `${MON[+iso.slice(5, 7) - 1]} ${+iso.slice(8, 10)}`;
+/** "20:00" → "8:00pm". Times always show on a 12-hour clock, Central time. */
+export const clock = (t: string) => { const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")}${h < 12 ? "am" : "pm"}`; };
 export const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 export const kMoney = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(n % 1e6 ? 2 : 0).replace(/\.?0+$/, "")}M` : n >= 1000 ? `$${Math.round(n / 1000)}k` : money(n));
 
@@ -128,7 +130,7 @@ export function factRows(form: FileSection[], f: FileView): [string, string][] {
     const raw = fld.key === "price" ? (f.price ? String(f.price) : "") : fld.key === "commission" ? f.commission ?? "" : fld.key === "bac" ? f.bac ?? "" : f.info[fld.key] ?? "";
     if (!raw) continue;
     const label = fld.key === "price" && f.kind === "listing" ? (f.info.active || f.status === "Active" ? "List price" : fld.label) : fld.label;
-    const value = fld.type === "money" ? money(Number(raw)) : fld.type === "date" ? shortDay(raw) : fld.type === "datetime" ? `${shortDay(raw.slice(0, 10))} ${raw.slice(11)}` : fld.type === "pct" ? `${raw}%` : raw;
+    const value = fld.type === "money" ? money(Number(raw)) : fld.type === "date" ? shortDay(raw) : fld.type === "datetime" ? `${shortDay(raw.slice(0, 10))} ${clock(raw.slice(11, 16))}` : fld.type === "pct" ? `${raw}%` : raw;
     out.push([label, value]);
   }
   return out;

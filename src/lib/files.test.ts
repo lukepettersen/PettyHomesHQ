@@ -55,6 +55,13 @@ describe("commission is withheld without permission", () => {
   });
 });
 
+describe("12-hour times", () => {
+  it("never shows 24-hour times", () => {
+    const form = [{ id: "s", name: "S", fields: [{ key: "meet", label: "When is the meeting?", type: "datetime" as const }] }];
+    expect(factRows(form, { ...toFileView(raw, false), kind: "buyer", info: { meet: "2026-10-13T20:00" } })).toEqual([["When is the meeting?", "Oct 13 8:00pm"]]);
+  });
+});
+
 describe("display helpers", () => {
   it("health and money", () => {
     expect([health(0), health(2), health(3)]).toEqual(["g", "y", "r"]);

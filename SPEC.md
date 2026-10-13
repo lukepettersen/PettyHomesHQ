@@ -94,6 +94,7 @@ Principles:
   - Task details: changes wait for Save changes / Cancel; switching away asks to save first.
   - Deal forms, stage editing, Tasks list arrangement: Save / Cancel.
 - Two-step confirm ("Click again to delete") on every delete.
+- Times always show on a 12-hour clock in Central time (e.g. 8:00pm), never 24-hour.
 - Branding per Petty Homes Visual Guidelines: Clean Moss `#727755`, Misty Gray `#e2dbcf`,
   Mint Tulip `#aac1a1`, Burnt Charcoal `#383232`, Close to Coral `#cc7855`, Rabbit Gray
   `#bbbbb3`; Mukta Mahee font; P-house logo.
