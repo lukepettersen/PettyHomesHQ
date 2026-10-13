@@ -36,3 +36,19 @@ export async function deleteTaskForever(id: string) {
     revalidatePath("/admin/trash");
   });
 }
+
+export async function restoreFile(id: string) {
+  return guarded("deleteRecords", async (user) => {
+    const f = await db.clientFile.update({ where: { id, deletedAt: { not: null } }, data: { deletedAt: null }, include: { person: { select: { name: true } } } });
+    await logActivity(user.id, "restore", "clientFile", id, `Restored ${f.person.name}'s ${f.kind} from Trash`);
+    revalidatePath("/admin/trash"); revalidatePath("/pipeline"); revalidatePath(`/people/${f.personId}`);
+  });
+}
+
+export async function deleteFileForever(id: string) {
+  return guarded("deleteRecords", async (user) => {
+    const f = await db.clientFile.delete({ where: { id, deletedAt: { not: null } }, include: { person: { select: { name: true } } } });
+    await logActivity(user.id, "delete", "clientFile", id, `Permanently deleted ${f.person.name}'s ${f.kind}`);
+    revalidatePath("/admin/trash");
+  });
+}

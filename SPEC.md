@@ -30,7 +30,7 @@ Principles:
 
 | Permission | Admin | Assistant |
 |---|---|---|
-| See commissions (amounts and %) | ✓ | — |
+| See commissions (amounts, %, BAC) | ✓ | — |
 | Delete people and deals | ✓ | — |
 | Manage users and roles | ✓ | — |
 | Edit task templates | ✓ | ✓ |
@@ -179,6 +179,8 @@ Principles:
     property details.
 - Status changes happen **only from the contact page** (status dropdown), or automatically
   when a checklist step marked "moves deal to" is completed.
+- Starting a buyer or listing tags the person **Buyer** or **Seller**.
+- **BAC** is treated like commission: only users with "See commissions" see or edit it.
 
 ### 7.2 Statuses (editable)
 - Buyer: Consult scheduled → Consult complete → Rep signed → Showing homes → Submitting

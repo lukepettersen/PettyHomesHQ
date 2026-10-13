@@ -7,7 +7,7 @@ the source of truth for behavior. The approved screens are in `mockups/` (open
 ## Status
 
 SPEC.md approved 2026-10-13. Build in the phases in SPEC.md §16, one pull request at a time.
-Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact page cards + timeline, Admin users/roles, stages/sources/follow-up, tags); piece 2 (smart list editing, bulk actions, search, Trash, CSV export); piece 3 (Tasks page, quick add, contact Tasks card, Create task pop-up); piece 4 (@mentions + bell, Date reminders, Tools menu, custom fields, phone layout). Phase 1 is complete; next is Phase 2, starting with the worker service (pg-boss) and file bucket (moved from Phase 1, SPEC.md §17).
+Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact page cards + timeline, Admin users/roles, stages/sources/follow-up, tags); piece 2 (smart list editing, bulk actions, search, Trash, CSV export); piece 3 (Tasks page, quick add, contact Tasks card, Create task pop-up); piece 4 (@mentions + bell, Date reminders, Tools menu, custom fields, phone layout). Phase 1 is complete. Phase 2 in progress: 2.1 done (client files, statuses, Pipeline board, Admin → Client statuses); next 2.2 purchase agreements + Under Contract, 2.3 task templates, 2.4 appointments, worker (pg-boss) and file bucket.
 
 ## Working with the owner
 
@@ -96,6 +96,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 - `src/app/(app)/` — signed-in pages: `people/` (list, `[id]` contact page, `actions.ts`), `admin/` (users, lists, tags, `actions.ts`)
 - Local testing: mint a session cookie with `next-auth/jwt` `encode()` using `NEXTAUTH_SECRET` (no Google needed)
 - `src/lib/mentions.ts`, `src/server/notifications.ts`, `src/components/Bell.tsx` — @mentions and the bell
+- `src/lib/files.ts` (questions per status, commission stripping via `toFileView`, tested), `src/server/files.ts`, actions in `src/app/(app)/pipeline/actions.ts`
 - `src/lib/customFields.ts` — custom field types and value cleaning
 - Owner setup and ops runbook: `docs/ops.md`
 

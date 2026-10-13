@@ -23,6 +23,11 @@ const REMINDERS = [
 ];
 // Built-in task lists (SPEC.md §9). Rows exist so they can be ordered with user lists and hidden from Today.
 const BUILTIN_LISTS: [string, string][] = [["clients", "Clients"], ["touch", "Due for a touch"], ["dates", "Important dates"], ["recurring", "Recurring"], ["misc", "Misc"]];
+const STATUSES: [string, string[]][] = [
+  ["buyer", ["Consult scheduled", "Consult complete", "Rep signed", "Showing homes", "Submitting offers"]],
+  ["listing", ["Consult scheduled", "Consult complete", "Listing signed / Prep", "Coming soon", "Active"]],
+];
+const UC_COLUMNS: [string, string][] = [["Inspection", "inspection"], ["HOA review", "hoaRescission"], ["Financing", "writtenStatement"], ["Closing", "closing"]];
 type F = { field: string; op: string; value: string };
 const f = (field: string, op: string, value: string): F => ({ field, op, value });
 const COLLECTIONS: [string, [string, F[]][]][] = [
@@ -55,10 +60,15 @@ async function main() {
     const exists = await db.taskList.findUnique({ where: { builtin } });
     if (!exists) await db.taskList.create({ data: { builtin, name: (await db.taskList.findUnique({ where: { name } })) ? `${name} (built in)` : name, position: i } });
   }
+  if ((await db.pipelineStatus.count()) === 0) {
+    for (const [kind, names] of STATUSES) await db.pipelineStatus.createMany({ data: names.map((name, position) => ({ kind, name, position })) });
+    await db.pipelineStatus.createMany({ data: UC_COLUMNS.map(([name, untilDate], position) => ({ kind: "uc", name, untilDate, position })) });
+  }
   // Trash: anything deleted more than 30 days ago is removed for good.
   const cutoff = new Date(Date.now() - 30 * 86400000);
   const purged = await db.person.deleteMany({ where: { deletedAt: { lt: cutoff } } });
   await db.task.deleteMany({ where: { deletedAt: { lt: cutoff } } });
+  await db.clientFile.deleteMany({ where: { deletedAt: { lt: cutoff } } });
   console.log(`Seeded roles, team and default settings. Purged ${purged.count} from Trash.`);
 }
 

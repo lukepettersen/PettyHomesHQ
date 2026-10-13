@@ -42,6 +42,7 @@ model User {
   createdPeople   Person[]        @relation("PersonCreator")
   timeline        TimelineEntry[]
   tasksAssigned   Task[]          @relation("TaskAssignee")
+  filesCreated    ClientFile[]
   tasksCreated    Task[]          @relation("TaskCreator")
   notifications   Notification[]  @relation("NotificationTo")
   notificationsBy Notification[]  @relation("NotificationFrom")
@@ -154,6 +155,7 @@ model Person {
   tasks         Task[]
   customValues  CustomValue[]
   notifications Notification[]
+  files         ClientFile[]
 
   @@index([deletedAt])
   @@index([name])
@@ -299,4 +301,50 @@ model Task {
   @@index([dueDate])
   @@index([personId])
   @@index([assigneeId, completedAt])
+}
+
+// ---------- Pipeline (Phase 2) ----------
+
+// Editable statuses: Buyer Pipeline, Seller Pipeline, Under Contract/Pending Pipeline (SPEC.md §7.2).
+model PipelineStatus {
+  id        String       @id @default(cuid())
+  kind      String // buyer | listing | uc
+  name      String
+  position  Int          @default(0)
+  untilDate String? // uc only: inspection | hoaRescission | writtenStatement | closing
+  files     ClientFile[]
+
+  @@unique([kind, name])
+}
+
+// A buyer representation or a listing for one person (SPEC.md §7.1).
+model ClientFile {
+  id          String          @id @default(cuid())
+  personId    String
+  person      Person          @relation(fields: [personId], references: [id], onDelete: Cascade)
+  kind        String // buyer | listing
+  statusId    String?
+  status      PipelineStatus? @relation(fields: [statusId], references: [id])
+  statusSince DateTime        @default(now())
+  address     String? // listing
+  price       Int? // listing: list price or estimated value, whole dollars
+  info        Json            @default("{}") // status questions (areas, range, dates…), validated in src/lib/files.ts
+  closedAt    DateTime?
+  createdById String?
+  createdBy   User?           @relation(fields: [createdById], references: [id])
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  deletedAt   DateTime?
+  commission  FileCommission?
+
+  @@index([personId])
+  @@index([kind, closedAt])
+}
+
+// Commission and BAC, kept apart so they're only read for users with "See commissions".
+model FileCommission {
+  fileId     String     @id
+  file       ClientFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  commission String     @default("")
+  bac        String     @default("")
 }
