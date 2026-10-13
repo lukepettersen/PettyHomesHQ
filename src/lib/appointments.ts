@@ -1,7 +1,7 @@
 // Appointments (SPEC.md §10). Pure, unit tested in appointments.test.ts.
 
 export type ApptType = "call" | "buyer" | "seller" | "showing" | "other";
-export const APPT_TYPES: [ApptType, string, number][] = [["call", "Phone Call", 30], ["buyer", "Buyer Consultation", 60], ["seller", "Seller Consultation", 60], ["showing", "Showing", 60], ["other", "Appointment", 60]];
+export const APPT_TYPES: [ApptType, string, number][] = [["call", "Phone Call", 30], ["buyer", "Buyer Consult", 60], ["seller", "Seller Consult", 60], ["showing", "Showing", 60], ["other", "Appointment", 60]];
 export const apptLabel = (t: string) => APPT_TYPES.find(([k]) => k === t)?.[1] ?? "Appointment";
 
 /** "Sam & Lena Ortiz" → "Ortiz"; "Sam Ortiz & Lena Brooks" → "Ortiz/Brooks"; "Cher" → "Cher". */

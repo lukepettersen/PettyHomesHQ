@@ -268,7 +268,7 @@ Principles:
   Condo/townhome. *(Later: Lead source is…, for the Stacie Rihl referral step.)*
 - **Triggers:** when a buyer/listing moves to a status; when a buyer-side or seller-side PA
   is added; when a contract closes (each side); **when a phone call is booked**; **when a
-  buyer consultation is booked**, **a seller consultation**, or **either one**; or none.
+  Buyer consult is booked**, **a Seller consult**, or **either one**; or none.
 - Templates are listed, created, edited and deleted in Admin → Task templates, with a steps
   editor.
 - Seeded templates (from the FUB review, simplified): the five buyer status templates, five
@@ -342,8 +342,8 @@ Principles:
 
 ## 10. Appointments
 
-- Contact page **+** menu: **Book phone call, Book buyer consultation, Book seller
-  consultation, Book showing, Other appointment**.
+- Contact page **+** menu: **Book phone call, Book Buyer Consult, Book Seller
+  Consult, Book showing, Other appointment**.
 - Title fills in as **"Last Name - Appointment"**, or "Last/Last" for a couple with
   different last names (e.g. "Ortiz/Brooks - Phone Call"). Editable; Other requires a name.
 - Times are picked in 15-minute steps (also the PA inspection appointment, which starts
@@ -356,7 +356,7 @@ Principles:
   (default: initial phone call scheduled email today; call reminder text and hold phone call
   on the call day; schedule consult the day after) and logs it on the timeline. Can also be
   booked from Add person.
-- **Buyer/Seller consultation** for someone without that file offers "Also start a
+- **Buyer/Seller Consult** for someone without that file offers "Also start a
   buyer/listing at Consult scheduled" and opens that form with the consult date filled in.
 - **From the contract:** inspection appointment, inspection deadline (11:59pm), Written
   Statement deadline and "Close Date HOLD" appear automatically while a contract is active.
