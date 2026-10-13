@@ -19,7 +19,7 @@ const listName = z.string().trim().min(1, "Give the list a name").max(60);
 const timeSchema = z.string().trim().max(20).transform((v, ctx) => {
   if (!v) return null;
   const t = parseTime(v);
-  if (!t) { ctx.addIssue({ code: "custom", message: `"${v}" isn't a time. Try 9am or 14:30.` }); return z.NEVER; }
+  if (!t) { ctx.addIssue({ code: "custom", message: `"${v}" isn't a time. Try 9am or 2:30pm.` }); return z.NEVER; }
   return t;
 });
 

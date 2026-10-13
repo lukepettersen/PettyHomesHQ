@@ -2,15 +2,16 @@
 
 import { useState, useTransition } from "react";
 import type { ListRow, TaskRow, TeamMember } from "@/server/tasks";
-import { formatTime, PRIORITIES, REPEATS, type Subtask } from "@/lib/tasks";
+import { PRIORITIES, REPEATS, type Subtask } from "@/lib/tasks";
 import { deleteTask, updateTask } from "./actions";
 import { CheckButton, PersonLink } from "./parts";
 import { DraftModal } from "./DraftModal";
+import { TimeSelect } from "@/components/TimeSelect";
 
 type Draft = { title: string; notes: string; due: string; time: string; repeat: string; priority: number; listId: string; assigneeId: string; subtasks: Subtask[] };
 
 const draftOf = (t: TaskRow): Draft => ({
-  title: t.title, notes: t.notes, due: t.due ?? "", time: formatTime(t.time), repeat: t.repeat ?? "", priority: t.priority,
+  title: t.title, notes: t.notes, due: t.due ?? "", time: t.time ?? "", repeat: t.repeat ?? "", priority: t.priority,
   listId: t.listId ?? "", assigneeId: t.assigneeId ?? "", subtasks: t.subtasks.map((s) => ({ ...s })),
 });
 
@@ -90,8 +91,8 @@ export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSa
       <div className="grid grid-cols-[96px_minmax(0,1fr)] items-center gap-x-2.5 gap-y-2 px-3.5 py-3 text-sm">
         <label htmlFor="d-due" className="text-xs font-semibold muted">Due</label>
         <input id="d-due" type="date" className={field} value={d.due} disabled={task.step?.locked} title={task.step?.locked ? "Set by a contract date" : undefined} onChange={(e) => set({ due: e.target.value })} />
-        <label htmlFor="d-time" className="text-xs font-semibold muted">Time</label>
-        <input id="d-time" className={field} placeholder="None" value={d.time} onChange={(e) => set({ time: e.target.value })} />
+        <span className="text-xs font-semibold muted">Time</span>
+        <TimeSelect label="Time" allowNone className={field} value={d.time} onChange={(x) => set({ time: x })} />
         <label htmlFor="d-repeat" className="text-xs font-semibold muted">Repeat</label>
         <select id="d-repeat" className={field} value={d.repeat} onChange={(e) => set({ repeat: e.target.value })}>
           <option value="">Never</option>

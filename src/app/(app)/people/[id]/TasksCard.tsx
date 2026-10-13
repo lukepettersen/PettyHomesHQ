@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import type { TaskRow, TeamMember } from "@/server/tasks";
 import { diffDays, dueLabel, TASK_KINDS } from "@/lib/tasks";
 import { Modal } from "@/components/Modal";
+import { TimeSelect } from "@/components/TimeSelect";
 import { applyTemplateToPerson, completeTask, createTask, reopenTask } from "../../tasks/actions";
 import { Avatar, CheckButton, KindIcon } from "../../tasks/parts";
 import { TaskDetail } from "../../tasks/TaskDetail";
@@ -129,9 +130,10 @@ export function CreateTaskModal({ personId, personName, team, today, meId, onClo
           <label className="label">Date
             <input type="date" className="input" value={f.due} onChange={(e) => set({ due: e.target.value })} required />
           </label>
-          <label className="label">Time
-            <input className="input" value={f.time} onChange={(e) => set({ time: e.target.value })} placeholder="Optional, e.g. 2pm" />
-          </label>
+          <div className="label">Time
+            <TimeSelect label="Time" allowNone value={f.time} onChange={(x) => set({ time: x })} />
+            {f.time && <span className="text-xs font-normal muted">⏰ An alarm rings for {team.find((m) => m.id === f.assigneeId)?.name.split(" ")[0] ?? "them"} at this time while HQ is open.</span>}
+          </div>
         </div>
         {error && <p role="alert" className="text-sm text-bad">{error}</p>}
         <div className="flex justify-end gap-2">

@@ -319,7 +319,7 @@ Principles:
 - **Quick add** with natural language: "call lender re Ortiz Fri 9am", "rent check every
   month", `#list`, `!high`, `@alyssa`, today/tomorrow/weekday/next week.
 - Assignee filter: Everyone / Me / each team member.
-- Task details: title, due date (locked for steps timed from a contract date), time, repeat,
+- Task details: title, due date (locked for steps timed from a contract date), time (12-hour, 30-minute steps; the Create task pop-up has the same picker), repeat,
   list, priority, assignee, linked person, checklist source and timing, subtasks, notes,
   delete. Save changes / Cancel.
 - Deleting a task (two-step) moves it to Trash; an Admin can restore it within 30 days.
