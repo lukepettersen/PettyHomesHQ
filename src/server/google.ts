@@ -179,8 +179,7 @@ export async function sendGmail(m: { to: string[]; subject: string; body: string
       method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ raw }),
     });
     if (!r.ok) {
-      console.error("Gmail: send failed", r.status);
-      return { ok: false, error: r.status === 403 ? "Google refused. Check that the Gmail API is turned on in Google Cloud, then try again." : "Gmail didn't send it. Try again in a minute." };
+      return { ok: false, error: await gmailError(r, "send") };
     }
     return { ok: true, id: ((await r.json()) as { id?: string }).id ?? "" };
   } catch {
@@ -217,7 +216,8 @@ async function syncSince(fromMs: number, accountEmail: string, accountUserId: st
   let page = "";
   for (let i = 0; i < 5; i++) {
     const r = await gmail(`messages?maxResults=100&q=${encodeURIComponent(`after:${Math.floor(fromMs / 1000)} -in:chats -in:spam -in:trash`)}${page ? `&pageToken=${page}` : ""}`);
-    if (!r?.ok) throw new Error(`list ${r?.status ?? "no token"}`);
+    if (!r) throw new Error("list: no token");
+    if (!r.ok) throw new Error(`list: ${await gmailError(r, "sync")}`);
     const j = (await r.json()) as { messages?: { id: string }[]; nextPageToken?: string };
     ids.push(...(j.messages ?? []).map((m) => m.id));
     if (!j.nextPageToken) break;
@@ -254,4 +254,22 @@ async function syncSince(fromMs: number, accountEmail: string, accountUserId: st
     }
   }
   return added;
+}
+
+/** Google's reason for saying no, in plain words. Logged without any message content. */
+async function gmailError(r: Response, what: string): Promise<string> {
+  let reason = "", message = "";
+  try {
+    const j = (await r.json()) as { error?: { message?: string; status?: string; errors?: { reason?: string }[]; details?: { reason?: string }[] } };
+    reason = j.error?.errors?.[0]?.reason ?? j.error?.details?.find((d) => d.reason)?.reason ?? j.error?.status ?? "";
+    message = (j.error?.message ?? "").slice(0, 300);
+  } catch { /* not JSON */ }
+  console.error(`Gmail: ${what} failed`, r.status, reason, message);
+  if (/accessNotConfigured|SERVICE_DISABLED/i.test(reason) || /has not been used|is disabled/i.test(message))
+    return "The Gmail API is off in Google Cloud (or was just turned on: give it 5 minutes). Turn it on in the same Google Cloud project as the HQ sign-in, then try again.";
+  if (/insufficient|SCOPE/i.test(reason + message))
+    return "Google didn't give HQ permission to send. In Admin → Integrations click Reconnect Google, and leave every box ticked on Google's screen.";
+  if (r.status === 401) return "Google signed HQ out. An Admin can click Reconnect Google in Admin → Integrations.";
+  if (r.status === 429) return "Gmail's sending limit was reached. Try again later.";
+  return `Gmail didn't send it (${r.status}${message ? `: ${message}` : ""}). Try again in a minute.`;
 }
