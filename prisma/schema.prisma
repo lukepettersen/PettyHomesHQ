@@ -156,6 +156,7 @@ model Person {
   customValues  CustomValue[]
   notifications Notification[]
   files         ClientFile[]
+  appointments  Appointment[]
 
   @@index([deletedAt])
   @@index([name])
@@ -418,5 +419,33 @@ model TaskTemplate {
   phases    Json     @default("[]")
   position  Int      @default(0)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Appointments booked from a contact (SPEC.md §10). Stored in HQ; Google Calendar events come in Phase 3.
+model Appointment {
+  id            String    @id @default(cuid())
+  personId      String
+  person        Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  type          String // call | buyer | seller | showing | other
+  title         String
+  date          DateTime  @db.Date
+  start         String? // "14:00"
+  end           String?
+  location      String    @default("")
+  invitees      Json      @default("[]") // names ticked to invite
+  googleEventId String?
+  createdById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  @@index([personId, date])
+}
+
+// Buyer and listing form definitions (the status questions), editable in Admin. Sections JSON: see src/lib/files.ts.
+model FileFormDef {
+  kind      String   @id // buyer | listing
+  sections  Json
   updatedAt DateTime @updatedAt
 }

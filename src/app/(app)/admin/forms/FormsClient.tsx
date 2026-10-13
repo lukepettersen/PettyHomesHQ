@@ -19,19 +19,27 @@ export function FormsClient({ forms }: { forms: Record<Side, PaSection[]> }) {
             className={`-mb-px border-b-[3px] px-3 py-2 ${side === s ? "border-coral font-semibold" : "border-transparent muted"}`}>{s === "buyer" ? "Buyer side" : "Seller side"}</button>
         ))}
       </div>
-      <FormEditor key={side} side={side} initial={forms[side]} />
+      <FormEditor key={side} initial={forms[side]} locked={LOCKED_KEYS} automation={AUTOMATION_KEYS} stepLabels
+        onSave={(sections) => saveForm({ side, sections })} />
     </>
   );
 }
 
-function FormEditor({ side, initial }: { side: Side; initial: PaSection[] }) {
+type Section = PaSection & { statuses?: string[] };
+
+/** Shared by the purchase agreement and buyer/listing forms. With `statuses`, each section picks the statuses it shows at. */
+export function FormEditor({ initial, onSave, locked, automation, statuses, stepLabels }: {
+  initial: Section[]; onSave: (sections: Section[]) => Promise<{ ok: true } | { ok: false; error: string }>;
+  locked: string[]; automation: string[]; statuses?: { id: string; name: string }[]; stepLabels?: boolean;
+}) {
+  const LOCKED_KEYS = locked, AUTOMATION_KEYS = automation;
   const router = useRouter();
-  const [secs, setSecs] = useState<PaSection[]>(initial);
+  const [secs, setSecs] = useState<Section[]>(initial);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const dirty = JSON.stringify(secs) !== JSON.stringify(initial);
   const conds = showIfChoices(secs);
-  const patchSec = (i: number, p: Partial<PaSection>) => setSecs(secs.map((s, j) => (j === i ? { ...s, ...p } : s)));
+  const patchSec = (i: number, p: Partial<Section>) => setSecs(secs.map((s, j) => (j === i ? { ...s, ...p } : s)));
   const patchField = (i: number, fi: number, p: Partial<PaField>) => patchSec(i, { fields: secs[i].fields.map((f, j) => (j === fi ? { ...f, ...p } : f)) });
   const moveSec = (i: number, d: number) => { const n = [...secs]; [n[i], n[i + d]] = [n[i + d], n[i]]; setSecs(n); };
   const moveField = (i: number, fi: number, d: number) => { const f = [...secs[i].fields]; [f[fi], f[fi + d]] = [f[fi + d], f[fi]]; patchSec(i, { fields: f }); };
@@ -41,13 +49,14 @@ function FormEditor({ side, initial }: { side: Side; initial: PaSection[] }) {
       {secs.map((s, i) => (
         <section key={s.id} className="card">
           <div className="flex flex-wrap items-center gap-2 border-b border-misty px-4 py-3">
-            <span className="text-xs font-semibold muted">{i === 0 ? "Step 2" : "Step 3"}</span>
+            {stepLabels && <span className="text-xs font-semibold muted">{i === 0 ? "Step 2" : "Step 3"}</span>}
             <input aria-label="Section name" className="input min-w-[180px] flex-1 font-semibold" value={s.name} onChange={(e) => patchSec(i, { name: e.target.value })} />
             <select aria-label={`Show ${s.name} only if`} className="input w-auto" value={s.showIf ?? ""} onChange={(e) => patchSec(i, { showIf: e.target.value || undefined })}>
               <option value="">Always shown</option>
               {conds.map(([k, l]) => <option key={k} value={k}>Only if {l}</option>)}
             </select>
-            <label className="flex items-center gap-1 text-sm"><input type="checkbox" checked={!!s.people} onChange={(e) => patchSec(i, { people: e.target.checked || undefined })} /> People section</label>
+            {statuses && <ShownAt statuses={statuses} value={s.statuses ?? []} onChange={(v) => patchSec(i, { statuses: v.length ? v : undefined })} />}
+            {!statuses && <label className="flex items-center gap-1 text-sm"><input type="checkbox" checked={!!s.people} onChange={(e) => patchSec(i, { people: e.target.checked || undefined })} /> People section</label>}
             <span className="flex gap-1">
               <button type="button" className="btn px-2" aria-label={`Move section ${s.name} up`} disabled={i === 0} onClick={() => moveSec(i, -1)}>↑</button>
               <button type="button" className="btn px-2" aria-label={`Move section ${s.name} down`} disabled={i === secs.length - 1} onClick={() => moveSec(i, 1)}>↓</button>
@@ -90,7 +99,29 @@ function FormEditor({ side, initial }: { side: Side; initial: PaSection[] }) {
       ))}
       <button type="button" className="btn self-start" onClick={() => setSecs([...secs, { id: newKey("section"), name: "New section", fields: [] }])}>+ Add section</button>
       <SaveBar dirty={dirty} pending={pending} error={error} onDiscard={() => { setSecs(initial); setError(""); }}
-        onSave={() => start(async () => { setError(""); const r = await saveForm({ side, sections: secs }); if (!r.ok) setError(r.error); else router.refresh(); })} />
+        onSave={() => start(async () => { setError(""); const r = await onSave(secs); if (!r.ok) setError(r.error); else router.refresh(); })} />
+    </div>
+  );
+}
+
+/** "Shown at": every status, or only the ticked ones. */
+function ShownAt({ statuses, value, onChange }: { statuses: { id: string; name: string }[]; value: string[]; onChange: (v: string[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const label = !value.length ? "Shown at every status" : `Shown at ${value.length} status${value.length === 1 ? "" : "es"}`;
+  return (
+    <div className="relative">
+      <button type="button" className="input w-auto text-left" aria-expanded={open} onClick={() => setOpen(!open)}>{label} ▾</button>
+      {open && (
+        <div className="absolute left-0 top-full z-20 mt-1 flex w-64 flex-col gap-1 rounded-lg border border-misty bg-white p-2 text-sm shadow-xl">
+          <label className="flex items-center gap-2"><input type="checkbox" checked={!value.length} onChange={() => onChange([])} /> Every status</label>
+          {statuses.map((st) => (
+            <label key={st.id} className="flex items-center gap-2">
+              <input type="checkbox" checked={value.includes(st.id)} onChange={(e) => onChange(e.target.checked ? [...value, st.id] : value.filter((x) => x !== st.id))} /> {st.name}
+            </label>
+          ))}
+          <button type="button" className="btn mt-1 self-end px-2 py-0.5" onClick={() => setOpen(false)}>Done</button>
+        </div>
+      )}
     </div>
   );
 }

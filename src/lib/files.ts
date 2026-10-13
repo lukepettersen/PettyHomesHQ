@@ -1,89 +1,92 @@
-// Buyer and listing files (SPEC.md §7.1): the questions asked at each status, cleaning answers,
-// and what the contact page and Pipeline show. Pure, unit tested in files.test.ts.
+// Buyer and listing files (SPEC.md §7.1): the editable forms (questions shown at each status), cleaning
+// answers, and what the contact page and Pipeline show. Pure, unit tested in files.test.ts.
 
 export type FileKind = "buyer" | "listing";
-export type QType = "text" | "money" | "number" | "date" | "choice";
-export type Question = { key: string; label: string; type: QType; options?: string[]; placeholder?: string; required?: boolean; commission?: boolean };
-export type Group = { title: string; questions: Question[] };
+import { isShown, type FieldType, type PaField, type PaSection } from "./pa";
+
+/** A section of the buyer or listing form; `statuses` lists the status ids it shows at (none = every status). */
+export type FileSection = PaSection & { statuses?: string[] };
+export type Answers = Record<string, string>;
 
 const TIMEFRAMES = ["0–3 months", "3–6 months", "6–12 months", "12+ months"];
-const YES_NO = ["No", "Yes"];
-const q = (key: string, label: string, type: QType, extra: Partial<Question> = {}): Question => ({ key, label, type, ...extra });
+const q = (key: string, label: string, type: FieldType, extra: Partial<PaField> = {}): PaField => ({ key, label, type, ...extra });
 
-const SEARCH: Group = { title: "What they're looking for", questions: [
-  q("areas", "Areas they want", "text", { placeholder: "e.g. SW Minneapolis, Edina" }),
-  q("range", "Price range", "text", { placeholder: "e.g. $350–400k" }),
+const SEARCH = { id: "search", name: "What they're looking for", fields: [
+  q("areas", "Areas they want", "text", { hint: "e.g. SW Minneapolis, Edina" }),
+  q("range", "Price range", "text", { hint: "e.g. $350–400k" }),
   q("timeframe", "Timeframe", "choice", { options: TIMEFRAMES }),
   q("preapproved", "Pre-approved?", "choice", { options: ["Not yet", "Yes", "Paying cash"] }),
-  q("lender", "Lender", "text", { placeholder: "Name and company" }),
+  q("lender", "Lender", "text", { hint: "Name and company" }),
 ] };
-const CONSULT: Group = { title: "Consult", questions: [q("consult", "Consult date", "date")] };
-const REP: Group = { title: "Buyer rep", questions: [
-  q("repSigned", "Buyer rep signed", "date"), q("repExpires", "Buyer rep expires", "date"),
-  q("bac", "BAC", "text", { placeholder: "e.g. 2.5%", commission: true }),
-] };
-const OFFER: Group = { title: "The offer", questions: [
-  q("offer", "Offer (address and price)", "text", { placeholder: "e.g. 2215 Hillside Ave · $389,000" }), q("respond", "Response deadline", "date"),
-] };
-const HOME: Group = { title: "The home", questions: [
-  q("address", "Property address", "text", { placeholder: "Street, city", required: true }), q("price", "Estimated value", "money"),
-  q("timeframe", "Timeframe", "choice", { options: TIMEFRAMES }),
-] };
-const LISTING: Group = { title: "The listing", questions: [
-  q("address", "Property address", "text", { placeholder: "Street, city", required: true }), q("price", "List price", "money"),
+const CONSULT = { id: "consult", name: "Consult", fields: [q("consult", "Consult date", "date")] };
+const REP = { id: "rep", name: "Buyer rep", fields: [q("repSigned", "Buyer rep signed", "date"), q("repExpires", "Buyer rep expires", "date"), q("bac", "BAC", "text", { hint: "e.g. 2.5%" })] };
+const OFFER = { id: "offer", name: "The offer", fields: [q("offer", "Offer (address and price)", "text", { hint: "e.g. 2215 Hillside Ave · $389,000" }), q("respond", "Response deadline", "date")] };
+const HOME = { id: "home", name: "The home", fields: [q("address", "Property address", "text", { hint: "Street, city", required: true }), q("price", "Estimated value", "money"), q("timeframe", "Timeframe", "choice", { options: TIMEFRAMES })] };
+const LISTING = { id: "listing", name: "The listing", fields: [
+  q("address", "Property address", "text", { hint: "Street, city", required: true }), q("price", "List price", "money"),
   q("lcSigned", "Listing agreement signed", "date"), q("lcExpires", "Listing expires", "date"),
-  q("commission", "Commission", "text", { placeholder: "e.g. 2.5%", commission: true }), q("bac", "BAC offered", "text", { placeholder: "e.g. 2.5%", commission: true }),
+  q("commission", "Commission", "text", { hint: "e.g. 2.5%" }), q("bac", "BAC offered", "text", { hint: "e.g. 2.5%" }),
   q("photos", "Photos scheduled", "date"), q("active", "Active date", "date"),
 ] };
-const PROPERTY: Group = { title: "The property", questions: [
+const PROPERTY = { id: "property", name: "The property", fields: [
   q("ptype", "Property type", "choice", { options: ["Single family", "Townhome", "Condo", "Twin home", "Multi-family"] }),
-  q("year", "Year built", "number"), q("hoa", "HOA?", "choice", { options: YES_NO }), q("newc", "New construction?", "choice", { options: YES_NO }),
+  q("year", "Year built", "number"), q("hoa", "HOA?", "yesno"), q("newc", "New construction?", "yesno"),
 ] };
 
-/** Questions for a status, by its position in the (editable) status list. */
-export function groupsFor(kind: FileKind, statusIndex: number, statusCount: number): Group[] {
-  if (kind === "buyer") {
-    const g = [SEARCH];
-    if (statusIndex === 0) g.push(CONSULT);
-    if (statusIndex >= 2) g.push(REP);
-    if (statusIndex === statusCount - 1 && statusCount > 2) g.push(OFFER);
-    return g;
-  }
-  if (statusIndex < 2) return statusIndex === 0 ? [HOME, CONSULT] : [HOME];
-  return [LISTING, PROPERTY];
+/**
+ * The starting forms, shown at the same statuses as before forms were editable: buyers always get the search,
+ * the consult at the first status, the rep from the third, the offer at the last; listings get the home and
+ * consult early, then the listing and property.
+ */
+export function defaultFileForm(kind: FileKind, statuses: { id: string }[]): FileSection[] {
+  const ids = statuses.map((s) => s.id), at = (from: number, to = ids.length - 1) => ids.slice(Math.max(0, from), to + 1);
+  if (kind === "buyer") return [{ ...SEARCH }, { ...CONSULT, statuses: at(0, 0) }, { ...REP, statuses: at(2) }, { ...OFFER, statuses: ids.length > 2 ? at(ids.length - 1) : [] }];
+  // "The home" and "The listing" both ask for the address and price; they're shown at different statuses.
+  return [{ ...HOME, statuses: at(0, 1) }, { ...CONSULT, statuses: at(0, 0) }, { ...LISTING, statuses: at(2) }, { ...PROPERTY, statuses: at(2) }];
 }
 
-const ALL: Record<FileKind, Question[]> = {
-  buyer: [SEARCH, CONSULT, REP, OFFER].flatMap((g) => g.questions),
-  listing: [HOME, CONSULT, LISTING, PROPERTY].flatMap((g) => g.questions).filter((x, i, a) => a.findIndex((y) => y.key === x.key) === i),
-};
-export const allQuestions = (kind: FileKind) => ALL[kind];
+/** Keys the app reads: Pipeline cards, the commission table, contract prefill and template conditions. */
+export const FILE_AUTOMATION_KEYS = ["address", "price", "commission", "bac", "consult", "repExpires", "active", "photos", "ptype", "year", "hoa", "newc"];
+export const FILE_LOCKED_KEYS: Record<FileKind, string[]> = { buyer: [], listing: ["address"] };
+const COMMISSION = ["commission", "bac"];
 
-export type Answers = Record<string, string>;
-export type CleanFile = { address: string | null; price: number | null; info: Answers; commission: { commission: string; bac: string } };
+/** Sections shown at a status (and passing any "Show only if"). */
+export function sectionsAt(form: FileSection[], statusId: string | null, a: Answers = {}): FileSection[] {
+  return form.filter((s) => (!s.statuses?.length || (statusId && s.statuses.includes(statusId))) && isShown(s.showIf, a))
+    .map((s) => ({ ...s, fields: s.fields.filter((f) => isShown(f.showIf, a)) }));
+}
 
-/** Checks and tidies answers. Throws a plain message the user can fix. */
-export function cleanAnswers(kind: FileKind, raw: Answers, required: Question[] = []): CleanFile {
+export type CleanFile = { address: string | null; price: number | null; info: Answers; commission: { commission: string; bac: string }; shown: Set<string> };
+
+/** Checks and tidies the answers to the questions shown at a status. Throws a plain message the user can fix. */
+export function cleanFileAnswers(form: FileSection[], statusId: string | null, raw: Answers, opts: { skipCommission?: boolean } = {}): CleanFile {
   const info: Answers = {};
   let address: string | null = null, price: number | null = null;
   const commission = { commission: "", bac: "" };
-  for (const qn of ALL[kind]) {
-    const v = (raw[qn.key] ?? "").toString().trim();
-    if (!v) { if (required.some((r) => r.key === qn.key)) throw new Error(`Add the ${qn.label.toLowerCase()}.`); continue; }
-    let out = v.slice(0, 200);
-    if (qn.type === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new Error(`${qn.label}: pick a date.`);
-    if (qn.type === "money" || qn.type === "number") {
+  const fields = sectionsAt(form, statusId, raw).flatMap((s) => s.fields).filter((f, i, all) => all.findIndex((x) => x.key === f.key) === i);
+  const shown = new Set(fields.map((f) => f.key));
+  for (const f of fields) {
+    if (opts.skipCommission && COMMISSION.includes(f.key)) continue;
+    let v = (raw[f.key] ?? "").toString().trim();
+    if (f.type === "date-na" && raw[`${f.key}_na`] === "yes") { info[`${f.key}_na`] = "yes"; continue; }
+    if (!v) { if (f.required) throw new Error(`Add the ${f.label.toLowerCase()}.`); continue; }
+    if (f.type === "money" || f.type === "number") {
       const n = Number(v.replace(/[$,\s]/g, ""));
-      if (!Number.isFinite(n) || n < 0) throw new Error(`${qn.label}: use a number.`);
-      out = String(Math.round(n));
+      if (!Number.isFinite(n) || n < 0) throw new Error(`${f.label}: use a number.`);
+      v = String(Math.round(n));
     }
-    if (qn.type === "choice" && !qn.options!.includes(v)) throw new Error(`${qn.label}: pick one of the choices.`);
-    if (qn.key === "address") address = out;
-    else if (qn.key === "price") price = Number(out);
-    else if (qn.commission) commission[qn.key as "commission" | "bac"] = out;
-    else info[qn.key] = out;
+    if (f.type === "pct") { const n = Number(v.replace(/[%\s]/g, "")); if (!Number.isFinite(n) || n < 0 || n > 100) throw new Error(`${f.label}: use a percent, like 2.7.`); v = String(n); }
+    if ((f.type === "date" || f.type === "date-na") && !/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new Error(`${f.label}: pick a date.`);
+    if (f.type === "datetime" && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) throw new Error(`${f.label}: pick a date and time.`);
+    if (f.type === "yesno" && v !== "Yes" && v !== "No") throw new Error(`${f.label}: pick Yes or No.`);
+    if (f.type === "choice" && !(f.options ?? []).includes(v)) throw new Error(`${f.label}: pick one of the choices.`);
+    v = v.slice(0, 300);
+    if (f.key === "address") address = v;
+    else if (f.key === "price") price = Number(v);
+    else if (COMMISSION.includes(f.key)) commission[f.key as "commission" | "bac"] = v;
+    else info[f.key] = v;
   }
-  return { address, price, info, commission };
+  return { address, price, info, commission, shown };
 }
 
 // ---------- Display ----------
@@ -117,16 +120,20 @@ export function toFileView(
 export const fileLine = (f: Pick<FileView, "kind" | "address" | "info">) =>
   f.kind === "buyer" ? [f.info.areas, f.info.range].filter(Boolean).join(" · ") || "Looking" : f.address ?? "Address not set";
 
-/** Label/value pairs for the facts line. Empty values, and commission values the viewer can't see, are left out. */
-export function factRows(f: FileView): [string, string][] {
-  const i = f.info, dt = (k: string) => (i[k] ? shortDay(i[k]) : "");
-  const rows: [string, string | undefined | false][] = f.kind === "buyer"
-    ? [["Looking in", i.areas], ["Price range", i.range], ["Timeframe", i.timeframe], ["Pre-approved", i.preapproved], ["Lender", i.lender], ["Consult", dt("consult")],
-       ["Rep signed", dt("repSigned")], ["Rep expires", dt("repExpires")], ["BAC", f.bac ?? ""], ["Offer", i.offer], ["Response due", dt("respond")]]
-    : [[f.status === "Consult scheduled" || f.status === "Consult complete" ? "Estimated value" : "List price", f.price ? money(f.price) : ""], ["Timeframe", i.timeframe], ["Consult", dt("consult")],
-       ["Listing signed", dt("lcSigned")], ["Expires", dt("lcExpires")], ["Commission", f.commission ?? ""], ["BAC offered", f.bac ?? ""], ["Photos", dt("photos")], ["Active", dt("active")],
-       ["Property", [i.ptype, i.year && `built ${i.year}`, i.hoa === "Yes" && "HOA", i.newc === "Yes" && "New construction"].filter(Boolean).join(" · ")]];
-  return rows.filter((r): r is [string, string] => !!r[1]);
+/** Label/value pairs for the facts line, in form order. Empty values, and commission the viewer can't see, are left out. */
+export function factRows(form: FileSection[], f: FileView): [string, string][] {
+  const out: [string, string][] = [];
+  const seen = new Set<string>(["address"]);
+  for (const fld of form.flatMap((s) => s.fields)) {
+    if (seen.has(fld.key)) continue;
+    seen.add(fld.key);
+    const raw = fld.key === "price" ? (f.price ? String(f.price) : "") : fld.key === "commission" ? f.commission ?? "" : fld.key === "bac" ? f.bac ?? "" : f.info[fld.key] ?? "";
+    if (!raw) continue;
+    const label = fld.key === "price" && f.kind === "listing" ? (f.info.active || f.status === "Active" ? "List price" : fld.label) : fld.label;
+    const value = fld.type === "money" ? money(Number(raw)) : fld.type === "date" ? shortDay(raw) : fld.type === "datetime" ? `${shortDay(raw.slice(0, 10))} ${raw.slice(11)}` : fld.type === "pct" ? `${raw}%` : raw;
+    out.push([label, value]);
+  }
+  return out;
 }
 
 /** Health dot from overdue open tasks: none on track, 1–2 something overdue, 3+ behind. */

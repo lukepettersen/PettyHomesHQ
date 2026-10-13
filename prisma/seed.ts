@@ -6,6 +6,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { DEFAULT_ROLES } from "../src/server/permissions";
 import { DEFAULT_FORMS } from "../src/lib/pa";
 import { STARTER_TEMPLATES } from "./starterTemplates";
+import { defaultFileForm } from "../src/lib/files";
 
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
 
@@ -68,6 +69,13 @@ async function main() {
   }
   for (const side of ["buyer", "seller"] as const) {
     if (!(await db.paForm.findUnique({ where: { side } }))) await db.paForm.create({ data: { side, sections: DEFAULT_FORMS[side] } });
+  }
+  // Buyer and listing forms, once, shown at the same statuses as before they were editable.
+  for (const kind of ["buyer", "listing"] as const) {
+    if (!(await db.fileFormDef.findUnique({ where: { kind } }))) {
+      const statuses = await db.pipelineStatus.findMany({ where: { kind }, orderBy: { position: "asc" } });
+      await db.fileFormDef.create({ data: { kind, sections: defaultFileForm(kind, statuses) } });
+    }
   }
   // Starter task templates, once, matched to the statuses by name (SPEC.md §8).
   if ((await db.taskTemplate.count()) === 0) {

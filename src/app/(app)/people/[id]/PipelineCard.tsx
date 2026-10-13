@@ -2,14 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { fileLine, kMoney, type FileKind, type FileView } from "@/lib/files";
+import { fileLine, kMoney, type FileKind, type FileSection, type FileView } from "@/lib/files";
 import type { StatusRow } from "@/server/files";
 import { FileForm } from "../../pipeline/FileForm";
 import { SideChip } from "./FileTabs";
 import type { PaView } from "@/lib/pa";
 
 /** Contact page → Pipeline: this person's buyer and listing files, + Add buyer / + Add seller. */
-export function PipelineCard({ personId, personName, files, contracts, statuses, canSeeCommission }: { personId: string; personName: string; files: FileView[]; contracts: PaView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean }) {
+export function PipelineCard({ fileForms, personId, personName, files, contracts, statuses, canSeeCommission }: { fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; files: FileView[]; contracts: PaView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean }) {
   const router = useRouter();
   const [adding, setAdding] = useState<FileKind | null>(null);
   const [msg, setMsg] = useState("");
@@ -43,7 +43,7 @@ export function PipelineCard({ personId, personName, files, contracts, statuses,
       </div>
       {msg && <p role="status" className="mt-2 text-sm text-accent">{msg}</p>}
       {adding && (
-        <FileForm kind={adding} personId={personId} personName={personName} statuses={statuses[adding]} canSeeCommission={canSeeCommission}
+        <FileForm form={fileForms[adding]} kind={adding} personId={personId} personName={personName} statuses={statuses[adding]} canSeeCommission={canSeeCommission}
           onClose={() => setAdding(null)} onSaved={(m) => { setAdding(null); setMsg(m); router.refresh(); }} />
       )}
     </section>

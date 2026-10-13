@@ -3,7 +3,7 @@ import { db } from "@/server/db";
 import { hasPermission } from "@/server/permissions";
 import type { SessionUser } from "@/server/auth";
 import { isoFromDate, todayCentral } from "@/lib/normalize";
-import { toFileView, type FileView } from "@/lib/files";
+import { defaultFileForm, toFileView, type FileKind, type FileSection, type FileView } from "@/lib/files";
 import { toPaView, ucColumn, type PaView } from "@/lib/pa";
 import { LIVE_STEPS } from "@/server/tasks";
 
@@ -67,4 +67,11 @@ export async function loadPipeline(user: SessionUser): Promise<{ files: Pipeline
     contracts: pas.filter((p) => p.state === "active").map(card),
     closed: pas.filter((p) => p.state === "closed").map(card),
   };
+}
+
+/** The buyer or listing form from Admin, or the starting one if it was never saved. */
+export async function loadFileForm(kind: FileKind): Promise<FileSection[]> {
+  const row = await db.fileFormDef.findUnique({ where: { kind } });
+  if (Array.isArray(row?.sections)) return row.sections as unknown as FileSection[];
+  return defaultFileForm(kind, await db.pipelineStatus.findMany({ where: { kind }, orderBy: { position: "asc" } }));
 }

@@ -2,33 +2,34 @@
 
 import { useState, useTransition } from "react";
 import { Modal } from "@/components/Modal";
-import { groupsFor, type Answers, type FileKind, type Question } from "@/lib/files";
+import { sectionsAt, type Answers, type FileKind, type FileSection } from "@/lib/files";
+import type { PaField } from "@/lib/pa";
 import type { StatusRow } from "@/server/files";
 import { startFile, updateFile } from "./actions";
 
 /** Start a buyer / Start a listing, or edit one. Questions change with the status (SPEC.md §7.1). */
-export function FileForm({ kind, personId, personName, fileId, statuses, statusId, answers, canSeeCommission, onClose, onSaved }: {
-  kind: FileKind; personId: string; personName: string; fileId?: string; statuses: StatusRow[]; statusId?: string | null; answers?: Answers;
+export function FileForm({ kind, personId, personName, fileId, statuses, statusId, answers, canSeeCommission, form, onClose, onSaved }: {
+  kind: FileKind; form: FileSection[]; personId: string; personName: string; fileId?: string; statuses: StatusRow[]; statusId?: string | null; answers?: Answers;
   canSeeCommission: boolean; onClose: () => void; onSaved: (message: string) => void;
 }) {
   const [status, setStatus] = useState(statusId && statuses.some((s) => s.id === statusId) ? statusId : statuses[0]?.id ?? "");
   const [v, setV] = useState<Answers>({ timeframe: "0–3 months", preapproved: "Not yet", ptype: "Single family", hoa: "No", newc: "No", ...answers });
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
-  const index = Math.max(0, statuses.findIndex((s) => s.id === status));
-  const groups = groupsFor(kind, index, statuses.length)
-    .map((g) => ({ ...g, questions: g.questions.filter((q) => canSeeCommission || !q.commission) }))
-    .filter((g) => g.questions.length);
-  const shownKeys = new Set(groups.flatMap((g) => g.questions.map((q) => q.key)));
+  // The questions for this status come from Admin → Buyer & listing forms.
+  const groups = sectionsAt(form, status, v)
+    .map((g) => ({ ...g, fields: g.fields.filter((q) => canSeeCommission || !["commission", "bac"].includes(q.key)) }))
+    .filter((g) => g.fields.length);
+  const shownKeys = new Set(groups.flatMap((g) => g.fields.map((q) => q.key)));
   const noun = kind === "buyer" ? "buyer" : "listing";
   const title = fileId ? `Edit ${kind === "buyer" ? "buyer representation" : "listing"}` : `Start a ${noun}`;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const missing = groups.flatMap((g) => g.questions).filter((q) => q.required && !(v[q.key] ?? "").trim());
+    const missing = groups.flatMap((g) => g.fields).filter((q) => q.required && !(v[q.key] ?? "").trim());
     if (missing.length) { setError(`Add the ${missing.map((q) => q.label.toLowerCase()).join(" and ")} first.`); return; }
     // Only send what's on screen; anything else on the file is kept as is.
-    const sent = Object.fromEntries(Object.entries(v).filter(([k]) => shownKeys.has(k)));
+    const sent = Object.fromEntries(Object.entries(v).filter(([k]) => shownKeys.has(k.replace(/_na$/, ""))));
     start(async () => {
       const r = fileId ? await updateFile({ id: fileId, statusId: status, answers: sent }) : await startFile({ personId, kind, statusId: status, answers: sent });
       if (!r.ok) { setError(r.error); return; }
@@ -49,10 +50,10 @@ export function FileForm({ kind, personId, personName, fileId, statuses, statusI
           </label>
         </div>
         {groups.map((g) => (
-          <fieldset key={g.title} className="rounded-lg border border-misty px-3 pt-1 pb-3">
-            <legend className="px-1 text-sm font-bold">{g.title}</legend>
+          <fieldset key={g.id} className="rounded-lg border border-misty px-3 pt-1 pb-3">
+            <legend className="px-1 text-sm font-bold">{g.name}</legend>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {g.questions.map((q) => <Field key={q.key} q={q} value={v[q.key] ?? ""} onChange={(x) => setV({ ...v, [q.key]: x })} />)}
+              {g.fields.map((q) => <Field key={q.key} q={q} v={v} set={(k, x) => setV((o) => ({ ...o, [k]: x }))} />)}
             </div>
           </fieldset>
         ))}
@@ -67,20 +68,35 @@ export function FileForm({ kind, personId, personName, fileId, statuses, statusI
   );
 }
 
-function Field({ q, value, onChange }: { q: Question; value: string; onChange: (v: string) => void }) {
+function Field({ q, v, set }: { q: PaField; v: Answers; set: (k: string, x: string) => void }) {
   const label = `${q.label}${q.required ? " *" : ""}`;
-  if (q.type === "choice") return (
-    <label className="label">{label}
-      <select className="input" value={value} onChange={(e) => onChange(e.target.value)}>
-        {!q.options!.includes(value) && <option value="">—</option>}
-        {q.options!.map((o) => <option key={o}>{o}</option>)}
-      </select>
-    </label>
-  );
+  const value = v[q.key] ?? "";
+  if (q.type === "choice" || q.type === "yesno") {
+    const opts = q.type === "yesno" ? ["No", "Yes"] : q.options ?? [];
+    return (
+      <label className="label">{label}
+        <select className="input" value={value} onChange={(e) => set(q.key, e.target.value)}>
+          {!opts.includes(value) && <option value="">—</option>}
+          {opts.map((o) => <option key={o}>{o}</option>)}
+        </select>
+      </label>
+    );
+  }
+  if (q.type === "date-na") {
+    const na = v[`${q.key}_na`] === "yes";
+    return (
+      <div className="label">{label}
+        <span className="flex items-center gap-2">
+          <input aria-label={q.label} type="date" className="input" value={na ? "" : value} disabled={na} onChange={(e) => set(q.key, e.target.value)} />
+          <label className="flex items-center gap-1 text-sm font-normal text-charcoal"><input type="checkbox" checked={na} onChange={(e) => set(`${q.key}_na`, e.target.checked ? "yes" : "")} /> N/A</label>
+        </span>
+      </div>
+    );
+  }
   return (
     <label className="label">{label}
-      <input className="input" value={value} onChange={(e) => onChange(e.target.value)} placeholder={q.placeholder ?? (q.type === "money" ? "$" : "")}
-        type={q.type === "date" ? "date" : "text"} inputMode={q.type === "money" || q.type === "number" ? "numeric" : undefined} />
+      <input className="input" value={value} onChange={(e) => set(q.key, e.target.value)} placeholder={q.hint ?? (q.type === "money" ? "$" : q.type === "pct" ? "e.g. 2.7" : "")}
+        type={q.type === "date" ? "date" : q.type === "datetime" ? "datetime-local" : "text"} inputMode={["money", "number", "pct"].includes(q.type) ? "decimal" : undefined} />
     </label>
   );
 }

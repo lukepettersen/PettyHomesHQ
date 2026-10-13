@@ -6,7 +6,8 @@ import { hasPermission } from "@/server/permissions";
 import { loadOptions } from "@/server/people";
 import { loadChecklists, loadPersonTasks } from "@/server/tasks";
 import { loadTemplates } from "@/server/automation";
-import { loadPersonFiles, loadStatuses } from "@/server/files";
+import { loadPersonAppointments } from "@/server/appointments";
+import { loadFileForm, loadPersonFiles, loadStatuses } from "@/server/files";
 import { loadForm, loadPersonContracts } from "@/server/pa";
 import { daysAgo, isoFromDate } from "@/lib/normalize";
 import { InfoCard, DetailsCard, CustomFieldsCard, TagsCard, DatesCard, DeletePerson } from "./cards";
@@ -14,6 +15,7 @@ import { Timeline } from "./Timeline";
 import { TasksCard } from "./TasksCard";
 import { FileTabs } from "./FileTabs";
 import { PipelineCard } from "./PipelineCard";
+import { AppointmentsCard } from "./AppointmentsCard";
 
 const BACK: Record<string, [string, string]> = { tasks: ["/tasks", "Tasks"], people: ["/people", "People"], pipeline: ["/pipeline", "Pipeline"] };
 
@@ -47,6 +49,8 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
   const canSeeCommission = hasPermission(user.permissions, "seeCommissions");
   const fileStatuses = { buyer: statuses.buyer, listing: statuses.listing };
   if (!p) notFound();
+  const [appts, buyerFileForm, listingFileForm] = await Promise.all([loadPersonAppointments(id, p.name), loadFileForm("buyer"), loadFileForm("listing")]);
+  const fileForms = { buyer: buyerFileForm, listing: listingFileForm };
 
   const birthdays = p.dates.filter((d) => d.kind === "birthday").map((d) => ({ whose: d.whose, date: isoFromDate(d.date) }));
   const home = p.dates.find((d) => d.kind === "homeiversary");
@@ -72,14 +76,17 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
         </div>
 
         <section className="order-3 min-w-0 lg:order-2">
-          <FileTabs personId={p.id} personName={p.name} files={files} statuses={fileStatuses} canSeeCommission={canSeeCommission}
+          <FileTabs fileForms={fileForms} personId={p.id} personName={p.name} files={files} statuses={fileStatuses} canSeeCommission={canSeeCommission}
             canDelete={hasPermission(user.permissions, "deleteRecords")} contracts={contracts} forms={{ buyer: buyerForm, seller: sellerForm }} today={tasks.today} checklists={checklists} team={tasks.team} timeline={<Timeline personId={p.id} team={tasks.team.map((m) => ({ id: m.id, name: m.name }))} entries={p.timeline.map((e) => ({ id: e.id, kind: e.kind, body: e.body, outcome: e.outcome, author: e.author?.name ?? null, at: e.createdAt.toISOString() }))} />} />
         </section>
 
         <aside className="order-2 flex min-w-0 flex-col gap-3 lg:sticky lg:top-3 lg:order-3">
           <TasksCard personId={p.id} personName={p.name} rows={tasks.rows} team={tasks.team} today={tasks.today} meId={user.id}
             templates={templates.map((t) => ({ id: t.id, name: t.name, manual: !t.trigger }))} files={files.filter((f) => !f.closedAt).map((f) => ({ id: f.id, label: `${f.kind === "buyer" ? "Buyer" : "Listing"} · ${f.kind === "buyer" ? f.status : (f.address ?? "").split(",")[0]}` }))} />
-          <PipelineCard personId={p.id} personName={p.name} files={files} contracts={contracts} statuses={fileStatuses} canSeeCommission={canSeeCommission} />
+          <PipelineCard fileForms={fileForms} personId={p.id} personName={p.name} files={files} contracts={contracts} statuses={fileStatuses} canSeeCommission={canSeeCommission} />
+          <AppointmentsCard fileForms={fileForms} personId={p.id} personName={p.name} appts={appts} today={tasks.today} phone={p.phones[0]?.number ?? ""} address={p.address ?? ""} hasEmail={p.emails.length > 0}
+            team={tasks.team.map((m) => m.name)} callTemplates={templates.filter((t) => t.trigger === "phonecall").map((t) => ({ name: t.name, steps: t.phases.reduce((n, ph) => n + ph.steps.length, 0) }))}
+            activeKinds={files.filter((f) => !f.closedAt).map((f) => f.kind)} statuses={fileStatuses} canSeeCommission={canSeeCommission} />
         </aside>
       </div>
     </div>

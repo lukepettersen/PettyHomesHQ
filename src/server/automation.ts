@@ -8,7 +8,9 @@ import { CONTRACT_ANCHORS, expand, offsetOf, type Anchor, type Facts, type Phase
 // dates change, and apply "Add/remove tags" steps.
 
 type Tx = Prisma.TransactionClient | typeof db;
-export type Ctx = { personId: string; fileId?: string | null; paId?: string | null; start: string; dates?: Partial<Record<Anchor, string | null>>; facts?: Facts };
+export type Ctx = { personId: string; fileId?: string | null; paId?: string | null; start: string; dates?: Partial<Record<Anchor, string | null>>; facts?: Facts;
+  /** Time of day for steps on the day of an anchor, e.g. the booked call's time on "Hold phone call" (SPEC.md §17). */
+  times?: Partial<Record<Anchor, string | null>> };
 
 const phasesOf = (v: unknown) => (Array.isArray(v) ? (v as Phase[]) : []);
 
@@ -45,7 +47,7 @@ export async function applyTemplate(tx: Tx, t: Template, ctx: Ctx, userId: strin
       data: {
         title: s.name, kind: s.type, personId: ctx.personId, fileId: ctx.fileId ?? null, paId: ctx.paId ?? null,
         templateId: t.id, stepId: s.id, phase: spec.phase, anchor: s.dir === "none" ? null : s.anchor, offsetDays: s.dir === "none" ? null : offsetOf(s),
-        dueDate: spec.due ? dateFromIso(spec.due) : null, assigneeId: who(s.assignee), advanceStatusId: s.advance || null, createdById: userId,
+        dueDate: spec.due ? dateFromIso(spec.due) : null, dueTime: spec.due && offsetOf(s) === 0 ? ctx.times?.[s.anchor] ?? null : null, assigneeId: who(s.assignee), advanceStatusId: s.advance || null, createdById: userId,
       },
     });
     n++;

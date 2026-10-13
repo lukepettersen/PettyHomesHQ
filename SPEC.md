@@ -179,6 +179,10 @@ Principles:
     property details.
 - Status changes happen **only from the contact page** (status dropdown), or automatically
   when a checklist step marked "moves deal to" is completed.
+- **Buyer & listing forms are editable** in Admin → Buyer & listing forms *(owner request,
+  2026-10-15)*: sections and questions like the PA forms (type, hint, required, choices,
+  Show only if), plus **Shown at** (every status or chosen statuses). The starting forms ask
+  the questions listed above. Listing address can't be removed.
 - Starting a buyer or listing tags the person **Buyer** or **Seller**.
 - **BAC** is treated like commission: only users with "See commissions" see or edit it.
 
@@ -318,6 +322,8 @@ Principles:
   different last names (e.g. "Ortiz/Brooks - Phone Call"). Editable; Other requires a name.
 - Fields: date, start, end (call 30 min, others 60), location (phone number for calls,
   property address for showings), invitees (client + team, tick to include).
+- The contact page Appointments card lists upcoming appointments, then "Past appointments
+  (N)"; contract dates show as "From contract". Delete is two-step.
 - **Phone call** also starts every template triggered by "When a phone call is booked"
   (default: initial phone call scheduled email today; call reminder text and hold phone call
   on the call day; schedule consult the day after) and logs it on the timeline. Can also be

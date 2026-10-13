@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { factRows, fileLine, money, shortDay, type FileView } from "@/lib/files";
+import { factRows, fileLine, money, shortDay, type FileSection, type FileView } from "@/lib/files";
 
 const pick = (o: Record<string, string>, keys: string[]) => Object.fromEntries(keys.filter((k) => o[k]).map((k) => [k, o[k]]));
 import type { StatusRow } from "@/server/files";
@@ -14,7 +14,7 @@ import type { PaSection, PaView, Side } from "@/lib/pa";
 import type { TaskRow, TeamMember } from "@/server/tasks";
 import { Checklist } from "./Checklist";
 
-type Props = { personId: string; personName: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean; canDelete: boolean; timeline: React.ReactNode;
+type Props = { fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean; canDelete: boolean; timeline: React.ReactNode;
   contracts: PaView[]; forms: Record<Side, PaSection[]>; today: string; checklists: TaskRow[]; team: TeamMember[] };
 
 /** Middle column: a tab per active buyer/listing file, then Timeline (SPEC.md §6.3). */
@@ -52,7 +52,7 @@ export function SideChip({ kind }: { kind: string }) {
   return <span className={`rounded px-1.5 text-[11px] font-bold uppercase tracking-wide ${kind === "buyer" ? "bg-accent-soft text-accent" : "bg-[#f6e3d9] text-[#9a4f2e]"}`}>{kind === "buyer" ? "Buyer" : kind === "listing" ? "Listing" : kind}</span>;
 }
 
-function FilePane({ file, personId, personName, statuses, canSeeCommission, canDelete, onDeleted, contracts, forms, today, checklists, team }: Props & { file: FileView; onDeleted: () => void }) {
+function FilePane({ fileForms, file, personId, personName, statuses, canSeeCommission, canDelete, onDeleted, contracts, forms, today, checklists, team }: Props & { file: FileView; onDeleted: () => void }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [addingPa, setAddingPa] = useState(false);
@@ -69,7 +69,7 @@ function FilePane({ file, personId, personName, statuses, canSeeCommission, canD
     if (!r.ok) { setError(r.error ?? "Something went wrong."); return; }
     done?.(); router.refresh();
   });
-  const facts = factRows(file);
+  const facts = factRows(fileForms[file.kind], file);
   const answers = { ...file.info, address: file.address ?? "", price: file.price ? String(file.price) : "", ...(file.commission !== null ? { commission: file.commission } : {}), ...(file.bac !== null ? { bac: file.bac } : {}) };
 
   return (
@@ -128,7 +128,7 @@ function FilePane({ file, personId, personName, statuses, canSeeCommission, canD
       {msg && <p role="status" className="mt-2 text-sm text-accent">{msg}</p>}
       {error && <p role="alert" className="mt-2 text-sm text-bad">{error}</p>}
       {editing && (
-        <FileForm kind={file.kind} personId={personId} personName={personName} fileId={file.id} statuses={list} statusId={file.statusId} answers={answers}
+        <FileForm form={fileForms[file.kind]} kind={file.kind} personId={personId} personName={personName} fileId={file.id} statuses={list} statusId={file.statusId} answers={answers}
           canSeeCommission={canSeeCommission} onClose={() => setEditing(false)} onSaved={(m) => { setEditing(false); setMsg(m); router.refresh(); }} />
       )}
     </div>

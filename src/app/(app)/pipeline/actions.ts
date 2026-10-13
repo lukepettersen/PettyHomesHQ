@@ -6,7 +6,8 @@ import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { hasPermission } from "@/server/permissions";
-import { cleanAnswers, groupsFor, type FileKind } from "@/lib/files";
+import { cleanFileAnswers, type FileKind } from "@/lib/files";
+import { loadFileForm } from "@/server/files";
 import { isoFromDate, todayCentral } from "@/lib/normalize";
 import { factsOf, moveFile, runTrigger } from "@/server/automation";
 
@@ -26,9 +27,9 @@ async function statusIn(kind: FileKind, statusId: string) {
   return { status: all[i], index: i, count: all.length };
 }
 
-function clean(kind: FileKind, answers: Record<string, string>, index: number, count: number) {
-  const required = groupsFor(kind, index, count).flatMap((g) => g.questions).filter((x) => x.required);
-  try { return cleanAnswers(kind, answers, required); } catch (e) { throw new UserError((e as Error).message); }
+async function clean(kind: FileKind, answers: Record<string, string>, statusId: string, canComm: boolean) {
+  const form = await loadFileForm(kind);
+  try { return cleanFileAnswers(form, statusId, answers, { skipCommission: !canComm }); } catch (e) { throw new UserError((e as Error).message); }
 }
 
 // ---------- Start a buyer / listing ----------
@@ -39,9 +40,9 @@ export async function startFile(input: z.input<typeof startSchema>) {
     const v = startSchema.parse(input);
     const person = await db.person.findFirst({ where: { id: v.personId, deletedAt: null }, select: { id: true, name: true } });
     if (!person) throw new UserError("That person was deleted.");
-    const { status, index, count } = await statusIn(v.kind, v.statusId);
-    const c = clean(v.kind, v.answers, index, count);
+    const { status } = await statusIn(v.kind, v.statusId);
     const canComm = hasPermission(user.permissions, "seeCommissions");
+    const c = await clean(v.kind, v.answers, status.id, canComm);
     if (v.kind === "listing" && status.name === "Active" && !c.info.active) c.info.active = isoFromDate(todayCentral());
     const tagName = v.kind === "buyer" ? "Buyer" : "Seller";
     const file = await db.$transaction(async (tx) => {
@@ -70,14 +71,14 @@ export async function updateFile(input: z.input<typeof editSchema>) {
     const f = await db.clientFile.findFirst({ where: { id: v.id, deletedAt: null }, include: { person: { select: { name: true } } } });
     if (!f) throw new UserError("That file was deleted.");
     const kind = f.kind as FileKind;
-    const { status, index, count } = await statusIn(kind, v.statusId);
-    const c = clean(kind, v.answers, index, count);
+    const { status } = await statusIn(kind, v.statusId);
+    const canComm = hasPermission(user.permissions, "seeCommissions");
+    const c = await clean(kind, v.answers, status.id, canComm);
     // Keep answers to questions not shown at this status (e.g. the consult date after the consult).
-    const shown = new Set(groupsFor(kind, index, count).flatMap((g) => g.questions.map((x) => x.key)));
+    const shown = c.shown;
     const prev = (f.info && typeof f.info === "object" ? f.info : {}) as Record<string, string>;
     const info = { ...Object.fromEntries(Object.entries(prev).filter(([k]) => !shown.has(k))), ...c.info };
     if (kind === "listing" && status.name === "Active" && !info.active) info.active = isoFromDate(todayCentral());
-    const canComm = hasPermission(user.permissions, "seeCommissions");
     await db.$transaction(async (tx) => {
       await tx.clientFile.update({
         where: { id: f.id },
@@ -165,5 +166,40 @@ export async function saveStages(input: z.input<typeof stagesSchema>) {
     await logActivity(user.id, "update", "pipelineStatus", null, `Saved ${label}: ${v.rows.map((r) => r.name).join(", ")}`);
     revalidatePath("/pipeline"); revalidatePath("/admin/statuses"); revalidatePath("/admin/templates");
     return { warning: null as string | null };
+  });
+}
+
+// ---------- Admin → Buyer & listing forms ----------
+const fileFieldSchema = z.object({
+  key: z.string().regex(/^[A-Za-z][\w]{0,40}$/), label: z.string().trim().max(80),
+  type: z.enum(["text", "money", "number", "pct", "date", "date-na", "datetime", "yesno", "choice"]),
+  hint: z.string().trim().max(120).optional(), required: z.boolean().optional(), options: z.array(z.string().trim().min(1).max(60)).max(30).optional(), showIf: z.string().max(120).optional(),
+});
+const fileSectionSchema = z.object({
+  id: z.string().regex(/^[\w-]{1,40}$/), name: z.string().trim().max(80), showIf: z.string().max(120).optional(),
+  statuses: z.array(id).max(30).optional(), fields: z.array(fileFieldSchema).max(60),
+});
+
+export async function saveFileForm(input: { kind: string; sections: unknown }) {
+  return guarded("manageUsers", async (user) => {
+    const kind = kindSchema.parse(input.kind);
+    const valid = new Set((await db.pipelineStatus.findMany({ where: { kind }, select: { id: true } })).map((s) => s.id));
+    const sections = z.array(fileSectionSchema).min(1, "Keep at least one section").max(30).parse(input.sections).map((s) => ({
+      id: s.id, name: s.name, showIf: s.showIf || undefined, statuses: s.statuses?.filter((x) => valid.has(x)).length ? s.statuses.filter((x) => valid.has(x)) : undefined,
+      fields: s.fields.map((f) => ({ ...f, showIf: f.showIf || undefined, hint: f.hint || undefined, required: f.required || undefined, options: f.type === "choice" ? f.options : undefined })),
+    }));
+    for (const s of sections) {
+      if (!s.name) throw new UserError("Every section needs a name.");
+      const keys = s.fields.map((f) => f.key);
+      if (new Set(keys).size !== keys.length) throw new UserError(`"${s.name}" has the same question twice.`);
+      for (const f of s.fields) {
+        if (!f.label) throw new UserError(`A question in "${s.name}" needs a name.`);
+        if (f.type === "choice" && !f.options?.length) throw new UserError(`"${f.label}" needs dropdown choices.`);
+      }
+    }
+    if (kind === "listing" && !sections.some((s) => s.fields.some((f) => f.key === "address"))) throw new UserError("The property address question can't be removed.");
+    await db.fileFormDef.upsert({ where: { kind }, update: { sections }, create: { kind, sections } });
+    await logActivity(user.id, "update", "fileForm", kind, `Saved the ${kind} form (${sections.length} sections)`);
+    revalidatePath("/admin/file-forms");
   });
 }
