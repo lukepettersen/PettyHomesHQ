@@ -49,7 +49,9 @@ async function main() {
       await db.collection.create({ data: { name, position: ci, lists: { create: lists.map(([n, filters], position) => ({ name: n, position, filters })) } } });
     }
   }
-  console.log("Seeded roles, team and default settings.");
+  // Trash: anything deleted more than 30 days ago is removed for good.
+  const purged = await db.person.deleteMany({ where: { deletedAt: { lt: new Date(Date.now() - 30 * 86400000) } } });
+  console.log(`Seeded roles, team and default settings. Purged ${purged.count} from Trash.`);
 }
 
 main().finally(() => db.$disconnect());

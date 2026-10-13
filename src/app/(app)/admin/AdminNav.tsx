@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const SECTIONS: [string, [string, string | null][]][] = [
-  ["Team", [["Users & roles", "/admin/users"]]],
+  ["Team", [["Users & roles", "/admin/users"], ["Trash", "/admin/trash"]]],
   ["People", [["Stages, sources & follow-up", "/admin/lists"], ["Tags", "/admin/tags"], ["Date reminders", null], ["Custom fields", null]]],
   ["Deals", [["Client statuses", null], ["Purchase agreement forms", null], ["Task templates", null]]],
   ["Connections", [["Tools menu", null], ["Integrations", null]]],

@@ -11,7 +11,11 @@ export function TopBar({ name }: { name: string }) {
         <span className="font-extrabold tracking-wide whitespace-nowrap">PETTY HOMES <span className="rounded bg-misty px-1.5 text-xs text-charcoal">HQ</span></span>
       </Link>
       <NavLinks />
-      <div className="ml-auto flex items-center gap-3 text-sm">
+      <form action="/people" className="ml-auto hidden md:block" role="search">
+        <input type="search" name="q" placeholder="Search people…" aria-label="Search people"
+          className="w-56 rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white placeholder:text-misty/70 outline-none focus:bg-white focus:text-charcoal lg:w-72" />
+      </form>
+      <div className="flex items-center gap-3 text-sm md:ml-0 ml-auto">
         <span className="hidden sm:inline">{name}</span>
         <SignOutButton />
       </div>

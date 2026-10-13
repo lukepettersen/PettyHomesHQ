@@ -7,7 +7,7 @@ the source of truth for behavior. The approved screens are in `mockups/` (open
 ## Status
 
 SPEC.md approved 2026-10-13. Build in the phases in SPEC.md §16, one pull request at a time.
-Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact page cards + timeline, Admin users/roles, stages/sources/follow-up, tags). Next: piece 2 (smart list editing, search everywhere, trash, export), piece 3 (Tasks), piece 4 (mentions/bell, date reminders, Tools, custom fields, phone layout).
+Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact page cards + timeline, Admin users/roles, stages/sources/follow-up, tags); piece 2 (smart list editing, bulk actions, search, Trash, CSV export). Next: piece 3 (Tasks), piece 4 (mentions/bell, date reminders, Tools, custom fields, phone layout).
 
 ## Working with the owner
 

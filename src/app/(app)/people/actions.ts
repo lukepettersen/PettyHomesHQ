@@ -143,3 +143,42 @@ export async function deletePerson(personId: string) {
     revalidatePath("/people");
   });
 }
+
+// ---------- Bulk actions on selected people ----------
+const bulkSchema = z.object({
+  ids: z.array(z.string()).min(1, "Select someone first").max(5000),
+  action: z.enum(["addTag", "removeTag", "stage", "followUp", "assign"]),
+  value: z.string().trim().max(80),
+});
+
+export async function bulkUpdate(input: z.input<typeof bulkSchema>) {
+  return guarded(null, async (user) => {
+    const v = bulkSchema.parse(input);
+    const where = { id: { in: v.ids }, deletedAt: null };
+    if (v.action === "addTag" || v.action === "removeTag") {
+      const name = v.value;
+      if (!name) throw new UserError("Pick a tag");
+      const tag = (await db.tag.findFirst({ where: { name: { equals: name, mode: "insensitive" } } })) ?? (v.action === "addTag" ? await db.tag.create({ data: { name } }) : null);
+      if (tag && v.action === "addTag") await db.personTag.createMany({ data: v.ids.map((personId) => ({ personId, tagId: tag.id })), skipDuplicates: true });
+      if (tag && v.action === "removeTag") await db.personTag.deleteMany({ where: { tagId: tag.id, personId: { in: v.ids } } });
+    } else if (v.action === "stage") {
+      await db.person.updateMany({ where, data: { stageId: v.value || null } });
+    } else if (v.action === "followUp") {
+      await db.person.updateMany({ where, data: { followUpDays: v.value ? Number(v.value) || null : null } });
+    } else {
+      await db.person.updateMany({ where, data: { assignedToId: v.value || null } });
+    }
+    await logActivity(user.id, "update", "person", null, `Bulk ${v.action} on ${v.ids.length} people`);
+    revalidatePath("/people");
+  });
+}
+
+export async function bulkDelete(ids: string[]) {
+  return guarded("deleteRecords", async (user) => {
+    const list = z.array(z.string()).min(1).max(5000).parse(ids);
+    const r = await db.person.updateMany({ where: { id: { in: list }, deletedAt: null }, data: { deletedAt: new Date() } });
+    await logActivity(user.id, "delete", "person", null, `Moved ${r.count} people to Trash`);
+    revalidatePath("/people");
+    return { count: r.count };
+  });
+}
