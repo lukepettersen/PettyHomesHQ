@@ -81,8 +81,8 @@ Principles:
 - **Top bar:** logo + "Petty Homes HQ", then tabs in this order:
   **People · Tasks · Messages · Pipeline · Tools ▾ · Admin**, and a notification **bell** on
   the right.
-- **Search from anywhere** in the top bar: people (name, phone, email), addresses and
-  contracts. *(Not in the mockup; design during Phase 1.)*
+- **Search from anywhere** in the top bar: matching people drop down as you type (name,
+  phone or email); Enter opens the highlighted person; "See all results" opens People.
 - **Tools ▾:** dropdown of external links the owner adds in Admin → Tools menu (name + link).
   Opens in a new tab. Empty state: "+ Add a tool". Links must be http:// or https://.
 - **Bell:** @mentions for the signed-in user, unread count, "Mark all read"; clicking one
@@ -148,7 +148,8 @@ Principles:
   (Admin only, two-step).
 - **Middle:** a tab per active client file (Buyer / Listing) plus **Timeline**.
   - **Timeline:** composer with Note, Send text, Log text, Log call (with outcome).
-    Filters: All, Notes, Texts, Calls, Emails, Deal activity. Newest first.
+    Filters: All, Notes, Texts, Calls, **Tasks**, Emails, Deal activity. Newest first.
+    Checking off a task for the person adds a "Task done" line (unchecking removes it).
   - **@mentions:** typing `@` in a note, logged call or logged text shows the team; picking
     one inserts "@Alyssa". On save, that person gets a bell notification and, when Gmail is
     connected, an email to their pettyhomes.com address. Mentions are highlighted in the
@@ -158,6 +159,8 @@ Principles:
     open checklist steps from their files ("· Buyer checklist"). Shows 6, then "Show all N".
     **+ Add task** opens the Create task pop-up: task name, type (Follow up, Call, Text,
     Email, Showing, Closing, Other), assigned to, date, time.
+    Each task shows an icon for its type (email, text, call, showing, closing, task).
+    Clicking a task opens its details in a pop-up on the contact page.
   - **Pipeline:** their buyer/listing files and contracts (click to open), with
     **+ Add buyer** and **+ Add seller**.
   - **Appointments:** upcoming list, then "Past appointments (N)" (§10).
@@ -171,7 +174,7 @@ Principles:
 - **Purchase agreements (PA)** sit under a file: buyer side under a buyer file, seller side
   under a listing. Earlier contracts (fell through / closed) stay listed under the file.
 - Starting a file asks status-specific questions:
-  - **Buyer:** areas, price range, timeframe, pre-approved, lender; consult date (Consult
+  - **Buyer:** areas, price range, lender; consult date (Consult
     scheduled); rep signed / expires / BAC (Rep signed onward); offer and response deadline
     (Submitting offers). "They already have an accepted offer" opens the PA next.
   - **Listing:** address, estimated value, timeframe, consult date (early statuses); then
@@ -320,6 +323,8 @@ Principles:
   consultation, Book showing, Other appointment**.
 - Title fills in as **"Last Name - Appointment"**, or "Last/Last" for a couple with
   different last names (e.g. "Ortiz/Brooks - Phone Call"). Editable; Other requires a name.
+- Times are picked in 30-minute steps (also the PA inspection appointment, which starts
+  at 12:00pm). Appointments can be edited; moving a booked call moves its steps.
 - Fields: date, start, end (call 30 min, others 60), location (phone number for calls,
   property address for showings), invitees (client + team, tick to include).
 - The contact page Appointments card lists upcoming appointments, then "Past appointments

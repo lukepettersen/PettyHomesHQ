@@ -19,7 +19,7 @@ export function PipelineCard({ fileForms, personId, personName, files, contracts
       <ul className="mt-2 flex flex-col">
         {files.map((f) => (
           <li key={f.id} className="flex items-start justify-between gap-2 border-t border-misty/60 py-1.5 text-sm first:border-0">
-            <span className="min-w-0"><SideChip kind={f.kind} /> <span className={f.closedAt ? "muted" : ""}>{f.kind === "buyer" ? fileLine(f) : (f.address ?? "Listing").split(",")[0]}</span>
+            <span className="min-w-0"><SideChip kind={f.kind} /> <span className={f.closedAt ? "muted" : ""}>{f.kind === "buyer" ? (contracts.find((c) => c.fileId === f.id && c.state === "active")?.address.split(",")[0] ?? fileLine(f)) : (f.address ?? "Listing").split(",")[0]}</span>
               <span className="block text-xs muted">{contracts.some((c) => c.fileId === f.id && c.state === "active") ? "Under contract" : f.status}</span></span>
             {f.price ? <span className="text-xs muted">{kMoney(f.price)}</span> : null}
           </li>

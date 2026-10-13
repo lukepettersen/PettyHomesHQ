@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import type { TaskRow, TeamMember } from "@/server/tasks";
 import { diffDays, dueLabel } from "@/lib/tasks";
 import { completeTask, reopenTask } from "../../tasks/actions";
-import { Avatar, CheckButton } from "../../tasks/parts";
+import { Avatar, CheckButton, KindIcon } from "../../tasks/parts";
 
 /** A file's or contract's checklist: phases folded (open steps already show in the Tasks card). */
 export function Checklist({ title, tasks, today, team }: { title: string; tasks: TaskRow[]; today: string; team: TeamMember[] }) {
@@ -42,6 +42,7 @@ export function Checklist({ title, tasks, today, team }: { title: string; tasks:
                     return (
                       <li key={t.id} className="flex items-center gap-2 px-3 py-1.5 pl-8 text-sm">
                         <CheckButton task={t} onToggle={() => toggle(t)} />
+                        <KindIcon kind={t.kind} />
                         <span className={`min-w-0 flex-1 ${t.done ? "muted line-through" : ""}`}>{t.title}</span>
                         <span className={`whitespace-nowrap text-xs ${overdue ? "font-semibold text-bad" : "muted"}`}>{t.due ? dueLabel(t.due, t.time, today) : t.step?.timing ? `Waits for date · ${t.step.timing}` : "No due date"}</span>
                         <Avatar member={team.find((m) => m.id === t.assigneeId)} />

@@ -50,3 +50,24 @@ export async function deleteAppointment(id: string) {
     revalidatePath(`/people/${a.personId}`);
   });
 }
+
+const editSchema = bookSchema.omit({ personId: true, type: true }).extend({ id: z.string().min(1).max(40) });
+
+/** Edit an appointment's title, date, times, location or invitees. */
+export async function updateAppointment(input: z.input<typeof editSchema>) {
+  return guarded(null, async (user) => {
+    const v = editSchema.parse(input);
+    if (v.start && v.end && v.end <= v.start) throw new UserError("The end time is before the start.");
+    const before = await db.appointment.findFirst({ where: { id: v.id, deletedAt: null } });
+    if (!before) throw new UserError("That appointment was deleted.");
+    const a = await db.appointment.update({ where: { id: v.id }, data: { title: v.title, date: dateFromIso(v.date), start: v.start, end: v.end, location: v.location, invitees: v.invitees } });
+    const moved = isoFromDate(before.date) !== v.date || before.start !== v.start;
+    // A moved call re-dates the open steps timed from it.
+    if (moved && a.type === "call") {
+      const open = await db.task.findMany({ where: { personId: a.personId, anchor: "phoneCall", completedAt: null, deletedAt: null } });
+      for (const t of open) await db.task.update({ where: { id: t.id }, data: { dueDate: new Date(dateFromIso(v.date).getTime() + (t.offsetDays ?? 0) * 86400000), ...(t.offsetDays === 0 && t.dueTime ? { dueTime: v.start } : {}) } });
+    }
+    await logActivity(user.id, "update", "appointment", a.id, `Updated appointment "${a.title}"${moved ? ` (now ${longIso(v.date)}${v.start ? ` ${formatTime(v.start)}` : ""})` : ""}`);
+    revalidatePath(`/people/${a.personId}`); revalidatePath("/tasks");
+  });
+}

@@ -14,7 +14,8 @@ const draftOf = (t: TaskRow): Draft => ({
 });
 
 /** Slides over the board. Edits are held until Save changes (SPEC.md §5 save rule). */
-export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSaved, onDeleted, notify }: {
+export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSaved, onDeleted, notify, popup }: {
+  popup?: boolean; // contact page: a centered pop-up instead of the side panel
   task: TaskRow; lists: ListRow[]; team: TeamMember[];
   onClose: () => void; onToggle: () => void; onDirty: (dirty: boolean) => void; onSaved: (id: string) => void; onDeleted: () => void; notify: (m: string) => void;
 }) {
@@ -56,7 +57,9 @@ export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSa
 
   const field = "w-full rounded-md border border-misty bg-paper px-2 py-1 text-sm";
   return (
-    <aside aria-label="Task details" className="fixed inset-y-0 right-0 z-30 flex w-full max-w-[380px] flex-col overflow-y-auto border-l border-misty bg-white shadow-xl xl:sticky xl:top-3 xl:z-auto xl:max-h-[calc(100vh-90px)] xl:rounded-xl xl:border xl:shadow-none">
+    <aside aria-label="Task details" className={popup
+      ? "flex max-h-[calc(100vh-32px)] w-full max-w-[440px] flex-col overflow-y-auto rounded-xl bg-white shadow-xl"
+      : "fixed inset-y-0 right-0 z-30 flex w-full max-w-[380px] flex-col overflow-y-auto border-l border-misty bg-white shadow-xl xl:sticky xl:top-3 xl:z-auto xl:max-h-[calc(100vh-90px)] xl:rounded-xl xl:border xl:shadow-none"}>
       <div className="flex items-start gap-2.5 border-b border-misty px-3.5 pt-3.5 pb-2.5">
         <span className="pt-1"><CheckButton task={task} onToggle={onToggle} /></span>
         <textarea aria-label="Title" rows={2} value={d.title} onChange={(e) => set({ title: e.target.value })} className="min-w-0 flex-1 resize-none bg-transparent text-[15px] font-semibold outline-none" />

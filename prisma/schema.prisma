@@ -219,7 +219,8 @@ model TimelineEntry {
   id        String    @id @default(cuid())
   personId  String
   person    Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
-  kind      String // "note" | "call" | "text" | "email" | "system"
+  kind      String // "note" | "call" | "text" | "email" | "system" | "task" (a completed task)
+  taskId    String? // for "task" entries: the task that was completed
   body      String
   outcome   String?
   authorId  String?

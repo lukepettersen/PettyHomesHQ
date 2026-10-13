@@ -35,7 +35,7 @@ describe("cleaning answers", () => {
   });
   it("rejects bad values with a plain message", () => {
     expect(() => cleanFileAnswers(buyer, "b1", { consult: "tomorrow" })).toThrow("Consult date: pick a date.");
-    expect(() => cleanFileAnswers(buyer, "b1", { timeframe: "soon" })).toThrow("pick one of the choices");
+    expect(() => cleanFileAnswers(listing, "l1", { address: "x", timeframe: "soon" })).toThrow("pick one of the choices");
     expect(() => cleanFileAnswers(listing, "l1", {})).toThrow("Add the property address.");
   });
 });

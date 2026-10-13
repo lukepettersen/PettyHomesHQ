@@ -14,8 +14,6 @@ const q = (key: string, label: string, type: FieldType, extra: Partial<PaField> 
 const SEARCH = { id: "search", name: "What they're looking for", fields: [
   q("areas", "Areas they want", "text", { hint: "e.g. SW Minneapolis, Edina" }),
   q("range", "Price range", "text", { hint: "e.g. $350–400k" }),
-  q("timeframe", "Timeframe", "choice", { options: TIMEFRAMES }),
-  q("preapproved", "Pre-approved?", "choice", { options: ["Not yet", "Yes", "Paying cash"] }),
   q("lender", "Lender", "text", { hint: "Name and company" }),
 ] };
 const CONSULT = { id: "consult", name: "Consult", fields: [q("consult", "Consult date", "date")] };

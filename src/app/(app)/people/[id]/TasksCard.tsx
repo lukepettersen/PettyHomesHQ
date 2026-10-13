@@ -1,28 +1,40 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { TaskRow, TeamMember } from "@/server/tasks";
 import { diffDays, dueLabel, TASK_KINDS } from "@/lib/tasks";
 import { Modal } from "@/components/Modal";
 import { applyTemplateToPerson, completeTask, createTask, reopenTask } from "../../tasks/actions";
-import { Avatar, CheckButton } from "../../tasks/parts";
+import { Avatar, CheckButton, KindIcon } from "../../tasks/parts";
+import { TaskDetail } from "../../tasks/TaskDetail";
+import type { ListRow } from "@/server/tasks";
 
 /** Contact page → Tasks: everything open for this person, soonest first (SPEC.md §6.3). */
 type TemplateOption = { id: string; name: string; manual: boolean };
 type FileOption = { id: string; label: string };
 
-export function TasksCard({ personId, personName, rows, team, today, meId, templates, files }: { personId: string; personName: string; rows: TaskRow[]; team: TeamMember[]; today: string; meId: string; templates: TemplateOption[]; files: FileOption[] }) {
+export function TasksCard({ personId, personName, rows, team, today, meId, templates, files, lists }: { personId: string; personName: string; rows: TaskRow[]; team: TeamMember[]; today: string; meId: string; templates: TemplateOption[]; files: FileOption[]; lists: ListRow[] }) {
   const router = useRouter();
   const [all, setAll] = useState(false);
   const [adding, setAdding] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
   const [msg, setMsg] = useState("");
   const [done, setDone] = useState<Record<string, { row: TaskRow; nextId: string | null }>>({});
   const [error, setError] = useState("");
   const [, start] = useTransition();
-  const list = [...rows.filter((r) => !done[r.id]), ...Object.values(done).map((d) => ({ ...d.row, done: true }))];
+  // Checked-off tasks stay where they were (crossed out) until the page is reloaded, so a mis-click is easy to undo.
+  const ids = rows.map((r) => r.id).join(",");
+  const [seen, setSeen] = useState(ids);
+  const [order, setOrder] = useState(() => rows.map((r) => r.id));
+  if (ids !== seen) {
+    const next = rows.map((r) => r.id);
+    for (const id of Object.keys(done)) if (!next.includes(id)) next.splice(Math.min(Math.max(0, order.indexOf(id)), next.length), 0, id);
+    setSeen(ids); setOrder(next);
+  }
+  const list = order.map((id) => (done[id] ? { ...done[id].row, done: true } : rows.find((r) => r.id === id))).filter((t): t is TaskRow => !!t);
   const shown = all ? list : list.slice(0, 6);
 
   const toggle = (t: TaskRow) => start(async () => {
@@ -52,10 +64,12 @@ export function TasksCard({ personId, personName, rows, team, today, meId, templ
         {shown.map((t) => (
           <li key={t.id} className="flex items-start gap-2 border-t border-misty/60 py-1.5 first:border-0">
             <span className="pt-0.5"><CheckButton task={t} onToggle={() => toggle(t)} /></span>
-            <Link href={`/tasks?view=clients&task=${t.id}`} className="flex min-w-0 flex-1 flex-col text-sm hover:underline">
+            <button type="button" onClick={() => setOpenId(t.id)} className="flex min-w-0 flex-1 flex-col text-left text-sm hover:underline">
               <span className={t.done ? "muted line-through" : "font-medium"}>{t.title}{t.step && <span className="font-normal muted"> · {t.step.source}</span>}</span>
-              <span className={`text-xs ${!t.done && t.due && diffDays(t.due, today) < 0 ? "font-medium text-bad" : "muted"}`}>{t.due || !t.step?.timing ? dueLabel(t.due, t.time, today) : `Waits for date · ${t.step.timing}`}</span>
-            </Link>
+              <span className={`flex items-center gap-1.5 text-xs ${!t.done && t.due && diffDays(t.due, today) < 0 ? "font-medium text-bad" : "muted"}`}>
+                <KindIcon kind={t.kind} />{t.due || !t.step?.timing ? dueLabel(t.due, t.time, today) : `Waits for date · ${t.step.timing}`}
+              </span>
+            </button>
             <Avatar member={team.find((m) => m.id === t.assigneeId)} />
           </li>
         ))}
@@ -64,6 +78,14 @@ export function TasksCard({ personId, personName, rows, team, today, meId, templ
       {templates.length > 0 && <button type="button" className="link mt-2 block text-sm" onClick={() => setApplying(true)}>Apply template</button>}
       {msg && <p role="status" className="mt-1 text-sm text-accent">{msg}</p>}
       {error && <p role="alert" className="mt-1 text-sm text-bad">{error}</p>}
+      {openId && list.find((t) => t.id === openId) && (
+        <div className="fixed inset-0 z-40 grid place-items-center bg-black/35 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget && !dirty) setOpenId(null); }}>
+          <TaskDetail popup key={openId} task={list.find((t) => t.id === openId)!} lists={lists} team={team} notify={setMsg}
+            onClose={() => { if (dirty) { setMsg("Save or cancel your changes first."); return; } setOpenId(null); }}
+            onToggle={() => toggle(list.find((t) => t.id === openId)!)} onDirty={setDirty}
+            onSaved={() => router.refresh()} onDeleted={() => { setDirty(false); setOpenId(null); router.refresh(); }} />
+        </div>
+      )}
       {applying && <ApplyTemplateModal personId={personId} personName={personName} templates={templates} files={files} today={today} onClose={() => setApplying(false)}
         onDone={(m) => { setApplying(false); setMsg(m); router.refresh(); }} />}
       {adding && <CreateTaskModal personId={personId} personName={personName} team={team} today={today} meId={meId} onClose={() => setAdding(false)} onCreated={() => { setAdding(false); router.refresh(); }} />}

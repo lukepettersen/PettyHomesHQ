@@ -36,6 +36,7 @@ export function TaskLine({ task, today, team, selected, showPerson = true, onTog
       <button type="button" onClick={onOpen} className="flex min-w-0 flex-col gap-0.5 text-left">
         <span className={`font-medium ${task.done ? "text-muted line-through" : ""}`}>{task.title}</span>
         <span className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs muted">
+          <KindIcon kind={task.kind} />
           {showPerson && task.personName && <span className="font-semibold text-accent">{task.personName}</span>}
           {subs > 0 && <span>☐ {task.subtasks.filter((s) => s.done).length}/{subs}</span>}
           {task.repeat && <span>↻ {repeatLabel(task.repeat)}</span>}
@@ -65,5 +66,27 @@ export function Toast({ message, onDone }: { message: string; onDone: () => void
     <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
       {message && <div className="pointer-events-auto max-w-xl rounded-lg bg-charcoal px-4 py-2.5 text-sm text-white shadow-lg">{message}</div>}
     </div>
+  );
+}
+
+const KIND_NAMES: Record<string, string> = { email: "Email", text: "Text", call: "Call", showing: "Showing", closing: "Closing", followup: "Follow up", other: "Other", task: "Task" };
+const ICON_PATHS: Record<string, React.ReactNode> = {
+  email: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>,
+  text: <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" />,
+  call: <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2" />,
+  showing: <><path d="M3 11 12 4l9 7" /><path d="M5 10v10h14V10" /></>,
+  closing: <><circle cx="8" cy="15" r="4" /><path d="m11 12 9-9M17 6l3 3" /></>,
+  task: <><rect x="4" y="4" width="16" height="16" rx="3" /><path d="m8.5 12 2.5 2.5 4.5-5" /></>,
+};
+
+/** Small icon showing what kind of task it is: email, text, call, showing, closing or task. */
+export function KindIcon({ kind }: { kind: string }) {
+  const k = ICON_PATHS[kind] ? kind : "task";
+  const name = KIND_NAMES[kind] ?? "Task";
+  return (
+    <span title={name} className="inline-flex items-center gap-1 text-muted">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{ICON_PATHS[k]}</svg>
+      <span className="sr-only">{name}</span>
+    </span>
   );
 }

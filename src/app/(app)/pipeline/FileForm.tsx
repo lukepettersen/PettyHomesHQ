@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Modal } from "@/components/Modal";
 import { sectionsAt, type Answers, type FileKind, type FileSection } from "@/lib/files";
 import type { PaField } from "@/lib/pa";
+import { DateTimeInput } from "@/components/TimeSelect";
 import type { StatusRow } from "@/server/files";
 import { startFile, updateFile } from "./actions";
 
@@ -13,7 +14,7 @@ export function FileForm({ kind, personId, personName, fileId, statuses, statusI
   canSeeCommission: boolean; onClose: () => void; onSaved: (message: string) => void;
 }) {
   const [status, setStatus] = useState(statusId && statuses.some((s) => s.id === statusId) ? statusId : statuses[0]?.id ?? "");
-  const [v, setV] = useState<Answers>({ timeframe: "0–3 months", preapproved: "Not yet", ptype: "Single family", hoa: "No", newc: "No", ...answers });
+  const [v, setV] = useState<Answers>({ ...(kind === "listing" ? { ptype: "Single family", hoa: "No", newc: "No" } : {}), ...answers });
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   // The questions for this status come from Admin → Buyer & listing forms.
@@ -93,10 +94,11 @@ function Field({ q, v, set }: { q: PaField; v: Answers; set: (k: string, x: stri
       </div>
     );
   }
+  if (q.type === "datetime") return <div className="label">{label}<DateTimeInput label={q.label} value={value} onChange={(x) => set(q.key, x)} /></div>;
   return (
     <label className="label">{label}
       <input className="input" value={value} onChange={(e) => set(q.key, e.target.value)} placeholder={q.hint ?? (q.type === "money" ? "$" : q.type === "pct" ? "e.g. 2.7" : "")}
-        type={q.type === "date" ? "date" : q.type === "datetime" ? "datetime-local" : "text"} inputMode={["money", "number", "pct"].includes(q.type) ? "decimal" : undefined} />
+        type={q.type === "date" ? "date" : "text"} inputMode={["money", "number", "pct"].includes(q.type) ? "decimal" : undefined} />
     </label>
   );
 }

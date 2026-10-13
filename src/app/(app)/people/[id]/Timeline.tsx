@@ -12,8 +12,8 @@ const TABS: [Kind, string, string, string][] = [
   ["call", "Log call", "What did you talk about?", "Log call"],
 ];
 type Kind = "note" | "text" | "call";
-const KIND_LABEL: Record<string, string> = { note: "Note", text: "Text", call: "Call", email: "Email", system: "Update" };
-const FILTERS: [string, string][] = [["all", "All"], ["note", "Notes"], ["text", "Texts"], ["call", "Calls"]];
+const KIND_LABEL: Record<string, string> = { note: "Note", text: "Text", call: "Call", email: "Email", system: "Update", task: "Task done" };
+const FILTERS: [string, string][] = [["all", "All"], ["note", "Notes"], ["text", "Texts"], ["call", "Calls"], ["task", "Tasks"]];
 
 export function Timeline({ personId, entries, team }: { personId: string; entries: Entry[]; team: Member[] }) {
   const [kind, setKind] = useState<Kind>("note");

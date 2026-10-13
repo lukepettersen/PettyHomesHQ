@@ -49,7 +49,8 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
   const canSeeCommission = hasPermission(user.permissions, "seeCommissions");
   const fileStatuses = { buyer: statuses.buyer, listing: statuses.listing };
   if (!p) notFound();
-  const [appts, buyerFileForm, listingFileForm] = await Promise.all([loadPersonAppointments(id, p.name), loadFileForm("buyer"), loadFileForm("listing")]);
+  const [appts, buyerFileForm, listingFileForm, taskLists] = await Promise.all([loadPersonAppointments(id, p.name), loadFileForm("buyer"), loadFileForm("listing"),
+    db.taskList.findMany({ where: { builtin: null }, orderBy: { position: "asc" } })]);
   const fileForms = { buyer: buyerFileForm, listing: listingFileForm };
 
   const birthdays = p.dates.filter((d) => d.kind === "birthday").map((d) => ({ whose: d.whose, date: isoFromDate(d.date) }));
@@ -81,7 +82,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
         </section>
 
         <aside className="order-2 flex min-w-0 flex-col gap-3 lg:sticky lg:top-3 lg:order-3">
-          <TasksCard personId={p.id} personName={p.name} rows={tasks.rows} team={tasks.team} today={tasks.today} meId={user.id}
+          <TasksCard lists={taskLists.map((l) => ({ id: l.id, name: l.name, builtin: null, showOnToday: l.showOnToday }))} personId={p.id} personName={p.name} rows={tasks.rows} team={tasks.team} today={tasks.today} meId={user.id}
             templates={templates.map((t) => ({ id: t.id, name: t.name, manual: !t.trigger }))} files={files.filter((f) => !f.closedAt).map((f) => ({ id: f.id, label: `${f.kind === "buyer" ? "Buyer" : "Listing"} · ${f.kind === "buyer" ? f.status : (f.address ?? "").split(",")[0]}` }))} />
           <PipelineCard fileForms={fileForms} personId={p.id} personName={p.name} files={files} contracts={contracts} statuses={fileStatuses} canSeeCommission={canSeeCommission} />
           <AppointmentsCard fileForms={fileForms} personId={p.id} personName={p.name} appts={appts} today={tasks.today} phone={p.phones[0]?.number ?? ""} address={p.address ?? ""} hasEmail={p.emails.length > 0}

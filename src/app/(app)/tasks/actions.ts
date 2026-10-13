@@ -127,6 +127,7 @@ export async function completeTask(taskId: string) {
     let nextId: string | null = null;
     await db.$transaction(async (tx) => {
       await tx.task.update({ where: { id: t.id }, data: { completedAt: new Date() } });
+      if (t.personId) await tx.timelineEntry.create({ data: { personId: t.personId, kind: "task", body: t.title, taskId: t.id, authorId: user.id } });
       if (t.repeat) {
         const from = t.dueDate ? isoFromDate(t.dueDate) : isoFromDate(todayCentral());
         const n = await tx.task.create({
@@ -159,6 +160,8 @@ export async function completeTask(taskId: string) {
 export async function reopenTask(input: { id: string; nextId?: string | null }) {
   return guarded(null, async (user) => {
     const t = await db.task.update({ where: { id: id.parse(input.id), deletedAt: null }, data: { completedAt: null } });
+    // Unchecking takes it back off the timeline.
+    await db.timelineEntry.updateMany({ where: { taskId: t.id, kind: "task", deletedAt: null }, data: { deletedAt: new Date() } });
     // Undo also removes the next repeat that completing created, if it hasn't been touched.
     if (input.nextId) await db.task.updateMany({ where: { id: id.parse(input.nextId), completedAt: null, createdAt: { gte: new Date(Date.now() - 6 * 3600000) } }, data: { deletedAt: new Date() } });
     await logActivity(user.id, "update", "task", t.id, `Reopened "${t.title}"`);
@@ -184,7 +187,10 @@ async function materializeDateTask(key: string, userId: string) {
 export async function completeDateTask(key: string) {
   return guarded(null, async (user) => {
     const t = await materializeDateTask(z.string().regex(/^date:[\w-]+:[\w-]+:\d{4}$/).parse(key), user.id);
-    await db.task.update({ where: { id: t.id }, data: { completedAt: new Date(), deletedAt: null } });
+    await db.$transaction([
+      db.task.update({ where: { id: t.id }, data: { completedAt: new Date(), deletedAt: null } }),
+      ...(t.personId ? [db.timelineEntry.create({ data: { personId: t.personId, kind: "task", body: t.title, taskId: t.id, authorId: user.id } })] : []),
+    ]);
     await logActivity(user.id, "update", "task", t.id, `Completed "${t.title}"`);
     refresh(t.personId);
     return { id: t.id };

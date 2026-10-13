@@ -36,4 +36,6 @@ export function contractAppointments(name: string, c: ContractDates): ApptView[]
   return out;
 }
 
-export const sortAppts = (a: ApptView, b: ApptView) => (a.date + (a.start ?? "")).localeCompare(b.date + (b.start ?? ""));
+/** Soonest first; deadlines ("at 11:59pm") sort at the end of their day, other all-day items first. */
+const sortKey = (a: ApptView) => a.date + (a.start ?? (a.title.includes("11:59pm") ? "23:59" : ""));
+export const sortAppts = (a: ApptView, b: ApptView) => sortKey(a).localeCompare(sortKey(b));

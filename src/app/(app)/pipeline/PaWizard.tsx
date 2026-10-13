@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Modal } from "@/components/Modal";
 import { COMMISSION_KEYS, visibleSections, type Answers, type PaField, type PaSection, type PaView, type Side } from "@/lib/pa";
 import { addPurchaseAgreement, updatePurchaseAgreement } from "./paActions";
+import { DateTimeInput } from "@/components/TimeSelect";
 
 type Props = {
   fileId: string; fileKind: "buyer" | "listing"; personName: string; fileLine: string; prefill?: Answers; pa?: PaView;
@@ -109,7 +110,8 @@ function PaInput({ f, v, set }: { f: PaField; v: Answers; set: (k: string, x: st
       </div>
     );
   }
-  const type = f.type === "date" ? "date" : f.type === "datetime" ? "datetime-local" : "text";
+  if (f.type === "datetime") return <div className="label">{label}<DateTimeInput label={f.label} value={value} onChange={(x) => set(f.key, x)} /></div>;
+  const type = f.type === "date" ? "date" : "text";
   const ph = f.hint ?? (f.type === "money" ? "$" : f.type === "pct" ? "e.g. 2.7" : "");
   return (
     <label className="label">{label}
