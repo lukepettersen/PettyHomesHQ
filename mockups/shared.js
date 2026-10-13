@@ -105,11 +105,16 @@ window.HQ.mention = (cid, text) => {
   hits.forEach(([k]) => window.HQ.notifications.unshift({ id: Date.now() + k, to: k, from: window.HQ.me, cid, name: c ? c.name : "", text, read: false }));
   return hits;
 };
-window.HQ.bookCall = (cid, { date, start, end, title }) => {
+// Appointment names: "Ortiz - Phone Call", or "Ortiz/Brooks - Phone Call" for a couple with different last names.
+window.HQ.apptName = c => {
+  const parts = c.name.split("&").map(p => p.trim().split(/\s+/)).filter(p => p[0]);
+  const lasts = parts.map((p, i) => p.length > 1 ? p[p.length - 1] : (parts[i + 1] && parts[i + 1].length > 1 ? parts[i + 1][parts[i + 1].length - 1] : p[0]));
+  return [...new Set(lasts)].join("/");
+};
+window.HQ.bookCall = (cid, { date, start, end, title, who, where }) => {
   const c = window.HQ.contacts[cid]; if (!c) return 0;
-  const last = c.name.split("&")[0].trim().split(" ").pop();
-  const invite = [c.name.split("&")[0].trim()].concat(window.HQ.settings.team.map(t => t[1]));
-  (c.appts = c.appts || []).push({ type: "Phone call", title: title || `${last} - Phone call`, date, start, end, where: (c.phones[0] || [])[1] || "", who: invite });
+  const invite = who || [c.name.split("&")[0].trim()].concat(window.HQ.settings.team.map(t => t[1]));
+  (c.appts = c.appts || []).push({ type: "Phone call", title: title || `${window.HQ.apptName(c)} - Phone Call`, date, start, end, where: where !== undefined ? where : (c.phones[0] || [])[1] || "", who: invite });
   const iso = x => x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0") + "-" + String(x.getDate()).padStart(2, "0");
   const [y, m, d] = date.split("-").map(Number), callDay = new Date(y, m - 1, d), today = new Date(2026, 9, 12);
   const initials = n => (window.HQ.settings.team.find(([, nm]) => nm.split(" ")[0] === n) || window.HQ.settings.team[0])[0];

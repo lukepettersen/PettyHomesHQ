@@ -400,6 +400,9 @@ body { background: var(--bg); }
 #pg-deals .minim > input, #pg-deals .minim select { padding: 9px 10px !important; font-size: 14px !important; }
 #pg-deals .mini-dt { display: flex; gap: 10px; flex-wrap: wrap; }
 #pg-deals .mini-dt input { width: auto !important; flex: 1 1 130px; padding: 9px 10px !important; }
+#pg-deals .appt-menu { display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--line); border-radius: 8px; padding: 4px; background: var(--bg); }
+#pg-deals .appt-menu button { border: 0; background: none; text-align: left; padding: 7px 8px; border-radius: 6px; font-weight: 600; font-size: 13px; }
+#pg-deals .appt-menu button:hover { background: var(--sunken); }
 #pg-deals .appt { display: flex; flex-direction: column; gap: 3px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 13px; }
 #pg-deals .appt:first-of-type { border-top: 0; padding-top: 0; }
 #pg-deals .appt-h { display: flex; justify-content: space-between; gap: 8px; }
@@ -1167,11 +1170,16 @@ window.HQ.mention = (cid, text) => {
   hits.forEach(([k]) => window.HQ.notifications.unshift({ id: Date.now() + k, to: k, from: window.HQ.me, cid, name: c ? c.name : "", text, read: false }));
   return hits;
 };
-window.HQ.bookCall = (cid, { date, start, end, title }) => {
+// Appointment names: "Ortiz - Phone Call", or "Ortiz/Brooks - Phone Call" for a couple with different last names.
+window.HQ.apptName = c => {
+  const parts = c.name.split("&").map(p => p.trim().split(/\s+/)).filter(p => p[0]);
+  const lasts = parts.map((p, i) => p.length > 1 ? p[p.length - 1] : (parts[i + 1] && parts[i + 1].length > 1 ? parts[i + 1][parts[i + 1].length - 1] : p[0]));
+  return [...new Set(lasts)].join("/");
+};
+window.HQ.bookCall = (cid, { date, start, end, title, who, where }) => {
   const c = window.HQ.contacts[cid]; if (!c) return 0;
-  const last = c.name.split("&")[0].trim().split(" ").pop();
-  const invite = [c.name.split("&")[0].trim()].concat(window.HQ.settings.team.map(t => t[1]));
-  (c.appts = c.appts || []).push({ type: "Phone call", title: title || `${last} - Phone call`, date, start, end, where: (c.phones[0] || [])[1] || "", who: invite });
+  const invite = who || [c.name.split("&")[0].trim()].concat(window.HQ.settings.team.map(t => t[1]));
+  (c.appts = c.appts || []).push({ type: "Phone call", title: title || `${window.HQ.apptName(c)} - Phone Call`, date, start, end, where: where !== undefined ? where : (c.phones[0] || [])[1] || "", who: invite });
   const iso = x => x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0") + "-" + String(x.getDate()).padStart(2, "0");
   const [y, m, d] = date.split("-").map(Number), callDay = new Date(y, m - 1, d), today = new Date(2026, 9, 12);
   const initials = n => (window.HQ.settings.team.find(([, nm]) => nm.split(" ")[0] === n) || window.HQ.settings.team[0])[0];
@@ -1402,7 +1410,7 @@ function personModal() {
     if (two && v("g-phone")) phones.push([v("g-first"), v("g-phone")]);
     if (two && v("g-email")) emails.push([v("g-first"), v("g-email")]);
     const cid = HQ.newContact(name, { stage: el("f-stage").value, source: el("f-source").value, phones, emails });
-    let n = 0; if (el("f-call").checked) { const t = el("f-calltime").value, [h, m] = (t || "12:00").split(":").map(Number), end = String(h + (m >= 30 ? 1 : 0)).padStart(2, "0") + ":" + String((m + 30) % 60).padStart(2, "0"); n = HQ.bookCall(cid, { date: el("f-calldate").value, start: t, end }); }
+    let n = 0; if (el("f-call").checked) { const t = el("f-calltime").value, [h, m] = (t || "12:00").split(":").map(Number), end = String(h + (m >= 30 ? 1 : 0)).padStart(2, "0") + ":" + String((m + 30) % 60).padStart(2, "0"); n = HQ.bookCall(cid, { date: el("f-calldate").value, start: t, end, title: `${HQ.apptName(HQ.contacts[cid])} - Phone Call` }); }
     el("modal").innerHTML = ""; toast(n ? `Added ${name}. Call booked, invite sent, ${n} tasks started.` : `Added ${name}.`); render();
   });
 }
@@ -1741,7 +1749,8 @@ function engInfo(dl) {
 
 function checklistHtml(dl) {
   const open = openTasks(dl), phases = [...new Set(dl.tasks.map(t => t.phase))];
-  if (!expanded[dl.id]) { const f = phases.find(p => dl.tasks.some(t => t.phase === p && eff(dl, t) === "open")); expanded[dl.id] = new Set(f ? [f] : []); }
+  // Phases start folded: the open steps already show in the Tasks card. Click a phase to see its steps.
+  if (!expanded[dl.id]) expanded[dl.id] = new Set();
   const done = dl.tasks.filter(t => eff(dl, t) !== "open").length;
   if (!dl.tasks.length) return `<p class="empty">No checklist for this status yet. Add a template for it in Admin → Task templates.</p>`;
   return `<div class="subh">Checklist · ${done} of ${dl.tasks.length} done</div>
@@ -1804,7 +1813,10 @@ function ftaskHtml(dl, t) {
   return `<div class="ptask"><button class="check" data-dl="${dl.id}" data-toggle="${t.id}" aria-label="Mark done: ${esc(t.t)}"></button><div><div class="title">${esc(t.t)}</div><div class="sm ${n !== null && n < 0 ? "od" : n === 0 ? "td" : "muted"}">${!due ? "Waits for " + esc(MS_NAMES[t.a]) : n === 0 ? "Today" : fmt(due)} · ${WHO[t.who]} · ${file} checklist</div></div></div>`;
 }
 /* ---------- Appointments + files (contact page, right column) ---------- */
-const lastName = c => c.name.split("&")[0].trim().split(" ").pop();
+const lastName = c => HQ.apptName(c);
+// Appointment types on the contact page: [key, name, minutes].
+const APPT_TYPES = [["call", "Phone Call", 30], ["buyer", "Buyer Consultation", 60], ["seller", "Seller Consultation", 60], ["showing", "Showing", 60], ["other", "Other appointment", 60]];
+let apptMenu = false;
 const fmtTime = hm => { if (!hm) return ""; let [h, m] = hm.split(":").map(Number); const ap = h >= 12 ? "pm" : "am"; h = h % 12 || 12; return h + (m ? ":" + String(m).padStart(2, "0") : "") + ap; };
 // Contract dates go on Google Calendar automatically; anything else is added by hand.
 function appts(c, files) {
@@ -1823,14 +1835,14 @@ function apptHtml(a, c) {
   const dt = d(a.date), n = diff(dt, TODAY), day = n === 0 ? "Today" : n === 1 ? "Tomorrow" : n > 1 && n < 7 ? ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][dt.getDay()] : fmt(dt);
   const time = a.start ? `${fmtTime(a.start)}${a.end ? " - " + fmtTime(a.end) : ""} ` : "";
   const who = (a.who || [c.name.split("&")[0].trim(), "Luke Pettersen", "Alyssa Chakiton"]).map(n => n.split(" ").map(x => x[0]).join("").slice(0, 2).toUpperCase());
-  return `<div class="appt"><div class="appt-h"><b>${a.type === "Phone call" ? "☎ " : ""}${esc(a.title)}</b><span class="gcal" title="On Google Calendar">G</span></div>
+  return `<div class="appt"><div class="appt-h"><b>${esc(a.title)}</b><span class="gcal" title="On Google Calendar">G</span></div>
     <div class="sm ${n === 0 ? "td" : "muted"}">◷ ${time}${day}</div>${a.where ? `<div class="sm muted">⌖ ${esc(a.where)}</div>` : ""}
     <div class="appt-f"><span class="avs">${who.map(x => `<span class="av">${x}</span>`).join("")}</span>${a.auto ? `<span class="sm muted">From contract</span>` : `<button class="rm-x" data-delappt="${a.i}" aria-label="Delete appointment">×</button>`}</div></div>`;
 }
 function apptCard(c, files) {
   const all = appts(c, files), up = all.filter(a => d(a.date) >= TODAY), past = all.filter(a => d(a.date) < TODAY);
-  return `<div class="card-s"><h3>Appointments <span class="muted">${up.length}</span><button class="plus" data-apptopen="1" aria-label="Add appointment">+</button></h3>
-    <button class="btn" data-bookcall="1">☎ Book phone call</button>
+  return `<div class="card-s"><h3>Appointments <span class="muted">${up.length}</span><button class="plus" data-apptmenu="1" aria-label="Book an appointment" aria-expanded="${apptMenu}">+</button></h3>
+    ${apptMenu ? `<div class="appt-menu">${APPT_TYPES.map(([k, l]) => `<button data-apptnew="${k}">${k === "other" ? "+ Other appointment" : "Book " + l.toLowerCase()}</button>`).join("")}</div>` : ""}
     ${up.map(a => apptHtml(a, c)).join("") || `<p class="muted sm">Nothing scheduled. Contract dates show up here once a purchase agreement is added.</p>`}
     ${past.length ? `<button class="morelink" data-pastappt="1">${showPastAppts ? "Hide" : "Past appointments"} (${past.length})</button>${showPastAppts ? past.map(a => apptHtml(a, c)).join("") : ""}` : ""}</div>`;
 }
@@ -1853,23 +1865,22 @@ function miniModalHtml() {
     <div class="mini-dt"><input id="mt-date" type="date" value="${iso(TODAY)}" aria-label="Date"><input id="mt-time" type="time" aria-label="Time"></div>
     <p class="muted sm" style="margin:0">For ${esc(c.name)}. It also shows on the Tasks page under Clients.</p>
     <div class="foot"><button type="button" class="btn" data-mclose="1">Cancel</button><button class="btn primary" type="submit">Create task</button></div></form></div>`;
-  const pa = deals.find(x => x.kind === "pa" && x.cid === openContact && x.status === "Active"), isCall = miniModal === "call";
-  const tpls = HQ.templates.filter(t => t.trigger === "Phone call booked");
-  if (isCall) return `<div class="modal-bg" data-mclose="1"><form class="modal deal-modal minim" id="mini-form" autocomplete="off">
-    <div class="mini-h"><h2>Book phone call</h2><button type="button" class="x" data-mclose="1" aria-label="Close">×</button></div>
-    <input id="ma-title" value="${esc(lastName(c))} - Phone call" aria-label="Title" required>
-    <div class="mini-dt"><input id="ma-date" type="date" value="${iso(add(TODAY, 1))}" aria-label="Date"><input id="ma-start" type="time" value="12:00" aria-label="Start"><input id="ma-end" type="time" value="12:30" aria-label="End"></div>
-    <p class="sm" style="margin:0">Sends a Google Calendar invite to <b>${esc(c.name)}</b>${(c.emails[0] || [])[1] ? ` (${esc(c.emails[0][1])})` : ` <span class="od">(no email on file, so only the team gets it)</span>`} and the team.</p>
-    <p class="muted sm" style="margin:0">${tpls.length ? `Starts ${tpls.map(t => `"${esc(t.name)}"`).join(" + ")}: ${tpls.reduce((n, t) => n + t.phases.reduce((m, p) => m + p.steps.length, 0), 0)} tasks timed from today and the call.` : "No template starts when a call is booked. Add one in Admin → Task templates."}</p>
-    <div class="foot"><button type="button" class="btn" data-mclose="1">Cancel</button><button class="btn primary" type="submit">Book call</button></div></form></div>`;
+  const pa = deals.find(x => x.kind === "pa" && x.cid === openContact && x.status === "Active");
+  const T = APPT_TYPES.find(x => x[0] === miniModal.slice(5)) || APPT_TYPES[4], [tk, tl, mins] = T;
+  const start = "12:00", end = String(12 + Math.floor(mins / 60)).padStart(2, "0") + ":" + String(mins % 60).padStart(2, "0");
+  const where = tk === "call" ? (c.phones[0] || [])[1] || "" : tk === "seller" ? c.address || "" : tk === "other" ? (pa ? pa.line : c.address || "") : "";
+  const tpls = tk === "call" ? HQ.templates.filter(t => t.trigger === "Phone call booked") : [];
+  const fileKind = tk === "buyer" ? "buyer" : tk === "seller" ? "listing" : null, hasFile = fileKind && deals.some(x => x.cid === openContact && x.kind === fileKind && isActive(x));
   return `<div class="modal-bg" data-mclose="1"><form class="modal deal-modal minim" id="mini-form" autocomplete="off">
-    <div class="mini-h"><h2>Create appointment</h2><button type="button" class="x" data-mclose="1" aria-label="Close">×</button></div>
-    <input id="ma-title" value="${esc(lastName(c))} - " aria-label="Title" required>
-    <div class="mini-dt"><input id="ma-date" type="date" value="${iso(TODAY)}" aria-label="Date"><input id="ma-start" type="time" value="09:00" aria-label="Start"><input id="ma-end" type="time" value="10:00" aria-label="End"></div>
-    <input id="ma-where" value="${esc(pa ? pa.line : c.address || "")}" placeholder="Location" aria-label="Location">
-    <div class="sm" style="display:flex;flex-wrap:wrap;gap:10px"><b class="muted">Invite</b>${[c.name.split("&")[0].trim()].concat(team.map(t => t[1])).map((n, i) => `<label class="chk"><input type="checkbox" data-inv="${esc(n)}" checked> ${esc(n)}</label>`).join("")}</div>
-    <p class="muted sm" style="margin:0">Adds it to Google Calendar and sends the invites.</p>
-    <div class="foot"><button type="button" class="btn" data-mclose="1">Cancel</button><button class="btn primary" type="submit">Create appointment</button></div></form></div>`;
+    <div class="mini-h"><h2>${tk === "other" ? "Create appointment" : "Book " + tl.toLowerCase()}</h2><button type="button" class="x" data-mclose="1" aria-label="Close">×</button></div>
+    <input id="ma-title" value="${esc(HQ.apptName(c))} - ${tk === "other" ? "" : tl}" aria-label="Title" required>
+    <div class="mini-dt"><input id="ma-date" type="date" value="${iso(add(TODAY, 1))}" aria-label="Date"><input id="ma-start" type="time" value="${start}" aria-label="Start"><input id="ma-end" type="time" value="${end}" aria-label="End"></div>
+    <input id="ma-where" value="${esc(where)}" placeholder="${tk === "call" ? "Phone number" : tk === "showing" ? "Property address" : "Location"}" aria-label="Location">
+    <div class="sm" style="display:flex;flex-wrap:wrap;gap:10px"><b class="muted">Invite</b>${[c.name.split("&")[0].trim()].concat(HQ.settings.team.map(t => t[1])).map(n => `<label class="chk"><input type="checkbox" data-inv="${esc(n)}" checked> ${esc(n)}</label>`).join("")}</div>
+    <p class="muted sm" style="margin:0">Adds it to Google Calendar and sends the invites${(c.emails[0] || [])[1] ? "" : ` <span class="od">(no email on file for ${esc(c.name.split(" ")[0])}, so only the team gets it)</span>`}.</p>
+    ${tk === "call" ? `<p class="muted sm" style="margin:0">${tpls.length ? `Starts ${tpls.map(t => `"${esc(t.name)}"`).join(" + ")}: ${tpls.reduce((n, t) => n + t.phases.reduce((m, p) => m + p.steps.length, 0), 0)} tasks timed from today and the call.` : "No template starts when a call is booked. Add one in Admin → Task templates."}</p>` : ""}
+    ${fileKind && !hasFile ? `<label class="chk"><input type="checkbox" id="ma-start-file" checked> Also start a ${fileKind === "buyer" ? "buyer" : "listing"} at Consult scheduled (opens next)</label>` : ""}
+    <div class="foot"><button type="button" class="btn" data-mclose="1">Cancel</button><button class="btn primary" type="submit">${tk === "other" ? "Create appointment" : "Book " + tl.toLowerCase()}</button></div></form></div>`;
 }
 function renderMini() {
   el("mini-modal").innerHTML = miniModalHtml();
@@ -1885,10 +1896,14 @@ function saveMini() {
     c.tasks.push({ t, type, kind: type === "Text" ? "text" : type === "Email" ? "email" : "task", due: el("mt-date").value || iso(TODAY), time: fmtTime(el("mt-time").value), who: el("mt-who").value, s: "open" });
     miniModal = null; renderMini(); render(); toast("Task created. It's on the Tasks page under Clients too."); return;
   }
-  const title = el("ma-title").value.trim(); if (!title) { el("ma-title").focus(); return; }
-  if (miniModal === "call") { const n = HQ.bookCall(openContact, { date: el("ma-date").value || iso(add(TODAY, 1)), start: el("ma-start").value, end: el("ma-end").value, title }); miniModal = null; renderMini(); render(); toast(`Call booked and invite sent.${n ? ` ${n} tasks started.` : ""}`); return; }
-  (c.appts = c.appts || []).push({ title, date: el("ma-date").value || iso(TODAY), start: el("ma-start").value, end: el("ma-end").value, where: el("ma-where").value.trim(), who: [...document.querySelectorAll("[data-inv]")].filter(x => x.checked).map(x => x.dataset.inv) });
-  miniModal = null; renderMini(); render(); toast("Appointment created and added to Google Calendar.");
+  const title = el("ma-title").value.trim(); if (!title || /-\s*$/.test(title)) { el("ma-title").focus(); toast("Give the appointment a name."); return; }
+  const tk = miniModal.slice(5), A = { title, date: el("ma-date").value || iso(add(TODAY, 1)), start: el("ma-start").value, end: el("ma-end").value, where: el("ma-where").value.trim(), who: [...document.querySelectorAll("[data-inv]")].filter(x => x.checked).map(x => x.dataset.inv) };
+  const thenFile = el("ma-start-file") && el("ma-start-file").checked;
+  if (tk === "call") { const n = HQ.bookCall(openContact, A); miniModal = null; renderMini(); render(); toast(`Call booked and invite sent.${n ? ` ${n} tasks started.` : ""}`); return; }
+  (c.appts = c.appts || []).push(Object.assign({ type: (APPT_TYPES.find(x => x[0] === tk) || [])[1] }, A));
+  miniModal = null; renderMini(); render();
+  if (thenFile) { openForm(tk === "buyer" ? "buyer" : "listing", { cid: openContact, v: { consult: A.date } }); toast("Appointment booked. Now start their " + (tk === "buyer" ? "buyer file." : "listing.")); return; }
+  toast("Appointment booked and added to Google Calendar.");
 }
 
 function ptaskHtml(t, i) {
@@ -2098,7 +2113,7 @@ function datesCard(c) {
   return `<div class="card-s">${head("Important Dates", "dates")}
     <dl class="kv">${c.birthdays.map(([n, b]) => `<dt>${esc(n.replace(/^(\S+)( \(.*\))?$/, "$1's birthday$2"))}</dt><dd>${niceDate(b)}</dd>`).join("") || `<dt>Birthdays</dt><dd class="muted">None added</dd>`}
     <dt>Homeiversary</dt><dd>${c.homeiversary ? niceDate(c.homeiversary, true) : `<span class="muted">Fills in when a deal closes</span>`}</dd></dl>
-    <p class="muted sm">Reminders for these dates are added to Tasks every year (Admin → Date reminders).</p></div>`;
+    </div>`;
 }
 
 function collect() {
@@ -2384,8 +2399,8 @@ document.addEventListener("click", e => {
   if (b.dataset.pstep) { readDealForm(); dealForm.step = +b.dataset.pstep; renderDealModal(); return; }
   if (b.dataset.alltasks) { showAllTasks = !showAllTasks; render(); return; }
   if (b.dataset.applyopen) { miniModal = "task"; renderMini(); return; }
-  if (b.dataset.apptopen) { miniModal = "appt"; renderMini(); return; }
-  if (b.dataset.bookcall) { miniModal = "call"; renderMini(); return; }
+  if (b.dataset.apptmenu) { apptMenu = !apptMenu; render(); return; }
+  if (b.dataset.apptnew) { apptMenu = false; miniModal = "appt:" + b.dataset.apptnew; render(); renderMini(); return; }
   if (b.dataset.delappt) { contact(openContact).appts.splice(+b.dataset.delappt, 1); render(); toast("Appointment deleted and removed from Google Calendar."); return; }
   if (b.dataset.pastappt) { showPastAppts = !showPastAppts; render(); return; }
   if (b.dataset.fileadd) { el("file-in").click(); return; }

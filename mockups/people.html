@@ -343,7 +343,7 @@ function personModal() {
     if (two && v("g-phone")) phones.push([v("g-first"), v("g-phone")]);
     if (two && v("g-email")) emails.push([v("g-first"), v("g-email")]);
     const cid = HQ.newContact(name, { stage: el("f-stage").value, source: el("f-source").value, phones, emails });
-    let n = 0; if (el("f-call").checked) { const t = el("f-calltime").value, [h, m] = (t || "12:00").split(":").map(Number), end = String(h + (m >= 30 ? 1 : 0)).padStart(2, "0") + ":" + String((m + 30) % 60).padStart(2, "0"); n = HQ.bookCall(cid, { date: el("f-calldate").value, start: t, end }); }
+    let n = 0; if (el("f-call").checked) { const t = el("f-calltime").value, [h, m] = (t || "12:00").split(":").map(Number), end = String(h + (m >= 30 ? 1 : 0)).padStart(2, "0") + ":" + String((m + 30) % 60).padStart(2, "0"); n = HQ.bookCall(cid, { date: el("f-calldate").value, start: t, end, title: `${HQ.apptName(HQ.contacts[cid])} - Phone Call` }); }
     el("modal").innerHTML = ""; toast(n ? `Added ${name}. Call booked, invite sent, ${n} tasks started.` : `Added ${name}.`); render();
   });
 }
