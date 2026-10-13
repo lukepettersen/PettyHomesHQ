@@ -1,0 +1,27 @@
+import { randomBytes } from "node:crypto";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/server/auth";
+import { hasPermission } from "@/server/permissions";
+import { allowedDomain } from "@/server/access";
+import { CALENDAR_SCOPE, googleKeysSet, redirectUri } from "@/server/google";
+
+export const dynamic = "force-dynamic";
+
+/** Admin → Integrations → Connect Google Calendar: sends the Admin to Google's approval screen. */
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  const user = session?.user;
+  if (!user?.id) return new Response("Sign in first", { status: 401 });
+  if (!hasPermission(user.permissions, "manageUsers")) return new Response("Only an Admin can connect Google Calendar.", { status: 403 });
+  if (!googleKeysSet()) return Response.redirect(new URL("/admin/integrations?google=nokeys", redirectUri()), 302);
+  const state = randomBytes(24).toString("base64url");
+  const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+  url.search = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID!, redirect_uri: redirectUri(), response_type: "code", scope: CALENDAR_SCOPE,
+    access_type: "offline", prompt: "consent", state, hd: allowedDomain(), ...(user.email ? { login_hint: user.email } : {}),
+  }).toString();
+  return new Response(null, {
+    status: 302,
+    headers: { Location: url.toString(), "Set-Cookie": `hq_google_state=${state}; Path=/api/google; HttpOnly; Secure; SameSite=Lax; Max-Age=600` },
+  });
+}

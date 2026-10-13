@@ -99,6 +99,13 @@ HQ app service → **Variables** → **New Variable**, paste the name and value,
 restarts HQ and the page shows **Connected**. To disconnect, delete the variables. Keys are never
 shown in HQ or stored in its database. Texting also has an on/off switch on that page.
 
+### Google Calendar
+One-time: Google Cloud → APIs & Services → Library → **Google Calendar API** → Enable; then
+Credentials → the HQ OAuth client → Authorized redirect URIs → add
+`https://<HQ address>/api/google/callback` → Save. In HQ: Admin → Integrations → **Connect Google
+Calendar** and approve. The connection is stored encrypted (key derived from `NEXTAUTH_SECRET`;
+changing that secret means connecting again). Disconnect from the same page.
+
 ### Rotate a secret
 Create the new value (Google: Credentials → the HQ client → reset secret), update the
 Railway variable, Railway redeploys. Changing `NEXTAUTH_SECRET` signs everyone out.

@@ -1,13 +1,25 @@
 import { adminGate } from "../gate";
 import { integrationStatus, textingEnabled } from "@/server/integrations";
 import { TextingSwitch } from "./TextingSwitch";
+import { CalendarControls } from "./CalendarControls";
+import { calendarConnection } from "@/server/google";
 
 export const dynamic = "force-dynamic";
 
-export default async function Page() {
+const GOOGLE_RESULT: Record<string, [boolean, string]> = {
+  connected: [true, "Google Calendar is connected. New and changed appointments and contract dates now go on the calendar."],
+  cancelled: [false, "Google Calendar wasn't connected: the approval was cancelled."],
+  expired: [false, "That approval link expired. Click Connect Google Calendar again."],
+  denied: [false, "Only an Admin can connect Google Calendar."],
+  nokeys: [false, "Add the Google keys in Railway first."],
+  error: [false, "Google didn't finish connecting. Check that the Google Calendar API is enabled and the …/api/google/callback address is added in Google Cloud, then try again."],
+};
+
+export default async function Page({ searchParams }: { searchParams: Promise<{ google?: string }> }) {
   const denied = await adminGate();
   if (denied) return denied;
-  const [list, texting] = [integrationStatus(), await textingEnabled()];
+  const [list, texting, cal, sp] = [integrationStatus(), await textingEnabled(), await calendarConnection(), await searchParams];
+  const result = sp.google ? GOOGLE_RESULT[sp.google] : undefined;
   return (
     <>
       <h1 className="text-2xl font-extrabold">Integrations</h1>
@@ -15,6 +27,7 @@ export default async function Page() {
         Connect other platforms by adding their keys in <b>Railway → your HQ app → Variables</b>. Railway restarts HQ, and the platform shows as Connected here.
         Keys are never shown here, never stored in HQ&apos;s database, and should never be sent in chat or email.
       </p>
+      {result && <p role="status" className={`mb-4 rounded-md px-3 py-2 text-sm ${result[0] ? "bg-accent-soft text-accent" : "bg-[#f9e1de] text-bad"}`}>{result[1]}</p>}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         {list.map((i) => (
           <section key={i.id} className="card flex flex-col gap-3 p-4" aria-labelledby={`int-${i.id}`}>
@@ -25,6 +38,7 @@ export default async function Page() {
             <p className="text-sm">{i.what}</p>
             {i.detail && <p className="text-sm muted">Number: {i.detail}</p>}
             {i.id === "texting" && <TextingSwitch connected={i.connected} on={texting} />}
+            {i.id === "google" && <CalendarControls keysSet={i.connected} email={cal?.email ?? null} connected={!!cal} />}
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider muted">{i.connected ? "Railway variables (all set)" : "Add in Railway → Variables"}</h3>
               <ul className="mt-1 flex flex-col gap-1 text-sm">

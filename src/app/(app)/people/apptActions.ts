@@ -6,6 +6,7 @@ import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { runTrigger } from "@/server/automation";
+import { syncAppointment } from "@/server/google";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
 import { formatTime, longIso } from "@/lib/tasks";
 
@@ -38,6 +39,7 @@ export async function bookAppointment(input: z.input<typeof bookSchema>) {
       return { id: a.id, tasks };
     });
     await logActivity(user.id, "create", "appointment", result.id, `Booked "${v.title}" for ${when}${result.tasks ? ` (${result.tasks} tasks)` : ""}`);
+    await syncAppointment(result.id); // Google Calendar, when connected
     revalidatePath(`/people/${v.personId}`); revalidatePath("/tasks");
     return result;
   });
@@ -47,6 +49,7 @@ export async function deleteAppointment(id: string) {
   return guarded(null, async (user) => {
     const a = await db.appointment.update({ where: { id: z.string().min(1).max(40).parse(id), deletedAt: null }, data: { deletedAt: new Date() } });
     await logActivity(user.id, "delete", "appointment", a.id, `Deleted appointment "${a.title}"`);
+    await syncAppointment(a.id);
     revalidatePath(`/people/${a.personId}`);
   });
 }
@@ -67,6 +70,7 @@ export async function updateAppointment(input: z.input<typeof editSchema>) {
       const open = await db.task.findMany({ where: { personId: a.personId, anchor: "phoneCall", completedAt: null, deletedAt: null } });
       for (const t of open) await db.task.update({ where: { id: t.id }, data: { dueDate: new Date(dateFromIso(v.date).getTime() + (t.offsetDays ?? 0) * 86400000), ...(t.offsetDays === 0 && t.dueTime ? { dueTime: v.start } : {}) } });
     }
+    await syncAppointment(a.id);
     await logActivity(user.id, "update", "appointment", a.id, `Updated appointment "${a.title}"${moved ? ` (now ${longIso(v.date)}${v.start ? ` ${formatTime(v.start)}` : ""})` : ""}`);
     revalidatePath(`/people/${a.personId}`); revalidatePath("/tasks");
   });

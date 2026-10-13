@@ -7,6 +7,7 @@ import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { hasPermission } from "@/server/permissions";
 import { loadForm } from "@/server/pa";
+import { syncContract } from "@/server/google";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
 import { closeStepsForWaived, contractAnchors, factsOf, redateContract, runTrigger } from "@/server/automation";
 import { cleanPaAnswers, formProblem, KEY_DATES, type DateKey, type DateStatus, type PaSection } from "@/lib/pa";
@@ -57,6 +58,7 @@ export async function addPurchaseAgreement(input: z.input<typeof addSchema>) {
      return { ...created, n };
     });
     await logActivity(user.id, "create", "purchaseAgreement", pa.id, `Added ${v.side}-side purchase agreement for ${file.person.name}: ${c.address}${pa.n ? ` (${pa.n} tasks)` : ""}`);
+    await syncContract(pa.id); // Google Calendar, when connected
     refresh(file.personId);
     return { id: pa.id, tasks: pa.n };
   });
@@ -91,6 +93,7 @@ export async function updatePurchaseAgreement(input: z.input<typeof editSchema>)
       await redateContract(tx, pa.id);
     });
     await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Updated purchase agreement for ${pa.file.person.name}${moved.length ? ` (moved ${moved.join(", ")})` : ""}`);
+    await syncContract(pa.id);
     refresh(pa.file.personId);
   });
 }
@@ -118,6 +121,7 @@ export async function setKeyDate(input: z.input<typeof dateSchema>) {
       if (v.status === "waived") await closeStepsForWaived(tx, pa.id, v.key);
     });
     await logActivity(user.id, "update", "purchaseAgreement", pa.id, `${label(v.key)} for ${pa.file.person.name}: ${v.status}${date ? ` (${date})` : ""}`);
+    await syncContract(pa.id);
     refresh(pa.file.personId);
   });
 }
@@ -145,6 +149,7 @@ export async function markClosed(paId: string) {
       await runTrigger(tx, `closed:${pa.side}`, { personId: pa.file.personId, fileId: null, paId: null, start: isoFromDate(closedOn), dates: contractAnchors(pa), facts: factsOf(pa.answers) }, user.id);
     });
     await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Marked closed: ${pa.address} for ${pa.file.person.name}`);
+    await syncContract(pa.id);
     refresh(pa.file.personId);
     revalidatePath("/people");
   });
@@ -161,6 +166,7 @@ export async function fellThrough(paId: string) {
       db.task.updateMany({ where: { paId: pa.id, completedAt: null, deletedAt: null }, data: { deletedAt: new Date() } }),
     ]);
     await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Fell through: ${pa.address} for ${pa.file.person.name}`);
+    await syncContract(pa.id);
     refresh(pa.file.personId);
   });
 }

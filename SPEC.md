@@ -338,8 +338,15 @@ Principles:
   buyer/listing at Consult scheduled" and opens that form with the consult date filled in.
 - **From the contract:** inspection appointment, inspection deadline (11:59pm), Written
   Statement deadline and "Close Date HOLD" appear automatically while a contract is active.
-- When Google is connected, appointments create Google Calendar events and invites; until
-  then they're stored in HQ only.
+- **Google Calendar** *(built 2026-10-15, ahead of Phase 3 at the owner's request)*: an Admin
+  connects once (Admin → Integrations → Connect Google Calendar; one connection for the team,
+  on the connecting Admin's calendar). Booking, editing or deleting an appointment updates its
+  event and emails the ticked invitees. While a contract is active, its inspection
+  appointment, inspection and Written Statement deadlines and Close Date HOLD are calendar
+  events that invite **everyone on the contract**: the team, the client's emails, and every
+  email address in the contract's people sections; they update when dates change and are
+  removed when the contract closes or falls through. If Google is unreachable, HQ still saves.
+  Until connected, appointments are stored in HQ only.
 - *Later:* booking a call for someone who already has one upcoming becomes **Reschedule
   call** *(decided, §17)*.
 

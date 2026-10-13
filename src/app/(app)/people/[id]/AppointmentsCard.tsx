@@ -15,7 +15,7 @@ import { FileForm } from "../../pipeline/FileForm";
 
 type Props = {
   fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; appts: ApptView[]; today: string; phone: string; address: string; hasEmail: boolean; team: string[];
-  callTemplates: { name: string; steps: number }[]; activeKinds: string[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean;
+  callTemplates: { name: string; steps: number }[]; calendarConnected: boolean; activeKinds: string[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean;
 };
 
 /** Contact page → Appointments: upcoming, then "Past appointments (N)"; + to book (SPEC.md §10). */
@@ -85,7 +85,7 @@ function Appt({ a, today, personName, onEdit, onDeleted }: { a: ApptView; today:
   );
 }
 
-function BookModal({ type, personId, personName, today, phone, address, hasEmail, team, callTemplates, activeKinds, onClose, onBooked, edit }: Props & { type: ApptType; edit?: ApptView; onClose: () => void; onBooked: (m: string, file?: { kind: "buyer" | "listing"; consult: string }) => void }) {
+function BookModal({ type, personId, personName, today, phone, address, hasEmail, team, callTemplates, activeKinds, calendarConnected, onClose, onBooked, edit }: Props & { type: ApptType; edit?: ApptView; onClose: () => void; onBooked: (m: string, file?: { kind: "buyer" | "listing"; consult: string }) => void }) {
   const [, label, mins] = APPT_TYPES.find(([k]) => k === type)!;
   const client = personName.split("&")[0].trim();
   const [f, setF] = useState(edit
@@ -132,7 +132,7 @@ function BookModal({ type, personId, personName, today, phone, address, hasEmail
             </label>
           ))}
         </fieldset>
-        <p className="text-xs muted">Saved in HQ. Google Calendar events and invites start once Google Calendar is connected (Admin → Integrations).{!hasEmail && ` There's no email on file for ${client}, so only the team would be invited.`}</p>
+        <p className="text-xs muted">{calendarConnected ? "Adds it to Google Calendar and sends the invites." : "Saved in HQ only. Connect Google Calendar in Admin → Integrations to add appointments to the calendar."}{calendarConnected && !hasEmail && ` There's no email on file for ${client}, so only the team gets the invite.`}</p>
         {type === "call" && !edit && <p className="text-xs muted">{callTemplates.length ? `Starts ${callTemplates.map((t) => `"${t.name}"`).join(" + ")}: ${steps} tasks timed from today and the call.` : "No template starts when a call is booked. Add one in Admin → Task templates."}</p>}
         {offerFile && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={thenFile} onChange={(e) => setThenFile(e.target.checked)} /> Also start a {fileKind === "buyer" ? "buyer" : "listing"} at Consult scheduled (opens next)</label>}
         {error && <p role="alert" className="text-sm text-bad">{error}</p>}

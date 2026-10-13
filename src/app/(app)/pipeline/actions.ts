@@ -8,6 +8,7 @@ import { logActivity } from "@/server/activity";
 import { hasPermission } from "@/server/permissions";
 import { cleanFileAnswers, type FileKind } from "@/lib/files";
 import { loadFileForm } from "@/server/files";
+import { syncContract } from "@/server/google";
 import { isoFromDate, todayCentral } from "@/lib/normalize";
 import { factsOf, moveFile, runTrigger } from "@/server/automation";
 
@@ -118,6 +119,7 @@ export async function deleteFile(fileId: string) {
   return guarded("deleteRecords", async (user) => {
     const f = await db.clientFile.update({ where: { id: id.parse(fileId), deletedAt: null }, data: { deletedAt: new Date() }, include: { person: { select: { name: true } } } });
     await logActivity(user.id, "delete", "clientFile", f.id, `Moved ${f.person.name}'s ${f.kind} to Trash`);
+    for (const pa of await db.purchaseAgreement.findMany({ where: { fileId: f.id }, select: { id: true } })) await syncContract(pa.id);
     refresh(f.personId);
   });
 }

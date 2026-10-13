@@ -102,6 +102,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 - `src/lib/templates.ts` (steps, anchors, conditions, expand; tested), `src/server/automation.ts` (runTrigger, applyTemplate, redateContract, moveFile), `prisma/starterTemplates.ts`
 - Admin pages check their own permission with `adminGate()` in `src/app/(app)/admin/gate.tsx`
 - `src/lib/appointments.ts` (names, contract dates; tested), `src/server/appointments.ts`, `src/app/(app)/people/apptActions.ts`
+- `src/lib/calendar.ts` (Google events; tested), `src/server/google.ts` (connect, encrypted token via `src/server/crypto.ts`, `syncAppointment`, `syncContract`), `src/app/api/google/*`
 - `src/lib/customFields.ts` — custom field types and value cleaning
 - Owner setup and ops runbook: `docs/ops.md`
 

@@ -7,6 +7,7 @@ import { loadOptions } from "@/server/people";
 import { loadChecklists, loadPersonTasks } from "@/server/tasks";
 import { loadTemplates } from "@/server/automation";
 import { loadPersonAppointments } from "@/server/appointments";
+import { calendarConnection } from "@/server/google";
 import { loadFileForm, loadPersonFiles, loadStatuses } from "@/server/files";
 import { loadForm, loadPersonContracts } from "@/server/pa";
 import { daysAgo, isoFromDate } from "@/lib/normalize";
@@ -85,7 +86,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
           <TasksCard lists={taskLists.map((l) => ({ id: l.id, name: l.name, builtin: null, showOnToday: l.showOnToday }))} personId={p.id} personName={p.name} rows={tasks.rows} team={tasks.team} today={tasks.today} meId={user.id}
             templates={templates.map((t) => ({ id: t.id, name: t.name, manual: !t.trigger }))} files={files.filter((f) => !f.closedAt).map((f) => ({ id: f.id, label: `${f.kind === "buyer" ? "Buyer" : "Listing"} · ${f.kind === "buyer" ? f.status : (f.address ?? "").split(",")[0]}` }))} />
           <PipelineCard fileForms={fileForms} personId={p.id} personName={p.name} files={files} contracts={contracts} statuses={fileStatuses} canSeeCommission={canSeeCommission} />
-          <AppointmentsCard fileForms={fileForms} personId={p.id} personName={p.name} appts={appts} today={tasks.today} phone={p.phones[0]?.number ?? ""} address={p.address ?? ""} hasEmail={p.emails.length > 0}
+          <AppointmentsCard calendarConnected={!!(await calendarConnection())} fileForms={fileForms} personId={p.id} personName={p.name} appts={appts} today={tasks.today} phone={p.phones[0]?.number ?? ""} address={p.address ?? ""} hasEmail={p.emails.length > 0}
             team={tasks.team.map((m) => m.name)} callTemplates={templates.filter((t) => t.trigger === "phonecall").map((t) => ({ name: t.name, steps: t.phases.reduce((n, ph) => n + ph.steps.length, 0) }))}
             activeKinds={files.filter((f) => !f.closedAt).map((f) => f.kind)} statuses={fileStatuses} canSeeCommission={canSeeCommission} />
         </aside>
