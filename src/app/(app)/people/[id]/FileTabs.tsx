@@ -49,7 +49,7 @@ export function FileTabs(p: Props) {
 }
 
 export function SideChip({ kind }: { kind: string }) {
-  return <span className={`rounded px-1.5 text-[11px] font-bold uppercase tracking-wide ${kind === "buyer" ? "bg-accent-soft text-accent" : "bg-[#f6e3d9] text-[#9a4f2e]"}`}>{kind === "buyer" ? "Buyer" : kind === "listing" ? "Listing" : kind}</span>;
+  return <span className={`rounded px-1.5 text-[11px] font-bold uppercase tracking-wide ${kind === "buyer" ? "bg-accent-soft text-accent" : "bg-[#f6e3d9] text-[#9a4f2e]"}`}>{kind === "buyer" ? "Buyer" : kind === "listing" ? "Seller" : kind}</span>;
 }
 
 function FilePane({ fileForms, file, personId, personName, statuses, canSeeCommission, canDelete, onDeleted, contracts, forms, today, checklists, team }: Props & { file: FileView; onDeleted: () => void }) {
@@ -76,7 +76,7 @@ function FilePane({ fileForms, file, personId, personName, statuses, canSeeCommi
     <div className="card mt-3 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <b>{file.kind === "buyer" ? "Buyer representation" : "Listing"}</b> <span className="muted">{activePa ? activePa.address : fileLine(file)}</span>
+          <b>{file.kind === "buyer" ? "Buyer" : "Seller"}</b> <span className="muted">{activePa ? activePa.address : fileLine(file)}</span>
           <p className="text-xs muted">{activePa ? `Under contract${activePa.dates.closing ? ` · closing ${shortDay(activePa.dates.closing)}` : ""}` : `In ${file.status} since ${shortDay(file.statusSince.slice(0, 10))}`}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -108,7 +108,7 @@ function FilePane({ fileForms, file, personId, personName, statuses, canSeeCommi
           <button type="button" className="btn btn-primary" onClick={() => setAddingPa(true)}>+ Add purchase agreement</button>
         </div>
       )}
-      <Checklist title={file.kind === "buyer" ? "Buyer checklist" : "Listing checklist"} tasks={checklists.filter((t) => t.fileId === file.id && !t.paId)} today={today} team={team} />
+      <Checklist title={file.kind === "buyer" ? "Buyer checklist" : "Seller checklist"} tasks={checklists.filter((t) => t.fileId === file.id && !t.paId)} today={today} team={team} />
       {earlier.length > 0 && (
         <div className="mt-3">
           <h4 className="text-xs font-semibold uppercase tracking-wider muted">Earlier contracts</h4>

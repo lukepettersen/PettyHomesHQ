@@ -15,7 +15,7 @@ export default async function Page() {
   const rows = people.map((p) => ({ id: p.id, name: p.name, left: TRASH_DAYS - (daysAgo(p.deletedAt) ?? 0) }));
   const tasks = await db.task.findMany({ where: { deletedAt: { not: null }, OR: [{ personId: null }, { person: { deletedAt: null } }] }, orderBy: { deletedAt: "desc" }, include: { person: { select: { name: true } } } });
   const files = await db.clientFile.findMany({ where: { deletedAt: { not: null }, person: { deletedAt: null } }, orderBy: { deletedAt: "desc" }, include: { person: { select: { name: true } } } });
-  const fileRows = files.map((f) => ({ id: f.id, name: `${f.person.name} · ${f.kind === "buyer" ? "Buyer" : "Listing"}`, detail: f.address ?? undefined, left: TRASH_DAYS - (daysAgo(f.deletedAt) ?? 0) }));
+  const fileRows = files.map((f) => ({ id: f.id, name: `${f.person.name} · ${f.kind === "buyer" ? "Buyer" : "Seller"}`, detail: f.address ?? undefined, left: TRASH_DAYS - (daysAgo(f.deletedAt) ?? 0) }));
   const documents = await db.document.findMany({ where: { deletedAt: { not: null }, person: { deletedAt: null } }, orderBy: { deletedAt: "desc" }, include: { person: { select: { name: true } } } });
   const docRows = documents.map((d) => ({ id: d.id, name: d.name, detail: d.person.name, left: TRASH_DAYS - (daysAgo(d.deletedAt) ?? 0) }));
   const taskRows = tasks.map((t) => ({ id: t.id, name: t.title, detail: t.person?.name, left: TRASH_DAYS - (daysAgo(t.deletedAt) ?? 0) }));

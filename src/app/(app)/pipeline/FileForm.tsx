@@ -22,8 +22,8 @@ export function FileForm({ kind, personId, personName, fileId, statuses, statusI
     .map((g) => ({ ...g, fields: g.fields.filter((q) => canSeeCommission || !["commission", "bac"].includes(q.key)) }))
     .filter((g) => g.fields.length);
   const shownKeys = new Set(groups.flatMap((g) => g.fields.map((q) => q.key)));
-  const noun = kind === "buyer" ? "buyer" : "listing";
-  const title = fileId ? `Edit ${kind === "buyer" ? "buyer representation" : "listing"}` : `Start a ${noun}`;
+  const noun = kind === "buyer" ? "buyer" : "seller";
+  const title = fileId ? `Edit ${noun}` : `Start a ${noun}`;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +35,7 @@ export function FileForm({ kind, personId, personName, fileId, statuses, statusI
       const r = fileId ? await updateFile({ id: fileId, statusId: status, answers: sent }) : await startFile({ personId, kind, statusId: status, answers: sent });
       if (!r.ok) { setError(r.error); return; }
       const st = statuses.find((s) => s.id === status)?.name ?? "";
-      onSaved(fileId ? "Saved." : `${kind === "buyer" ? "Buyer" : "Listing"} started at ${st}.`);
+      onSaved(fileId ? "Saved." : `${kind === "buyer" ? "Buyer" : "Seller"} started at ${st}.`);
     });
   };
 

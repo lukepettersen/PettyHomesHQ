@@ -87,7 +87,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
 
         <aside className="order-2 flex min-w-0 flex-col gap-3 lg:sticky lg:top-3 lg:order-3">
           <TasksCard lists={taskLists.map((l) => ({ id: l.id, name: l.name, builtin: null, showOnToday: l.showOnToday }))} personId={p.id} personName={p.name} rows={tasks.rows} team={tasks.team} today={tasks.today} meId={user.id}
-            templates={templates.map((t) => ({ id: t.id, name: t.name, manual: !t.trigger }))} files={files.filter((f) => !f.closedAt).map((f) => ({ id: f.id, label: `${f.kind === "buyer" ? "Buyer" : "Listing"} · ${f.kind === "buyer" ? f.status : (f.address ?? "").split(",")[0]}` }))} />
+            templates={templates.map((t) => ({ id: t.id, name: t.name, manual: !t.trigger }))} files={files.filter((f) => !f.closedAt).map((f) => ({ id: f.id, label: `${f.kind === "buyer" ? "Buyer" : "Seller"} · ${f.kind === "buyer" ? f.status : (f.address ?? "").split(",")[0]}` }))} />
           <PipelineCard fileForms={fileForms} personId={p.id} personName={p.name} files={files} contracts={contracts} statuses={fileStatuses} canSeeCommission={canSeeCommission} />
           <AppointmentsCard calendarConnected={!!(await calendarConnection())} fileForms={fileForms} personId={p.id} personName={p.name} appts={appts} today={tasks.today} phone={p.phones[0]?.number ?? ""} address={p.address ?? ""} hasEmail={p.emails.length > 0}
             team={tasks.team.map((m) => m.name)} callTemplates={templates.filter((t) => ["phonecall", "buyerconsult", "sellerconsult"].includes(t.trigger ?? "")).map((t) => ({ name: t.name, trigger: t.trigger!, steps: t.phases.reduce((n, ph) => n + ph.steps.length, 0) }))}

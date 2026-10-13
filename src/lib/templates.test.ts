@@ -52,6 +52,9 @@ describe("minutes before", () => {
     const { timeBefore, timingLabel, templateProblem } = await import("./templates");
     expect(timeBefore("14:00", 15)).toBe("13:45");
     expect(timeBefore("00:10", 30)).toBe("00:00");
+    expect(timeBefore("14:00", -30)).toBe("14:30");
+    expect(timeBefore("23:50", -30)).toBe("23:59");
+    expect(timingLabel({ anchor: "phoneCall", days: 0, dir: "minutesAfter", minutes: 15 })).toBe("15 minutes after Phone call");
     expect(timingLabel({ anchor: "consult", days: 0, dir: "minutesBefore", minutes: 30 })).toBe("30 minutes before Consult");
     const step = { id: "x", name: "Reminder", assignee: "", type: "task" as const, days: 0, dir: "minutesBefore" as const, minutes: 15, anchor: "closing" as const, cond: "always" as const };
     expect(templateProblem({ id: "t", name: "T", trigger: null, phases: [{ id: "p", name: "P", steps: [step] }] })).toMatch(/Phone call or Consult/);

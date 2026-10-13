@@ -167,7 +167,7 @@ function Editor({ t: initial, statuses, team, tags, today, templates, messages, 
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pl-14 max-sm:pl-0">
                 <span className="flex flex-wrap items-center gap-1 text-xs font-semibold muted">Due
-                  {s.dir === "minutesBefore" ? (
+                  {s.dir === "minutesBefore" || s.dir === "minutesAfter" ? (
                     <select aria-label={`Minutes for ${s.name}`} className={field} value={s.minutes ?? 15} onChange={(e) => setStep(i, si, { minutes: Number(e.target.value) })}>
                       {MINUTE_OPTIONS.map((m) => <option key={m} value={m}>{m}</option>)}
                     </select>
@@ -177,13 +177,14 @@ function Editor({ t: initial, statuses, team, tags, today, templates, messages, 
                   <select aria-label={`When ${s.name} is due`} className={field} value={s.dir} onChange={(e) => {
                     const dir = e.target.value as Step["dir"];
                     // Minutes before only makes sense for the phone call, which has a time.
-                    setStep(i, si, dir === "minutesBefore" ? { dir, days: 0, minutes: s.minutes ?? 15, anchor: "phoneCall" } : { dir, minutes: undefined, days: dir === "on" || dir === "none" ? 0 : s.days || 1 });
+                    const byMinutes = dir === "minutesBefore" || dir === "minutesAfter";
+                    setStep(i, si, byMinutes ? { dir, days: 0, minutes: s.minutes ?? 15, anchor: TIMED_ANCHORS.includes(s.anchor) ? s.anchor : "phoneCall" } : { dir, minutes: undefined, days: dir === "on" || dir === "none" ? 0 : s.days || 1 });
                   }}>
                     <option value="before">days before</option><option value="after">days after</option><option value="on">on the day of</option>
-                    <option value="minutesBefore">minutes before</option><option value="none">no due date</option>
+                    <option value="minutesBefore">minutes before</option><option value="minutesAfter">minutes after</option><option value="none">no due date</option>
                   </select>
                   <select aria-label={`Date ${s.name} counts from`} className={field} value={s.anchor} disabled={s.dir === "none"} onChange={(e) => setStep(i, si, { anchor: e.target.value as Step["anchor"] })}>
-                    {ANCHORS.filter(([k]) => s.dir !== "minutesBefore" || TIMED_ANCHORS.includes(k)).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                    {ANCHORS.filter(([k]) => (s.dir !== "minutesBefore" && s.dir !== "minutesAfter") || TIMED_ANCHORS.includes(k)).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
                   </select>
                 </span>
                 <label className="flex items-center gap-1 text-xs font-semibold muted">Only when

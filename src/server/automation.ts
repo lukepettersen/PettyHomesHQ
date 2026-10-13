@@ -2,7 +2,7 @@ import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
-import { CONTRACT_ANCHORS, expand, offsetOf, timeBefore, type Anchor, type Facts, type Phase, type Template } from "@/lib/templates";
+import { CONTRACT_ANCHORS, expand, minutesOffset, offsetOf, timeBefore, type Anchor, type Facts, type Phase, type Template } from "@/lib/templates";
 
 // Task templates in action (SPEC.md §8): start checklists on triggers, re-date steps when contract
 // dates change, and apply "Add/remove tags" steps.
@@ -53,8 +53,8 @@ export async function applyTemplate(tx: Tx, t: Template, ctxIn: Ctx, userId: str
       data: {
         title: s.name, kind: s.type, personId: ctx.personId, fileId: ctx.fileId ?? null, paId: ctx.paId ?? null,
         templateId: t.id, stepId: s.id, phase: spec.phase, anchor: s.dir === "none" ? null : s.anchor, offsetDays: s.dir === "none" ? null : offsetOf(s),
-        dueDate: spec.due ? dateFromIso(spec.due) : null, dueTime: !spec.due ? null : s.dir === "minutesBefore" ? (ctx.times?.[s.anchor] ? timeBefore(ctx.times[s.anchor]!, s.minutes ?? 15) : null) : offsetOf(s) === 0 ? ctx.times?.[s.anchor] ?? null : null,
-        offsetMinutes: s.dir === "minutesBefore" ? s.minutes ?? 15 : null, assigneeId: who(s.assignee), advanceStatusId: s.advance || null, createdById: userId,
+        dueDate: spec.due ? dateFromIso(spec.due) : null, dueTime: !spec.due ? null : minutesOffset(s) != null ? (ctx.times?.[s.anchor] ? timeBefore(ctx.times[s.anchor]!, minutesOffset(s)!) : null) : offsetOf(s) === 0 ? ctx.times?.[s.anchor] ?? null : null,
+        offsetMinutes: minutesOffset(s), // positive = before, negative = after assigneeId: who(s.assignee), advanceStatusId: s.advance || null, createdById: userId,
       },
     });
     n++;
