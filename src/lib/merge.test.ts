@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { fill, longDate, mergeValues, nameParts, SAMPLE } from "./merge";
+import { fill, formMergeFields, formValues, longDate, mergeKey, mergeValues, nameParts, SAMPLE } from "./merge";
+import { DEFAULT_FORMS } from "./pa";
 
 describe("merge fields", () => {
   it("splits couple names", () => {
@@ -16,5 +17,17 @@ describe("merge fields", () => {
   it("writes dates and times the friendly way (12-hour)", () => {
     expect(longDate("2026-10-16")).toBe("Friday, October 16");
     expect(mergeValues(SAMPLE).inspection_appointment).toBe("Friday, October 16 at 10:00am");
+  });
+  it("makes every form question a merge field, with friendly names", () => {
+    const keys = formMergeFields([{ group: "Contract (seller side)", sections: DEFAULT_FORMS.seller }]).map((f) => f.key);
+    for (const k of ["first_name", "earnest_money", "commission", "commission_amount", "bac", "buyer_agent_name", "buyer_agent_email", "seller_title_company", "title_contact_info", "hoa_rescission_date", "closing_date", "agent_name"]) expect(keys).toContain(k);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(mergeKey("customQuestion2")).toBe("custom_question2");
+  });
+  it("writes form answers the friendly way", () => {
+    const v = formValues(DEFAULT_FORMS.seller, { price: "389000", em: "5000", commission: "2.7", bac: "695", closing: "2026-11-20", inspAppt: "2026-10-16T14:30", writtenStatement_na: "yes", bAgentName: "Jordan Reyes" });
+    expect(v).toMatchObject({ price: "$389,000", earnest_money: "$5,000", commission: "2.7%", bac: "$695", commission_amount: "$10,503", closing_date: "Friday, November 20",
+      inspection_appointment: "Friday, October 16 at 2:30pm", written_statement_date: "N/A", buyer_agent_name: "Jordan Reyes" });
+    expect(mergeValues({ personName: "Bob Baker", extra: v }).earnest_money).toBe("$5,000");
   });
 });

@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { Modal } from "@/components/Modal";
-import { MERGE_FIELDS } from "@/lib/merge";
 import { getDraft } from "./draftActions";
 
 type Draft = { kind: "email" | "text"; templateId: string | null; stepMessage: string | null; templates: { id: string; name: string }[]; to: string[]; subject: string; body: string; missing: string[] };
@@ -21,7 +20,6 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
     setD(r.data as Draft); setSubject(r.data!.subject); setBody(r.data!.body); setError("");
   });
   useEffect(() => { load(); }, [taskId]); // eslint-disable-line react-hooks/exhaustive-deps
-  const label = (k: string) => MERGE_FIELDS.find(([x]) => x === k)?.[1] ?? k;
   const copy = async () => {
     try { await navigator.clipboard.writeText(d?.kind === "email" ? `Subject: ${subject}\n\n${body}` : body); setCopied(true); setTimeout(() => setCopied(false), 2000); }
     catch { setError("Couldn't copy. Select the text and copy it instead."); }
@@ -42,7 +40,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
           <p className="text-sm"><b>To:</b> {d.to.length ? d.to.join(", ") : <span className="text-bad">No {d.kind === "email" ? "email address" : "phone number"} on file</span>}</p>
           {d.kind === "email" && <label className="label">Subject<input className="input" value={subject} onChange={(e) => setSubject(e.target.value)} /></label>}
           <label className="label">Message<textarea className="input min-h-56 font-normal" value={body} onChange={(e) => setBody(e.target.value)} /></label>
-          {d.missing.length > 0 && <p className="text-sm text-[#9a6400]">Not filled in (nothing on file): {d.missing.map(label).join(", ")}. Check the message before sending.</p>}
+          {d.missing.length > 0 && <p className="text-sm text-[#9a6400]">Not filled in (nothing on file): {d.missing.join(", ")}. Check the message before sending.</p>}
           <p className="text-xs muted">{d.kind === "email" ? "Nothing is sent from HQ yet. Open it in your email app, or copy it. Gmail drafts come once Gmail is connected." : "Copy it and send it from your phone, then check off the task."}</p>
           <div className="flex flex-wrap justify-end gap-2">
             <button type="button" className="btn" onClick={onClose}>Close</button>

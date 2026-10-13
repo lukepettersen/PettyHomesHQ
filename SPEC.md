@@ -30,7 +30,7 @@ Principles:
 
 | Permission | Admin | Assistant |
 |---|---|---|
-| See commissions (amounts, %, BAC) | ✓ | — |
+| See commissions (amounts, %, BAC) | ✓ | ✓ (owner decision 2026-10-16) |
 | Delete people and deals | ✓ | — |
 | Manage users and roles | ✓ | — |
 | Edit task templates | ✓ | ✓ |
@@ -245,7 +245,7 @@ Principles:
 - **Default seller-side form:** same property, dates and notes; contract adds Buyer's
   financing (Conventional/FHA/VA/Cash/Other); people sections are Buyer's agent, Buyer's
   lender, Buyer's title, Seller's title.
-- Commission shows as "2.7% · $8,424" (Admins only).
+- Commission shows as "2.7% · $8,424" (anyone with "See commissions").
 - On the PA box: key-date tiles (Not set / + Add date, Met, Waived, Extended), facts line,
   people line, checklist, actions **Edit · Fell through · Mark closed**.
   A key date that has passed counts as Met unless it was marked otherwise; moving a pending
@@ -268,7 +268,7 @@ Principles:
   Condo/townhome. *(Later: Lead source is…, for the Stacie Rihl referral step.)*
 - **Triggers:** when a buyer/listing moves to a status; when a buyer-side or seller-side PA
   is added; when a contract closes (each side); **when a phone call is booked**; **when a
-  buyer or seller consultation is booked**; or none.
+  buyer consultation is booked**, **a seller consultation**, or **either one**; or none.
 - Templates are listed, created, edited and deleted in Admin → Task templates, with a steps
   editor.
 - Seeded templates (from the FUB review, simplified): the five buyer status templates, five
@@ -281,7 +281,12 @@ Principles:
   Built: the step picks its message template from a dropdown; Draft shows the filled-in
   message (template can be switched; empty merge fields are flagged) with **Copy** and **Open
   in email** (the person's email app). Gmail drafts replace Open in email once Gmail is
-  connected. Merge fields never include commission or BAC.
+  connected.
+  Merge fields (2026-10-16): client names, the team, and **every question on the purchase
+  agreement and buyer/listing forms** (a new question becomes a merge field automatically),
+  grouped in Admin → Text & email templates. Money, dates and times are written out
+  ("$389,000", "Friday, November 20", "10:00am"). Commission, BAC and commission amount
+  ({commission}, {bac}, {commission_amount}) fill in only for people with "See commissions".
 - **Automatic tag changes on close** *(new)*: a step type "Add/remove tags" so closing adds
   Past Client, Email Newsletter, Mailers, Petty Homes Event List, Real Estate Health Check
   and removes Buyer / Seller / Under contract.

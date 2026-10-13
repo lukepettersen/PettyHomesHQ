@@ -21,7 +21,7 @@ export const STEP_TYPES: [StepType, string][] = [["task", "Task"], ["call", "Cal
 export const CONTRACT_ANCHORS: Anchor[] = ["finalAcceptance", "inspection", "writtenStatement", "hoaRescission", "closing"];
 export const anchorLabel = (a: string) => ANCHORS.find(([k]) => k === a)?.[1] ?? a;
 
-/** Triggers: "status:<id>", "pa:buyer", "pa:seller", "closed:buyer", "closed:seller", "phonecall", "buyerconsult", "sellerconsult", or none. */
+/** Triggers: "status:<id>", "pa:buyer", "pa:seller", "closed:buyer", "closed:seller", "phonecall", "buyerconsult", "sellerconsult", "anyconsult" (either), or none. */
 export function triggerLabel(trigger: string | null, statuses: { id: string; kind: string; name: string }[]): string {
   if (!trigger) return "Apply by hand";
   if (trigger.startsWith("status:")) {
@@ -30,7 +30,7 @@ export function triggerLabel(trigger: string | null, statuses: { id: string; kin
   }
   return ({ "pa:buyer": "When a buyer-side purchase agreement is added", "pa:seller": "When a seller-side purchase agreement is added",
     "closed:buyer": "When a buyer-side contract closes", "closed:seller": "When a seller-side contract closes", phonecall: "When a phone call is booked",
-    buyerconsult: "When a buyer consultation is booked", sellerconsult: "When a seller consultation is booked" } as Record<string, string>)[trigger] ?? trigger;
+    buyerconsult: "When a buyer consultation is booked", sellerconsult: "When a seller consultation is booked", anyconsult: "When a buyer or seller consultation is booked" } as Record<string, string>)[trigger] ?? trigger;
 }
 
 /** Facts that conditions read: from the contract, or the listing file. */

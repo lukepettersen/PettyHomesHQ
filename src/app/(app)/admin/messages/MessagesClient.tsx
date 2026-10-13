@@ -3,13 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { SaveBar } from "@/components/SaveBar";
-import { fill, MERGE_FIELDS, mergeValues, SAMPLE } from "@/lib/merge";
+import { fill, sampleValues, type MergeField } from "@/lib/merge";
 import { deleteMessageTemplate, saveMessageTemplate } from "./actions";
 
 type Kind = "email" | "text";
 export type Msg = { id: string | null; kind: Kind; name: string; folder: string; subject: string; body: string };
 
-export function MessagesClient({ templates, initialKind, initialId }: { templates: Msg[]; initialKind: Kind; initialId: string | null }) {
+export function MessagesClient({ templates, initialKind, initialId, fields }: { templates: Msg[]; initialKind: Kind; initialId: string | null; fields: MergeField[] }) {
   const router = useRouter();
   const [kind, setKind] = useState<Kind>(initialKind);
   const [selId, setSelId] = useState<string | null>(initialId ?? templates.find((t) => t.kind === initialKind)?.id ?? null);
@@ -48,7 +48,7 @@ export function MessagesClient({ templates, initialKind, initialId }: { template
           {list.length === 0 && <p className="px-2.5 py-2 text-xs muted">No {kind} templates yet.</p>}
         </aside>
         <div className="min-w-0">
-          {sel ? <Editor key={sel.id ?? "new"} t={sel} onDirty={setDirty} onSaved={(id) => { setDraftNew(null); setSelId(id); url(kind, id); router.refresh(); }} onDeleted={() => { setSelId(null); router.refresh(); }} />
+          {sel ? <Editor key={sel.id ?? "new"} t={sel} fields={fields} onDirty={setDirty} onSaved={(id) => { setDraftNew(null); setSelId(id); url(kind, id); router.refresh(); }} onDeleted={() => { setSelId(null); router.refresh(); }} />
             : <div className="card p-6 muted">Pick a template, or create one with + New {kind} template.</div>}
         </div>
       </div>
@@ -56,7 +56,7 @@ export function MessagesClient({ templates, initialKind, initialId }: { template
   );
 }
 
-function Editor({ t: initial, onDirty, onSaved, onDeleted }: { t: Msg; onDirty: (d: boolean) => void; onSaved: (id: string) => void; onDeleted: () => void }) {
+function Editor({ t: initial, fields, onDirty, onSaved, onDeleted }: { t: Msg; fields: MergeField[]; onDirty: (d: boolean) => void; onSaved: (id: string) => void; onDeleted: () => void }) {
   const [t, setT] = useState(initial);
   const [error, setError] = useState("");
   const [confirm, setConfirm] = useState(false);
@@ -71,7 +71,7 @@ function Editor({ t: initial, onDirty, onSaved, onDeleted }: { t: Msg; onDirty: 
     set({ body: t.body.slice(0, at) + tag + t.body.slice(el?.selectionEnd ?? at) });
     requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(at + tag.length, at + tag.length); });
   };
-  const values = mergeValues(SAMPLE);
+  const values = sampleValues(fields);
   const preview = fill(t.body, values), subj = fill(t.subject, values);
   return (
     <div className="flex flex-col gap-3">
@@ -85,10 +85,15 @@ function Editor({ t: initial, onDirty, onSaved, onDeleted }: { t: Msg; onDirty: 
           <textarea ref={body} className="input min-h-48 font-normal" value={t.body} onChange={(e) => set({ body: e.target.value })} />
         </label>
         <div>
-          <span className="text-xs font-semibold muted">Insert a merge field:</span>
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            {MERGE_FIELDS.map(([k, l]) => <button key={k} type="button" className="chip hover:bg-misty" title={l} onClick={() => insert(k)}>{`{${k}}`}</button>)}
-          </div>
+          <span className="text-xs font-semibold muted">Insert a merge field (every question on your forms is one):</span>
+          {[...new Set(fields.map((f) => f.group))].map((g) => (
+            <details key={g} className="mt-1" open={g === "Client"}>
+              <summary className="cursor-pointer text-sm font-semibold">{g} <span className="text-xs font-normal muted">{fields.filter((f) => f.group === g).length}</span></summary>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {fields.filter((f) => f.group === g).map((f) => <button key={f.key} type="button" className="chip hover:bg-misty" title={`{${f.key}}`} onClick={() => insert(f.key)}>{f.label}</button>)}
+              </div>
+            </details>
+          ))}
         </div>
         {t.kind === "text" && <p className="text-xs muted">{preview.text.length} characters{preview.text.length > 160 ? " (longer texts are sent as several messages)" : ""}.</p>}
         {!isNew && (

@@ -21,7 +21,8 @@ export async function loadTemplates(tx: Tx = db): Promise<Template[]> {
 
 /** Starts every template for a trigger. A file only gets each template once. Returns the number of tasks made. */
 export async function runTrigger(tx: Tx, trigger: string, ctx: Ctx, userId: string): Promise<number> {
-  const templates = (await loadTemplates(tx)).filter((t) => t.trigger === trigger);
+  // "anyconsult" templates start for a buyer or a seller consultation.
+  const templates = (await loadTemplates(tx)).filter((t) => t.trigger === trigger || (t.trigger === "anyconsult" && (trigger === "buyerconsult" || trigger === "sellerconsult")));
   let n = 0;
   for (const t of templates) n += await applyTemplate(tx, t, ctx, userId, { once: true });
   return n;
@@ -54,7 +55,8 @@ export async function applyTemplate(tx: Tx, t: Template, ctxIn: Ctx, userId: str
         title: s.name, kind: s.type, personId: ctx.personId, fileId: ctx.fileId ?? null, paId: ctx.paId ?? null,
         templateId: t.id, stepId: s.id, phase: spec.phase, anchor: s.dir === "none" ? null : s.anchor, offsetDays: s.dir === "none" ? null : offsetOf(s),
         dueDate: spec.due ? dateFromIso(spec.due) : null, dueTime: !spec.due ? null : minutesOffset(s) != null ? (ctx.times?.[s.anchor] ? timeBefore(ctx.times[s.anchor]!, minutesOffset(s)!) : null) : offsetOf(s) === 0 ? ctx.times?.[s.anchor] ?? null : null,
-        offsetMinutes: minutesOffset(s), // positive = before, negative = after assigneeId: who(s.assignee), advanceStatusId: s.advance || null, createdById: userId,
+        offsetMinutes: minutesOffset(s), // positive = before, negative = after
+        assigneeId: who(s.assignee), advanceStatusId: s.advance || null, createdById: userId,
       },
     });
     n++;

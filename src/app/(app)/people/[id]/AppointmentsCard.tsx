@@ -96,7 +96,7 @@ function BookModal({ type, personId, personName, today, phone, address, hasEmail
   const [thenFile, setThenFile] = useState(offerFile);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
-  const starts = callTemplates.filter((t) => t.trigger === (type === "call" ? "phonecall" : `${type}consult`));
+  const starts = callTemplates.filter((t) => t.trigger === (type === "call" ? "phonecall" : `${type}consult`) || (type !== "call" && t.trigger === "anyconsult"));
   const steps = starts.reduce((n, t) => n + t.steps, 0);
   const submit = (e: React.FormEvent) => {
     e.preventDefault(); setError("");

@@ -90,6 +90,19 @@ async function main() {
       await db.taskTemplate.create({ data: { name: t.name, trigger, phases, position } });
     }
   }
+  // One-time repair: template tasks created 2026-10-15/16 lost their assignee and "When done" status (fixed in automation.ts).
+  const orphans = await db.task.findMany({ where: { templateId: { not: null }, stepId: { not: null }, assigneeId: null, completedAt: null, deletedAt: null }, include: { person: { select: { assignedToId: true } } } });
+  if (orphans.length) {
+    const team = await db.user.findMany({ where: { status: { not: "DISABLED" } }, select: { id: true, name: true, isOwner: true } });
+    const owner = team.find((u) => u.isOwner)?.id ?? null;
+    const tpls = new Map((await db.taskTemplate.findMany({ where: { id: { in: [...new Set(orphans.map((o) => o.templateId!))] } } })).map((t) => [t.id, t]));
+    for (const o of orphans) {
+      const phases = (Array.isArray(tpls.get(o.templateId!)?.phases) ? tpls.get(o.templateId!)!.phases : []) as { steps: { id: string; assignee?: string; advance?: string }[] }[];
+      const step = phases.flatMap((p) => p.steps).find((x) => x.id === o.stepId);
+      const named = step?.assignee ? team.find((u) => u.name.split(/\s+/)[0].toLowerCase() === step.assignee!.toLowerCase())?.id : undefined;
+      await db.task.update({ where: { id: o.id }, data: { assigneeId: named ?? o.person?.assignedToId ?? owner, advanceStatusId: o.advanceStatusId ?? step?.advance ?? null } });
+    }
+  }
   // Trash: anything deleted more than 30 days ago is removed for good.
   const cutoff = new Date(Date.now() - 30 * 86400000);
   // People with stored files are purged by the app (it removes the files from the bucket first).

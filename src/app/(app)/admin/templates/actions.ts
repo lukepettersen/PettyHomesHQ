@@ -7,7 +7,7 @@ import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { templateProblem, type Template } from "@/lib/templates";
 
-const FIXED_TRIGGERS = ["pa:buyer", "pa:seller", "closed:buyer", "closed:seller", "phonecall", "buyerconsult", "sellerconsult"];
+const FIXED_TRIGGERS = ["pa:buyer", "pa:seller", "closed:buyer", "closed:seller", "phonecall", "buyerconsult", "sellerconsult", "anyconsult"];
 const tags = z.array(z.string().trim().min(1).max(60)).max(20).optional();
 const stepSchema = z.object({
   id: z.string().regex(/^[\w-]{1,40}$/), name: z.string().trim().max(160), assignee: z.string().trim().max(40),

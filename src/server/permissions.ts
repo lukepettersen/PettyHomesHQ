@@ -14,7 +14,7 @@ export const ALL_PERMISSIONS = Object.keys(PERMISSIONS) as Permission[];
 
 export const DEFAULT_ROLES: Record<string, Permission[]> = {
   Admin: ALL_PERMISSIONS,
-  Assistant: ["editTaskTemplates", "editMessageTemplates", "sendTexts"],
+  Assistant: ["seeCommissions", "editTaskTemplates", "editMessageTemplates", "sendTexts"],
 };
 
 export function hasPermission(perms: readonly string[] | undefined, perm: Permission): boolean {
