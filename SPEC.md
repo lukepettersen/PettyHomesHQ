@@ -103,6 +103,9 @@ Principles:
   On a phone the contact page shows contact info, then Tasks, then Timeline, then the other
   cards; the Tasks sidebar becomes a row of chips and task details open full screen.
 
+- **Home-screen app** *(2026-10-14)*: "Add to Home Screen" gives the white house mark on moss,
+  the name "HQ", and opens full screen (web app manifest + Apple touch icon).
+
 ## 6. People
 
 ### 6.1 Person record
