@@ -127,7 +127,8 @@ export async function completeTask(taskId: string) {
     let nextId: string | null = null;
     await db.$transaction(async (tx) => {
       await tx.task.update({ where: { id: t.id }, data: { completedAt: new Date() } });
-      if (t.personId) await tx.timelineEntry.create({ data: { personId: t.personId, kind: "task", body: t.title, taskId: t.id, authorId: user.id } });
+      // A text task checked off is logged as a text (Texts filter, last text); other tasks as "Task done".
+      if (t.personId) await tx.timelineEntry.create({ data: { personId: t.personId, kind: t.kind === "text" ? "text" : "task", body: t.title, taskId: t.id, authorId: user.id } });
       // Checking off a text task means they were texted: it restarts their follow-up ("Due for a touch").
       if (t.personId && t.kind === "text") await tx.person.update({ where: { id: t.personId }, data: { lastTextAt: new Date(), lastContactAt: new Date() } });
       if (t.repeat) {
@@ -163,7 +164,7 @@ export async function reopenTask(input: { id: string; nextId?: string | null }) 
   return guarded(null, async (user) => {
     const t = await db.task.update({ where: { id: id.parse(input.id), deletedAt: null }, data: { completedAt: null } });
     // Unchecking takes it back off the timeline.
-    await db.timelineEntry.updateMany({ where: { taskId: t.id, kind: "task", deletedAt: null }, data: { deletedAt: new Date() } });
+    await db.timelineEntry.updateMany({ where: { taskId: t.id, kind: { in: ["task", "text"] }, deletedAt: null }, data: { deletedAt: new Date() } });
     // Undo also removes the next repeat that completing created, if it hasn't been touched.
     if (input.nextId) await db.task.updateMany({ where: { id: id.parse(input.nextId), completedAt: null, createdAt: { gte: new Date(Date.now() - 6 * 3600000) } }, data: { deletedAt: new Date() } });
     await logActivity(user.id, "update", "task", t.id, `Reopened "${t.title}"`);
@@ -191,7 +192,9 @@ export async function completeDateTask(key: string) {
     const t = await materializeDateTask(z.string().regex(/^date:[\w-]+:[\w-]+:\d{4}$/).parse(key), user.id);
     await db.$transaction([
       db.task.update({ where: { id: t.id }, data: { completedAt: new Date(), deletedAt: null } }),
-      ...(t.personId ? [db.timelineEntry.create({ data: { personId: t.personId, kind: "task", body: t.title, taskId: t.id, authorId: user.id } })] : []),
+      ...(t.personId ? [db.timelineEntry.create({ data: { personId: t.personId, kind: t.kind === "text" ? "text" : "task", body: t.title, taskId: t.id, authorId: user.id } })] : []),
+      // "Text Happy Birthday" checked off: they were texted, so their follow-up restarts.
+      ...(t.personId && t.kind === "text" ? [db.person.update({ where: { id: t.personId }, data: { lastTextAt: new Date(), lastContactAt: new Date() } })] : []),
     ]);
     await logActivity(user.id, "update", "task", t.id, `Completed "${t.title}"`);
     refresh(t.personId);
