@@ -73,6 +73,38 @@ export async function loadFromFub(): Promise<number> {
   }
   for (const p of people) { const r = rels.get(p.id); if (r) p.relationships = r; }
 
+  // Last text with each person ("Due for a touch" counts from texts). FUB may list every text at once; if it
+  // only lists one person's texts at a time, ask per person for clients and sphere (not the agent database).
+  const lastText = new Map<number, number>();
+  const note = (list: Record<string, unknown>[]) => {
+    for (const t of list) {
+      const pid = Number(t.personId), at = Date.parse(str(t.created) || str(t.sent) || str(t.updated));
+      if (pid && Number.isFinite(at) && at > (lastText.get(pid) ?? 0)) lastText.set(pid, at);
+    }
+  };
+  const arrayOf = (j: Record<string, unknown>) => (Object.entries(j).find(([k, v]) => k !== "_metadata" && Array.isArray(v))?.[1] ?? null) as Record<string, unknown>[] | null;
+  let all = true;
+  try {
+    let tnext: string | null = "textMessages?limit=100";
+    for (let page = 0; tnext && page < 2000; page++) {
+      const j = await fubGet(tnext);
+      const list = arrayOf(j);
+      if (!list) { all = false; break; }
+      note(list);
+      const meta = (j._metadata ?? {}) as { nextLink?: string; next?: string };
+      tnext = meta.nextLink || (meta.next ? `textMessages?limit=100&next=${encodeURIComponent(meta.next)}` : null);
+    }
+  } catch { all = false; }
+  if (!all) {
+    const candidates = people.filter((p) => !/industry|realtor|real estate agent|trash|petty homes admin/i.test(p.stage)).map((p) => p.id);
+    for (let i = 0; i < candidates.length; i += 5) {
+      await Promise.all(candidates.slice(i, i + 5).map(async (id) => {
+        try { const list = arrayOf(await fubGet(`textMessages?personId=${id}&limit=100`)); if (list) note(list.map((t) => ({ ...t, personId: t.personId ?? id }))); } catch { /* skip this person */ }
+      }));
+    }
+  }
+  for (const p of people) { const at = lastText.get(p.id); if (at) p.lastText = new Date(at).toISOString(); }
+
   await db.appSetting.upsert({ where: { key: "fub.people" }, update: { value: people }, create: { key: "fub.people", value: people } });
   await db.appSetting.upsert({ where: { key: "fub.loadedAt" }, update: { value: new Date().toISOString() }, create: { key: "fub.loadedAt", value: new Date().toISOString() } });
   return people.length;

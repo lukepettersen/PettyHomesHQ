@@ -51,7 +51,7 @@ export async function loadPeopleRows(): Promise<PersonRow[]> {
       lastContactAt: p.lastContactAt,
       assignedTo: p.assignedTo?.name ?? null,
       hasUpcomingTask: p._count.tasks > 0,
-      lastCallAt: lastBy.get(`${p.id}:call`) ?? null, lastTextAt: lastBy.get(`${p.id}:text`) ?? null, lastEmailAt: lastBy.get(`${p.id}:email`) ?? null,
+      lastCallAt: lastBy.get(`${p.id}:call`) ?? null, lastTextAt: p.lastTextAt ?? lastBy.get(`${p.id}:text`) ?? null, lastEmailAt: lastBy.get(`${p.id}:email`) ?? null,
       createdAt: p.createdAt, hasEmail: p.emails.length > 0, hasPhone: p.phones.length > 0,
       birthdays: p.dates.filter((d) => d.kind === "birthday").map((d) => mmdd(d.date)),
       homeiversary: (() => { const h = p.dates.find((d) => d.kind === "homeiversary"); return h ? mmdd(h.date) : null; })(),

@@ -63,5 +63,6 @@ describe("FUB import matching (owner decisions)", () => {
     expect(applyPlan(person({ lastActivity: "2026-09-01T15:30:00Z" }), plan)?.lastContactAt).toBe("2026-09-01T15:30:00.000Z");
     expect(applyPlan(person({ lastActivity: "" }), plan)?.lastContactAt).toBeNull();
     expect(applyPlan(person({ lastActivity: "2999-01-01" }), plan)?.lastContactAt).toBeNull();
+    expect(applyPlan(person({ lastText: "2026-10-01T12:00:00Z" }), plan)?.lastTextAt).toBe("2026-10-01T12:00:00.000Z");
   });
 });

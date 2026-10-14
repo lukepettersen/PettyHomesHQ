@@ -94,11 +94,11 @@ export async function loadTaskBoard() {
     db.taskList.findMany({ orderBy: [{ position: "asc" }, { name: "asc" }] }),
     db.task.findMany({ where: { completedAt: null, deletedAt: null, OR: [{ personId: null }, { person: { deletedAt: null } }], ...LIVE_STEPS }, include: taskInclude, orderBy: [{ dueDate: "asc" }, { priority: "desc" }, { dueTime: "asc" }] }),
     loadDateTasks(team, today),
-    db.person.findMany({ where: { deletedAt: null, followUpDays: { gt: 0 } }, select: { id: true, name: true, followUpDays: true, lastContactAt: true, assignedToId: true } }),
+    db.person.findMany({ where: { deletedAt: null, followUpDays: { gt: 0 } }, select: { id: true, name: true, followUpDays: true, lastTextAt: true, assignedToId: true } }),
   ]);
   const touches: TouchRow[] = people
     .filter((p) => isDueForTouch(p))
-    .map((p) => ({ personId: p.id, name: p.name, followUpDays: p.followUpDays!, lastContact: p.lastContactAt ? p.lastContactAt.toISOString() : null, assigneeId: p.assignedToId }))
+    .map((p) => ({ personId: p.id, name: p.name, followUpDays: p.followUpDays!, lastContact: p.lastTextAt ? p.lastTextAt.toISOString() : null, assigneeId: p.assignedToId }))
     .sort((a, b) => (a.lastContact ?? "").localeCompare(b.lastContact ?? ""));
   return {
     today, team, touches,

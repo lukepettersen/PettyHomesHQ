@@ -10,6 +10,7 @@ export type FubPerson = {
   custom: Record<string, string>; // FUB custom fields that have a value, by label ("Birthday 1", "Mailing Name"…)
   relationships?: FubRelation[]; // spouse, partner… (FUB "Relationships")
   lastActivity?: string; // FUB's last activity date (texts, calls, emails logged in FUB)
+  lastText?: string; // FUB's most recent text with them (either way)
 };
 export type FubRelation = { type: string; firstName: string; lastName: string; emails: { value: string; type: string }[]; phones: { value: string; type: string }[] };
 
@@ -92,7 +93,7 @@ export function defaultPlan(s: Summary, hq: { stages: string[]; sources: string[
 export type HqPerson = {
   fubId: number; name: string; first: string; last: string; stage: string; followUpDays: number | null; partnerType: string | null; source: string;
   tags: string[]; kids: string; emails: { address: string; label: string }[]; phones: { number: string; label: string }[]; address: string;
-  birthdays: { whose: string; date: string }[]; homeiversary: string | null; lastContactAt: string | null; mailingName: string; referredBy: string; assignedToId: string | null;
+  birthdays: { whose: string; date: string }[]; homeiversary: string | null; lastContactAt: string | null; lastTextAt: string | null; mailingName: string; referredBy: string; assignedToId: string | null;
 };
 
 /** "1985-04-12", "04/12/1985", "4/12/85" → "1985-04-12"; anything else → null. */
@@ -114,6 +115,12 @@ export function kidsOf(p: FubPerson, plan: Plan): string {
 /** FUB's last activity as an ISO time, if it's a real date that isn't in the future (it starts the follow-up clock). */
 export function lastActivityOf(p: FubPerson, now = Date.now()): string | null {
   const t = Date.parse(p.lastActivity ?? "");
+  return Number.isFinite(t) && t <= now + 86400000 && t > Date.parse("2000-01-01") ? new Date(t).toISOString() : null;
+}
+
+/** FUB's last text with them as an ISO time ("Due for a touch" counts from it). */
+export function lastTextOf(p: FubPerson, now = Date.now()): string | null {
+  const t = Date.parse(p.lastText ?? "");
   return Number.isFinite(t) && t <= now + 86400000 && t > Date.parse("2000-01-01") ? new Date(t).toISOString() : null;
 }
 
@@ -151,7 +158,7 @@ export function applyPlan(p: FubPerson, plan: Plan): HqPerson | null {
     address: p.address.trim(),
     // Birthday 1 is theirs; Birthday 2 is the spouse/partner who joined the contact.
     birthdays: plan.fields.birthdays.map((l) => fubDate(c(l))).flatMap((d, i) => (d ? [{ whose: i === 0 ? first : i === 1 && theirs ? theirs : "", date: d }] : [])),
-    homeiversary: fubDate(c(plan.fields.homeiversary)), lastContactAt: lastActivityOf(p), mailingName: c(plan.fields.mailingName), referredBy: c(plan.fields.referredBy),
+    homeiversary: fubDate(c(plan.fields.homeiversary)), lastContactAt: lastActivityOf(p), lastTextAt: lastTextOf(p), mailingName: c(plan.fields.mailingName), referredBy: c(plan.fields.referredBy),
     assignedToId: plan.agents[p.assignedTo] ?? null,
   };
 }

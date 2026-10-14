@@ -138,7 +138,7 @@ export async function addTimelineEntry(input: z.input<typeof entrySchema>) {
     const snippet = v.body.length > 140 ? `${v.body.slice(0, 140)}…` : v.body;
     await db.$transaction([
       db.timelineEntry.create({ data: { personId: v.personId, kind: v.kind, body: v.body, outcome: v.kind === "call" ? v.outcome ?? null : null, authorId: user.id } }),
-      db.person.update({ where: { id: v.personId }, data: { lastContactAt: new Date() } }),
+      db.person.update({ where: { id: v.personId }, data: { lastContactAt: new Date(), ...(v.kind === "text" ? { lastTextAt: new Date() } : {}) } }),
       ...mentioned.map((m) => db.notification.create({ data: { toId: m.id, fromId: user.id, personId: v.personId, text: `${user.name.split(" ")[0]} mentioned you on ${person.name}: "${snippet}"` } })),
     ]);
     await logActivity(user.id, "create", "timeline", v.personId, `Logged ${v.kind} for ${person.name}${mentioned.length ? ` (mentioned ${mentioned.map((m) => m.name).join(", ")})` : ""}`);
@@ -201,10 +201,11 @@ export async function bulkUpdate(input: z.input<typeof bulkSchema>) {
     } else if (v.action === "stage") {
       await db.person.updateMany({ where, data: { stageId: v.value || null } });
     } else if (v.action === "contacted") {
-      // "Mark contacted": last contact moves up to that day (never back), restarting their follow-up clock.
+      // "Mark texted": last text (and last contact) move up to that day (never back), restarting their follow-up clock.
       if (!/^\d{4}-\d{2}-\d{2}$/.test(v.value)) throw new UserError("Pick a date");
       const at = new Date(`${v.value}T17:00:00.000Z`); // midday Central
       if (at.getTime() > Date.now() + 86400000) throw new UserError("Pick today or an earlier day.");
+      await db.person.updateMany({ where: { ...where, OR: [{ lastTextAt: null }, { lastTextAt: { lt: at } }] }, data: { lastTextAt: at } });
       await db.person.updateMany({ where: { ...where, OR: [{ lastContactAt: null }, { lastContactAt: { lt: at } }] }, data: { lastContactAt: at } });
     } else if (v.action === "followUp") {
       await db.person.updateMany({ where, data: { followUpDays: v.value ? Number(v.value) || null : null } });

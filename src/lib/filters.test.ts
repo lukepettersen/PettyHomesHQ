@@ -16,10 +16,13 @@ describe("smart list filters", () => {
     expect(matchesAll({ ...base, lastContactAt: null }, [{ field: "lastContact", op: "never", value: "" }], now)).toBe(true);
   });
   it("knows who is due for a touch", () => {
-    expect(isDueForTouch(base, now)).toBe(true);
-    expect(isDueForTouch({ ...base, lastContactAt: daysAgo(5) }, now)).toBe(false);
-    expect(isDueForTouch({ ...base, followUpDays: null }, now)).toBe(false);
-    expect(isDueForTouch({ ...base, lastContactAt: null }, now)).toBe(true);
+    const texted = { ...base, lastTextAt: daysAgo(40) };
+    expect(isDueForTouch(texted, now)).toBe(true);
+    expect(isDueForTouch({ ...texted, lastTextAt: daysAgo(5) }, now)).toBe(false);
+    expect(isDueForTouch({ ...texted, followUpDays: null }, now)).toBe(false);
+    expect(isDueForTouch({ ...texted, lastTextAt: null }, now)).toBe(true);
+    // A recent call or email doesn't count; only texts do.
+    expect(isDueForTouch({ ...texted, lastContactAt: daysAgo(1), lastCallAt: daysAgo(1) }, now)).toBe(true);
   });
   it("filters by upcoming task", () => {
     expect(matchesAll(base, [{ field: "upcomingTask", op: "is", value: "no" }], now)).toBe(true);

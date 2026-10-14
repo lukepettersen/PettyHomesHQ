@@ -54,10 +54,11 @@ export const MULTI_OPS = ["isAny", "isNot", "hasAny", "hasAll", "hasNone"];
 const DAY = 86400000;
 export const valuesOf = (f: Filter) => f.value.split("||").map((x) => x.trim()).filter(Boolean);
 
-export function isDueForTouch(p: Pick<PersonFacts, "followUpDays" | "lastContactAt">, now = new Date()): boolean {
+/** Due for a touch: longer than their follow-up since the last text (texts are the touch; owner, 2026-10-14). */
+export function isDueForTouch(p: Pick<PersonFacts, "followUpDays" | "lastTextAt">, now = new Date()): boolean {
   if (!p.followUpDays) return false;
-  if (!p.lastContactAt) return true;
-  return now.getTime() - p.lastContactAt.getTime() >= p.followUpDays * DAY;
+  if (!p.lastTextAt) return true;
+  return now.getTime() - p.lastTextAt.getTime() >= p.followUpDays * DAY;
 }
 
 /** Days from today until the next "MM-DD" (0 = today). */

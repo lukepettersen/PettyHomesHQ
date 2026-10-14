@@ -49,7 +49,7 @@ export function ImportClient({ keySet, loadedAt, summary, plan: initial, planSav
   };
   const addPartners = () => run(async () => {
     const r = await addPartnersToImported(); if (!r.ok) throw new Error(r.error);
-    setNote(`Brought in ${r.data!.lastContacts.toLocaleString()} last contact dates. Added a spouse/partner to ${r.data!.updated.toLocaleString()} contacts and kids to ${r.data!.kidsAdded.toLocaleString()}; named ${r.data!.birthdaysNamed.toLocaleString()} partner birthdays.${r.data!.kept ? ` ${r.data!.kept.toLocaleString()} were left as is (already a couple, or renamed in HQ).` : ""}`); router.refresh();
+    setNote(`Brought in ${r.data!.lastTexts.toLocaleString()} last text dates and ${r.data!.lastContacts.toLocaleString()} last contact dates. Added a spouse/partner to ${r.data!.updated.toLocaleString()} contacts and kids to ${r.data!.kidsAdded.toLocaleString()}; named ${r.data!.birthdaysNamed.toLocaleString()} partner birthdays.${r.data!.kept ? ` ${r.data!.kept.toLocaleString()} were left as is (already a couple, or renamed in HQ).` : ""}`); router.refresh();
   });
   const undo = (id: string) => {
     if (confirm !== id) { setConfirm(id); return; }

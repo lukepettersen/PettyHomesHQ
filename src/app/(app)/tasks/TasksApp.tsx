@@ -138,7 +138,7 @@ export function TasksApp(p: Props) {
       <span />
       <span className="flex min-w-0 flex-col gap-0.5">
         <PersonLink id={t.personId} name={t.name} />
-        <span className="flex flex-wrap gap-x-2.5 text-xs muted"><span>Every {t.followUpDays} days</span><span>Last touch {t.lastContact ? longIso(t.lastContact.slice(0, 10)) : "never"}</span></span>
+        <span className="flex flex-wrap gap-x-2.5 text-xs muted"><span>Every {t.followUpDays} days</span><span>Last text {t.lastContact ? longIso(t.lastContact.slice(0, 10)) : "never"}</span></span>
       </span>
       <button type="button" className="btn px-2 py-0.5 text-xs" disabled={pending} onClick={() => touch(t)}>Log text</button>
     </div>

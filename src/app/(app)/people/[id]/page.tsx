@@ -26,7 +26,7 @@ const BACK: Record<string, [string, string]> = { tasks: ["/tasks", "Tasks"], peo
 
 export const dynamic = "force-dynamic";
 
-export default async function ContactPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ from?: string; back?: string }> }) {
+export default async function ContactPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ from?: string; back?: string; pos?: string }> }) {
   const { id } = await params;
   const sp = await searchParams;
   let [backHref, backLabel] = BACK[sp.from ?? ""] ?? BACK.people;
@@ -36,12 +36,17 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
     const bq = new URLSearchParams(sp.back);
     const { current, shown } = await queryPeople({ list: bq.get("list") ?? undefined, f: bq.get("f") ?? undefined, q: bq.get("q") ?? undefined, sort: bq.get("sort") ?? undefined });
     const at = shown.findIndex((r) => r.id === id);
-    const withPage = (i: number) => { const q = new URLSearchParams(bq); const pg = Math.floor(i / PAGE_SIZE) + 1; if (pg > 1) q.set("page", String(pg)); else q.delete("page"); return q.toString(); };
+    const withPage = (i: number) => { const q = new URLSearchParams(bq); const pg = Math.floor(Math.max(0, i) / PAGE_SIZE) + 1; if (pg > 1) q.set("page", String(pg)); else q.delete("page"); return q.toString(); };
+    const link = (i: number) => (i >= 0 && i < shown.length ? `/people/${shown[i].id}?back=${encodeURIComponent(withPage(i))}&pos=${i}` : null);
     if (at >= 0) {
-      const link = (i: number) => (i >= 0 && i < shown.length ? `/people/${shown[i].id}?back=${encodeURIComponent(withPage(i))}` : null);
       nav = { prev: link(at - 1), next: link(at + 1), at: at + 1, total: shown.length };
       backHref = `/people${withPage(at) ? `?${withPage(at)}` : ""}`;
-    } else backHref = `/people${sp.back ? `?${sp.back}` : ""}`;
+    } else {
+      // They no longer match the list (e.g. just texted, so not "due"): keep going from where they were.
+      const was = Math.min(Math.max(0, Number(sp.pos) || 0), shown.length);
+      nav = shown.length ? { prev: link(was - 1), next: link(was), at: 0, total: shown.length } : null;
+      backHref = `/people${withPage(was) ? `?${withPage(was)}` : ""}`;
+    }
     backLabel = current?.name ?? (bq.get("f") || bq.get("q") ? "People" : "All people");
   }
   const user = await requireUser();
@@ -87,7 +92,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
         {nav && (
           <nav aria-label="Step through the list" className="ml-auto flex items-center gap-2 text-sm">
             {nav.prev ? <Link className="btn px-2.5 py-1" href={nav.prev} rel="prev">‹ Prev</Link> : <span className="btn px-2.5 py-1 opacity-40">‹ Prev</span>}
-            <span className="muted">{nav.at.toLocaleString()} of {nav.total.toLocaleString()}</span>
+            <span className="muted">{nav.at ? `${nav.at.toLocaleString()} of ${nav.total.toLocaleString()}` : `No longer in this list · ${nav.total.toLocaleString()} left`}</span>
             {nav.next ? <Link className="btn px-2.5 py-1" href={nav.next} rel="next">Next ›</Link> : <span className="btn px-2.5 py-1 opacity-40">Next ›</span>}
           </nav>
         )}

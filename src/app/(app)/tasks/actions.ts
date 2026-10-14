@@ -128,6 +128,8 @@ export async function completeTask(taskId: string) {
     await db.$transaction(async (tx) => {
       await tx.task.update({ where: { id: t.id }, data: { completedAt: new Date() } });
       if (t.personId) await tx.timelineEntry.create({ data: { personId: t.personId, kind: "task", body: t.title, taskId: t.id, authorId: user.id } });
+      // Checking off a text task means they were texted: it restarts their follow-up ("Due for a touch").
+      if (t.personId && t.kind === "text") await tx.person.update({ where: { id: t.personId }, data: { lastTextAt: new Date(), lastContactAt: new Date() } });
       if (t.repeat) {
         const from = t.dueDate ? isoFromDate(t.dueDate) : isoFromDate(todayCentral());
         const n = await tx.task.create({
@@ -248,7 +250,7 @@ export async function logTouch(personId: string) {
     if (!p) throw new UserError("That person was deleted.");
     await db.$transaction([
       db.timelineEntry.create({ data: { personId: p.id, kind: "text", body: "Text logged from Tasks (Due for a touch)", authorId: user.id } }),
-      db.person.update({ where: { id: p.id }, data: { lastContactAt: new Date() } }),
+      db.person.update({ where: { id: p.id }, data: { lastContactAt: new Date(), lastTextAt: new Date() } }),
     ]);
     await logActivity(user.id, "create", "timeline", p.id, `Logged a text for ${p.name} (Due for a touch)`);
     refresh(p.id);

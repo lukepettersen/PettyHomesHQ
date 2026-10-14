@@ -6,7 +6,7 @@ import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { cachedFubPeople, fubKeySet, loadFromFub } from "@/server/fub";
-import { applyPlan, fubDate, kidsOf, lastActivityOf, partnerOf, summarize, type HqPerson, type Plan } from "@/lib/fubImport";
+import { applyPlan, fubDate, kidsOf, lastActivityOf, lastTextOf, partnerOf, summarize, type HqPerson, type Plan } from "@/lib/fubImport";
 import { isPartnerType } from "@/lib/partners";
 import { coupleName, dateFromIso, formatPhone, normalizeEmail, normalizePhone } from "@/lib/normalize";
 
@@ -115,7 +115,7 @@ export async function runImport(input: { batchId: string | null; offset: number 
       const phones = [...new Map(h.phones.map((x) => [normalizePhone(x.number), x])).entries()];
       await db.person.create({
         data: {
-          name: h.name, mailingName: h.mailingName || h.name, kids: h.kids || null, lastContactAt: h.lastContactAt ? new Date(h.lastContactAt) : null, referredBy: h.referredBy || null, address: h.address || null,
+          name: h.name, mailingName: h.mailingName || h.name, kids: h.kids || null, lastContactAt: h.lastContactAt ? new Date(h.lastContactAt) : null, lastTextAt: h.lastTextAt ? new Date(h.lastTextAt) : null, referredBy: h.referredBy || null, address: h.address || null,
           stageId, sourceId, followUpDays: h.followUpDays, partnerType: h.partnerType && isPartnerType(h.partnerType) ? h.partnerType : null,
           assignedToId: h.assignedToId, createdById: user.id, fubId: h.fubId, importBatchId: batch.id,
           emails: { create: emails.map(([n, e], i) => ({ address: e.address, normalized: n, label: e.label, position: i })) },
@@ -166,13 +166,16 @@ export async function addPartnersToImported() {
     const plan = await savedPlan();
     const { people } = await cachedFubPeople();
     // Last contact from FUB's last activity, so people contacted recently aren't all "due for a touch".
-    let lastContacts = 0;
-    const byFub = new Map((await db.person.findMany({ where: { fubId: { not: null }, deletedAt: null }, select: { id: true, fubId: true, lastContactAt: true } })).map((x) => [x.fubId!, x]));
+    let lastContacts = 0, lastTexts = 0;
+    const byFub = new Map((await db.person.findMany({ where: { fubId: { not: null }, deletedAt: null }, select: { id: true, fubId: true, lastContactAt: true, lastTextAt: true } })).map((x) => [x.fubId!, x]));
     for (const p of people) {
-      const at = lastActivityOf(p), hqP = byFub.get(p.id);
-      if (!at || !hqP || (hqP.lastContactAt && hqP.lastContactAt >= new Date(at))) continue;
-      await db.person.update({ where: { id: hqP.id }, data: { lastContactAt: new Date(at) } });
-      lastContacts++;
+      const hqP = byFub.get(p.id);
+      if (!hqP) continue;
+      const at = lastActivityOf(p), tx = lastTextOf(p);
+      const data: { lastContactAt?: Date; lastTextAt?: Date } = {};
+      if (at && !(hqP.lastContactAt && hqP.lastContactAt >= new Date(at))) { data.lastContactAt = new Date(at); lastContacts++; }
+      if (tx && !(hqP.lastTextAt && hqP.lastTextAt >= new Date(tx))) { data.lastTextAt = new Date(tx); lastTexts++; }
+      if (data.lastContactAt || data.lastTextAt) await db.person.update({ where: { id: hqP.id }, data });
     }
     const found = people.map((p) => ({ p, rel: partnerOf(p, plan), kids: kidsOf(p, plan) })).filter((x) => x.rel || x.kids);
     const hq = await db.person.findMany({ where: { fubId: { in: found.map((x) => x.p.id) }, deletedAt: null }, include: { emails: true, phones: true } });
@@ -219,7 +222,7 @@ export async function addPartnersToImported() {
     }
     await logActivity(user.id, "update", "import", "fub", `Updated imported contacts from Follow Up Boss: partners ${updated}, kids ${kidsAdded}, last contact dates ${lastContacts}`);
     revalidatePath("/people"); revalidatePath("/admin/import");
-    return { updated, kept, kidsAdded, birthdaysNamed, lastContacts };
+    return { updated, kept, kidsAdded, birthdaysNamed, lastContacts, lastTexts };
   });
 }
 

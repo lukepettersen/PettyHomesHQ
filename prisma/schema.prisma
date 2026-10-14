@@ -149,6 +149,7 @@ model Person {
   createdById   String?
   createdBy     User?           @relation("PersonCreator", fields: [createdById], references: [id])
   lastContactAt DateTime?
+  lastTextAt    DateTime? // last text either way: "Due for a touch" counts from this (owner, 2026-10-14)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   deletedAt     DateTime?

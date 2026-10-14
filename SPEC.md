@@ -146,7 +146,8 @@ Principles:
   - *(2026-10-14)* Lists show **100 people per page** (Previous / Next); sorting is by column
     header over the whole list; "Select all N" selects everyone matching. Opening a contact
     from a list keeps its place: **← Back** returns to that list, page and sort, and
-    **‹ Prev / Next ›** (with "12 of 6,904") steps through the people in it.
+    **‹ Prev / Next ›** (with "12 of 6,904") steps through the people in it — still from
+    the same spot if the person just dropped out of the list (e.g. texted, so no longer due).
   - Lists and collections: create, rename, duplicate, delete, **drag to reorder or move
     between collections**, plus a ⋯ menu (rename, ↑ ↓, Move to…, Duplicate, Delete).
   - Default collections seeded once: Clear Daily, Sphere, Leads, Mailing Lists, Partners.
@@ -347,7 +348,7 @@ Principles:
   red. Opening a task slides details over the board.
 - **Lists (sidebar):** Today, then built-in lists and user lists in one order.
   - Built-in: **Clients** (grouped by client, click name to open), **Due for a touch**
-    (people past their follow-up frequency; **Log text** records a text on their timeline and restarts the follow-up clock), **Important dates**, **Recurring**,
+    (people past their follow-up frequency **since their last text**; texts are the touch, owner decision 2026-10-14 — calls and emails don't restart it; the card shows "Last text …"; **Log text** records a text on their timeline and restarts the clock, as do logging a text on the timeline, checking off a text task, the bulk action **Mark texted**, and the last text date pulled from Follow Up Boss), **Important dates**, **Recurring**,
     **Misc** (any task with no client).
   - User lists: create, rename, delete (tasks are kept).
   - **Edit columns / Edit:** reorder every list, untick "On Today" to hide one from Today,

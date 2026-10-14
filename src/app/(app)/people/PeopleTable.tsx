@@ -103,7 +103,7 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
   ) : action === "followUp" ? (
     <select className="input w-auto" value={value} onChange={(e) => setValue(e.target.value)} aria-label="Follow-up"><option value="">Not set</option>{options.followUp.map((d) => <option key={d} value={d}>Every {d} days</option>)}</select>
   ) : action === "contacted" ? (
-    <label className="flex items-center gap-1.5 text-white">Last contact on <input type="date" className="input w-auto text-charcoal" value={value} max={new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" })} onChange={(e) => setValue(e.target.value)} aria-label="Contacted on" /></label>
+    <label className="flex items-center gap-1.5 text-white">Texted on <input type="date" className="input w-auto text-charcoal" value={value} max={new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" })} onChange={(e) => setValue(e.target.value)} aria-label="Contacted on" /></label>
   ) : action === "assign" ? (
     <select className="input w-auto" value={value} onChange={(e) => setValue(e.target.value)} aria-label="Assign to"><option value="">No one</option>{options.team.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select>
   ) : null;
@@ -123,7 +123,7 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
           {ids.length > 0 && <b className="mr-2">{ids.length.toLocaleString()} selected</b>}
           {all && !everyone && total > rows.length && !action && <button type="button" className="rounded-md px-2 py-1 underline hover:bg-white/15" onClick={() => setSel(new Set(allIds))}>Select all {total.toLocaleString()}</button>}
           {ids.length > 0 && !action && <>
-            {([["addTag", "Add tag"], ["removeTag", "Remove tag"], ["stage", "Change stage"], ["followUp", "Set follow-up"], ["assign", "Assign"], ["contacted", "Mark contacted"]] as const).map(([k, l]) => (
+            {([["addTag", "Add tag"], ["removeTag", "Remove tag"], ["stage", "Change stage"], ["followUp", "Set follow-up"], ["assign", "Assign"], ["contacted", "Mark texted"]] as const).map(([k, l]) => (
               <button key={k} type="button" className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" onClick={() => { setAction(k); setValue(k === "contacted" ? new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" }) : ""); setMsg(""); }}>{l}</button>
             ))}
             {canExport && <a className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" href={`/api/export/people?ids=${ids.join(",")}`}>Export</a>}
@@ -150,7 +150,7 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
             {sorted.map((r) => (
               <tr key={r.id} className={`border-b border-misty/60 last:border-0 hover:bg-paper ${sel.has(r.id) ? "bg-accent-soft/60" : ""}`}>
                 <td className="px-3 py-2"><input type="checkbox" aria-label={`Select ${r.name}`} checked={sel.has(r.id)} onChange={() => toggle(r.id)} /></td>
-                <td className="truncate px-3 py-2"><Link href={`/people/${r.id}${back ? `?back=${encodeURIComponent(back)}` : "?back="}`} className="link">{r.name}</Link>{r.phone && !columns.includes("phone") && <div className="text-xs muted">{r.phone}</div>}</td>
+                <td className="truncate px-3 py-2"><Link href={`/people/${r.id}?back=${encodeURIComponent(back)}&pos=${(page - 1) * 100 + sorted.indexOf(r)}`} className="link">{r.name}</Link>{r.phone && !columns.includes("phone") && <div className="text-xs muted">{r.phone}</div>}</td>
                 {columns.map((k) => <td key={k} className={`px-3 py-2 ${k === "tags" ? "" : "truncate"}`}>{cellOf(k, r)[0]}</td>)}
               </tr>
             ))}
