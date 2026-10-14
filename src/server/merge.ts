@@ -27,8 +27,8 @@ export async function loadMergeForms(): Promise<{ group: string; sections: PaSec
  * fill in only with "See commissions".
  */
 export async function mergeFor(user: SessionUser, personId: string | null, where: { paId?: string | null; fileId?: string | null } = {}) {
-  const p = personId ? await db.person.findFirst({ where: { id: personId, deletedAt: null } }) : null;
-  const ctx: MergeCtx = { personName: p?.name ?? "", mailingName: p?.mailingName };
+  const p = personId ? await db.person.findFirst({ where: { id: personId, deletedAt: null }, include: { emails: { orderBy: { position: "asc" }, take: 1 }, phones: { orderBy: { position: "asc" }, take: 1 } } }) : null;
+  const ctx: MergeCtx = { personName: p?.name ?? "", mailingName: p?.mailingName, email: p?.emails[0]?.address, phone: p?.phones[0]?.number, homeAddress: p?.address };
   const canComm = hasPermission(user.permissions, "seeCommissions");
   const forms = await loadMergeForms();
   const fields = formMergeFields(forms);

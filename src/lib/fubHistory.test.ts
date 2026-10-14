@@ -7,6 +7,13 @@ describe("FUB templates", () => {
       text: "Hi {first_name}, it's {agent_first_name}. %contact_custom_buy_price%", unknown: ["%contact_custom_buy_price%"],
     });
   });
+  it("maps BUY/SELL custom fields to the purchase agreement, and the partner's first name", () => {
+    const r = convertMergeFields("Hi %contact_first_name% and %contact_rels_first_name%! %custom_buy_address% closes %custom_sell_close_date% for %custom_buy_purchase_price%, inspection %custom_inspection_deadline%, WS %custom_sell_written_statement%. - %sender_first_name% %inquiry_address%");
+    expect(r.text).toBe("Hi {primary_first_name} and {partner_first_name}! {address} closes {closing_date} for {price}, inspection {inspection_date}, WS {written_statement_date}. - {my_first_name} %inquiry_address%");
+    expect(r.unknown).toEqual(["%inquiry_address%"]);
+    expect(convertMergeFields("%custom_buy_commission% %custom_sell_bac% %custom_buy_hoa_doc_rescission_period% %custom_mailing_name% %contact_street%, %contact_city%").text)
+      .toBe("{commission} {bac} {hoa_rescission_date} {mailing_name} {street}, {city}");
+  });
   it("keeps bold, links and lists from email HTML", () => {
     expect(htmlToMarkup('<p>Hi <strong>Sam</strong>,</p><p>See <a href="https://pettyhomes.com/x">the listing</a></p><ul><li>One</li><li>Two</li></ul>'))
       .toBe("Hi **Sam**,\nSee [the listing](https://pettyhomes.com/x)\n\n- One\n- Two");

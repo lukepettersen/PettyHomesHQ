@@ -5,15 +5,18 @@ import type { PaSection } from "./pa";
 
 export const MERGE_FIELDS: [string, string][] = [
   ["first_name", "Client first name(s)"], ["last_name", "Client last name"], ["full_name", "Client full name"], ["mailing_name", "Mailing name"],
+  ["primary_first_name", "First person's first name"], ["partner_first_name", "Spouse/partner's first name"],
+  ["email", "Client email"], ["phone", "Client phone"], ["street", "Client street address"], ["city", "Client city"],
   ["address", "Property address"], ["price", "Purchase or list price"],
   ["final_acceptance_date", "Final Acceptance"], ["inspection_date", "Inspection deadline"], ["inspection_appointment", "Inspection appointment"],
   ["written_statement_date", "Written Statement"], ["closing_date", "Closing date"],
   ["lender_name", "Lender"], ["title_company", "Title company"],
-  ["agent_name", "Luke's full name"], ["agent_first_name", "Luke's first name"], ["assistant_name", "Assistant's name"], ["my_name", "Your name"],
+  ["agent_name", "Luke's full name"], ["agent_first_name", "Luke's first name"], ["assistant_name", "Assistant's name"], ["my_name", "Your name"], ["my_first_name", "Your first name"],
 ];
 
 export type MergeCtx = {
   personName: string; mailingName?: string | null;
+  email?: string | null; phone?: string | null; homeAddress?: string | null; // the contact's own (not the deal's)
   address?: string | null; price?: number | null;
   dates?: Partial<Record<"finalAcceptance" | "inspection" | "writtenStatement" | "closing", string | null>>;
   inspAppt?: string | null; lender?: string | null; titleCompany?: string | null;
@@ -41,7 +44,11 @@ export function nameParts(name: string): { first: string; last: string } {
 export function mergeValues(c: MergeCtx): Record<string, string> {
   const { first, last } = nameParts(c.personName);
   const d = c.dates ?? {};
+  const firsts = c.personName.split("&").map((x) => x.trim().split(/\s+/)[0]).filter(Boolean);
+  const home = (c.homeAddress ?? "").split(",").map((x) => x.trim());
   const base: Record<string, string> = {
+    primary_first_name: firsts[0] ?? "", partner_first_name: firsts[1] ?? "",
+    email: c.email ?? "", phone: c.phone ?? "", street: home[0] ?? "", city: home[1] ?? "", my_first_name: (c.myName ?? "").split(/\s+/)[0],
     first_name: first, last_name: last, full_name: c.personName, mailing_name: c.mailingName || c.personName,
     address: c.address ?? "", price: c.price ? `$${c.price.toLocaleString("en-US")}` : "",
     final_acceptance_date: d.finalAcceptance ? longDate(d.finalAcceptance) : "", inspection_date: d.inspection ? longDate(d.inspection) : "",

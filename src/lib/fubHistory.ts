@@ -8,12 +8,29 @@ const FIELDS: Record<string, string> = {
   contact_name: "full_name", contact_full_name: "full_name", name: "full_name", full_name: "full_name",
   agent_first_name: "agent_first_name", agent_name: "agent_name", agent_full_name: "agent_name",
   user_first_name: "my_name", user_name: "my_name", my_name: "my_name",
-  property_address: "address", contact_address: "address", address: "address",
+  property_address: "address",
+  contact_rels_first_name: "partner_first_name", contact_email: "email", contact_phone: "phone", contact_street: "street", contact_city: "city",
+  sender_first_name: "my_first_name", sender_name: "my_name", custom_mailing_name: "mailing_name", mailing_name: "mailing_name",
 };
+// FUB's BUY / SELL custom fields are the purchase agreement: HQ fills them from the buyer- or seller-side contract.
+const PA_FIELDS: Record<string, string> = {
+  address: "address", purchase_price: "price", final_acceptance_date: "final_acceptance_date", inspection_deadline: "inspection_date",
+  written_statement: "written_statement_date", hoa_doc_rescission_period: "hoa_rescission_date", close_date: "closing_date",
+  seller_contributions: "seller_contributions", earnest_money: "earnest_money", commission: "commission", bac: "bac",
+};
+function hqField(key: string, hasPartner: boolean): string | null {
+  const k = key.toLowerCase();
+  // "Hi %contact_first_name% and %contact_rels_first_name%": the first name alone, since HQ's {first_name} is both.
+  if (hasPartner && /^contact_first_?name$/.test(k)) return "primary_first_name";
+  if (FIELDS[k]) return FIELDS[k];
+  const pa = /^(?:contact_)?custom_(?:(?:buy|sell)_)?(.+)$/.exec(k);
+  return pa && PA_FIELDS[pa[1]] ? PA_FIELDS[pa[1]] : null;
+}
 export function convertMergeFields(text: string): { text: string; unknown: string[] } {
   const unknown = new Set<string>();
+  const hasPartner = /%contact_rels_first_name%/i.test(text);
   const out = text.replace(/%([a-z0-9_]+)%/gi, (whole, key: string) => {
-    const k = FIELDS[key.toLowerCase()];
+    const k = hqField(key, hasPartner);
     if (k) return `{${k}}`;
     unknown.add(whole);
     return whole;

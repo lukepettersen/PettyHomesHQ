@@ -30,4 +30,9 @@ describe("merge fields", () => {
       inspection_appointment: "Friday, October 16 at 2:30pm", written_statement_date: "N/A", buyer_agent_name: "Jordan Reyes" });
     expect(mergeValues({ personName: "Bob Baker", extra: v }).earnest_money).toBe("$5,000");
   });
+  it("splits a couple's first names and the contact's own address", () => {
+    const v = mergeValues({ personName: "Sam & Lena Ortiz", homeAddress: "5357 35th Ave S, Minneapolis, MN 55417", myName: "Alyssa Chakiton", email: "sam@x.com" });
+    expect(v).toMatchObject({ first_name: "Sam & Lena", primary_first_name: "Sam", partner_first_name: "Lena", street: "5357 35th Ave S", city: "Minneapolis", my_first_name: "Alyssa", email: "sam@x.com" });
+    expect(mergeValues({ personName: "Sam Ortiz & Lena Brooks" }).partner_first_name).toBe("Lena");
+  });
 });

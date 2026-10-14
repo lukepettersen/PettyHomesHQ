@@ -521,7 +521,13 @@ Sections (left menu):
 - **Templates** *(built 2026-10-14)*: step 5 on the import page previews and copies every FUB
   email and text template (name, subject, wording; email HTML kept as bold/links/lists;
   folder from the name prefix BPC/BUC/SPC/SUC/Leads; FUB merge fields like
-  %contact_first_name% → {first_name}; unmatched ones listed so they can be edited). Names
+  %contact_first_name% → {first_name}; FUB's BUY/SELL custom fields (address, purchase price,
+  final acceptance, inspection, written statement, HOA rescission, close date, seller
+  contributions, commission, BAC) → the purchase agreement's merge fields, filled from the
+  buyer- or seller-side contract; %contact_rels_first_name% → {partner_first_name} (with
+  %contact_first_name% then → {primary_first_name}); contact email/phone/street/city, sender
+  first name and mailing name have HQ fields too; website-lead fields like %inquiry_address%
+  have no HQ match and are listed so they can be edited). Names
   already in HQ are skipped; **Remove copied templates** undoes it.
 - **History** *(built 2026-10-14)*: step 6 copies each imported contact's FUB **notes, calls and
   texts** (not the realtor database) onto their timeline with the original dates and author;
