@@ -18,6 +18,7 @@ import { FileTabs } from "./FileTabs";
 import { PipelineCard } from "./PipelineCard";
 import { AppointmentsCard } from "./AppointmentsCard";
 import { FilesCard } from "./FilesCard";
+import { PartnerDeals } from "./PartnerDeals";
 import { storageConnected } from "@/server/storage";
 
 const BACK: Record<string, [string, string]> = { tasks: ["/tasks", "Tasks"], people: ["/people", "People"], pipeline: ["/pipeline", "Pipeline"] };
@@ -56,6 +57,8 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
     db.taskList.findMany({ where: { builtin: null }, orderBy: { position: "asc" } }),
     db.messageTemplate.findMany({ where: { kind: "email" }, orderBy: [{ folder: "asc" }, { name: "asc" }], select: { id: true, name: true, folder: true } }), emailConnection()]);
   const fileForms = { buyer: buyerFileForm, listing: listingFileForm };
+  // A partner (lender, title, other agent) sees the deals they were picked for.
+  const partnerDeals = await db.paPartner.findMany({ where: { personId: p.id, pa: { deletedAt: null, file: { deletedAt: null } } }, include: { pa: { include: { file: { include: { person: { select: { id: true, name: true } } } } } } }, orderBy: { pa: { createdAt: "desc" } } });
   const docs = await db.document.findMany({ where: { personId: id, deletedAt: null }, orderBy: { createdAt: "desc" } });
 
   const birthdays = p.dates.filter((d) => d.kind === "birthday").map((d) => ({ whose: d.whose, date: isoFromDate(d.date) }));
@@ -73,7 +76,11 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
           </div>
           <div className="order-4 flex min-w-0 flex-col gap-3">
             <DetailsCard id={p.id} options={options} stageId={p.stageId} sourceId={p.sourceId} assignedToId={p.assignedToId}
-              followUpDays={p.followUpDays} mailingName={p.mailingName ?? ""} referredBy={p.referredBy ?? ""} />
+              followUpDays={p.followUpDays} mailingName={p.mailingName ?? ""} referredBy={p.referredBy ?? ""} partnerType={p.partnerType} company={p.company ?? ""} />
+            {partnerDeals.length > 0 && <PartnerDeals deals={partnerDeals.map((d) => ({
+              personId: d.pa.file.person.id, client: d.pa.file.person.name, address: d.pa.address, state: d.pa.state,
+              role: (d.pa.side === "seller" ? sellerForm : buyerForm).find((s) => s.id === d.sectionId)?.name ?? d.sectionId,
+            }))} />}
             <CustomFieldsCard id={p.id} fields={fields.map((f) => ({ fieldId: f.id, name: f.name, type: f.type, options: f.options, value: p.customValues.find((v) => v.fieldId === f.id)?.value ?? "" }))} />
             <TagsCard id={p.id} tags={p.tags.map((t) => t.tag.name).sort()} allTags={options.tags} />
             <DatesCard id={p.id} name={p.name} birthdays={birthdays} homeiversary={home ? isoFromDate(home.date) : ""} />

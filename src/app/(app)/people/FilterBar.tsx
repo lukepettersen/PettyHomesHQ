@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { describeFilter, FIELD_LABELS, FIELD_OPS, type Filter, type FilterField } from "@/lib/filters";
 import { Modal } from "@/components/Modal";
+import { PARTNER_TYPES } from "@/lib/partners";
 import { createSmartList, saveSmartListFilters } from "./listActions";
 
 export type FilterOptions = { stages: string[]; tags: string[]; sources: string[]; followUp: number[]; team: string[] };
@@ -11,6 +12,7 @@ export type FilterOptions = { stages: string[]; tags: string[]; sources: string[
 function valuesFor(field: FilterField, o: FilterOptions): [string, string][] | null {
   switch (field) {
     case "stage": return o.stages.map((s) => [s, s]);
+    case "type": return PARTNER_TYPES.map(([, l]) => [l, l]);
     case "tag": return o.tags.map((s) => [s, s]);
     case "source": return o.sources.map((s) => [s, s]);
     case "assigned": return o.team.map((s) => [s, s]);

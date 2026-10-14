@@ -9,7 +9,7 @@ export async function loadForm(side: Side): Promise<PaSection[]> {
   return Array.isArray(row?.sections) ? (row.sections as unknown as PaSection[]) : DEFAULT_FORMS[side];
 }
 
-export const paInclude = (user: SessionUser) => ({ commission: hasPermission(user.permissions, "seeCommissions") });
+export const paInclude = (user: SessionUser) => ({ commission: hasPermission(user.permissions, "seeCommissions"), partners: { include: { person: { select: { id: true, name: true } } } } });
 
 export async function loadPersonContracts(personId: string, user: SessionUser): Promise<PaView[]> {
   const rows = await db.purchaseAgreement.findMany({ where: { deletedAt: null, file: { personId, deletedAt: null } }, include: paInclude(user), orderBy: { createdAt: "desc" } });

@@ -138,6 +138,8 @@ model Person {
   sourceId      String?
   source        Source?         @relation(fields: [sourceId], references: [id])
   referredBy    String?
+  partnerType   String? // industry partners: realtor | lender | title | inspector | tc | attorney | other (src/lib/partners.ts)
+  company       String?
   followUpDays  Int?
   assignedToId  String?
   assignedTo    User?           @relation("PersonAssignee", fields: [assignedToId], references: [id])
@@ -158,6 +160,7 @@ model Person {
   files         ClientFile[]
   appointments  Appointment[]
   documents     Document[]
+  partnerOn     PaPartner[]
 
   @@index([deletedAt])
   @@index([name])
@@ -401,6 +404,7 @@ model PurchaseAgreement {
   updatedAt          DateTime      @updatedAt
   deletedAt          DateTime?
   commission         PaCommission?
+  partners           PaPartner[]
   tasks              Task[]
 
   @@index([fileId])
@@ -408,6 +412,18 @@ model PurchaseAgreement {
 }
 
 // Commission % and BAC for a contract, only read for users with "See commissions".
+// Which partner contact (lender, title, other agent…) was picked for a purchase agreement's people section.
+model PaPartner {
+  paId      String
+  pa        PurchaseAgreement @relation(fields: [paId], references: [id], onDelete: Cascade)
+  sectionId String
+  personId  String
+  person    Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([paId, sectionId])
+  @@index([personId])
+}
+
 model PaCommission {
   paId       String            @id
   pa         PurchaseAgreement @relation(fields: [paId], references: [id], onDelete: Cascade)

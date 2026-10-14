@@ -1,5 +1,6 @@
 "use client";
 
+import { PARTNER_TYPES, partnerLabel } from "@/lib/partners";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { addTag, deletePerson, removeTag, updateContactInfo, updateCustomValues, updateDetails, updateImportantDates } from "../actions";
@@ -99,7 +100,7 @@ export function InfoCard(p: { id: string; name: string; address: string; phones:
   );
 }
 
-export function DetailsCard(p: { id: string; options: Options; stageId: string | null; sourceId: string | null; assignedToId: string | null; followUpDays: number | null; mailingName: string; referredBy: string }) {
+export function DetailsCard(p: { id: string; options: Options; stageId: string | null; sourceId: string | null; assignedToId: string | null; followUpDays: number | null; mailingName: string; referredBy: string; partnerType: string | null; company: string }) {
   const e = useEdit();
   const o = p.options;
   const name = (list: { id: string; name: string }[], id: string | null) => list.find((x) => x.id === id)?.name;
@@ -107,6 +108,7 @@ export function DetailsCard(p: { id: string; options: Options; stageId: string |
     <form className="card p-4" action={(f) => e.save(() => updateDetails({
       id: p.id, stageId: String(f.get("stageId")), sourceId: String(f.get("sourceId")), assignedToId: String(f.get("assignedToId")),
       followUpDays: f.get("followUpDays") ? Number(f.get("followUpDays")) : null, mailingName: String(f.get("mailingName")), referredBy: String(f.get("referredBy")),
+      partnerType: String(f.get("partnerType") ?? ""), company: String(f.get("company") ?? ""),
     }))}>
       <CardHead title="Details" editing onEdit={() => {}} />
       <div className="flex flex-col gap-2.5">
@@ -116,6 +118,8 @@ export function DetailsCard(p: { id: string; options: Options; stageId: string |
         <label className="label">Source<select className="input" name="sourceId" defaultValue={p.sourceId ?? ""}><option value="">—</option>{o.sources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
         <label className="label">Referred by<input className="input" name="referredBy" defaultValue={p.referredBy} /></label>
         <label className="label">Mailing name<input className="input" name="mailingName" defaultValue={p.mailingName} /></label>
+        <label className="label">Type<select className="input" name="partnerType" defaultValue={p.partnerType ?? ""}><option value="">Client / sphere (not a partner)</option>{PARTNER_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>
+        <label className="label">Company<input className="input" name="company" defaultValue={p.company} placeholder="e.g. Edina Title, RE/MAX Results" /></label>
       </div>
       <SaveRow pending={e.pending} error={e.error} onCancel={() => { e.setError(""); e.setEditing(false); }} />
     </form>
@@ -131,6 +135,8 @@ export function DetailsCard(p: { id: string; options: Options; stageId: string |
         {row("Source", name(o.sources, p.sourceId))}
         {p.referredBy && row("Referred by", p.referredBy)}
         {row("Mailing name", p.mailingName)}
+        {p.partnerType && row("Type", partnerLabel(p.partnerType))}
+        {(p.partnerType || p.company) && row("Company", p.company)}
       </dl>
     </div>
   );

@@ -1,10 +1,11 @@
 // Smart list filters (SPEC.md §6.2). Pure so they can be unit tested; the People page applies them.
 
 export type Filter = { field: FilterField; op: string; value: string };
-export type FilterField = "stage" | "tag" | "source" | "followUp" | "lastContact" | "dueForTouch" | "upcomingTask" | "assigned";
+export type FilterField = "stage" | "type" | "tag" | "source" | "followUp" | "lastContact" | "dueForTouch" | "upcomingTask" | "assigned";
 
 export type PersonFacts = {
   stage: string | null;
+  type: string | null; // partner type label: Realtor, Lender, Title…
   source: string | null;
   tags: string[];
   followUpDays: number | null;
@@ -15,6 +16,7 @@ export type PersonFacts = {
 
 export const FIELD_LABELS: Record<FilterField, string> = {
   stage: "Stage",
+  type: "Type",
   tag: "Tag",
   source: "Source",
   followUp: "Follow-up",
@@ -26,6 +28,7 @@ export const FIELD_LABELS: Record<FilterField, string> = {
 
 export const FIELD_OPS: Record<FilterField, [string, string][]> = {
   stage: [["is", "is"], ["isNot", "is not"]],
+  type: [["is", "is"], ["isNot", "is not"]],
   tag: [["has", "has"], ["hasNot", "doesn't have"]],
   source: [["is", "is"], ["isNot", "is not"]],
   followUp: [["is", "is"]],
@@ -48,6 +51,8 @@ export function matches(p: PersonFacts, f: Filter, now = new Date()): boolean {
   switch (f.field) {
     case "stage":
       return f.op === "isNot" ? !eq(p.stage) : eq(p.stage);
+    case "type":
+      return f.op === "isNot" ? !eq(p.type) : eq(p.type);
     case "source":
       return f.op === "isNot" ? !eq(p.source) : eq(p.source);
     case "tag": {

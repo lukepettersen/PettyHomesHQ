@@ -107,6 +107,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 - Sending email: `src/lib/email.ts` (MIME; tested), `sendGmail` in `src/server/google.ts`, `src/app/(app)/people/emailActions.ts`, Timeline Email tab `people/[id]/EmailComposer.tsx`; merge values per person in `src/server/merge.ts` (`mergeFor`)
 - `src/lib/merge.ts` (merge fields; tested), Admin → Text & email templates in `src/app/(app)/admin/messages/`, Draft email/text in `src/app/(app)/tasks/DraftModal.tsx` + `draftActions.ts`
 - Files card: `src/lib/documents.ts` (tested), `src/server/storage.ts` (S3 client, signed downloads), `src/app/api/documents/*`, Trash purge removes stored objects (`src/server/trash.ts`)
+- Industry partners: `src/lib/partners.ts` (types, section → type, fill/save; tested), `src/server/partners.ts` (`savePaPartners`), `/api/partners`, `pipeline/PartnerPicker.tsx`, `people/[id]/PartnerDeals.tsx`
 - `src/lib/customFields.ts` — custom field types and value cleaning
 - Owner setup and ops runbook: `docs/ops.md`
 

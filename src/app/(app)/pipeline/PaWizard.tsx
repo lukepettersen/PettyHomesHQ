@@ -5,6 +5,8 @@ import { Modal } from "@/components/Modal";
 import { COMMISSION_KEYS, visibleSections, type Answers, type PaField, type PaSection, type PaView, type Side } from "@/lib/pa";
 import { addPurchaseAgreement, updatePurchaseAgreement } from "./paActions";
 import { DateTimeInput } from "@/components/TimeSelect";
+import { fillFromPartner, sectionPartnerType } from "@/lib/partners";
+import { PartnerPicker } from "./PartnerPicker";
 
 type Props = {
   fileId: string; fileKind: "buyer" | "listing"; personName: string; fileLine: string; prefill?: Answers; pa?: PaView;
@@ -19,6 +21,9 @@ export function PaWizard({ fileId, fileKind, personName, fileLine, prefill, pa, 
   const [v, setV] = useState<Answers>(() => pa ? fromPa(pa) : { hoa: "No", newc: "No", ptype: "Single family", fin: "Conventional", ...prefill });
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
+  // People sections: the partner contact picked for each, and typed-in ones to save as new contacts.
+  const [picked, setPicked] = useState<Record<string, { id: string; name: string }>>(pa?.partners ?? {});
+  const [saveAs, setSaveAs] = useState<string[]>([]);
   const form = forms[side].map((s) => ({ ...s, fields: s.fields.filter((f) => canSeeCommission || !COMMISSION_KEYS.includes(f.key)) }));
   const sections = visibleSections(form, v);
   const onPage = step === 2 ? sections.slice(0, 1) : step === 3 ? sections.slice(1) : step === 0 ? sections : [];
@@ -31,7 +36,8 @@ export function PaWizard({ fileId, fileKind, personName, fileLine, prefill, pa, 
     if (miss.length) { setError(`Add the ${miss.map((f) => f.label.toLowerCase()).join(" and ")} first.`); return; }
     if (step === 2) { setStep(3); return; }
     start(async () => {
-      const r = editing ? await updatePurchaseAgreement({ id: pa!.id, answers: v }) : await addPurchaseAgreement({ fileId, side, answers: v });
+      const links = { partners: Object.fromEntries(Object.entries(picked).map(([k, x]) => [k, x.id])), saveAsContact: saveAs.filter((k) => !picked[k]) };
+      const r = editing ? await updatePurchaseAgreement({ id: pa!.id, answers: v, ...links }) : await addPurchaseAgreement({ fileId, side, answers: v, ...links });
       if (!r.ok) { setError(r.error); return; }
       onSaved(editing ? "Saved." : "Purchase agreement added. They're now under contract.");
     });
@@ -59,7 +65,18 @@ export function PaWizard({ fileId, fileKind, personName, fileLine, prefill, pa, 
           <fieldset key={s.id} className="rounded-lg border border-misty px-3 pt-1 pb-3">
             <legend className="px-1 text-sm font-bold">{s.name}</legend>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {s.people && (
+                <PartnerPicker type={sectionPartnerType(s)} picked={picked[s.id] ?? null}
+                  onPick={(p) => { setV((o) => ({ ...o, ...fillFromPartner(s, p) })); setPicked((x) => ({ ...x, [s.id]: { id: p.id, name: p.name } })); }}
+                  onClear={() => setPicked((x) => { const n = { ...x }; delete n[s.id]; return n; })} />
+              )}
               {s.fields.map((f) => <PaInput key={f.key} f={f} v={v} set={(k, x) => setV((o) => ({ ...o, [k]: x }))} />)}
+              {s.people && !picked[s.id] && s.fields.some((f) => (v[f.key] ?? "").trim()) && (
+                <label className="col-span-full flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={saveAs.includes(s.id)} onChange={(e) => setSaveAs((x) => (e.target.checked ? [...x, s.id] : x.filter((y) => y !== s.id)))} />
+                  Save as contact, so they&apos;re in the list next time
+                </label>
+              )}
             </div>
           </fieldset>
         ))}

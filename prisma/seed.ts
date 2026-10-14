@@ -38,7 +38,7 @@ const COLLECTIONS: [string, [string, F[]][]][] = [
   ["Sphere", [["Past clients", [f("stage", "is", "Past Client")]], ["Sphere", [f("stage", "is", "Sphere")]], ["Due for a touch", [f("dueForTouch", "is", "yes")]], ["30 day sphere", [f("followUp", "is", "30")]], ["90 day sphere", [f("followUp", "is", "90")]], ["180 day sphere", [f("followUp", "is", "180")]]]],
   ["Leads", [["All leads", [f("stage", "is", "Lead")]], ["Website leads", [f("source", "is", "Website")]], ["Zillow leads", [f("source", "is", "Zillow Preferred")]], ["Gone quiet (60+ days)", [f("stage", "is", "Lead"), f("lastContact", "moreThan", "60")]]]],
   ["Mailing Lists", [["Past client mailers", [f("stage", "is", "Past Client"), f("tag", "has", "Mailers")]], ["Christmas cards", [f("tag", "has", "Christmas Cards")]], ["Email newsletter", [f("tag", "has", "Email Newsletter")]]]],
-  ["Partners", [["Industry partners", [f("stage", "is", "Industry Partners")]]]],
+  ["Partners", [["Industry partners", [f("stage", "is", "Industry Partners")]], ["Realtors", [f("type", "is", "Realtor")]], ["Lenders", [f("type", "is", "Lender")]], ["Title", [f("type", "is", "Title")]]]],
 ];
 
 async function main() {

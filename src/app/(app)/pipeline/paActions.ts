@@ -7,6 +7,7 @@ import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { hasPermission } from "@/server/permissions";
 import { loadForm } from "@/server/pa";
+import { savePaPartners } from "@/server/partners";
 import { syncContract } from "@/server/google";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
 import { closeStepsForWaived, contractAnchors, factsOf, redateContract, runTrigger } from "@/server/automation";
@@ -31,7 +32,8 @@ function clean(form: PaSection[], answers: Record<string, string>, canComm: bool
 const dateData = (dates: Record<DateKey, string | null>) => Object.fromEntries(KEY_DATES.map(([k]) => [k, dates[k] ? dateFromIso(dates[k]!) : null]));
 
 // ---------- Add ----------
-const addSchema = z.object({ fileId: id, side: sideSchema, answers: answersSchema });
+const partnerLinks = { partners: z.record(z.string().max(40), id).optional(), saveAsContact: z.array(z.string().max(40)).max(20).optional() };
+const addSchema = z.object({ fileId: id, side: sideSchema, answers: answersSchema, ...partnerLinks });
 
 export async function addPurchaseAgreement(input: z.input<typeof addSchema>) {
   return guarded(null, async (user) => {
@@ -40,7 +42,8 @@ export async function addPurchaseAgreement(input: z.input<typeof addSchema>) {
     if (!file) throw new UserError("That file was closed or deleted.");
     if (await db.purchaseAgreement.findFirst({ where: { fileId: file.id, state: "active", deletedAt: null } })) throw new UserError("This file already has an active contract. Mark it closed or fell through first.");
     const canComm = hasPermission(user.permissions, "seeCommissions");
-    const c = clean(await loadForm(v.side), v.answers, canComm);
+    const form = await loadForm(v.side);
+    const c = clean(form, v.answers, canComm);
     const today = isoFromDate(todayCentral());
     const pa = await db.$transaction(async (tx) => {
      const created = await tx.purchaseAgreement.create({
@@ -57,6 +60,7 @@ export async function addPurchaseAgreement(input: z.input<typeof addSchema>) {
      }, user.id);
      return { ...created, n };
     });
+    await savePaPartners(pa.id, form, c.answers, v.partners ?? {}, v.saveAsContact ?? [], user.id);
     await logActivity(user.id, "create", "purchaseAgreement", pa.id, `Added ${v.side}-side purchase agreement for ${file.person.name}: ${c.address}${pa.n ? ` (${pa.n} tasks)` : ""}`);
     await syncContract(pa.id); // Google Calendar, when connected
     refresh(file.personId);
@@ -65,7 +69,7 @@ export async function addPurchaseAgreement(input: z.input<typeof addSchema>) {
 }
 
 // ---------- Edit ----------
-const editSchema = z.object({ id, answers: answersSchema });
+const editSchema = z.object({ id, answers: answersSchema, ...partnerLinks });
 
 export async function updatePurchaseAgreement(input: z.input<typeof editSchema>) {
   return guarded(null, async (user) => {
@@ -73,7 +77,8 @@ export async function updatePurchaseAgreement(input: z.input<typeof editSchema>)
     const pa = await db.purchaseAgreement.findFirst({ where: { id: v.id, deletedAt: null }, include: { file: { include: { person: { select: { name: true } } } } } });
     if (!pa) throw new UserError("That contract was deleted.");
     const canComm = hasPermission(user.permissions, "seeCommissions");
-    const c = clean(await loadForm(pa.side as "buyer" | "seller"), v.answers, canComm);
+    const form = await loadForm(pa.side as "buyer" | "seller");
+    const c = clean(form, v.answers, canComm);
     // Moving a date that was still pending marks it Extended and remembers the original.
     const status = obj(pa.dateStatus), orig = obj(pa.originalDates);
     const moved: string[] = [];
@@ -92,6 +97,7 @@ export async function updatePurchaseAgreement(input: z.input<typeof editSchema>)
       if (canComm) await tx.paCommission.upsert({ where: { paId: pa.id }, update: c.commission, create: { paId: pa.id, ...c.commission } });
       await redateContract(tx, pa.id);
     });
+    await savePaPartners(pa.id, form, c.answers, v.partners ?? {}, v.saveAsContact ?? [], user.id);
     await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Updated purchase agreement for ${pa.file.person.name}${moved.length ? ` (moved ${moved.join(", ")})` : ""}`);
     await syncContract(pa.id);
     refresh(pa.file.personId);

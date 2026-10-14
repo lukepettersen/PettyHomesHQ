@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/server/db";
 import { matchesAll, parseFilters, isDueForTouch, type Filter, type PersonFacts } from "@/lib/filters";
 import { todayCentral } from "@/lib/normalize";
+import { partnerLabel } from "@/lib/partners";
 
 export type PersonRow = PersonFacts & {
   id: string;
@@ -11,6 +12,7 @@ export type PersonRow = PersonFacts & {
   dueForTouch: boolean;
   /** Every phone (digits), email, address and mailing name, for search. */
   contactText: string;
+  company: string | null;
 };
 
 /** Everyone not in Trash, flattened for the People table and smart lists. */
@@ -32,6 +34,7 @@ export async function loadPeopleRows(): Promise<PersonRow[]> {
   return people.map((p) => {
     const facts: PersonFacts = {
       stage: p.stage?.name ?? null,
+      type: partnerLabel(p.partnerType),
       source: p.source?.name ?? null,
       tags: p.tags.map((t) => t.tag.name).sort(),
       followUpDays: p.followUpDays,
@@ -40,7 +43,7 @@ export async function loadPeopleRows(): Promise<PersonRow[]> {
       hasUpcomingTask: p._count.tasks > 0,
     };
     return {
-      ...facts, id: p.id, name: p.name, phone: p.phones[0]?.number ?? null, email: p.emails[0]?.address ?? null, dueForTouch: isDueForTouch(facts),
+      ...facts, id: p.id, name: p.name, company: p.company, phone: p.phones[0]?.number ?? null, email: p.emails[0]?.address ?? null, dueForTouch: isDueForTouch(facts),
       contactText: [...p.phones.map((x) => x.normalized), ...p.emails.map((x) => x.normalized), p.address ?? "", p.mailingName ?? ""].join(" ").toLowerCase(),
     };
   });
@@ -51,7 +54,7 @@ export function searchRows(rows: PersonRow[], q: string): PersonRow[] {
   if (!s) return rows;
   const digits = s.replace(/\D/g, "");
   return rows.filter((r) =>
-    [r.name, r.contactText, r.stage ?? "", r.source ?? "", ...r.tags].join(" ").toLowerCase().includes(s) ||
+    [r.name, r.contactText, r.stage ?? "", r.type ?? "", r.company ?? "", r.source ?? "", ...r.tags].join(" ").toLowerCase().includes(s) ||
     (digits.length >= 3 && r.contactText.includes(digits)),
   );
 }

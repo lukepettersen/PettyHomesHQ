@@ -174,6 +174,22 @@ Principles:
     that expire in 5 minutes; deleted files go to Trash and are removed from storage after 30
     days.
 
+### 6.4 Industry partners *(built 2026-10-14)*
+
+- Realtors, lenders, title and other partners are regular contacts with a **Type** (Realtor,
+  Lender, Title, Inspector, Transaction coordinator, Attorney, Other partner) and a
+  **Company**, set on the Details card. People → Partners has **Realtors**, **Lenders** and
+  **Title** lists (smart list filter "Type is …").
+- Purchase agreement people sections (Buyer's lender, Buyer's/Seller's title, Seller's/Buyer's
+  agent, Seller's TC) have **"Choose a … from your contacts"**: search-as-you-type over
+  partners of that type, most-used first; picking one fills name, company, email and phone
+  and links the contact. Someone typed in by hand can be ticked **Save as contact** (stage
+  Industry Partners, type from the section; an existing contact with that email is linked
+  instead).
+- A partner's contact page shows **Deals**: every contract they were picked for (client,
+  address, role, state).
+- Partners are **never** invited to contract calendar events (only the team and the client).
+
 ## 7. Pipeline
 
 ### 7.1 Client files
