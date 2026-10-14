@@ -102,7 +102,7 @@ export function TasksApp(p: Props) {
     const r = await logTouch(row.personId);
     if (!r.ok) { setToast(r.error); return; }
     setTouched((x) => [...x, row.personId]);
-    setToast(`Touch logged for ${row.name}. Next one due in ${row.followUpDays} days.`);
+    setToast(`Text logged for ${row.name}. Next one due in ${row.followUpDays} days.`);
     refresh();
   });
 
@@ -140,7 +140,7 @@ export function TasksApp(p: Props) {
         <PersonLink id={t.personId} name={t.name} />
         <span className="flex flex-wrap gap-x-2.5 text-xs muted"><span>Every {t.followUpDays} days</span><span>Last touch {t.lastContact ? longIso(t.lastContact.slice(0, 10)) : "never"}</span></span>
       </span>
-      <button type="button" className="btn px-2 py-0.5 text-xs" disabled={pending} onClick={() => touch(t)}>Log touch</button>
+      <button type="button" className="btn px-2 py-0.5 text-xs" disabled={pending} onClick={() => touch(t)}>Log text</button>
     </div>
   );
   const box = (children: React.ReactNode) => <div className="overflow-hidden rounded-xl border border-misty bg-white">{children}</div>;

@@ -247,10 +247,10 @@ export async function logTouch(personId: string) {
     const p = await db.person.findFirst({ where: { id: id.parse(personId), deletedAt: null } });
     if (!p) throw new UserError("That person was deleted.");
     await db.$transaction([
-      db.timelineEntry.create({ data: { personId: p.id, kind: "call", body: "Touch logged from Tasks", authorId: user.id } }),
+      db.timelineEntry.create({ data: { personId: p.id, kind: "text", body: "Text logged from Tasks (Due for a touch)", authorId: user.id } }),
       db.person.update({ where: { id: p.id }, data: { lastContactAt: new Date() } }),
     ]);
-    await logActivity(user.id, "create", "timeline", p.id, `Logged a touch for ${p.name}`);
+    await logActivity(user.id, "create", "timeline", p.id, `Logged a text for ${p.name} (Due for a touch)`);
     refresh(p.id);
     revalidatePath("/people");
     return { name: p.name, followUpDays: p.followUpDays };

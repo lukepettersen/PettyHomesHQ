@@ -343,7 +343,7 @@ Principles:
   red. Opening a task slides details over the board.
 - **Lists (sidebar):** Today, then built-in lists and user lists in one order.
   - Built-in: **Clients** (grouped by client, click name to open), **Due for a touch**
-    (people past their follow-up frequency; Log touch), **Important dates**, **Recurring**,
+    (people past their follow-up frequency; **Log text** records a text on their timeline and restarts the follow-up clock), **Important dates**, **Recurring**,
     **Misc** (any task with no client).
   - User lists: create, rename, delete (tasks are kept).
   - **Edit columns / Edit:** reorder every list, untick "On Today" to hide one from Today,
