@@ -2,6 +2,8 @@ import type { NextAuthOptions } from "next-auth";
 import { getServerSession } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { REMEMBER_COOKIE, REMEMBER_DAYS, signInStillGood } from "@/lib/session";
 import { db } from "@/server/db";
 import { allowedDomain, isAllowedGoogleAccount } from "@/server/access";
 import { hasPermission, type Permission } from "@/server/permissions";
@@ -10,7 +12,8 @@ import { hasPermission, type Permission } from "@/server/permissions";
 // team list (invited or active) in Admin → Users & roles. Everyone else is turned away.
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
-  session: { strategy: "jwt", maxAge: 12 * 60 * 60 },
+  // The cookie can last up to 400 days; signInStillGood() ends sign-ins that weren't "kept" after 12 hours.
+  session: { strategy: "jwt", maxAge: REMEMBER_DAYS * 24 * 60 * 60 },
   pages: { signIn: "/login", error: "/login" },
   providers: [
     GoogleProvider({
@@ -29,7 +32,15 @@ export const authOptions: NextAuthOptions = {
       await db.activityLog.create({ data: { userId: user.id, action: "sign_in", entity: "user", entityId: user.id, summary: `${user.name} signed in` } });
       return true;
     },
-    async jwt({ token }) {
+    async jwt({ token, account }) {
+      if (account) {
+        // Just signed in: was "Keep me signed in on this device" ticked on the sign-in page?
+        let remember = false;
+        try { remember = (await cookies()).get(REMEMBER_COOKIE)?.value === "1"; } catch { /* no request cookies */ }
+        token.remember = remember;
+        token.loginAt = Date.now();
+      }
+      if (!signInStillGood(token)) return { ...token, uid: undefined, perms: [], role: undefined };
       // Re-read the user on every request so role changes and removals take effect right away.
       if (!token.email) return token;
       const user = await db.user.findUnique({ where: { email: token.email.toLowerCase() }, include: { role: true } });
