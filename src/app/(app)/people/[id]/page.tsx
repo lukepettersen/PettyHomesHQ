@@ -20,14 +20,30 @@ import { AppointmentsCard } from "./AppointmentsCard";
 import { FilesCard } from "./FilesCard";
 import { PartnerDeals } from "./PartnerDeals";
 import { storageConnected } from "@/server/storage";
+import { PAGE_SIZE, queryPeople } from "@/server/people";
 
 const BACK: Record<string, [string, string]> = { tasks: ["/tasks", "Tasks"], people: ["/people", "People"], pipeline: ["/pipeline", "Pipeline"] };
 
 export const dynamic = "force-dynamic";
 
-export default async function ContactPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ from?: string }> }) {
+export default async function ContactPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ from?: string; back?: string }> }) {
   const { id } = await params;
-  const [backHref, backLabel] = BACK[(await searchParams).from ?? ""] ?? BACK.people;
+  const sp = await searchParams;
+  let [backHref, backLabel] = BACK[sp.from ?? ""] ?? BACK.people;
+  // Opened from a People list: Back returns to that list (same page and sort), and Prev / Next step through it.
+  let nav: { prev: string | null; next: string | null; at: number; total: number } | null = null;
+  if (sp.back !== undefined) {
+    const bq = new URLSearchParams(sp.back);
+    const { current, shown } = await queryPeople({ list: bq.get("list") ?? undefined, f: bq.get("f") ?? undefined, q: bq.get("q") ?? undefined, sort: bq.get("sort") ?? undefined });
+    const at = shown.findIndex((r) => r.id === id);
+    const withPage = (i: number) => { const q = new URLSearchParams(bq); const pg = Math.floor(i / PAGE_SIZE) + 1; if (pg > 1) q.set("page", String(pg)); else q.delete("page"); return q.toString(); };
+    if (at >= 0) {
+      const link = (i: number) => (i >= 0 && i < shown.length ? `/people/${shown[i].id}?back=${encodeURIComponent(withPage(i))}` : null);
+      nav = { prev: link(at - 1), next: link(at + 1), at: at + 1, total: shown.length };
+      backHref = `/people${withPage(at) ? `?${withPage(at)}` : ""}`;
+    } else backHref = `/people${sp.back ? `?${sp.back}` : ""}`;
+    backLabel = current?.name ?? (bq.get("f") || bq.get("q") ? "People" : "All people");
+  }
   const user = await requireUser();
   const [p, options, tasks, fields, files, statuses, contracts, buyerForm, sellerForm, checklists, templates] = await Promise.all([
     db.person.findFirst({
@@ -66,7 +82,16 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
 
   return (
     <div className="mx-auto max-w-[1500px] px-4 py-3">
-      <Link href={backHref} className="link text-sm">← {backLabel}</Link>
+      <div className="flex flex-wrap items-center gap-3">
+        <Link href={backHref} className="link text-sm">← {backLabel}</Link>
+        {nav && (
+          <nav aria-label="Step through the list" className="ml-auto flex items-center gap-2 text-sm">
+            {nav.prev ? <Link className="btn px-2.5 py-1" href={nav.prev} rel="prev">‹ Prev</Link> : <span className="btn px-2.5 py-1 opacity-40">‹ Prev</span>}
+            <span className="muted">{nav.at.toLocaleString()} of {nav.total.toLocaleString()}</span>
+            {nav.next ? <Link className="btn px-2.5 py-1" href={nav.next} rel="next">Next ›</Link> : <span className="btn px-2.5 py-1 opacity-40">Next ›</span>}
+          </nav>
+        )}
+      </div>
       <div className="mt-2 grid grid-cols-1 items-start gap-3 lg:grid-cols-[290px_minmax(0,1fr)_300px]">
         {/* On a phone: contact info, then Tasks, then Timeline, then the other cards (SPEC.md §17). */}
         <div className="contents lg:sticky lg:top-3 lg:flex lg:min-w-0 lg:flex-col lg:gap-3">

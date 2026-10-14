@@ -143,6 +143,10 @@ Principles:
     column header to sort. Drag a header's right edge to resize it (double-click resets); widths are
     remembered per list in that browser.
   - Change filters, then Save changes / Save as new list / Reset.
+  - *(2026-10-14)* Lists show **100 people per page** (Previous / Next); sorting is by column
+    header over the whole list; "Select all N" selects everyone matching. Opening a contact
+    from a list keeps its place: **← Back** returns to that list, page and sort, and
+    **‹ Prev / Next ›** (with "12 of 6,904") steps through the people in it.
   - Lists and collections: create, rename, duplicate, delete, **drag to reorder or move
     between collections**, plus a ⋯ menu (rename, ↑ ↓, Move to…, Duplicate, Delete).
   - Default collections seeded once: Clear Daily, Sphere, Leads, Mailing Lists, Partners.
@@ -361,7 +365,9 @@ Principles:
   Checking off a repeating task creates the next one; checked-off tasks stay visible (struck
   through) until you switch lists, so a mis-click can be undone.
 - **Important dates tasks** come from each person's birthdays and homeiversary and the rules
-  in Admin → Date reminders (default: text happy birthday/homeiversary on the day to
+  in Admin → Date reminders, titled with capitals: birthdays add whose it is ("Text Happy
+  Birthday · Lena"), homeiversaries are just the action ("Send Homeiversary Card")
+  (default: text happy birthday/homeiversary on the day to
   everyone; send card 7 days before to Past Clients). Shown up to 60 days ahead.
 - **Task alarms:** a task with a set time rings for the person it's assigned to when it comes
   due: a pop-up over every page (Done · Snooze 5 min · Open contact · Dismiss), a chime that

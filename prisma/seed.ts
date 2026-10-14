@@ -19,10 +19,10 @@ const SOURCES = ["Sphere", "Sphere Referral", "Website", "Zillow Preferred", "Op
 const FOLLOW_UP = [7, 30, 60, 90, 180];
 const TAGS = ["Buyer", "Seller", "Past Client", "A Lead", "B Lead", "C Lead", "D Lead", "Email Newsletter", "Mailers", "Christmas Cards", "Petty Homes Event List", "Real Estate Health Check", "Investor", "Unsubscribed", "Bounced", "No Bday Needed"];
 const REMINDERS = [
-  { dateKind: "birthday", title: "Text happy birthday", days: 0, direction: "on", assignee: "Luke", kind: "text", appliesTo: "Everyone" },
-  { dateKind: "birthday", title: "Send birthday card", days: 7, direction: "before", assignee: "Alyssa", kind: "task", appliesTo: "Past Client" },
-  { dateKind: "homeiversary", title: "Text happy homeiversary", days: 0, direction: "on", assignee: "Luke", kind: "text", appliesTo: "Everyone" },
-  { dateKind: "homeiversary", title: "Send homeiversary card", days: 7, direction: "before", assignee: "Alyssa", kind: "task", appliesTo: "Past Client" },
+  { dateKind: "birthday", title: "Text Happy Birthday", days: 0, direction: "on", assignee: "Luke", kind: "text", appliesTo: "Everyone" },
+  { dateKind: "birthday", title: "Send Birthday Card", days: 7, direction: "before", assignee: "Alyssa", kind: "task", appliesTo: "Past Client" },
+  { dateKind: "homeiversary", title: "Text Happy Homeiversary", days: 0, direction: "on", assignee: "Luke", kind: "text", appliesTo: "Everyone" },
+  { dateKind: "homeiversary", title: "Send Homeiversary Card", days: 7, direction: "before", assignee: "Alyssa", kind: "task", appliesTo: "Past Client" },
 ];
 // Built-in task lists (SPEC.md §9). Rows exist so they can be ordered with user lists and hidden from Today.
 const BUILTIN_LISTS: [string, string][] = [["clients", "Clients"], ["touch", "Due for a touch"], ["dates", "Important dates"], ["recurring", "Recurring"], ["misc", "Misc"]];

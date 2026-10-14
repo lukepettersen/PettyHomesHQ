@@ -138,6 +138,10 @@ export type ReminderInput = { id: string; dateKind: string; title: string; days:
 export type DateTask = { key: string; title: string; due: string; personId: string; personName: string; assigneeId: string | null; kind: string };
 
 /** Birthdays and homeiversaries run through Admin → Date reminders, from 14 days back to 60 days ahead. */
+const SMALL = new Set(["a", "an", "and", "the", "to", "of", "on", "for", "in", "at"]);
+/** "send birthday card" → "Send Birthday Card" (small words like "to" stay lowercase mid-title). */
+export const titleCase = (s: string) => s.trim().split(/\s+/).map((w, i) => (i > 0 && SMALL.has(w.toLowerCase()) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1))).join(" ");
+
 export function importantDateTasks(dates: DateInput[], reminders: ReminderInput[], team: { id: string; name: string }[], today: string): DateTask[] {
   const out: DateTask[] = [];
   const year = +today.slice(0, 4);
@@ -154,7 +158,8 @@ export function importantDateTasks(dates: DateInput[], reminders: ReminderInput[
         const member = r.assignee ? team.find((t) => t.name.split(/\s+/)[0].toLowerCase() === r.assignee.toLowerCase()) : undefined;
         out.push({
           key: `date:${d.id}:${r.id}:${y}`,
-          title: `${r.title} · ${who}'s ${d.kind === "birthday" ? "birthday" : "homeiversary"} ${shortIso(occ)}`,
+          // Owner (2026-10-14): birthdays name whose it is; homeiversaries are just the action ("Send Homeiversary Card").
+          title: d.kind === "birthday" ? `${titleCase(r.title)} · ${who}` : titleCase(r.title),
           due, personId: d.personId, personName: d.personName,
           assigneeId: member?.id ?? d.assignedToId, kind: r.kind,
         });

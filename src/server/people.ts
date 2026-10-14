@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/server/db";
-import { matchesAll, parseFilters, isDueForTouch, type Filter, type PersonFacts } from "@/lib/filters";
+import { daysUntil, matchesAll, parseFilters, isDueForTouch, type Filter, type PersonFacts } from "@/lib/filters";
 import { todayCentral } from "@/lib/normalize";
 import { partnerLabel } from "@/lib/partners";
 import { parseColumns } from "@/lib/columns";
@@ -100,3 +100,42 @@ export async function loadOptions() {
   };
 }
 export type Options = Awaited<ReturnType<typeof loadOptions>>;
+
+/** Sorts like the People table's column headers (Name A–Z, dates most recent first, blanks last). */
+export function sortRows(rows: PersonRow[], sort = "name"): PersonRow[] {
+  const days = (d: Date | null | undefined) => (d ? -d.getTime() : Number.MAX_SAFE_INTEGER);
+  const next = (r: PersonRow) => (r.birthdays?.length ? Math.min(...r.birthdays.map((b) => daysUntil(b))) : Number.MAX_SAFE_INTEGER);
+  const key = (r: PersonRow): string | number => {
+    switch (sort) {
+      case "lastContact": return days(r.lastContactAt);
+      case "lastCall": return days(r.lastCallAt);
+      case "lastText": return days(r.lastTextAt);
+      case "lastEmail": return days(r.lastEmailAt);
+      case "created": return days(r.createdAt);
+      case "followUp": return r.followUpDays ?? Number.MAX_SAFE_INTEGER;
+      case "birthday": return next(r);
+      case "tags": return r.tags.join(",").toLowerCase() || "~";
+      case "assigned": return (r.assignedTo ?? "~").toLowerCase();
+      case "homeiversary": return r.homeiversary ?? "~";
+      case "stage": case "type": case "company": case "phone": case "email": case "source": case "address": case "mailingName": case "kids":
+        return ((r as unknown as Record<string, string | null>)[sort] ?? "~").toLowerCase();
+      default: return r.name.toLowerCase();
+    }
+  };
+  return rows.map((r) => [key(r), r] as const).sort((a, b) => (typeof a[0] === "number" && typeof b[0] === "number" ? a[0] - b[0] : String(a[0]).localeCompare(String(b[0]))) || a[1].name.localeCompare(b[1].name)).map(([, r]) => r);
+}
+
+export const PAGE_SIZE = 100;
+export type PeopleQuery = { list?: string; f?: string; q?: string; sort?: string };
+function parseJson(s?: string): unknown { if (!s) return undefined; try { return JSON.parse(s); } catch { return undefined; } }
+
+/** Everyone a People view shows (list, filters, search, sort): shared by the People page and the contact page's Prev / Next. */
+export async function queryPeople(qp: PeopleQuery) {
+  const [rows, collections] = await Promise.all([loadPeopleRows(), loadCollections()]);
+  const lists = collections.flatMap((c) => c.lists.map((l) => ({ ...l, collection: c.name })));
+  const current = lists.find((l) => l.id === qp.list);
+  const urlFilters = parseJson(qp.f);
+  const working = urlFilters !== undefined ? parseFilters(urlFilters) : current?.filters ?? [];
+  const shown = sortRows(searchRows(applyFilters(rows, working), qp.q ?? ""), qp.sort);
+  return { rows, collections, current, working, shown };
+}

@@ -1,7 +1,7 @@
 import { requireUser } from "@/server/auth";
 import { hasPermission } from "@/server/permissions";
-import { applyFilters, loadCollections, loadOptions, loadPeopleRows, searchRows } from "@/server/people";
-import { daysUntil, parseFilters } from "@/lib/filters";
+import { applyFilters, loadOptions, PAGE_SIZE, queryPeople } from "@/server/people";
+import { daysUntil } from "@/lib/filters";
 import { parseColumns } from "@/lib/columns";
 import { db } from "@/server/db";
 import { daysAgo } from "@/lib/normalize";
@@ -12,18 +12,18 @@ import { PeopleTable } from "./PeopleTable";
 
 export const dynamic = "force-dynamic";
 
-function parseJson(s?: string): unknown { if (!s) return undefined; try { return JSON.parse(s); } catch { return undefined; } }
-
-export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ list?: string; q?: string; f?: string; new?: string }> }) {
+export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ list?: string; q?: string; f?: string; new?: string; sort?: string; page?: string }> }) {
   const sp = await searchParams;
   const q = sp.q ?? "";
   const user = await requireUser();
-  const [rows, collections, options, allCols] = await Promise.all([loadPeopleRows(), loadCollections(), loadOptions(), db.appSetting.findUnique({ where: { key: "people.columns" } })]);
-  const lists = collections.flatMap((c) => c.lists.map((l) => ({ ...l, collection: c.name })));
-  const current = lists.find((l) => l.id === sp.list);
-  const urlFilters = parseJson(sp.f);
-  const working = urlFilters !== undefined ? parseFilters(urlFilters) : current?.filters ?? [];
-  const shown = searchRows(applyFilters(rows, working), q);
+  const [{ rows, collections, current, working, shown }, options, allCols] = await Promise.all([
+    queryPeople({ list: sp.list, f: sp.f, q, sort: sp.sort }), loadOptions(), db.appSetting.findUnique({ where: { key: "people.columns" } }),
+  ]);
+  // 100 at a time keeps big lists (thousands of realtors) quick.
+  const pages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+  const page = Math.min(pages, Math.max(1, Number(sp.page) || 1));
+  const pageRows = shown.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const viewQuery = new URLSearchParams({ ...(sp.list ? { list: sp.list } : {}), ...(sp.f ? { f: sp.f } : {}), ...(q ? { q } : {}), ...(sp.sort ? { sort: sp.sort } : {}) });
   const columns = current ? current.columns : parseColumns(allCols?.value);
   const iso = (d: Date | null | undefined) => (d ? d.toISOString() : null);
   const exportParams = new URLSearchParams({ ...(sp.list ? { list: sp.list } : {}), ...(sp.f ? { f: sp.f } : {}), ...(q ? { q } : {}) });
@@ -53,8 +53,9 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
           collections={collections.map((c) => ({ id: c.id, name: c.name }))}
           options={{ stages: options.stages.map((s) => s.name), tags: options.tags, sources: options.sources.map((s) => s.name), followUp: options.followUp, team: options.team.map((u) => u.name) }} />
         <PeopleTable
-          listId={current?.id ?? null} columns={columns}
-          rows={shown.map((r) => ({
+          listId={current?.id ?? null} columns={columns} sort={sp.sort ?? "name"} page={page} pages={pages} total={shown.length} viewQuery={viewQuery.toString()}
+          allIds={shown.map((r) => r.id)}
+          rows={pageRows.map((r) => ({
             id: r.id, name: r.name, phone: r.phone, email: r.email, stage: r.stage, type: r.type, company: r.company, address: r.address, mailingName: r.mailingName, kids: r.kids,
             assigned: r.assignedTo, source: r.source, tags: r.tags, followUpDays: r.followUpDays, dueForTouch: r.dueForTouch,
             lastDays: daysAgo(r.lastContactAt), callDays: daysAgo(r.lastCallAt ?? null), textDays: daysAgo(r.lastTextAt ?? null), emailDays: daysAgo(r.lastEmailAt ?? null),

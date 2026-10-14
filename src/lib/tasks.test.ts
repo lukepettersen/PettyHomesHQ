@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categoryOf, dueLabel, formatTime, importantDateTasks, nextDue, parseQuickAdd, parseTime, stripPersonWord } from "./tasks";
+import { categoryOf, dueLabel, formatTime, importantDateTasks, nextDue, parseQuickAdd, parseTime, stripPersonWord, titleCase } from "./tasks";
 
 const TODAY = "2026-10-13"; // a Tuesday
 
@@ -64,7 +64,7 @@ describe("important dates", () => {
   it("applies rules by stage within the window", () => {
     const out = importantDateTasks([{ ...base, id: "d1", date: "1980-10-20", stage: "Past Client" }], reminders, team, TODAY);
     expect(out.map((t) => [t.key, t.due, t.assigneeId])).toEqual([["date:d1:r1:2026", "2026-10-20", "u1"], ["date:d1:r2:2026", "2026-10-13", "u2"]]);
-    expect(out[0].title).toBe("Text happy birthday · Sam's birthday Oct 20");
+    expect(out[0].title).toBe("Text Happy Birthday · Sam");
   });
   it("skips rules for other stages and dates outside the window", () => {
     expect(importantDateTasks([{ ...base, id: "d1", date: "1980-10-20", stage: "Lead" }], reminders, team, TODAY)).toHaveLength(1);
@@ -72,6 +72,13 @@ describe("important dates", () => {
   });
   it("wraps into next year", () => {
     const out = importantDateTasks([{ ...base, id: "d3", date: "1990-01-05", whose: "Lena", stage: null }], reminders, team, "2026-12-20");
-    expect(out[0]).toMatchObject({ due: "2027-01-05", title: "Text happy birthday · Lena's birthday Jan 5" });
+    expect(out[0]).toMatchObject({ due: "2027-01-05", title: "Text Happy Birthday · Lena" });
+  });
+  it("title-cases reminder names; homeiversaries don't add a name", () => {
+    expect(titleCase("send homeiversary card")).toBe("Send Homeiversary Card");
+    expect(titleCase("text happy birthday to them")).toBe("Text Happy Birthday to Them");
+    const out = importantDateTasks([{ id: "h", kind: "homeiversary", whose: "", date: "2020-10-20", personId: "p", personName: "Sam & Lena Ortiz", stage: "Past Client", assignedToId: null }],
+      [{ id: "r", dateKind: "homeiversary", title: "send homeiversary card", days: 0, direction: "on", assignee: "", kind: "task", appliesTo: "Everyone" }], [], "2026-10-12");
+    expect(out[0].title).toBe("Send Homeiversary Card");
   });
 });

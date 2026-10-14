@@ -46,9 +46,15 @@ function cellOf(k: string, r: Row): [React.ReactNode, string | number] {
   }
 }
 
-export function PeopleTable({ rows, options, canDelete, canExport, exportHref, emptyText, listId, columns }: { rows: Row[]; options: Opt; canDelete: boolean; canExport: boolean; exportHref: string; emptyText: string; listId: string | null; columns: string[] }) {
+export function PeopleTable({ rows, options, canDelete, canExport, exportHref, emptyText, listId, columns, sort, page, pages, total, viewQuery, allIds }: {
+  rows: Row[]; options: Opt; canDelete: boolean; canExport: boolean; exportHref: string; emptyText: string; listId: string | null; columns: string[];
+  sort: string; page: number; pages: number; total: number; viewQuery: string; allIds: string[];
+}) {
   const [sel, setSel] = useState<Set<string>>(new Set());
-  const [sort, setSort] = useState<string>("name");
+  // Sorting and pages are in the address, so Back from a contact returns to the same spot.
+  const href = (p: Record<string, string | null>) => { const q = new URLSearchParams(viewQuery); for (const [k, v] of Object.entries(p)) { if (v) q.set(k, v); else q.delete(k); } return `/people${q.size ? `?${q}` : ""}`; };
+  const back = (() => { const q = new URLSearchParams(viewQuery); if (page > 1) q.set("page", String(page)); return q.toString(); })();
+  const setSort = (k: string) => { router.push(href({ sort: k === "name" ? null : k, page: null })); };
   const [editCols, setEditCols] = useState(false);
   // Column widths: drag a header's right edge. Remembered per list in this browser.
   const widthKey = `hq-colw-${listId ?? "all"}`;
@@ -76,11 +82,11 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
   const [msg, setMsg] = useState("");
   const [pending, start] = useTransition();
   const router = useRouter();
-  const sortVal = (r: Row) => (sort === "name" ? r.name.toLowerCase() : cellOf(sort, r)[1]);
-  const sorted = [...rows].sort((a, b) => { const x = sortVal(a), y = sortVal(b); return typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y)); });
+  const sorted = rows; // already in order (HQ sorts the whole list, not just this page)
   const all = rows.length > 0 && rows.every((r) => sel.has(r.id));
+  const everyone = sel.size >= allIds.length && allIds.length > 0;
   const toggle = (id: string) => { const n = new Set(sel); if (n.has(id)) n.delete(id); else n.add(id); setSel(n); setConfirm(false); };
-  const ids = [...sel].filter((id) => rows.some((r) => r.id === id));
+  const ids = [...sel];
 
   function apply() {
     if (!action) return;
@@ -112,7 +118,8 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
     <>
       {(ids.length > 0 || msg) && (
         <div className="mt-3 flex flex-wrap items-center gap-1.5 rounded-lg bg-charcoal px-3 py-2 text-sm text-white">
-          {ids.length > 0 && <b className="mr-2">{ids.length} selected</b>}
+          {ids.length > 0 && <b className="mr-2">{ids.length.toLocaleString()} selected</b>}
+          {all && !everyone && total > rows.length && !action && <button type="button" className="rounded-md px-2 py-1 underline hover:bg-white/15" onClick={() => setSel(new Set(allIds))}>Select all {total.toLocaleString()}</button>}
           {ids.length > 0 && !action && <>
             {([["addTag", "Add tag"], ["removeTag", "Remove tag"], ["stage", "Change stage"], ["followUp", "Set follow-up"], ["assign", "Assign"]] as const).map(([k, l]) => (
               <button key={k} type="button" className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" onClick={() => { setAction(k); setValue(""); setMsg(""); }}>{l}</button>
@@ -141,7 +148,7 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
             {sorted.map((r) => (
               <tr key={r.id} className={`border-b border-misty/60 last:border-0 hover:bg-paper ${sel.has(r.id) ? "bg-accent-soft/60" : ""}`}>
                 <td className="px-3 py-2"><input type="checkbox" aria-label={`Select ${r.name}`} checked={sel.has(r.id)} onChange={() => toggle(r.id)} /></td>
-                <td className="truncate px-3 py-2"><Link href={`/people/${r.id}`} className="link">{r.name}</Link>{r.phone && !columns.includes("phone") && <div className="text-xs muted">{r.phone}</div>}</td>
+                <td className="truncate px-3 py-2"><Link href={`/people/${r.id}${back ? `?back=${encodeURIComponent(back)}` : "?back="}`} className="link">{r.name}</Link>{r.phone && !columns.includes("phone") && <div className="text-xs muted">{r.phone}</div>}</td>
                 {columns.map((k) => <td key={k} className={`px-3 py-2 ${k === "tags" ? "" : "truncate"}`}>{cellOf(k, r)[0]}</td>)}
               </tr>
             ))}
@@ -149,7 +156,14 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
         </table>
         {rows.length === 0 && <p className="p-8 text-center muted">{emptyText}</p>}
       </div>
-      {canExport && rows.length > 0 && <a href={exportHref} className="mt-2 inline-block text-sm font-semibold text-accent hover:underline">Export these {rows.length} to CSV</a>}
+      {pages > 1 && (
+        <nav aria-label="Pages" className="mt-2 flex items-center justify-center gap-3 text-sm">
+          {page > 1 ? <Link className="btn" href={href({ page: page > 2 ? String(page - 1) : null })}>‹ Previous</Link> : <span className="btn opacity-40">‹ Previous</span>}
+          <span>Page {page} of {pages} · {total.toLocaleString()} people</span>
+          {page < pages ? <Link className="btn" href={href({ page: String(page + 1) })}>Next ›</Link> : <span className="btn opacity-40">Next ›</span>}
+        </nav>
+      )}
+      {canExport && rows.length > 0 && <a href={exportHref} className="mt-2 inline-block text-sm font-semibold text-accent hover:underline">Export these {total.toLocaleString()} to CSV</a>}
     </>
   );
 }
