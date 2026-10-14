@@ -114,8 +114,10 @@ export function kidsOf(p: FubPerson, plan: Plan): string {
 export function partnerOf(p: FubPerson, plan: Plan): FubRelation | null {
   return (p.relationships ?? []).find((r) => r.firstName.trim() && (plan.relationships?.[r.type || "(no type)"] ?? "skip") === "merge") ?? null;
 }
-const contactsOf = (list: { value: string; type: string }[], label: string | null, isEmail: boolean) =>
-  list.filter((x) => (isEmail ? x.value?.includes("@") : x.value?.replace(/\D/g, "").length >= 7)).map((x) => ({ value: x.value.trim(), label: label ?? x.type ?? "" }));
+/** Valid phones/emails, labeled. With a partner, the second one on the main record is the partner's (label2). */
+const contactsOf = (list: { value: string; type: string }[], label: string | null, isEmail: boolean, label2: string | null = null) =>
+  list.filter((x) => (isEmail ? x.value?.includes("@") : x.value?.replace(/\D/g, "").length >= 7))
+    .map((x, i) => ({ value: x.value.trim(), label: (i === 1 && label2) || label || x.type || "" }));
 
 /** One FUB person → what HQ will save, or null when their stage is skipped. */
 export function applyPlan(p: FubPerson, plan: Plan): HqPerson | null {
@@ -137,10 +139,11 @@ export function applyPlan(p: FubPerson, plan: Plan): HqPerson | null {
   return {
     fubId: p.id, name, first, last, stage: pastClient ? "Past Client" : rule.stage, followUpDays: rule.followUp, partnerType,
     source: src?.source ?? "", kids: kidsOf(p, plan), tags: tagRules.filter(([, r]) => r === "keep").map(([t]) => t),
-    emails: [...contactsOf(p.emails, mine, true), ...(rel ? contactsOf(rel.emails, theirs, true) : [])].map((e) => ({ address: e.value, label: e.label })),
-    phones: [...contactsOf(p.phones, mine, false), ...(rel ? contactsOf(rel.phones, theirs, false) : [])].map((x) => ({ number: x.value, label: x.label || "Mobile" })),
+    emails: [...contactsOf(p.emails, mine, true, theirs), ...(rel ? contactsOf(rel.emails, theirs, true) : [])].map((e) => ({ address: e.value, label: e.label })),
+    phones: [...contactsOf(p.phones, mine, false, theirs), ...(rel ? contactsOf(rel.phones, theirs, false) : [])].map((x) => ({ number: x.value, label: x.label || "Mobile" })),
     address: p.address.trim(),
-    birthdays: plan.fields.birthdays.map((l) => fubDate(c(l))).flatMap((d, i) => (d ? [{ whose: i === 0 ? first : "", date: d }] : [])),
+    // Birthday 1 is theirs; Birthday 2 is the spouse/partner who joined the contact.
+    birthdays: plan.fields.birthdays.map((l) => fubDate(c(l))).flatMap((d, i) => (d ? [{ whose: i === 0 ? first : i === 1 && theirs ? theirs : "", date: d }] : [])),
     homeiversary: fubDate(c(plan.fields.homeiversary)), mailingName: c(plan.fields.mailingName), referredBy: c(plan.fields.referredBy),
     assignedToId: plan.agents[p.assignedTo] ?? null,
   };

@@ -6,7 +6,7 @@ import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { cachedFubPeople, fubKeySet, loadFromFub } from "@/server/fub";
-import { applyPlan, kidsOf, partnerOf, summarize, type HqPerson, type Plan } from "@/lib/fubImport";
+import { applyPlan, fubDate, kidsOf, partnerOf, summarize, type HqPerson, type Plan } from "@/lib/fubImport";
 import { isPartnerType } from "@/lib/partners";
 import { coupleName, dateFromIso, normalizeEmail, normalizePhone } from "@/lib/normalize";
 
@@ -167,23 +167,38 @@ export async function addPartnersToImported() {
     const { people } = await cachedFubPeople();
     const found = people.map((p) => ({ p, rel: partnerOf(p, plan), kids: kidsOf(p, plan) })).filter((x) => x.rel || x.kids);
     const hq = await db.person.findMany({ where: { fubId: { in: found.map((x) => x.p.id) }, deletedAt: null }, include: { emails: true, phones: true } });
-    let updated = 0, kept = 0, kidsAdded = 0;
+    let updated = 0, kept = 0, kidsAdded = 0, birthdaysNamed = 0;
     for (const person of hq) {
       const { p, rel, kids } = found.find((x) => x.p.id === person.fubId)!;
       if (kids && !person.kids) { await db.person.update({ where: { id: person.id }, data: { kids } }); kidsAdded++; }
       if (!rel) continue;
+      // Birthday 2 belongs to the spouse/partner: name it where it's still unnamed.
+      const second = plan.fields.birthdays[1] ? fubDate(p.custom?.[plan.fields.birthdays[1]] ?? "") : null;
+      if (second) {
+        const r = await db.importantDate.updateMany({ where: { personId: person.id, kind: "birthday", whose: "", date: dateFromIso(second) }, data: { whose: rel.firstName.trim() } });
+        birthdaysNamed += r.count;
+      }
       const first = p.firstName.trim(), last = p.lastName.trim();
       const original = [first, last].filter(Boolean).join(" ");
-      if (person.name !== original) { kept++; continue; } // already a couple, or renamed in HQ
       const name = coupleName({ first, last }, { first: rel.firstName.trim(), last: rel.lastName.trim() });
+      if (person.name === name) {
+        // Joined already (earlier version labeled both phones/emails with the first name): give the second to the partner.
+        // Of the ones still labeled with the first person's name (their record's own), the second is the partner's.
+        const fix = (list: { id: string; position: number; label: string }[]) => list.filter((x) => x.label === first).sort((x, y) => x.position - y.position)[1];
+        const e2 = fix(person.emails), p2 = fix(person.phones);
+        if (e2) await db.email.update({ where: { id: e2.id }, data: { label: rel.firstName.trim() } });
+        if (p2) await db.phone.update({ where: { id: p2.id }, data: { label: rel.firstName.trim() } });
+        continue;
+      }
+      if (person.name !== original) { kept++; continue; } // renamed in HQ
       const haveE = new Set(person.emails.map((e) => e.normalized)), haveP = new Set(person.phones.map((x) => x.normalized));
       const emails = rel.emails.filter((e) => e.value.includes("@") && !haveE.has(normalizeEmail(e.value)));
       const phones = rel.phones.filter((x) => normalizePhone(x.value).length >= 7 && !haveP.has(normalizePhone(x.value)));
       await db.$transaction([
         db.person.update({ where: { id: person.id }, data: { name, ...(!person.mailingName || person.mailingName === original ? { mailingName: name } : {}) } }),
-        // The existing phone/email belongs to the first person; label them so it's clear whose is whose.
-        db.email.updateMany({ where: { personId: person.id, label: { in: ["", "home", "Home", "work", "Work", "other", "Other"] } }, data: { label: first } }),
-        db.phone.updateMany({ where: { personId: person.id, label: { in: ["Mobile", "mobile", "home", "Home", "work", "Work", "other", "Other"] } }, data: { label: first } }),
+        // Whose is whose: the first phone/email on the record is theirs, the second is the partner's.
+        ...[...person.emails].sort((a, b) => a.position - b.position).map((e, i) => db.email.update({ where: { id: e.id }, data: { label: i === 1 ? rel.firstName.trim() : first } })),
+        ...[...person.phones].sort((a, b) => a.position - b.position).map((x, i) => db.phone.update({ where: { id: x.id }, data: { label: i === 1 ? rel.firstName.trim() : first } })),
         ...emails.map((e, i) => db.email.create({ data: { personId: person.id, address: e.value.trim(), normalized: normalizeEmail(e.value), label: rel.firstName.trim(), position: person.emails.length + i } })),
         ...phones.map((x, i) => db.phone.create({ data: { personId: person.id, number: x.value.trim(), normalized: normalizePhone(x.value), label: rel.firstName.trim(), position: person.phones.length + i } })),
       ]);
@@ -191,7 +206,7 @@ export async function addPartnersToImported() {
     }
     await logActivity(user.id, "update", "import", "fub", `From Follow Up Boss relationships: added partners to ${updated} and kids to ${kidsAdded} imported contacts`);
     revalidatePath("/people"); revalidatePath("/admin/import");
-    return { updated, kept, kidsAdded };
+    return { updated, kept, kidsAdded, birthdaysNamed };
   });
 }
 

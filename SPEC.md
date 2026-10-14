@@ -496,6 +496,9 @@ Sections (left menu):
   son, daughter…: first names go on the contact's **Kids** line, e.g. "Mia, Leo") or "Leave
   out" (parents, others). **Add spouses/partners and kids** updates people imported before
   this (names only where not changed in HQ; kids only where the Kids line is empty).
+- With a spouse/partner joined: **Birthday 2** is named for the partner, and the **second phone
+  and second email** on the FUB record are labeled with the partner's name (the button also
+  fixes contacts joined before this rule).
 - Contacts have a **Kids** line on the Details card (editable; also a People column). Kids
   are not separate contacts.
 - *(Original plan)* Contacts via FUB CSV export (no API needed): names, phones, emails, address, stage,
