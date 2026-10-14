@@ -39,7 +39,7 @@ const DEFS: Omit<Integration, "connected" | "missing" | "detail">[] = [
   },
   {
     id: "fub", name: "Follow Up Boss",
-    what: "Only needed to copy notes and text/email history. People come over from a FUB spreadsheet export, which needs no key.",
+    what: "Copies your contacts from Follow Up Boss (Admin → Import from Follow Up Boss). Read only.",
     vars: [{ name: "FUB_API_KEY", help: "Follow Up Boss → Admin → API → create a key" }],
     note: "The import is a one-time copy with a practice run first. Nothing in Follow Up Boss is changed.",
   },

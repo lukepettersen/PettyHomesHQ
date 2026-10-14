@@ -108,6 +108,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 - `src/lib/merge.ts` (merge fields; tested), Admin → Text & email templates in `src/app/(app)/admin/messages/`, Draft email/text in `src/app/(app)/tasks/DraftModal.tsx` + `draftActions.ts`
 - Files card: `src/lib/documents.ts` (tested), `src/server/storage.ts` (S3 client, signed downloads), `src/app/api/documents/*`, Trash purge removes stored objects (`src/server/trash.ts`)
 - Industry partners: `src/lib/partners.ts` (types, section → type, fill/save; tested), `src/server/partners.ts` (`savePaPartners`), `/api/partners`, `pipeline/PartnerPicker.tsx`, `people/[id]/PartnerDeals.tsx`
+- FUB import: `src/lib/fubImport.ts` (summary, default matching from owner decisions, apply; tested), `src/server/fub.ts` (API, cached copy in AppSetting), Admin → Import from Follow Up Boss in `src/app/(app)/admin/import/`
 - `src/lib/customFields.ts` — custom field types and value cleaning
 - Owner setup and ops runbook: `docs/ops.md`
 

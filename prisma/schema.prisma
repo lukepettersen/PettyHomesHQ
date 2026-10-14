@@ -138,6 +138,8 @@ model Person {
   sourceId      String?
   source        Source?         @relation(fields: [sourceId], references: [id])
   referredBy    String?
+  fubId         Int?            @unique // the Follow Up Boss person this came from (import)
+  importBatchId String? // which import added them (Undo import)
   partnerType   String? // industry partners: realtor | lender | title | inspector | tc | attorney | other (src/lib/partners.ts)
   company       String?
   followUpDays  Int?
@@ -519,4 +521,14 @@ model Document {
   deletedAt    DateTime?
 
   @@index([personId])
+}
+
+// One run of Admin → Import from Follow Up Boss; Undo removes the people it added.
+model ImportBatch {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  createdById String
+  added       Int       @default(0)
+  duplicates  Int       @default(0)
+  undoneAt    DateTime?
 }

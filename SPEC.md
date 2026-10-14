@@ -473,7 +473,14 @@ Sections (left menu):
 
 ## 15. Data import from FUB
 
-- Contacts via FUB CSV export (no API needed): names, phones, emails, address, stage,
+- **Built 2026-10-14: Admin → Import from Follow Up Boss** pulls everyone straight from the FUB
+  API (key `FUB_API_KEY` in Railway; read only), then: **Match** (every FUB stage, tag, source,
+  agent and custom field with counts; each mapped or skipped; custom fields Mailing Name,
+  Homeiversary, Referred By and Birthday 1–7 picked from the FUB fields), **Preview** (totals
+  and sample people exactly as saved, incl. address and birthdays), **Import** (in groups with
+  a progress bar; anyone already in HQ by FUB id, email or phone is left alone) and **Undo
+  import** (removes the people that run added). Addresses come from the FUB address.
+- *(Original plan)* Contacts via FUB CSV export (no API needed): names, phones, emails, address, stage,
   source, tags, birthdays (Birthday 1–7 → Important Dates), homeiversary, mailing name,
   referred by.
 - Map FUB "N Day Sphere" stages to follow-up frequency; Past Client tag/stage → Past Client.
