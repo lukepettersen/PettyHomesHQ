@@ -369,8 +369,8 @@ Principles:
   on the connecting Admin's calendar). Booking, editing or deleting an appointment updates its
   event and emails the ticked invitees. While a contract is active, its inspection
   appointment, inspection and Written Statement deadlines and Close Date HOLD are calendar
-  events that invite **everyone on the contract**: the team, the client's emails, and every
-  email address in the contract's people sections; they update when dates change and are
+  events that invite **only the team and the client** (never lenders, title, the other agent
+  or other partners; owner decision 2026-10-14); they update when dates change and are
   removed when the contract closes or falls through. If Google is unreachable, HQ still saves.
   Until connected, appointments are stored in HQ only.
 - *Later:* booking a call for someone who already has one upcoming becomes **Reschedule

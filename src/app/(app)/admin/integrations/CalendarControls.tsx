@@ -2,13 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { disconnectCalendar } from "./actions";
+import { disconnectCalendar, refreshCalendar } from "./actions";
 
 /** Connect / Disconnect Google: Calendar and sending Gmail (one connection for the team). */
 export function CalendarControls({ keysSet, connected, email, gmail }: { keysSet: boolean; connected: boolean; email: string | null; gmail: { send: boolean; read: boolean } }) {
   const router = useRouter();
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState("");
+  const [done, setDone] = useState("");
   const [pending, start] = useTransition();
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-md bg-sunken px-3 py-2">
@@ -24,6 +25,12 @@ export function CalendarControls({ keysSet, connected, email, gmail }: { keysSet
         <a href="/api/google/connect" aria-disabled={!keysSet} className={`btn btn-primary ml-auto ${keysSet ? "" : "pointer-events-none opacity-50"}`}>Connect Google</a>
       )}
       {error && <span role="alert" className="text-sm text-bad">{error}</span>}
+      {connected && (
+        <div className="flex w-full flex-wrap items-center gap-3 border-t border-misty pt-2">
+          <span className="text-sm">Contract dates invite only you, the team and the client.{done ? ` ${done}` : ""}</span>
+          <button type="button" className="btn ml-auto" disabled={pending} onClick={() => start(async () => { setError(""); const r = await refreshCalendar(); if (!r.ok) setError(r.error); else setDone(`Updated ${r.data!.count} active contract${r.data!.count === 1 ? "" : "s"}.`); })}>Refresh calendar invites</button>
+        </div>
+      )}
       {connected && (
         <div className="flex w-full flex-wrap items-center gap-3 border-t border-misty pt-2">
           <span className="text-sm">

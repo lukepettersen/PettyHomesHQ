@@ -112,8 +112,8 @@ export function syncAppointment(id: string) {
 
 /**
  * Contract dates on the calendar while the contract is active: inspection appointment, inspection and
- * Written Statement deadlines, Close Date HOLD. Everyone on the contract is invited: the team, the
- * client's emails and every email in the contract's people sections.
+ * Written Statement deadlines, Close Date HOLD. Only the team and the client are invited, never partners
+ * (lenders, title, the other agent): owner decision 2026-10-14.
  */
 export function syncContract(paId: string) {
   return safely("contract sync", async () => {
@@ -128,7 +128,6 @@ export function syncContract(paId: string) {
       const emails = [
         ...(await team()).map((t) => ({ email: t.email, name: t.name })),
         ...pa.file.person.emails.map((e) => ({ email: e.address, name: pa.file.person.name })),
-        ...Object.values(answers).filter((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())).map((v) => ({ email: v.trim(), name: v.trim() })),
       ];
       for (const a of contractAppointments(pa.file.person.name, { address: pa.address, inspAppt: answers.inspAppt, inspection: d(pa.inspection), writtenStatement: pa.writtenStatementNA ? null : d(pa.writtenStatement), closing: d(pa.closing) })) {
         wanted.set(contractKey(paId, a.title), apptEvent(a, emails, `${pa.address} · from the purchase agreement in Petty Homes HQ.`));

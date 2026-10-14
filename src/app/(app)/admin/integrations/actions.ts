@@ -6,7 +6,7 @@ import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { isConnected } from "@/server/integrations";
-import { disconnect } from "@/server/google";
+import { calendarConnection, disconnect, syncContract } from "@/server/google";
 
 /** Admin → Integrations → Texting on/off: pause or resume sending. */
 export async function setTexting(on: boolean) {
@@ -25,5 +25,16 @@ export async function disconnectCalendar() {
     await disconnect();
     await logActivity(user.id, "update", "integration", "google-calendar", "Disconnected Google Calendar");
     revalidatePath("/admin/integrations");
+  });
+}
+
+/** Admin → Integrations → Refresh calendar invites: re-saves every active contract's events (dates and who is invited). */
+export async function refreshCalendar() {
+  return guarded("manageUsers", async (user) => {
+    if (!(await calendarConnection())) throw new UserError("Google Calendar isn't connected.");
+    const active = await db.purchaseAgreement.findMany({ where: { state: "active", deletedAt: null }, select: { id: true } });
+    for (const pa of active) await syncContract(pa.id);
+    await logActivity(user.id, "update", "integration", "google-calendar", `Refreshed calendar invites for ${active.length} active contracts`);
+    return { count: active.length };
   });
 }
