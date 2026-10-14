@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { ListRow, TaskRow, TeamMember } from "@/server/tasks";
-import { PRIORITIES, REPEATS, type Subtask } from "@/lib/tasks";
+import { REPEATS, type Subtask } from "@/lib/tasks";
 import { deleteTask, updateTask } from "./actions";
 import { CheckButton, PersonLink } from "./parts";
 import { DraftModal } from "./DraftModal";
@@ -30,7 +30,6 @@ export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSa
     setSeen(incoming);
     if (JSON.stringify(d) === JSON.stringify(orig)) { setOrig(draftOf(task)); setD(draftOf(task)); }
   }
-  const [newSub, setNewSub] = useState("");
   const [confirmDel, setConfirmDel] = useState(false);
   const [drafting, setDrafting] = useState(false);
   const canDraft = !task.virtual && (task.kind === "email" || task.kind === "text") && !!task.personId;
@@ -57,7 +56,7 @@ export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSa
       onDirty(false); onDeleted(); notify("Task deleted. An Admin can restore it from Trash for 30 days.");
     });
   };
-  const addSub = () => { const v = newSub.trim(); if (!v) return; set({ subtasks: [...d.subtasks, { title: v, done: false }] }); setNewSub(""); };
+  const [showNotes, setShowNotes] = useState(false);
 
   const field = "w-full rounded-md border border-misty bg-paper px-2 py-1 text-sm";
   return (
@@ -103,10 +102,6 @@ export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSa
           <option value="">None (sorted automatically)</option>
           {userLists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
         </select>
-        <label htmlFor="d-p" className="text-xs font-semibold muted">Priority</label>
-        <select id="d-p" className={field} value={d.priority} onChange={(e) => set({ priority: Number(e.target.value) })}>
-          {PRIORITIES.map((p, i) => <option key={p} value={i}>{p}</option>)}
-        </select>
         <label htmlFor="d-who" className="text-xs font-semibold muted">Assignee</label>
         <select id="d-who" className={field} value={d.assigneeId} onChange={(e) => set({ assigneeId: e.target.value })}>
           <option value="">Nobody</option>
@@ -116,9 +111,9 @@ export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSa
         <span>{task.personId && task.personName ? <PersonLink id={task.personId} name={task.personName} /> : <span className="muted">Nothing (general task)</span>}</span>
       </div>
 
+      {d.subtasks.length > 0 && (
       <div className="flex flex-col gap-1.5 px-3.5 py-3">
         <h3 className="text-xs font-semibold muted">Subtasks</h3>
-        {d.subtasks.length === 0 && <span className="text-[12.5px] muted">None yet</span>}
         {d.subtasks.map((s, i) => (
           <div key={i} className="flex items-center gap-2 text-sm">
             <label className="flex min-w-0 flex-1 items-center gap-2">
@@ -128,15 +123,16 @@ export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSa
             <button type="button" aria-label={`Remove subtask ${s.title}`} className="px-1 muted hover:text-bad" onClick={() => set({ subtasks: d.subtasks.filter((_, j) => j !== i) })}>×</button>
           </div>
         ))}
-        <div className="flex gap-1.5">
-          <input aria-label="New subtask" placeholder="Add a subtask" className={field} value={newSub} onChange={(e) => setNewSub(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSub(); } }} />
-          <button type="button" className="btn" onClick={addSub}>Add</button>
-        </div>
       </div>
+      )}
 
       <div className="flex flex-col gap-1.5 px-3.5 py-3">
-        <label htmlFor="d-notes" className="text-xs font-semibold muted">Notes</label>
-        <textarea id="d-notes" placeholder="Add notes" className={`${field} min-h-[70px] resize-y`} value={d.notes} onChange={(e) => set({ notes: e.target.value })} />
+        {showNotes || d.notes ? (
+          <>
+            <label htmlFor="d-notes" className="text-xs font-semibold muted">Notes</label>
+            <textarea id="d-notes" autoFocus={showNotes && !d.notes} placeholder="e.g. gate code, call after 5" className={`${field} min-h-[70px] resize-y`} value={d.notes} onChange={(e) => set({ notes: e.target.value })} />
+          </>
+        ) : <button type="button" className="self-start text-sm font-semibold text-accent hover:underline" onClick={() => setShowNotes(true)}>+ Add notes</button>}
       </div>
 
       {error && <p role="alert" className="px-3.5 text-sm text-bad">{error}</p>}

@@ -138,8 +138,8 @@ Principles:
   last contact; search box.
 - Bulk actions on selected rows: Add tag, Change stage, Set follow-up, Assign, Export,
   Delete.
-- **Add person:** first/last, phone, email, optional second person, stage, source, and an
-  optional **Phone call booked** date and time (books the call, §10).
+- **Add person:** first/last, phone, email, optional second person, stage, source. Calls are
+  booked afterwards from the contact page (Appointments → + Book), owner decision 2026-10-14.
 
 ### 6.3 Contact page (3 columns)
 - **Back link** returns to where you came from (People, Tasks, Messages or Pipeline) and that
@@ -322,11 +322,12 @@ Principles:
 - Tasks sort themselves: linked to a client → Clients; repeating → Recurring; birthday or
   homeiversary → Important dates; `#list` → that list; anything else → Misc.
 - **Quick add** with natural language: "call lender re Ortiz Fri 9am", "rent check every
-  month", `#list`, `!high`, `@alyssa`, today/tomorrow/weekday/next week.
+  month", `#list`, `@alyssa`, today/tomorrow/weekday/next week.
 - Assignee filter: Everyone / Me / each team member.
 - Task details: title, due date (locked for steps timed from a contract date), time (12-hour, 15-minute steps; the Create task pop-up has the same picker), repeat,
-  list, priority, assignee, linked person, checklist source and timing, subtasks, notes,
-  delete. Save changes / Cancel.
+  list, assignee, linked person, checklist source and timing, notes (behind "+ Add notes"
+  until used), delete. Save changes / Cancel. No priority or subtasks (owner decision
+  2026-10-14; subtasks already on a task still show so nothing is lost).
 - Deleting a task (two-step) moves it to Trash; an Admin can restore it within 30 days.
   Checking off a repeating task creates the next one; checked-off tasks stay visible (struck
   through) until you switch lists, so a mis-click can be undone.

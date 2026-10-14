@@ -3,10 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { createPerson } from "./actions";
-import { bookAppointment } from "./apptActions";
-import { addMinutes, defaultTitle } from "@/lib/appointments";
-import { TIMES } from "@/components/TimeSelect";
-import { formatTime as fmtTime } from "@/lib/tasks";
 import type { Options } from "@/server/people";
 import { Modal } from "@/components/Modal";
 
@@ -28,13 +24,6 @@ export function AddPersonButton({ options }: { options: Options }) {
         stageId: g("stageId"), sourceId: g("sourceId"),
       });
       if (!res.ok) { setError(res.error); return; }
-      // Optional "Phone call booked": books the call, which starts its templates (SPEC.md §6.2, §10).
-      if (g("callDate")) {
-        const name = res.data!.name, t = g("callTime") || null;
-        const r = await bookAppointment({ personId: res.data!.id, type: "call", title: defaultTitle(name, "call"), date: g("callDate"), start: t, end: t ? addMinutes(t, 30) : null,
-          location: g("phone"), invitees: [name.split("&")[0].trim(), ...options.team.map((u) => u.name)] });
-        if (!r.ok) setError(`Added, but the call wasn't booked: ${r.error}`);
-      }
       setOpen(false); setTwo(false);
       router.push(`/people/${res.data!.id}`);
     });
@@ -45,7 +34,7 @@ export function AddPersonButton({ options }: { options: Options }) {
       <button type="button" className="btn btn-primary whitespace-nowrap" onClick={() => setOpen(true)}>+ Add person</button>
       {open && (
         <Modal title="Add person" onClose={() => setOpen(false)}>
-          <form action={submit} className="flex flex-col gap-3">
+          <form action={submit} autoComplete="off" className="flex flex-col gap-3">
             <div className="grid grid-cols-2 gap-2">
               <label className="label">First name<input className="input" name="first" required autoFocus /></label>
               <label className="label">Last name<input className="input" name="last" /></label>
@@ -73,11 +62,6 @@ export function AddPersonButton({ options }: { options: Options }) {
                 <select className="input" name="sourceId" defaultValue=""><option value="">—</option>{options.sources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
               </label>
             </div>
-            <fieldset className="grid grid-cols-2 gap-2">
-              <legend className="mb-1 text-xs font-semibold muted">Phone call booked (optional)</legend>
-              <label className="label">Call date<input className="input" type="date" name="callDate" /></label>
-              <label className="label">Call time<select className="input" name="callTime" defaultValue="12:00"><option value="">No time</option>{TIMES.map((t) => <option key={t} value={t}>{fmtTime(t)}</option>)}</select></label>
-            </fieldset>
             {error && <p role="alert" className="text-sm text-bad">{error}</p>}
             <div className="flex justify-end gap-2">
               <button type="button" className="btn" onClick={() => setOpen(false)}>Cancel</button>

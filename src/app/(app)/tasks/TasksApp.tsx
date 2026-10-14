@@ -307,7 +307,7 @@ export function TasksApp(p: Props) {
         {arranging && <ArrangeLists lists={p.lists} notify={setToast} onClose={(saved) => { setArranging(false); if (saved) refresh(); }} />}
         {body()}
         {view === "today" && rows.length === 0 && touches.length === 0 && empty("No tasks yet. Type one in the box above, or add one from a person's page.")}
-        <p className="text-xs muted">Quick add understands <code>today</code>, <code>tomorrow</code>, a weekday, <code>next week</code>, <code>9am</code>, <code>every month</code>, <code>#list</code>, <code>!high</code>, <code>@alyssa</code> and <code>re Name</code>. See <Link className="link" href="/people">People</Link> to add tasks for a person.</p>
+        <p className="text-xs muted">Quick add understands <code>today</code>, <code>tomorrow</code>, a weekday, <code>next week</code>, <code>9am</code>, <code>every month</code>, <code>#list</code>, <code>@alyssa</code> and <code>re Name</code>. See <Link className="link" href="/people">People</Link> to add tasks for a person.</p>
       </main>
 
       {selected && (
