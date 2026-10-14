@@ -488,8 +488,11 @@ Sections (left menu):
   their old "N Day Sphere" stage (e.g. 90 Day Sphere + Past Client tag → Past Client, every
   90 days). Other "N Day Sphere" people → Sphere with that follow-up. The import screen lists
   every FUB stage/tag/source/agent with counts so each can be matched or skipped, shows a
-  preview, and has **Undo import**. Still to decide: the 8,090 imported Industry Partners,
-  Petty Homes Admin (3).
+  preview, and has **Undo import**. FUB stage **Industry Partners** (8,090) and **Realtor** →
+  HQ stage Industry Partners with Type **Realtor**, unless their source (or a tag) says
+  otherwise: lender/mortgage → Lender, title → Title, inspector → Inspector, attorney →
+  Attorney (the matching screen shows each such source/tag so it can be set). FUB stage
+  **Petty Homes Admin** → skipped.
 
 ## 16. Build phases
 
