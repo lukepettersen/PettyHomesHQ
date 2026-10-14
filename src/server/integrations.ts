@@ -5,7 +5,7 @@ import { db } from "@/server/db";
 // whether they are set and never returns their values.
 
 export type Integration = {
-  id: "google" | "texting" | "fub" | "storage";
+  id: "google" | "texting" | "fub" | "storage" | "claude";
   name: string;
   what: string;
   vars: { name: string; help: string }[];
@@ -54,6 +54,12 @@ const DEFS: Omit<Integration, "connected" | "missing" | "detail">[] = [
       { name: "S3_SECRET_ACCESS_KEY", help: "The secret for that access key" },
     ],
     note: "Recommended: Cloudflare R2 (create a private bucket and an API token for it, then add the five variables). Step-by-step in docs/ops.md.",
+  },
+  {
+    id: "claude", name: "Ask Claude",
+    what: "The Ask Claude button: say or type what to add (tasks, notes, logged calls or texts, @mentions) and review it before it saves. What you say, plus the matching contact names, is sent to Anthropic to read; Anthropic doesn't train on it.",
+    vars: [{ name: "ANTHROPIC_API_KEY", help: "console.anthropic.com → Settings → API keys → Create key" }],
+    note: "Add a little prepaid credit at console.anthropic.com → Billing (each request costs about a cent or two).",
   },
 ];
 

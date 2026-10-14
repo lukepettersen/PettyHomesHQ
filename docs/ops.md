@@ -129,6 +129,14 @@ Uploads are limited to 25 MB and program files are refused. Downloads go through
 required) and use links that expire after 5 minutes. Deleted files sit in Trash for 30 days,
 then are removed from the bucket.
 
+### Ask Claude (talk to add tasks and notes)
+1. console.anthropic.com → sign in (or sign up with your pettyhomes.com Google account).
+2. **Billing** → add a little prepaid credit (for example $10; each request costs about a cent
+   or two). Optional: set a monthly spend limit there.
+3. **Settings → API keys → Create key** → name it `PettyHomes HQ` → copy it (shown once).
+4. Railway → HQ app → **Variables** → add `ANTHROPIC_API_KEY` = that key (never send it in chat).
+5. Admin → Integrations shows Ask Claude **Connected**; the mic button in the top bar works.
+
 ### Rotate a secret
 Create the new value (Google: Credentials → the HQ client → reset secret), update the
 Railway variable, Railway redeploys. Changing `NEXTAUTH_SECRET` signs everyone out.

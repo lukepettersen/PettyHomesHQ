@@ -65,7 +65,7 @@ Principles:
   device"** (unticked by default). Ticked: that browser stays signed in up to 400 days (the
   browser limit). Unticked: signed out 12 hours after signing in. Removing or disabling a
   user in Admin still locks them out immediately on every device.
-- Secrets (Google client, Twilio, storage, database) live only in Railway environment
+- Secrets (Google client, Twilio, storage, Anthropic, database) live only in Railway environment
   variables. Never in code, never in chat, never in the repo.
 - Every write is checked against the user's role on the server.
 - **Activity log:** who created, changed or deleted what, when (people, files, PAs, tasks,
@@ -380,6 +380,18 @@ Principles:
   "Turn on". A task that came due in the last 3 hours (computer asleep) still rings. HQ must
   be open in a browser tab, and the browser only plays sound after one click on the page.
   Moving the task to a new time rings again.
+- **Ask Claude** *(owner request 2026-10-14)*: a mic button in the top bar on every page. Say
+  (or type) what to add — "remind me to call the Ortizes Tuesday at 2", "note on Sam: they
+  want a bigger yard, @Alyssa send them listings", "log a call with Pat, left a voicemail".
+  Claude looks up the contacts by name and proposes tasks (title, contact, assignee, day,
+  time) and notes / logged calls / logged texts (with @mentions, which notify the teammate).
+  **Nothing saves until you review the cards** (edit, untick, Start over) and click Save;
+  saving uses the normal Add task / Add note rules (permissions, activity log, bell). On a
+  contact's page, "them" means that contact. If a name matches several people, Claude asks
+  instead of guessing. Talking uses the browser's speech-to-text (Chrome, Edge, Safari);
+  elsewhere type, or use the phone keyboard's mic. Off until `ANTHROPIC_API_KEY` is set in
+  Railway (Admin → Integrations); what's said and the matching contact names go to
+  Anthropic's API to be read (not used for training) and aren't logged in HQ.
 
 ## 10. Appointments
 
@@ -474,8 +486,8 @@ Sections (left menu):
   body, merge-field buttons, preview with sample details; open to "Edit text and email
   templates". Attachments come with the Files card and Gmail drafts.)*
 - **Task templates have folders** to organize the list *(owner request)*.
-- **Connections:** Tools menu; Integrations (Google Workspace, Texting/Twilio, later
-  website lead form).
+- **Connections:** Tools menu; Integrations (Google Workspace, Texting/Twilio, Follow Up
+  Boss, File storage, Ask Claude, later website lead form).
 - All Admin edits use the unsaved-changes Save / Discard bar.
 
 ## 14. Later phases (not in v1)

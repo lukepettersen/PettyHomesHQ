@@ -7,7 +7,7 @@ the source of truth for behavior. The approved screens are in `mockups/` (open
 ## Status
 
 SPEC.md approved 2026-10-13. Build in the phases in SPEC.md §16, one pull request at a time.
-Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact page cards + timeline, Admin users/roles, stages/sources/follow-up, tags); piece 2 (smart list editing, bulk actions, search, Trash, CSV export); piece 3 (Tasks page, quick add, contact Tasks card, Create task pop-up); piece 4 (@mentions + bell, Date reminders, Tools menu, custom fields, phone layout). Phase 1 is complete. Phase 2 in progress: 2.1 done (client files, statuses, Pipeline board, Admin → Client statuses); 2.2 done (purchase agreements, Admin forms editor, key dates, Under Contract, Mark closed / Fell through); 2.3 done (task templates, automations, Admin → Task templates, Admin → Integrations); 2.4 in progress: appointments done, Buyer & listing forms editable (Admin); Google Calendar done; message templates + drafts done; Files card done; next task alarms, worker (pg-boss). Texting (Messages) is on hold at the owner's request.
+Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact page cards + timeline, Admin users/roles, stages/sources/follow-up, tags); piece 2 (smart list editing, bulk actions, search, Trash, CSV export); piece 3 (Tasks page, quick add, contact Tasks card, Create task pop-up); piece 4 (@mentions + bell, Date reminders, Tools menu, custom fields, phone layout). Phase 1 is complete. Phase 2 in progress: 2.1 done (client files, statuses, Pipeline board, Admin → Client statuses); 2.2 done (purchase agreements, Admin forms editor, key dates, Under Contract, Mark closed / Fell through); 2.3 done (task templates, automations, Admin → Task templates, Admin → Integrations); 2.4 in progress: appointments done, Buyer & listing forms editable (Admin); Google Calendar done; message templates + drafts done; Files card done; task alarms done; Ask Claude done; next worker (pg-boss). Texting (Messages) is on hold at the owner's request.
 
 ## Working with the owner
 
@@ -109,6 +109,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 - Files card: `src/lib/documents.ts` (tested), `src/server/storage.ts` (S3 client, signed downloads), `src/app/api/documents/*`, Trash purge removes stored objects (`src/server/trash.ts`)
 - Industry partners: `src/lib/partners.ts` (types, section → type, fill/save; tested), `src/server/partners.ts` (`savePaPartners`), `/api/partners`, `pipeline/PartnerPicker.tsx`, `people/[id]/PartnerDeals.tsx`
 - FUB import: `src/lib/fubImport.ts` (summary, default matching from owner decisions, apply; tested), `src/server/fub.ts` (API, cached copy in AppSetting), Admin → Import from Follow Up Boss in `src/app/(app)/admin/import/`; templates + notes/calls/texts: `src/lib/fubHistory.ts` (tested), `admin/import/historyActions.ts`, `HistoryTemplates.tsx`
+- Ask Claude: `src/lib/assistant.ts` (proposal checks; tested), `src/server/assistant.ts` (Claude call with find_people / propose_task / propose_note tools; proposes only), `src/app/(app)/assistant/actions.ts`, `src/components/AskClaude.tsx` (mic, review cards, Save via createTask / addTimelineEntry)
 - `src/lib/customFields.ts` — custom field types and value cleaning
 - Owner setup and ops runbook: `docs/ops.md`
 
