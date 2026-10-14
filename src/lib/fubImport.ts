@@ -9,6 +9,7 @@ export type FubPerson = {
   address: string;
   custom: Record<string, string>; // FUB custom fields that have a value, by label ("Birthday 1", "Mailing Name"…)
   relationships?: FubRelation[]; // spouse, partner… (FUB "Relationships")
+  lastActivity?: string; // FUB's last activity date (texts, calls, emails logged in FUB)
 };
 export type FubRelation = { type: string; firstName: string; lastName: string; emails: { value: string; type: string }[]; phones: { value: string; type: string }[] };
 
@@ -91,7 +92,7 @@ export function defaultPlan(s: Summary, hq: { stages: string[]; sources: string[
 export type HqPerson = {
   fubId: number; name: string; first: string; last: string; stage: string; followUpDays: number | null; partnerType: string | null; source: string;
   tags: string[]; kids: string; emails: { address: string; label: string }[]; phones: { number: string; label: string }[]; address: string;
-  birthdays: { whose: string; date: string }[]; homeiversary: string | null; mailingName: string; referredBy: string; assignedToId: string | null;
+  birthdays: { whose: string; date: string }[]; homeiversary: string | null; lastContactAt: string | null; mailingName: string; referredBy: string; assignedToId: string | null;
 };
 
 /** "1985-04-12", "04/12/1985", "4/12/85" → "1985-04-12"; anything else → null. */
@@ -108,6 +109,12 @@ const iso = (y: number, mo: number, d: number) => (mo >= 1 && mo <= 12 && d >= 1
 /** Children's first names for the Kids line ("Mia, Leo"). */
 export function kidsOf(p: FubPerson, plan: Plan): string {
   return [...new Set((p.relationships ?? []).filter((r) => r.firstName.trim() && plan.relationships?.[r.type || "(no type)"] === "kids").map((r) => r.firstName.trim()))].join(", ");
+}
+
+/** FUB's last activity as an ISO time, if it's a real date that isn't in the future (it starts the follow-up clock). */
+export function lastActivityOf(p: FubPerson, now = Date.now()): string | null {
+  const t = Date.parse(p.lastActivity ?? "");
+  return Number.isFinite(t) && t <= now + 86400000 && t > Date.parse("2000-01-01") ? new Date(t).toISOString() : null;
 }
 
 /** The relationship (spouse/partner) merged into the contact, if any. */
@@ -144,7 +151,7 @@ export function applyPlan(p: FubPerson, plan: Plan): HqPerson | null {
     address: p.address.trim(),
     // Birthday 1 is theirs; Birthday 2 is the spouse/partner who joined the contact.
     birthdays: plan.fields.birthdays.map((l) => fubDate(c(l))).flatMap((d, i) => (d ? [{ whose: i === 0 ? first : i === 1 && theirs ? theirs : "", date: d }] : [])),
-    homeiversary: fubDate(c(plan.fields.homeiversary)), mailingName: c(plan.fields.mailingName), referredBy: c(plan.fields.referredBy),
+    homeiversary: fubDate(c(plan.fields.homeiversary)), lastContactAt: lastActivityOf(p), mailingName: c(plan.fields.mailingName), referredBy: c(plan.fields.referredBy),
     assignedToId: plan.agents[p.assignedTo] ?? null,
   };
 }

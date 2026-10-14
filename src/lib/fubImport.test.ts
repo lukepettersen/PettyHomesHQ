@@ -59,4 +59,9 @@ describe("FUB import matching (owner decisions)", () => {
     const diff = person({ firstName: "Sam", lastName: "Ortiz", relationships: [{ type: "Partner", firstName: "Lena", lastName: "Brooks", emails: [], phones: [] }] });
     expect(applyPlan(diff, defaultPlan(summarize([diff]), HQ))?.name).toBe("Sam Ortiz & Lena Brooks");
   });
+  it("uses FUB's last activity as the last contact", () => {
+    expect(applyPlan(person({ lastActivity: "2026-09-01T15:30:00Z" }), plan)?.lastContactAt).toBe("2026-09-01T15:30:00.000Z");
+    expect(applyPlan(person({ lastActivity: "" }), plan)?.lastContactAt).toBeNull();
+    expect(applyPlan(person({ lastActivity: "2999-01-01" }), plan)?.lastContactAt).toBeNull();
+  });
 });

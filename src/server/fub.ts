@@ -46,6 +46,7 @@ export async function loadFromFub(): Promise<number> {
         emails: (p.emails ?? []).map((e) => ({ value: str(e.value), type: str(e.type) })),
         phones: (p.phones ?? []).map((e) => ({ value: str(e.value), type: str(e.type) })),
         address: a ? [a.street, [a.city, [a.state, a.code].filter(Boolean).join(" ")].filter(Boolean).join(", ")].filter(Boolean).join(", ") : "",
+        lastActivity: str(p.lastActivity) || str(p.lastCommunication) || "",
         custom: Object.fromEntries(fields.map((f) => [f.label, str(p[f.name]).trim()]).filter(([, v]) => v)),
       });
     }

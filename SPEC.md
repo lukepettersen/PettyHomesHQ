@@ -508,6 +508,11 @@ Sections (left menu):
   and second email** on the FUB record are labeled with the partner's name (the button also
   fixes contacts joined before this rule; when the dates don't line up, a single unnamed
   birthday on a joined contact is taken as the partner's).
+- **Last contact** *(2026-10-14)*: FUB's last activity date becomes the person's last contact,
+  so the follow-up clock starts from their real history. **Update imported contacts** (after
+  Load again) brings these in for people already imported, along with partners, kids and
+  partner birthdays. People texted from a personal phone that FUB never saw: select them on
+  People and use the bulk action **Mark contacted** (a date, default today).
 - Contacts have a **Kids** line on the Details card (editable; also a People column). Kids
   are not separate contacts.
 - *(Original plan)* Contacts via FUB CSV export (no API needed): names, phones, emails, address, stage,

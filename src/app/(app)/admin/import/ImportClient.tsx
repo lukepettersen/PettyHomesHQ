@@ -49,7 +49,7 @@ export function ImportClient({ keySet, loadedAt, summary, plan: initial, planSav
   };
   const addPartners = () => run(async () => {
     const r = await addPartnersToImported(); if (!r.ok) throw new Error(r.error);
-    setNote(`Added a spouse/partner to ${r.data!.updated.toLocaleString()} contacts and kids to ${r.data!.kidsAdded.toLocaleString()}; named ${r.data!.birthdaysNamed.toLocaleString()} partner birthdays.${r.data!.kept ? ` ${r.data!.kept.toLocaleString()} were left as is (already a couple, or renamed in HQ).` : ""}`); router.refresh();
+    setNote(`Brought in ${r.data!.lastContacts.toLocaleString()} last contact dates. Added a spouse/partner to ${r.data!.updated.toLocaleString()} contacts and kids to ${r.data!.kidsAdded.toLocaleString()}; named ${r.data!.birthdaysNamed.toLocaleString()} partner birthdays.${r.data!.kept ? ` ${r.data!.kept.toLocaleString()} were left as is (already a couple, or renamed in HQ).` : ""}`); router.refresh();
   });
   const undo = (id: string) => {
     if (confirm !== id) { setConfirm(id); return; }
@@ -254,10 +254,10 @@ export function ImportClient({ keySet, loadedAt, summary, plan: initial, planSav
               <p className="mt-1 text-xs muted">{progress.next.toLocaleString()} of {progress.total.toLocaleString()} checked · {progress.added.toLocaleString()} added · {progress.dupes.toLocaleString()} already in HQ</p>
             </div>
           )}
-          {batches.some((b) => !b.undone) && summary.relTypes.length > 0 && (
+          {batches.some((b) => !b.undone) && (
             <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md bg-sunken px-3 py-2 text-sm">
-              <span className="flex-1">People imported before relationships came over: add their spouse/partner (name, phone and email) and their kids.</span>
-              <button type="button" className="btn" disabled={pending || dirty} onClick={addPartners}>Add spouses/partners and kids</button>
+              <span className="flex-1">Update people already imported with what&apos;s new in this copy: last contact dates (so recently contacted people aren&apos;t due), spouses/partners, kids and partner birthdays. Click Load again first.</span>
+              <button type="button" className="btn" disabled={pending || dirty} onClick={addPartners}>Update imported contacts</button>
             </div>
           )}
           {batches.length > 0 && (
