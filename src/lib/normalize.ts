@@ -8,7 +8,8 @@ export function normalizePhone(raw: string): string {
 
 export function formatPhone(raw: string): string {
   const d = normalizePhone(raw);
-  return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : raw.trim();
+  // Owner's format (2026-10-14): 952-250-4114.
+  return d.length === 10 ? `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}` : raw.trim();
 }
 
 export function normalizeEmail(raw: string): string {

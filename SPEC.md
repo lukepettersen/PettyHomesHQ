@@ -496,9 +496,12 @@ Sections (left menu):
   son, daughter…: first names go on the contact's **Kids** line, e.g. "Mia, Leo") or "Leave
   out" (parents, others). **Add spouses/partners and kids** updates people imported before
   this (names only where not changed in HQ; kids only where the Kids line is empty).
+- **Phone format** *(owner, 2026-10-14)*: every 10-digit number is saved and shown as
+  952-250-4114 (existing numbers were reformatted; digits for matching are unchanged).
 - With a spouse/partner joined: **Birthday 2** is named for the partner, and the **second phone
   and second email** on the FUB record are labeled with the partner's name (the button also
-  fixes contacts joined before this rule).
+  fixes contacts joined before this rule; when the dates don't line up, a single unnamed
+  birthday on a joined contact is taken as the partner's).
 - Contacts have a **Kids** line on the Details card (editable; also a People column). Kids
   are not separate contacts.
 - *(Original plan)* Contacts via FUB CSV export (no API needed): names, phones, emails, address, stage,

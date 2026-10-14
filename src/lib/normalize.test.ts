@@ -5,7 +5,9 @@ describe("phones and emails", () => {
   it("normalizes US numbers", () => {
     expect(normalizePhone("(612) 555-0101")).toBe("6125550101");
     expect(normalizePhone("+1 612 555 0101")).toBe("6125550101");
-    expect(formatPhone("6125550101")).toBe("(612) 555-0101");
+    expect(formatPhone("6125550101")).toBe("612-555-0101");
+    expect(formatPhone("(952) 250-4114")).toBe("952-250-4114");
+    expect(formatPhone("+1 218 481 9273")).toBe("218-481-9273");
   });
   it("lowercases emails", () => expect(normalizeEmail("  Sam@Example.COM ")).toBe("sam@example.com"));
 });

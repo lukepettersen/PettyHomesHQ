@@ -8,7 +8,7 @@ import { logActivity } from "@/server/activity";
 import { cachedFubPeople, fubKeySet, loadFromFub } from "@/server/fub";
 import { applyPlan, fubDate, kidsOf, partnerOf, summarize, type HqPerson, type Plan } from "@/lib/fubImport";
 import { isPartnerType } from "@/lib/partners";
-import { coupleName, dateFromIso, normalizeEmail, normalizePhone } from "@/lib/normalize";
+import { coupleName, dateFromIso, formatPhone, normalizeEmail, normalizePhone } from "@/lib/normalize";
 
 // Admin → Import from Follow Up Boss (SPEC.md §15). Admins only. Nothing in Follow Up Boss is changed.
 
@@ -119,7 +119,7 @@ export async function runImport(input: { batchId: string | null; offset: number 
           stageId, sourceId, followUpDays: h.followUpDays, partnerType: h.partnerType && isPartnerType(h.partnerType) ? h.partnerType : null,
           assignedToId: h.assignedToId, createdById: user.id, fubId: h.fubId, importBatchId: batch.id,
           emails: { create: emails.map(([n, e], i) => ({ address: e.address, normalized: n, label: e.label, position: i })) },
-          phones: { create: phones.map(([n, x], i) => ({ number: x.number, normalized: n, label: x.label || "Mobile", position: i })) },
+          phones: { create: phones.map(([n, x], i) => ({ number: formatPhone(x.number), normalized: n, label: x.label || "Mobile", position: i })) },
           tags: { create: tagIds.map((tagId) => ({ tagId })) },
           dates: { create: [...h.birthdays.map((b) => ({ kind: "birthday", whose: b.whose, date: dateFromIso(b.date) })), ...(h.homeiversary ? [{ kind: "homeiversary", date: dateFromIso(h.homeiversary) }] : [])] },
         },
@@ -172,11 +172,15 @@ export async function addPartnersToImported() {
       const { p, rel, kids } = found.find((x) => x.p.id === person.fubId)!;
       if (kids && !person.kids) { await db.person.update({ where: { id: person.id }, data: { kids } }); kidsAdded++; }
       if (!rel) continue;
-      // Birthday 2 belongs to the spouse/partner: name it where it's still unnamed.
-      const second = plan.fields.birthdays[1] ? fubDate(p.custom?.[plan.fields.birthdays[1]] ?? "") : null;
-      if (second) {
-        const r = await db.importantDate.updateMany({ where: { personId: person.id, kind: "birthday", whose: "", date: dateFromIso(second) }, data: { whose: rel.firstName.trim() } });
-        birthdaysNamed += r.count;
+      // Birthday 2 belongs to the spouse/partner: name it where it's still unnamed. By its FUB date first; otherwise,
+      // when nobody has the partner's birthday yet and exactly one birthday is unnamed, that one is theirs.
+      const partnerName = rel.firstName.trim();
+      const bdays = await db.importantDate.findMany({ where: { personId: person.id, kind: "birthday" } });
+      if (!bdays.some((b) => b.whose.toLowerCase() === partnerName.toLowerCase())) {
+        const second = plan.fields.birthdays[1] ? fubDate(p.custom?.[plan.fields.birthdays[1]] ?? "") : null;
+        const unnamed = bdays.filter((b) => !b.whose.trim());
+        const pick = (second && unnamed.find((b) => b.date.toISOString().slice(0, 10) === second)) || (unnamed.length === 1 ? unnamed[0] : null);
+        if (pick) { await db.importantDate.update({ where: { id: pick.id }, data: { whose: partnerName } }); birthdaysNamed++; }
       }
       const first = p.firstName.trim(), last = p.lastName.trim();
       const original = [first, last].filter(Boolean).join(" ");
@@ -200,7 +204,7 @@ export async function addPartnersToImported() {
         ...[...person.emails].sort((a, b) => a.position - b.position).map((e, i) => db.email.update({ where: { id: e.id }, data: { label: i === 1 ? rel.firstName.trim() : first } })),
         ...[...person.phones].sort((a, b) => a.position - b.position).map((x, i) => db.phone.update({ where: { id: x.id }, data: { label: i === 1 ? rel.firstName.trim() : first } })),
         ...emails.map((e, i) => db.email.create({ data: { personId: person.id, address: e.value.trim(), normalized: normalizeEmail(e.value), label: rel.firstName.trim(), position: person.emails.length + i } })),
-        ...phones.map((x, i) => db.phone.create({ data: { personId: person.id, number: x.value.trim(), normalized: normalizePhone(x.value), label: rel.firstName.trim(), position: person.phones.length + i } })),
+        ...phones.map((x, i) => db.phone.create({ data: { personId: person.id, number: formatPhone(x.value), normalized: normalizePhone(x.value), label: rel.firstName.trim(), position: person.phones.length + i } })),
       ]);
       updated++;
     }

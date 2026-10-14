@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "@/server/db";
 import { logActivity } from "@/server/activity";
-import { normalizeEmail, normalizePhone } from "@/lib/normalize";
+import { formatPhone, normalizeEmail, normalizePhone } from "@/lib/normalize";
 import { partnerFromAnswers, sectionPartnerType } from "@/lib/partners";
 import type { PaSection } from "@/lib/pa";
 
@@ -28,7 +28,7 @@ export async function savePaPartners(paId: string, form: PaSection[], answers: R
       data: {
         name: p.name, mailingName: p.name, company: p.company || null, partnerType: sectionPartnerType(s) ?? "other", stageId: stage?.id ?? null, createdById: userId, assignedToId: userId,
         emails: email ? { create: [{ address: p.email.trim(), normalized: email, label: "Work" }] } : undefined,
-        phones: p.phone && normalizePhone(p.phone).length >= 7 ? { create: [{ number: p.phone.trim(), normalized: normalizePhone(p.phone), label: "Work" }] } : undefined,
+        phones: p.phone && normalizePhone(p.phone).length >= 7 ? { create: [{ number: formatPhone(p.phone), normalized: normalizePhone(p.phone), label: "Work" }] } : undefined,
       },
     });
     await logActivity(userId, "create", "person", created.id, `Added ${p.name} (${s.name}) from a purchase agreement`);

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
-import { coupleName, dateFromIso, normalizeEmail, normalizePhone } from "@/lib/normalize";
+import { coupleName, dateFromIso, formatPhone, normalizeEmail, normalizePhone } from "@/lib/normalize";
 import { findMentions } from "@/lib/mentions";
 import { cleanFieldValue } from "@/lib/customFields";
 
@@ -16,7 +16,7 @@ const contactRow = z.object({ label: trimmed(40).default(""), value: trimmed(200
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date");
 
 function cleanPhones(rows: z.infer<typeof contactRow>[]) {
-  return rows.filter((r) => r.value).map((r, position) => ({ label: r.label || "Mobile", number: r.value, normalized: normalizePhone(r.value), position }));
+  return rows.filter((r) => r.value).map((r, position) => ({ label: r.label || "Mobile", number: formatPhone(r.value), normalized: normalizePhone(r.value), position }));
 }
 function cleanEmails(rows: z.infer<typeof contactRow>[]) {
   return rows.filter((r) => r.value).map((r, position) => {
