@@ -183,8 +183,8 @@ export async function deletePerson(personId: string) {
 
 // ---------- Bulk actions on selected people ----------
 const bulkSchema = z.object({
-  ids: z.array(z.string()).min(1, "Select someone first").max(5000),
-  action: z.enum(["addTag", "removeTag", "stage", "followUp", "assign"]),
+  ids: z.array(z.string()).min(1, "Select someone first").max(20000),
+  action: z.enum(["addTag", "removeTag", "stage", "followUp", "assign", "contacted"]),
   value: z.string().trim().max(80),
 });
 
@@ -200,6 +200,12 @@ export async function bulkUpdate(input: z.input<typeof bulkSchema>) {
       if (tag && v.action === "removeTag") await db.personTag.deleteMany({ where: { tagId: tag.id, personId: { in: v.ids } } });
     } else if (v.action === "stage") {
       await db.person.updateMany({ where, data: { stageId: v.value || null } });
+    } else if (v.action === "contacted") {
+      // "Mark contacted": last contact moves up to that day (never back), restarting their follow-up clock.
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(v.value)) throw new UserError("Pick a date");
+      const at = new Date(`${v.value}T17:00:00.000Z`); // midday Central
+      if (at.getTime() > Date.now() + 86400000) throw new UserError("Pick today or an earlier day.");
+      await db.person.updateMany({ where: { ...where, OR: [{ lastContactAt: null }, { lastContactAt: { lt: at } }] }, data: { lastContactAt: at } });
     } else if (v.action === "followUp") {
       await db.person.updateMany({ where, data: { followUpDays: v.value ? Number(v.value) || null : null } });
     } else {
@@ -212,7 +218,7 @@ export async function bulkUpdate(input: z.input<typeof bulkSchema>) {
 
 export async function bulkDelete(ids: string[]) {
   return guarded("deleteRecords", async (user) => {
-    const list = z.array(z.string()).min(1).max(5000).parse(ids);
+    const list = z.array(z.string()).min(1).max(20000).parse(ids);
     const r = await db.person.updateMany({ where: { id: { in: list }, deletedAt: null }, data: { deletedAt: new Date() } });
     await logActivity(user.id, "delete", "person", null, `Moved ${r.count} people to Trash`);
     revalidatePath("/people");
