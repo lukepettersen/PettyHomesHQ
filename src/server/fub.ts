@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/server/db";
-import type { FubPerson } from "@/lib/fubImport";
+import type { FubPerson, FubRelation } from "@/lib/fubImport";
 
 // Follow Up Boss API (SPEC.md §15): reads people with the key stored in Railway (FUB_API_KEY). Read-only:
 // nothing in Follow Up Boss is ever changed.
@@ -52,6 +52,26 @@ export async function loadFromFub(): Promise<number> {
     const meta = (j._metadata ?? {}) as { nextLink?: string; next?: string };
     next = meta.nextLink || (meta.next ? `people?limit=100&fields=allFields&sort=id&next=${encodeURIComponent(meta.next)}` : null);
   }
+  // Relationships (spouse, partner, children…) live separately in FUB; attach them to their person.
+  const rels = new Map<number, FubRelation[]>();
+  let rnext: string | null = "peopleRelationships?limit=100";
+  for (let page = 0; rnext && page < 1000; page++) {
+    const j = await fubGet(rnext);
+    const list = (Object.entries(j).find(([k, v]) => k !== "_metadata" && Array.isArray(v))?.[1] ?? []) as (Record<string, unknown> & { personId?: number; emails?: { value?: string; type?: string }[]; phones?: { value?: string; type?: string }[] })[];
+    for (const r of list) {
+      if (!r.personId) continue;
+      const rel: FubRelation = {
+        type: str(r.type), firstName: str(r.firstName), lastName: str(r.lastName),
+        emails: (r.emails ?? []).map((e) => ({ value: str(e.value), type: str(e.type) })), phones: (r.phones ?? []).map((e) => ({ value: str(e.value), type: str(e.type) })),
+      };
+      if (!rel.firstName && str(r.name)) { const [f, ...l] = str(r.name).trim().split(/\s+/); rel.firstName = f; rel.lastName = l.join(" "); }
+      rels.set(r.personId, [...(rels.get(r.personId) ?? []), rel]);
+    }
+    const meta = (j._metadata ?? {}) as { nextLink?: string; next?: string };
+    rnext = meta.nextLink || (meta.next ? `peopleRelationships?limit=100&next=${encodeURIComponent(meta.next)}` : null);
+  }
+  for (const p of people) { const r = rels.get(p.id); if (r) p.relationships = r; }
+
   await db.appSetting.upsert({ where: { key: "fub.people" }, update: { value: people }, create: { key: "fub.people", value: people } });
   await db.appSetting.upsert({ where: { key: "fub.loadedAt" }, update: { value: new Date().toISOString() }, create: { key: "fub.loadedAt", value: new Date().toISOString() } });
   return people.length;

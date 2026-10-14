@@ -42,4 +42,15 @@ describe("FUB import matching (owner decisions)", () => {
     expect(hq(1)).toMatchObject({ mailingName: "Sam & Lena Ortiz", homeiversary: "2020-08-15", referredBy: "Pat", birthdays: [{ whose: "Sam", date: "1985-04-12" }, { whose: "", date: "1987-06-01" }] });
     expect(applyPlan(person({ custom: { "Birthday 2": "1990-01-02" } }), plan)?.birthdays).toEqual([{ whose: "", date: "1990-01-02" }]);
   });
+  it("merges a spouse/partner into the contact, not children", () => {
+    const fam = person({ id: 20, firstName: "Sam", lastName: "Ortiz", stage: "Lead", emails: [{ value: "sam@x.com", type: "home" }], relationships: [
+      { type: "Child", firstName: "Mia", lastName: "Ortiz", emails: [], phones: [] },
+      { type: "Spouse", firstName: "Lena", lastName: "Ortiz", emails: [{ value: "lena@x.com", type: "" }], phones: [{ value: "612-555-0199", type: "mobile" }] },
+    ] });
+    const pl = defaultPlan(summarize([fam]), HQ);
+    expect(pl.relationships).toEqual({ Child: "skip", Spouse: "merge" });
+    expect(applyPlan(fam, pl)).toMatchObject({ name: "Sam & Lena Ortiz", emails: [{ address: "sam@x.com", label: "Sam" }, { address: "lena@x.com", label: "Lena" }], phones: [{ number: "612-555-0199", label: "Lena" }] });
+    const diff = person({ firstName: "Sam", lastName: "Ortiz", relationships: [{ type: "Partner", firstName: "Lena", lastName: "Brooks", emails: [], phones: [] }] });
+    expect(applyPlan(diff, defaultPlan(summarize([diff]), HQ))?.name).toBe("Sam Ortiz & Lena Brooks");
+  });
 });

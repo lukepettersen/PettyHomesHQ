@@ -6,9 +6,9 @@ import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { cachedFubPeople, fubKeySet, loadFromFub } from "@/server/fub";
-import { applyPlan, summarize, type HqPerson, type Plan } from "@/lib/fubImport";
+import { applyPlan, partnerOf, summarize, type HqPerson, type Plan } from "@/lib/fubImport";
 import { isPartnerType } from "@/lib/partners";
-import { dateFromIso, normalizeEmail, normalizePhone } from "@/lib/normalize";
+import { coupleName, dateFromIso, normalizeEmail, normalizePhone } from "@/lib/normalize";
 
 // Admin → Import from Follow Up Boss (SPEC.md §15). Admins only. Nothing in Follow Up Boss is changed.
 
@@ -25,6 +25,7 @@ export async function loadFub() {
 const label = z.string().max(200);
 const planSchema = z.object({
   fields: z.object({ mailingName: label, homeiversary: label, referredBy: label, birthdays: z.array(label).max(12) }),
+  relationships: z.record(label, z.enum(["merge", "skip"])).optional(),
   stages: z.record(z.string().max(200), z.object({ action: z.enum(["import", "skip"]), stage: z.string().trim().max(80), followUp: z.number().int().min(1).max(3650).nullable(), type: z.string().max(20).nullable() })),
   tags: z.record(z.string().max(200), z.string().regex(/^(keep|skip|type:\w+)$/)),
   sources: z.record(z.string().max(200), z.object({ source: z.string().trim().max(80), type: z.string().max(20).nullable() })),
@@ -153,4 +154,40 @@ export async function undoImport(batchId: string) {
 
 export async function fubSummary() {
   return guarded("manageUsers", async () => summarize((await cachedFubPeople()).people));
+}
+
+/**
+ * People imported before relationships came over: add their spouse/partner (name "Sam & Lena Ortiz", and the
+ * partner's phone and email). A contact whose name was changed in HQ since the import is left as is.
+ */
+export async function addPartnersToImported() {
+  return guarded("manageUsers", async (user) => {
+    const plan = await savedPlan();
+    const { people } = await cachedFubPeople();
+    const withPartner = people.map((p) => ({ p, rel: partnerOf(p, plan) })).filter((x) => x.rel);
+    const hq = await db.person.findMany({ where: { fubId: { in: withPartner.map((x) => x.p.id) }, deletedAt: null }, include: { emails: true, phones: true } });
+    let updated = 0, kept = 0;
+    for (const person of hq) {
+      const { p, rel } = withPartner.find((x) => x.p.id === person.fubId)!;
+      const first = p.firstName.trim(), last = p.lastName.trim();
+      const original = [first, last].filter(Boolean).join(" ");
+      if (person.name !== original) { kept++; continue; } // already a couple, or renamed in HQ
+      const name = coupleName({ first, last }, { first: rel!.firstName.trim(), last: rel!.lastName.trim() });
+      const haveE = new Set(person.emails.map((e) => e.normalized)), haveP = new Set(person.phones.map((x) => x.normalized));
+      const emails = rel!.emails.filter((e) => e.value.includes("@") && !haveE.has(normalizeEmail(e.value)));
+      const phones = rel!.phones.filter((x) => normalizePhone(x.value).length >= 7 && !haveP.has(normalizePhone(x.value)));
+      await db.$transaction([
+        db.person.update({ where: { id: person.id }, data: { name, ...(!person.mailingName || person.mailingName === original ? { mailingName: name } : {}) } }),
+        // The existing phone/email belongs to the first person; label them so it's clear whose is whose.
+        db.email.updateMany({ where: { personId: person.id, label: { in: ["", "home", "Home", "work", "Work", "other", "Other"] } }, data: { label: first } }),
+        db.phone.updateMany({ where: { personId: person.id, label: { in: ["Mobile", "mobile", "home", "Home", "work", "Work", "other", "Other"] } }, data: { label: first } }),
+        ...emails.map((e, i) => db.email.create({ data: { personId: person.id, address: e.value.trim(), normalized: normalizeEmail(e.value), label: rel!.firstName.trim(), position: person.emails.length + i } })),
+        ...phones.map((x, i) => db.phone.create({ data: { personId: person.id, number: x.value.trim(), normalized: normalizePhone(x.value), label: rel!.firstName.trim(), position: person.phones.length + i } })),
+      ]);
+      updated++;
+    }
+    await logActivity(user.id, "update", "import", "fub", `Added spouses/partners from Follow Up Boss to ${updated} imported contacts`);
+    revalidatePath("/people"); revalidatePath("/admin/import");
+    return { updated, kept, found: withPartner.length };
+  });
 }

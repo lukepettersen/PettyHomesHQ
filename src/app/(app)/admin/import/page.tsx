@@ -20,14 +20,14 @@ export default async function Page() {
   // A saved matching wins; anything new in FUB since then gets the suggestion.
   const s = (saved?.value ?? null) as Plan | null;
   const plan: Plan = s ? {
-    fields: s.fields ?? suggested.fields,
+    fields: s.fields ?? suggested.fields, relationships: { ...suggested.relationships, ...s.relationships },
     stages: { ...suggested.stages, ...s.stages }, tags: { ...suggested.tags, ...s.tags }, sources: { ...suggested.sources, ...s.sources }, agents: { ...suggested.agents, ...s.agents },
   } : suggested;
   return (
     <>
       <h1 className="text-2xl font-extrabold">Import from Follow Up Boss</h1>
       <p className="mb-4 mt-1 text-sm muted">Copies your contacts from Follow Up Boss into HQ. Nothing in Follow Up Boss is changed, people already in HQ are never added twice, and every import can be undone.</p>
-      <ImportClient keySet={fubKeySet()} loadedAt={loadedAt} summary={summary} plan={plan} planSaved={!!s} hq={hq}
+      <ImportClient key={loadedAt ?? "none"} keySet={fubKeySet()} loadedAt={loadedAt} summary={summary} plan={plan} planSaved={!!s} hq={hq}
         batches={batches.map((b) => ({ id: b.id, at: b.createdAt.toISOString(), added: b.added, duplicates: b.duplicates, undone: !!b.undoneAt }))} />
     </>
   );

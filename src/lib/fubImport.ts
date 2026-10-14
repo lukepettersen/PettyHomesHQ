@@ -1,5 +1,6 @@
 // Bringing contacts over from Follow Up Boss (SPEC.md §15). Pure, unit tested in fubImport.test.ts:
 // what's in the FUB data (summary), the suggested matching (defaultPlan), and one FUB person → HQ (applyPlan).
+import { coupleName } from "./normalize";
 
 /** A FUB person, as pulled from the FUB API and stored for the import. */
 export type FubPerson = {
@@ -7,7 +8,9 @@ export type FubPerson = {
   emails: { value: string; type: string }[]; phones: { value: string; type: string }[];
   address: string;
   custom: Record<string, string>; // FUB custom fields that have a value, by label ("Birthday 1", "Mailing Name"…)
+  relationships?: FubRelation[]; // spouse, partner… (FUB "Relationships")
 };
+export type FubRelation = { type: string; firstName: string; lastName: string; emails: { value: string; type: string }[]; phones: { value: string; type: string }[] };
 
 export type StageRule = { action: "import" | "skip"; stage: string; followUp: number | null; type: string | null };
 export type TagRule = "keep" | "skip" | `type:${string}`;
@@ -16,11 +19,12 @@ export type SourceRule = { source: string; type: string | null }; // source "" =
 export type FieldMap = { mailingName: string; homeiversary: string; referredBy: string; birthdays: string[] };
 export type Plan = {
   fields: FieldMap;
+  relationships?: Record<string, "merge" | "skip">; // FUB relationship type → merged into the contact (couple) or not
   stages: Record<string, StageRule>; tags: Record<string, TagRule>; sources: Record<string, SourceRule>;
   agents: Record<string, string | null>; // FUB agent name → HQ user id
 };
 
-export type Summary = { total: number; stages: [string, number][]; tags: [string, number][]; sources: [string, number][]; agents: [string, number][]; custom: [string, number][] };
+export type Summary = { total: number; stages: [string, number][]; tags: [string, number][]; sources: [string, number][]; agents: [string, number][]; custom: [string, number][]; relTypes: [string, number][] };
 const count = (values: string[]) => {
   const m = new Map<string, number>();
   for (const v of values) m.set(v, (m.get(v) ?? 0) + 1);
@@ -31,6 +35,7 @@ export function summarize(people: FubPerson[]): Summary {
     total: people.length, stages: count(people.map((p) => p.stage || "(no stage)")), tags: count(people.flatMap((p) => p.tags)),
     sources: count(people.map((p) => p.source).filter(Boolean)), agents: count(people.map((p) => p.assignedTo).filter(Boolean)),
     custom: count(people.flatMap((p) => Object.keys(p.custom ?? {}))),
+    relTypes: count(people.flatMap((p) => (p.relationships ?? []).map((r) => r.type || "(no type)"))),
   };
 }
 
@@ -76,7 +81,10 @@ export function defaultPlan(s: Summary, hq: { stages: string[]; sources: string[
     mailingName: find(/mailing\s*name/i), homeiversary: find(/homeiversary|home\s*anniversary/i), referredBy: find(/referred\s*by/i),
     birthdays: labels.filter((l) => /birthday|bday/i.test(l) && !/no bday/i.test(l)).sort((a, b) => birthdayNo(a) - birthdayNo(b)),
   };
-  return { fields, stages, tags, sources, agents };
+  // Spouses and partners join the contact ("Sam & Lena Ortiz"); children, parents etc. don't by default.
+  const relationships: Record<string, "merge" | "skip"> = {};
+  for (const [t] of s.relTypes) relationships[t] = /spouse|partner|husband|wife|fianc|significant|co.?buyer|co.?owner|co.?seller|boyfriend|girlfriend|^\(no type\)$/i.test(t) ? "merge" : "skip";
+  return { fields, relationships, stages, tags, sources, agents };
 }
 
 export type HqPerson = {
@@ -96,6 +104,13 @@ export function fubDate(v: string): string | null {
 }
 const iso = (y: number, mo: number, d: number) => (mo >= 1 && mo <= 12 && d >= 1 && d <= 31 && y > 1900 ? `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}` : null);
 
+/** The relationship (spouse/partner) merged into the contact, if any. */
+export function partnerOf(p: FubPerson, plan: Plan): FubRelation | null {
+  return (p.relationships ?? []).find((r) => r.firstName.trim() && (plan.relationships?.[r.type || "(no type)"] ?? "skip") === "merge") ?? null;
+}
+const contactsOf = (list: { value: string; type: string }[], label: string | null, isEmail: boolean) =>
+  list.filter((x) => (isEmail ? x.value?.includes("@") : x.value?.replace(/\D/g, "").length >= 7)).map((x) => ({ value: x.value.trim(), label: label ?? x.type ?? "" }));
+
 /** One FUB person → what HQ will save, or null when their stage is skipped. */
 export function applyPlan(p: FubPerson, plan: Plan): HqPerson | null {
   const rule = plan.stages[p.stage || "(no stage)"];
@@ -108,13 +123,16 @@ export function applyPlan(p: FubPerson, plan: Plan): HqPerson | null {
   const tagType = tagRules.map(([, r]) => (r.startsWith("type:") ? r.slice(5) : null)).find((x) => x && x !== "realtor") ?? null;
   const partnerType = rule.type ? (src?.type && src.type !== "realtor" ? src.type : tagType ?? rule.type) : null;
   const first = p.firstName.trim(), last = p.lastName.trim();
-  const name = [first, last].filter(Boolean).join(" ") || p.emails[0]?.value || "Unnamed";
+  const rel = partnerOf(p, plan);
+  // With a spouse/partner: "Sam & Lena Ortiz" (or "Sam Ortiz & Lena Brooks"), each person's phone/email labeled with their name.
+  const name = (rel ? coupleName({ first, last }, { first: rel.firstName.trim(), last: rel.lastName.trim() }) : [first, last].filter(Boolean).join(" ")) || p.emails[0]?.value || "Unnamed";
+  const mine = rel ? first || null : null, theirs = rel ? rel.firstName.trim() : null;
   const c = (label: string) => (label ? (p.custom?.[label] ?? "").trim() : "");
   return {
     fubId: p.id, name, first, last, stage: pastClient ? "Past Client" : rule.stage, followUpDays: rule.followUp, partnerType,
     source: src?.source ?? "", tags: tagRules.filter(([, r]) => r === "keep").map(([t]) => t),
-    emails: p.emails.filter((e) => e.value?.includes("@")).map((e) => ({ address: e.value.trim(), label: e.type || "" })),
-    phones: p.phones.filter((x) => x.value?.replace(/\D/g, "").length >= 7).map((x) => ({ number: x.value.trim(), label: x.type || "Mobile" })),
+    emails: [...contactsOf(p.emails, mine, true), ...(rel ? contactsOf(rel.emails, theirs, true) : [])].map((e) => ({ address: e.value, label: e.label })),
+    phones: [...contactsOf(p.phones, mine, false), ...(rel ? contactsOf(rel.phones, theirs, false) : [])].map((x) => ({ number: x.value, label: x.label || "Mobile" })),
     address: p.address.trim(),
     birthdays: plan.fields.birthdays.map((l) => fubDate(c(l))).flatMap((d, i) => (d ? [{ whose: i === 0 ? first : "", date: d }] : [])),
     homeiversary: fubDate(c(plan.fields.homeiversary)), mailingName: c(plan.fields.mailingName), referredBy: c(plan.fields.referredBy),

@@ -489,6 +489,12 @@ Sections (left menu):
   and sample people exactly as saved, incl. address and birthdays), **Import** (in groups with
   a progress bar; anyone already in HQ by FUB id, email or phone is left alone) and **Undo
   import** (removes the people that run added). Addresses come from the FUB address.
+- **Relationships** *(2026-10-14)*: FUB relationships are pulled too. Each relationship type
+  is matched to "Join their contact" (default for spouse/partner/husband/wife/co-buyer…:
+  name becomes "Sam & Lena Ortiz" or "Sam Ortiz & Lena Brooks", the partner's phone and email
+  are added and labeled with each person's first name) or "Leave out" (default for children,
+  parents, others). **Add spouses/partners** updates people imported before this, unless
+  their name was changed in HQ.
 - *(Original plan)* Contacts via FUB CSV export (no API needed): names, phones, emails, address, stage,
   source, tags, birthdays (Birthday 1–7 → Important Dates), homeiversary, mailing name,
   referred by.

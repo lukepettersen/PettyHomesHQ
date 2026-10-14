@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { PARTNER_TYPES, partnerLabel } from "@/lib/partners";
 import type { HqPerson, Plan, Summary, TagRule } from "@/lib/fubImport";
-import { loadFub, previewImport, runImport, savePlan, undoImport } from "./actions";
+import { addPartnersToImported, loadFub, previewImport, runImport, savePlan, undoImport } from "./actions";
 
 type Hq = { stages: string[]; sources: string[]; users: { id: string; name: string }[] };
 type Batch = { id: string; at: string; added: number; duplicates: number; undone: boolean };
@@ -47,6 +47,10 @@ export function ImportClient({ keySet, loadedAt, summary, plan: initial, planSav
       setPreview(null); router.refresh();
     });
   };
+  const addPartners = () => run(async () => {
+    const r = await addPartnersToImported(); if (!r.ok) throw new Error(r.error);
+    setNote(`Added a spouse/partner to ${r.data!.updated.toLocaleString()} contacts.${r.data!.kept ? ` ${r.data!.kept.toLocaleString()} were left as is (already a couple, or renamed in HQ).` : ""}`); router.refresh();
+  });
   const undo = (id: string) => {
     if (confirm !== id) { setConfirm(id); return; }
     setConfirm(null);
@@ -108,6 +112,22 @@ export function ImportClient({ keySet, loadedAt, summary, plan: initial, planSav
               </div>
             );
           })()}
+
+          <h3 className="mt-4 text-sm font-bold">Relationships (spouse, partner…)</h3>
+          {summary.relTypes.length === 0 ? (
+            <p className="text-sm muted">No relationships in the loaded copy.{loadedAt ? " If your contacts have spouses or partners in Follow Up Boss, click Load again above to bring them in." : ""}</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
+              {summary.relTypes.map(([t, n]) => (
+                <label key={t} className="flex items-center gap-2 border-t border-misty py-1.5 text-sm">
+                  <span className="flex-1"><b>{t}</b> <span className="muted">{n.toLocaleString()}</span></span>
+                  <select aria-label={`Relationship ${t}`} className="input w-56" value={plan.relationships?.[t] ?? "skip"} onChange={(e) => edit({ ...plan, relationships: { ...plan.relationships, [t]: e.target.value as "merge" | "skip" } })}>
+                    <option value="merge">Join their contact (Sam &amp; Lena)</option><option value="skip">Leave out</option>
+                  </select>
+                </label>
+              ))}
+            </div>
+          )}
 
           <h3 className="mt-4 text-sm font-bold">Stages</h3>
           <div className="overflow-x-auto"><table className="w-full text-sm">
@@ -232,6 +252,12 @@ export function ImportClient({ keySet, loadedAt, summary, plan: initial, planSav
             <div className="mt-3">
               <div className="h-2 overflow-hidden rounded bg-sunken"><div className="h-full bg-accent" style={{ width: `${Math.round((progress.next / Math.max(1, progress.total)) * 100)}%` }} /></div>
               <p className="mt-1 text-xs muted">{progress.next.toLocaleString()} of {progress.total.toLocaleString()} checked · {progress.added.toLocaleString()} added · {progress.dupes.toLocaleString()} already in HQ</p>
+            </div>
+          )}
+          {batches.some((b) => !b.undone) && summary.relTypes.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md bg-sunken px-3 py-2 text-sm">
+              <span className="flex-1">People imported before relationships came over: add their spouse/partner to the contact (name, phone and email).</span>
+              <button type="button" className="btn" disabled={pending || dirty} onClick={addPartners}>Add spouses/partners</button>
             </div>
           )}
           {batches.length > 0 && (
