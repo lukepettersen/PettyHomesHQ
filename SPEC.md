@@ -133,6 +133,14 @@ Principles:
   - Smart lists: filter builder with fields Stage, Tag, Source, Deal status, Follow-up,
     Last contact (more/less than N days), Due for a touch, Assigned to, **Has an upcoming
     task (yes/no)** *(new)*.
+  - *(2026-10-14)* More specific filters: Stage / Type / Source / Assigned to (incl. Nobody)
+    "is any of / is none of" (several at once); Tags "has any of / has all of / has none
+    of"; **Last call, Last text, Last email** and Last contact (any) more/less than N days
+    or never; Added to HQ; Birthday / Homeiversary in the next N days; Has an email / phone.
+  - **Columns** *(2026-10-14)*: each smart list (and All people) picks and orders its columns
+    from Stage, Type, Company, Phone, Email, Last contact/call/text/email, Follow up, Tags,
+    Source, Assigned to, Address, Mailing name, Next birthday, Homeiversary, Added. Click a
+    column header to sort.
   - Change filters, then Save changes / Save as new list / Reset.
   - Lists and collections: create, rename, duplicate, delete, **drag to reorder or move
     between collections**, plus a ⋯ menu (rename, ↑ ↓, Move to…, Duplicate, Delete).

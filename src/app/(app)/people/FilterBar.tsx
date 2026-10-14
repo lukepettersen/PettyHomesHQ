@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { describeFilter, FIELD_LABELS, FIELD_OPS, type Filter, type FilterField } from "@/lib/filters";
+import { DAY_FIELDS, describeFilter, FIELD_LABELS, FIELD_OPS, MULTI_OPS, type Filter, type FilterField } from "@/lib/filters";
 import { Modal } from "@/components/Modal";
 import { PARTNER_TYPES } from "@/lib/partners";
 import { createSmartList, saveSmartListFilters } from "./listActions";
@@ -15,10 +15,10 @@ function valuesFor(field: FilterField, o: FilterOptions): [string, string][] | n
     case "type": return PARTNER_TYPES.map(([, l]) => [l, l]);
     case "tag": return o.tags.map((s) => [s, s]);
     case "source": return o.sources.map((s) => [s, s]);
-    case "assigned": return o.team.map((s) => [s, s]);
+    case "assigned": return [["Nobody", "Nobody"], ...o.team.map((s) => [s, s] as [string, string])];
     case "followUp": return [["none", "Not set"], ...o.followUp.map((d) => [String(d), `Every ${d} days`] as [string, string])];
-    case "dueForTouch": case "upcomingTask": return [["yes", "Yes"], ["no", "No"]];
-    default: return null; // lastContact: number of days
+    case "dueForTouch": case "upcomingTask": case "hasEmail": case "hasPhone": return [["yes", "Yes"], ["no", "No"]];
+    default: return null; // day fields: a number of days
   }
 }
 
@@ -31,6 +31,7 @@ export function FilterBar({ list, working, options, collections, q, startBuildin
   const [field, setField] = useState<FilterField>("stage");
   const [op, setOp] = useState("is");
   const [value, setValue] = useState("");
+  const [picked, setPicked] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
@@ -46,10 +47,12 @@ export function FilterBar({ list, working, options, collections, q, startBuildin
     router.push(`/people${p.size ? `?${p}` : ""}`);
   };
   const vals = valuesFor(field, options);
-  const pickField = (f: FilterField) => { setField(f); setOp(FIELD_OPS[f][0][0]); setValue(""); };
+  const multi = !!vals && MULTI_OPS.includes(op);
+  const pickField = (f: FilterField) => { setField(f); setOp(FIELD_OPS[f][0][0]); setValue(""); setPicked([]); };
   const add = () => {
-    const v = vals ? value || vals[0]?.[0] || "" : op === "never" ? "" : value || "30";
-    go([...working, { field, op, value: v }]); setBuilding(false);
+    if (multi && !picked.length) return;
+    const v = multi ? picked.join("||") : vals ? value || vals[0]?.[0] || "" : op === "never" ? "" : value || (field === "birthday" || field === "homeiversary" ? "14" : "30");
+    go([...working, { field, op, value: v }]); setBuilding(false); setPicked([]);
   };
 
   return (
@@ -73,14 +76,20 @@ export function FilterBar({ list, working, options, collections, q, startBuildin
           <select className="input w-auto" aria-label="Condition" value={op} onChange={(e) => setOp(e.target.value)}>
             {FIELD_OPS[field].map(([k, l]) => <option key={k} value={k}>{l}</option>)}
           </select>
-          {vals ? (
+          {multi ? (
+            <div className="flex max-h-40 w-full flex-wrap gap-x-4 gap-y-1 overflow-y-auto rounded-md bg-sunken px-2.5 py-2 text-sm">
+              {vals!.map(([k, l]) => (
+                <label key={k} className="flex items-center gap-1.5"><input type="checkbox" checked={picked.includes(k)} onChange={(e) => setPicked(e.target.checked ? [...picked, k] : picked.filter((x) => x !== k))} /> {l}</label>
+              ))}
+            </div>
+          ) : vals ? (
             <select className="input w-auto" aria-label="Value" value={value} onChange={(e) => setValue(e.target.value)}>
               {vals.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
-          ) : op !== "never" && (
-            <><input className="input w-24" type="number" min={0} aria-label="Days" value={value} placeholder="30" onChange={(e) => setValue(e.target.value)} /><span className="text-sm muted">days ago</span></>
+          ) : DAY_FIELDS.includes(field) && op !== "never" && (
+            <><input className="input w-24" type="number" min={0} aria-label="Days" value={value} placeholder={field === "birthday" || field === "homeiversary" ? "14" : "30"} onChange={(e) => setValue(e.target.value)} /><span className="text-sm muted">{field === "birthday" || field === "homeiversary" ? "days" : "days ago"}</span></>
           )}
-          <button type="button" className="btn btn-primary" onClick={add}>Add filter</button>
+          <button type="button" className="btn btn-primary" disabled={multi && !picked.length} onClick={add}>Add filter</button>
           <button type="button" className="btn" onClick={() => setBuilding(false)}>Cancel</button>
         </div>
       )}

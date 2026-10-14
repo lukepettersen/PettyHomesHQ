@@ -270,6 +270,7 @@ model SmartList {
   name         String
   position     Int        @default(0)
   filters      Json       @default("[]")
+  columns      Json? // People table columns for this list (src/lib/columns.ts); empty = the default set
 }
 
 // ---------- Tasks ----------

@@ -3,12 +3,15 @@ import { db } from "@/server/db";
 import { matchesAll, parseFilters, isDueForTouch, type Filter, type PersonFacts } from "@/lib/filters";
 import { todayCentral } from "@/lib/normalize";
 import { partnerLabel } from "@/lib/partners";
+import { parseColumns } from "@/lib/columns";
 
 export type PersonRow = PersonFacts & {
   id: string;
   name: string;
   phone: string | null;
   email: string | null;
+  address: string | null;
+  mailingName: string | null;
   dueForTouch: boolean;
   /** Every phone (digits), email, address and mailing name, for search. */
   contactText: string;
@@ -28,9 +31,15 @@ export async function loadPeopleRows(): Promise<PersonRow[]> {
       tags: { include: { tag: true } },
       phones: { orderBy: { position: "asc" } },
       emails: { orderBy: { position: "asc" } },
+      dates: { select: { kind: true, date: true } },
       _count: { select: { tasks: { where: { completedAt: null, deletedAt: null, dueDate: { gte: today } } } } },
     },
   });
+  // Last call / text / email from the timeline, for smart list filters and columns.
+  const lastBy = new Map<string, Date>();
+  for (const g of await db.timelineEntry.groupBy({ by: ["personId", "kind"], where: { deletedAt: null, kind: { in: ["call", "text", "email"] } }, _max: { createdAt: true } }))
+    if (g._max.createdAt) lastBy.set(`${g.personId}:${g.kind}`, g._max.createdAt);
+  const mmdd = (d: Date) => d.toISOString().slice(5, 10);
   return people.map((p) => {
     const facts: PersonFacts = {
       stage: p.stage?.name ?? null,
@@ -41,9 +50,13 @@ export async function loadPeopleRows(): Promise<PersonRow[]> {
       lastContactAt: p.lastContactAt,
       assignedTo: p.assignedTo?.name ?? null,
       hasUpcomingTask: p._count.tasks > 0,
+      lastCallAt: lastBy.get(`${p.id}:call`) ?? null, lastTextAt: lastBy.get(`${p.id}:text`) ?? null, lastEmailAt: lastBy.get(`${p.id}:email`) ?? null,
+      createdAt: p.createdAt, hasEmail: p.emails.length > 0, hasPhone: p.phones.length > 0,
+      birthdays: p.dates.filter((d) => d.kind === "birthday").map((d) => mmdd(d.date)),
+      homeiversary: (() => { const h = p.dates.find((d) => d.kind === "homeiversary"); return h ? mmdd(h.date) : null; })(),
     };
     return {
-      ...facts, id: p.id, name: p.name, company: p.company, phone: p.phones[0]?.number ?? null, email: p.emails[0]?.address ?? null, dueForTouch: isDueForTouch(facts),
+      ...facts, id: p.id, name: p.name, company: p.company, address: p.address, mailingName: p.mailingName, phone: p.phones[0]?.number ?? null, email: p.emails[0]?.address ?? null, dueForTouch: isDueForTouch(facts),
       contactText: [...p.phones.map((x) => x.normalized), ...p.emails.map((x) => x.normalized), p.address ?? "", p.mailingName ?? ""].join(" ").toLowerCase(),
     };
   });
@@ -61,7 +74,7 @@ export function searchRows(rows: PersonRow[], q: string): PersonRow[] {
 
 export async function loadCollections() {
   const cols = await db.collection.findMany({ orderBy: { position: "asc" }, include: { lists: { orderBy: { position: "asc" } } } });
-  return cols.map((c) => ({ id: c.id, name: c.name, lists: c.lists.map((l) => ({ id: l.id, name: l.name, filters: parseFilters(l.filters) })) }));
+  return cols.map((c) => ({ id: c.id, name: c.name, lists: c.lists.map((l) => ({ id: l.id, name: l.name, filters: parseFilters(l.filters), columns: parseColumns(l.columns) })) }));
 }
 
 export function applyFilters(rows: PersonRow[], filters: Filter[]): PersonRow[] {

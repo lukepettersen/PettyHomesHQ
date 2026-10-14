@@ -6,8 +6,9 @@ import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { FIELD_LABELS } from "@/lib/filters";
+import { COLUMNS } from "@/lib/columns";
 
-const filterSchema = z.array(z.object({ field: z.enum(Object.keys(FIELD_LABELS) as [string, ...string[]]), op: z.string().max(20), value: z.string().max(100) })).max(20);
+const filterSchema = z.array(z.object({ field: z.enum(Object.keys(FIELD_LABELS) as [string, ...string[]]), op: z.string().max(20), value: z.string().max(2000) })).max(20);
 const name = z.string().trim().min(1, "Give it a name").max(80);
 const done = () => revalidatePath("/people");
 
@@ -102,6 +103,21 @@ export async function deleteCollection(id: string) {
     if (count) throw new UserError(`Move or delete its ${count} list${count === 1 ? "" : "s"} first.`);
     const c = await db.collection.delete({ where: { id } });
     await logActivity(user.id, "delete", "collection", id, `Deleted collection ${c.name}`);
+    done();
+  });
+}
+
+/** Columns on the People table for a smart list, or All people when listId is null. */
+export async function saveColumns(listId: string | null, columns: unknown) {
+  return guarded(null, async (user) => {
+    const cols = z.array(z.enum(COLUMNS.map(([k]) => k) as [string, ...string[]])).min(1, "Pick at least one column.").max(COLUMNS.length).parse(columns);
+    if (listId) {
+      const list = await db.smartList.update({ where: { id: z.string().max(40).parse(listId) }, data: { columns: cols } });
+      await logActivity(user.id, "update", "smartList", list.id, `Changed columns on ${list.name}`);
+    } else {
+      await db.appSetting.upsert({ where: { key: "people.columns" }, update: { value: cols }, create: { key: "people.columns", value: cols } });
+      await logActivity(user.id, "update", "setting", "people.columns", "Changed columns on All people");
+    }
     done();
   });
 }
