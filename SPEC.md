@@ -141,7 +141,8 @@ Principles:
   last contact; search box.
 - Bulk actions on selected rows: Add tag, Change stage, Set follow-up, Assign, Export,
   Delete.
-- **Add person:** first/last, phone, email, optional second person, stage, source. Calls are
+- **Add person:** first/last, phone, email, optional second person, stage, source (picking the
+  Industry Partners stage also asks Type and Company, §6.4). Calls are
   booked afterwards from the contact page (Appointments → + Book), owner decision 2026-10-14.
 
 ### 6.3 Contact page (3 columns)

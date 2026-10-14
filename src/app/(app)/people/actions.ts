@@ -34,6 +34,8 @@ const createSchema = z.object({
   second: z.object({ first: trimmed(80), last: trimmed(80), phone: trimmed(40), email: trimmed(200) }).optional(),
   stageId: optionalId,
   sourceId: optionalId,
+  partnerType: z.string().max(20).optional().transform((x) => (x && isPartnerType(x) ? x : null)),
+  company: trimmed(160).default(""),
 });
 
 export async function createPerson(input: z.input<typeof createSchema>) {
@@ -44,7 +46,7 @@ export async function createPerson(input: z.input<typeof createSchema>) {
     const phones = cleanPhones([{ label: two ? v.first : "Mobile", value: v.phone }, ...(two ? [{ label: two.first, value: two.phone }] : [])]);
     const emails = cleanEmails([{ label: two ? v.first : "", value: v.email }, ...(two ? [{ label: two.first, value: two.email }] : [])]);
     const p = await db.person.create({
-      data: { name, mailingName: name, stageId: v.stageId, sourceId: v.sourceId, createdById: user.id, assignedToId: user.id, phones: { create: phones }, emails: { create: emails } },
+      data: { name, mailingName: name, stageId: v.stageId, sourceId: v.sourceId, partnerType: v.partnerType, company: v.company || null, createdById: user.id, assignedToId: user.id, phones: { create: phones }, emails: { create: emails } },
     });
     await logActivity(user.id, "create", "person", p.id, `Added ${name}`);
     revalidatePath("/people");
