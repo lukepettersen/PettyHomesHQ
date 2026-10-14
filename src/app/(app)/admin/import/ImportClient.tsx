@@ -49,7 +49,7 @@ export function ImportClient({ keySet, loadedAt, summary, plan: initial, planSav
   };
   const addPartners = () => run(async () => {
     const r = await addPartnersToImported(); if (!r.ok) throw new Error(r.error);
-    setNote(`Added a spouse/partner to ${r.data!.updated.toLocaleString()} contacts.${r.data!.kept ? ` ${r.data!.kept.toLocaleString()} were left as is (already a couple, or renamed in HQ).` : ""}`); router.refresh();
+    setNote(`Added a spouse/partner to ${r.data!.updated.toLocaleString()} contacts and kids to ${r.data!.kidsAdded.toLocaleString()}.${r.data!.kept ? ` ${r.data!.kept.toLocaleString()} were left as is (already a couple, or renamed in HQ).` : ""}`); router.refresh();
   });
   const undo = (id: string) => {
     if (confirm !== id) { setConfirm(id); return; }
@@ -121,8 +121,8 @@ export function ImportClient({ keySet, loadedAt, summary, plan: initial, planSav
               {summary.relTypes.map(([t, n]) => (
                 <label key={t} className="flex items-center gap-2 border-t border-misty py-1.5 text-sm">
                   <span className="flex-1"><b>{t}</b> <span className="muted">{n.toLocaleString()}</span></span>
-                  <select aria-label={`Relationship ${t}`} className="input w-56" value={plan.relationships?.[t] ?? "skip"} onChange={(e) => edit({ ...plan, relationships: { ...plan.relationships, [t]: e.target.value as "merge" | "skip" } })}>
-                    <option value="merge">Join their contact (Sam &amp; Lena)</option><option value="skip">Leave out</option>
+                  <select aria-label={`Relationship ${t}`} className="input w-56" value={plan.relationships?.[t] ?? "skip"} onChange={(e) => edit({ ...plan, relationships: { ...plan.relationships, [t]: e.target.value as "merge" | "kids" | "skip" } })}>
+                    <option value="merge">Join their contact (Sam &amp; Lena)</option><option value="kids">Add to Kids</option><option value="skip">Leave out</option>
                   </select>
                 </label>
               ))}
@@ -225,11 +225,11 @@ export function ImportClient({ keySet, loadedAt, summary, plan: initial, planSav
                 {Object.keys(preview.byType).length > 0 && <> · Partners: {Object.entries(preview.byType).map(([k, n]) => `${partnerLabel(k)} ${n.toLocaleString()}`).join(", ")}</>}
               </p>
               <div className="overflow-x-auto"><table className="w-full text-sm">
-                <thead><tr className="text-left text-xs muted"><th className={cell}>Name</th><th className={cell}>Stage</th><th className={cell}>Follow-up</th><th className={cell}>Type</th><th className={cell}>Tags</th><th className={cell}>Contact</th><th className={cell}>Address</th><th className={cell}>Mailing name</th><th className={cell}>Birthdays · homeiversary</th></tr></thead>
+                <thead><tr className="text-left text-xs muted"><th className={cell}>Name</th><th className={cell}>Stage</th><th className={cell}>Follow-up</th><th className={cell}>Type</th><th className={cell}>Tags</th><th className={cell}>Kids</th><th className={cell}>Contact</th><th className={cell}>Address</th><th className={cell}>Mailing name</th><th className={cell}>Birthdays · homeiversary</th></tr></thead>
                 <tbody>{preview.samples.map((p) => (
                   <tr key={p.fubId} className="border-t border-misty align-top">
                     <td className={`${cell} font-semibold`}>{p.name}</td><td className={cell}>{p.stage}</td><td className={cell}>{p.followUpDays ? `${p.followUpDays} days` : "—"}</td>
-                    <td className={cell}>{partnerLabel(p.partnerType) ?? "—"}</td><td className={cell}>{p.tags.join(", ") || "—"}</td>
+                    <td className={cell}>{partnerLabel(p.partnerType) ?? "—"}</td><td className={cell}>{p.tags.join(", ") || "—"}</td><td className={cell}>{p.kids || "—"}</td>
                     <td className={cell}>{[p.emails[0]?.address, p.phones[0]?.number].filter(Boolean).join(" · ") || "—"}</td>
                     <td className={cell}>{p.address || "—"}</td><td className={cell}>{p.mailingName || "—"}</td>
                     <td className={cell}>{[...p.birthdays.map((b) => b.date), ...(p.homeiversary ? [`home ${p.homeiversary}`] : [])].join(", ") || "—"}</td>
@@ -256,8 +256,8 @@ export function ImportClient({ keySet, loadedAt, summary, plan: initial, planSav
           )}
           {batches.some((b) => !b.undone) && summary.relTypes.length > 0 && (
             <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md bg-sunken px-3 py-2 text-sm">
-              <span className="flex-1">People imported before relationships came over: add their spouse/partner to the contact (name, phone and email).</span>
-              <button type="button" className="btn" disabled={pending || dirty} onClick={addPartners}>Add spouses/partners</button>
+              <span className="flex-1">People imported before relationships came over: add their spouse/partner (name, phone and email) and their kids.</span>
+              <button type="button" className="btn" disabled={pending || dirty} onClick={addPartners}>Add spouses/partners and kids</button>
             </div>
           )}
           {batches.length > 0 && (

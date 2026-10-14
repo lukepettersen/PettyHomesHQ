@@ -9,7 +9,7 @@ import { Modal } from "@/components/Modal";
 import { COLUMNS, columnLabel } from "@/lib/columns";
 
 export type Row = {
-  id: string; name: string; phone: string | null; email: string | null; stage: string | null; type: string | null; company: string | null; address: string | null; mailingName: string | null;
+  id: string; name: string; phone: string | null; email: string | null; stage: string | null; type: string | null; company: string | null; address: string | null; mailingName: string | null; kids: string | null;
   assigned: string | null; source: string | null; tags: string[]; followUpDays: number | null; dueForTouch: boolean;
   lastDays: number | null; callDays: number | null; textDays: number | null; emailDays: number | null; created: string | null;
   birthdayIn: number | null; birthday: string | null; homeiversary: string | null;
@@ -38,6 +38,7 @@ function cellOf(k: string, r: Row): [React.ReactNode, string | number] {
     case "assigned": return [r.assigned ?? dash, r.assigned ?? "~"];
     case "address": return [r.address ?? dash, r.address ?? "~"];
     case "mailingName": return [r.mailingName ?? dash, r.mailingName ?? "~"];
+    case "kids": return [r.kids ?? dash, r.kids ?? "~"];
     case "birthday": return [r.birthday ? <>{md(r.birthday)}{r.birthdayIn !== null && r.birthdayIn <= 14 ? <span className="text-xs text-accent"> · in {r.birthdayIn}d</span> : null}</> : dash, r.birthdayIn ?? 1e9];
     case "homeiversary": return [md(r.homeiversary) ?? dash, r.homeiversary ?? "~"];
     case "created": return [r.created ? new Date(r.created).toLocaleDateString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", year: "numeric" }) : dash, r.created ? -Date.parse(r.created) : 0];

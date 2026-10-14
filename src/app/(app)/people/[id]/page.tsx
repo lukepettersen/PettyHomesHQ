@@ -76,7 +76,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
           </div>
           <div className="order-4 flex min-w-0 flex-col gap-3">
             <DetailsCard id={p.id} options={options} stageId={p.stageId} sourceId={p.sourceId} assignedToId={p.assignedToId}
-              followUpDays={p.followUpDays} mailingName={p.mailingName ?? ""} referredBy={p.referredBy ?? ""} partnerType={p.partnerType} company={p.company ?? ""} />
+              followUpDays={p.followUpDays} mailingName={p.mailingName ?? ""} referredBy={p.referredBy ?? ""} partnerType={p.partnerType} company={p.company ?? ""} kids={p.kids ?? ""} />
             {partnerDeals.length > 0 && <PartnerDeals deals={partnerDeals.map((d) => ({
               personId: d.pa.file.person.id, client: d.pa.file.person.name, address: d.pa.address, state: d.pa.state,
               role: (d.pa.side === "seller" ? sellerForm : buyerForm).find((s) => s.id === d.sectionId)?.name ?? d.sectionId,

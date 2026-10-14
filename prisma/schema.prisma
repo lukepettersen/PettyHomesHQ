@@ -140,6 +140,7 @@ model Person {
   referredBy    String?
   fubId         Int?            @unique // the Follow Up Boss person this came from (import)
   importBatchId String? // which import added them (Undo import)
+  kids          String? // "Mia, Leo": children's first names (Details card; from FUB relationships)
   partnerType   String? // industry partners: realtor | lender | title | inspector | tc | attorney | other (src/lib/partners.ts)
   company       String?
   followUpDays  Int?

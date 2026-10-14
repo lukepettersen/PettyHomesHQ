@@ -55,7 +55,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
         <PeopleTable
           listId={current?.id ?? null} columns={columns}
           rows={shown.map((r) => ({
-            id: r.id, name: r.name, phone: r.phone, email: r.email, stage: r.stage, type: r.type, company: r.company, address: r.address, mailingName: r.mailingName,
+            id: r.id, name: r.name, phone: r.phone, email: r.email, stage: r.stage, type: r.type, company: r.company, address: r.address, mailingName: r.mailingName, kids: r.kids,
             assigned: r.assignedTo, source: r.source, tags: r.tags, followUpDays: r.followUpDays, dueForTouch: r.dueForTouch,
             lastDays: daysAgo(r.lastContactAt), callDays: daysAgo(r.lastCallAt ?? null), textDays: daysAgo(r.lastTextAt ?? null), emailDays: daysAgo(r.lastEmailAt ?? null),
             created: iso(r.createdAt), birthdayIn: r.birthdays?.length ? Math.min(...r.birthdays.map((b) => daysUntil(b))) : null,

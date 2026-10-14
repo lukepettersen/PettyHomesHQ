@@ -48,8 +48,8 @@ describe("FUB import matching (owner decisions)", () => {
       { type: "Spouse", firstName: "Lena", lastName: "Ortiz", emails: [{ value: "lena@x.com", type: "" }], phones: [{ value: "612-555-0199", type: "mobile" }] },
     ] });
     const pl = defaultPlan(summarize([fam]), HQ);
-    expect(pl.relationships).toEqual({ Child: "skip", Spouse: "merge" });
-    expect(applyPlan(fam, pl)).toMatchObject({ name: "Sam & Lena Ortiz", emails: [{ address: "sam@x.com", label: "Sam" }, { address: "lena@x.com", label: "Lena" }], phones: [{ number: "612-555-0199", label: "Lena" }] });
+    expect(pl.relationships).toEqual({ Child: "kids", Spouse: "merge" });
+    expect(applyPlan(fam, pl)).toMatchObject({ name: "Sam & Lena Ortiz", kids: "Mia", emails: [{ address: "sam@x.com", label: "Sam" }, { address: "lena@x.com", label: "Lena" }], phones: [{ number: "612-555-0199", label: "Lena" }] });
     const diff = person({ firstName: "Sam", lastName: "Ortiz", relationships: [{ type: "Partner", firstName: "Lena", lastName: "Brooks", emails: [], phones: [] }] });
     expect(applyPlan(diff, defaultPlan(summarize([diff]), HQ))?.name).toBe("Sam Ortiz & Lena Brooks");
   });

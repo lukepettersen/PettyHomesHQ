@@ -492,9 +492,12 @@ Sections (left menu):
 - **Relationships** *(2026-10-14)*: FUB relationships are pulled too. Each relationship type
   is matched to "Join their contact" (default for spouse/partner/husband/wife/co-buyer…:
   name becomes "Sam & Lena Ortiz" or "Sam Ortiz & Lena Brooks", the partner's phone and email
-  are added and labeled with each person's first name) or "Leave out" (default for children,
-  parents, others). **Add spouses/partners** updates people imported before this, unless
-  their name was changed in HQ.
+  are added and labeled with each person's first name), "Add to Kids" (default for child,
+  son, daughter…: first names go on the contact's **Kids** line, e.g. "Mia, Leo") or "Leave
+  out" (parents, others). **Add spouses/partners and kids** updates people imported before
+  this (names only where not changed in HQ; kids only where the Kids line is empty).
+- Contacts have a **Kids** line on the Details card (editable; also a People column). Kids
+  are not separate contacts.
 - *(Original plan)* Contacts via FUB CSV export (no API needed): names, phones, emails, address, stage,
   source, tags, birthdays (Birthday 1–7 → Important Dates), homeiversary, mailing name,
   referred by.

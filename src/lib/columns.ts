@@ -4,7 +4,7 @@ export const COLUMNS: [string, string][] = [
   ["stage", "Stage"], ["type", "Type"], ["company", "Company"], ["phone", "Phone"], ["email", "Email"],
   ["lastContact", "Last contact"], ["lastCall", "Last call"], ["lastText", "Last text"], ["lastEmail", "Last email"],
   ["followUp", "Follow up"], ["tags", "Tags"], ["source", "Source"], ["assigned", "Assigned to"],
-  ["address", "Address"], ["mailingName", "Mailing name"], ["birthday", "Next birthday"], ["homeiversary", "Homeiversary"], ["created", "Added"],
+  ["address", "Address"], ["mailingName", "Mailing name"], ["kids", "Kids"], ["birthday", "Next birthday"], ["homeiversary", "Homeiversary"], ["created", "Added"],
 ];
 export const DEFAULT_COLUMNS = ["stage", "lastContact", "followUp", "tags", "source"];
 export const columnLabel = (k: string) => COLUMNS.find(([x]) => x === k)?.[1] ?? k;

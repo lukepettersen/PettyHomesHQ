@@ -73,14 +73,14 @@ export async function updateContactInfo(input: z.input<typeof infoSchema>) {
 
 // ---------- Details card ----------
 const detailsSchema = z.object({ id: z.string(), stageId: optionalId, sourceId: optionalId, assignedToId: optionalId, followUpDays: z.coerce.number().int().min(0).max(3650).nullable(), mailingName: trimmed(160).default(""), referredBy: trimmed(160).default(""),
-  partnerType: z.string().max(20).optional().transform((x) => (x && isPartnerType(x) ? x : null)), company: trimmed(160).default("") });
+  partnerType: z.string().max(20).optional().transform((x) => (x && isPartnerType(x) ? x : null)), company: trimmed(160).default(""), kids: trimmed(200).default("") });
 
 export async function updateDetails(input: z.input<typeof detailsSchema>) {
   return guarded(null, async (user) => {
     const v = detailsSchema.parse(input);
     const p = await db.person.update({
       where: { id: v.id, deletedAt: null },
-      data: { stageId: v.stageId, sourceId: v.sourceId, assignedToId: v.assignedToId, followUpDays: v.followUpDays || null, mailingName: v.mailingName || null, referredBy: v.referredBy || null, partnerType: v.partnerType, company: v.company || null },
+      data: { stageId: v.stageId, sourceId: v.sourceId, assignedToId: v.assignedToId, followUpDays: v.followUpDays || null, mailingName: v.mailingName || null, referredBy: v.referredBy || null, partnerType: v.partnerType, company: v.company || null, kids: v.kids || null },
     });
     await logActivity(user.id, "update", "person", v.id, `Updated details for ${p.name}`);
     revalidatePath(`/people/${v.id}`);

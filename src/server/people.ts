@@ -12,6 +12,7 @@ export type PersonRow = PersonFacts & {
   email: string | null;
   address: string | null;
   mailingName: string | null;
+  kids: string | null;
   dueForTouch: boolean;
   /** Every phone (digits), email, address and mailing name, for search. */
   contactText: string;
@@ -56,8 +57,8 @@ export async function loadPeopleRows(): Promise<PersonRow[]> {
       homeiversary: (() => { const h = p.dates.find((d) => d.kind === "homeiversary"); return h ? mmdd(h.date) : null; })(),
     };
     return {
-      ...facts, id: p.id, name: p.name, company: p.company, address: p.address, mailingName: p.mailingName, phone: p.phones[0]?.number ?? null, email: p.emails[0]?.address ?? null, dueForTouch: isDueForTouch(facts),
-      contactText: [...p.phones.map((x) => x.normalized), ...p.emails.map((x) => x.normalized), p.address ?? "", p.mailingName ?? ""].join(" ").toLowerCase(),
+      ...facts, id: p.id, name: p.name, company: p.company, address: p.address, mailingName: p.mailingName, kids: p.kids, phone: p.phones[0]?.number ?? null, email: p.emails[0]?.address ?? null, dueForTouch: isDueForTouch(facts),
+      contactText: [...p.phones.map((x) => x.normalized), ...p.emails.map((x) => x.normalized), p.address ?? "", p.mailingName ?? "", p.kids ?? ""].join(" ").toLowerCase(),
     };
   });
 }
