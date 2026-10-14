@@ -483,6 +483,13 @@ Sections (left menu):
 - Templates (95 email, 59 text) imported from FUB folders BPC/BUC/SPC/SUC/Leads; one-off and
   dated ones archived.
 - Dry run → owner review → real import. Nothing in FUB is changed.
+- **Matching decisions (owner, 2026-10-14):** FUB stage Lead → HQ stage Lead. Anyone with the
+  FUB tag **Past Client** → HQ stage **Past Client**, keeping the follow-up frequency from
+  their old "N Day Sphere" stage (e.g. 90 Day Sphere + Past Client tag → Past Client, every
+  90 days). Other "N Day Sphere" people → Sphere with that follow-up. The import screen lists
+  every FUB stage/tag/source/agent with counts so each can be matched or skipped, shows a
+  preview, and has **Undo import**. Still to decide: the 8,090 imported Industry Partners,
+  Petty Homes Admin (3).
 
 ## 16. Build phases
 
