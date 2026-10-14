@@ -140,7 +140,8 @@ Principles:
   - **Columns** *(2026-10-14)*: each smart list (and All people) picks and orders its columns
     from Stage, Type, Company, Phone, Email, Last contact/call/text/email, Follow up, Tags,
     Source, Assigned to, Address, Mailing name, Next birthday, Homeiversary, Added. Click a
-    column header to sort.
+    column header to sort. Drag a header's right edge to resize it (double-click resets); widths are
+    remembered per list in that browser.
   - Change filters, then Save changes / Save as new list / Reset.
   - Lists and collections: create, rename, duplicate, delete, **drag to reorder or move
     between collections**, plus a ⋯ menu (rename, ↑ ↓, Move to…, Duplicate, Delete).

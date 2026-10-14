@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { bulkDelete, bulkUpdate } from "./actions";
 import { saveColumns } from "./listActions";
 import { Modal } from "@/components/Modal";
@@ -49,6 +49,26 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [sort, setSort] = useState<string>("name");
   const [editCols, setEditCols] = useState(false);
+  // Column widths: drag a header's right edge. Remembered per list in this browser.
+  const widthKey = `hq-colw-${listId ?? "all"}`;
+  const [widths, setWidths] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const t = setTimeout(() => { try { setWidths(JSON.parse(localStorage.getItem(widthKey) ?? "{}")); } catch { /* private window */ } }, 0);
+    return () => clearTimeout(t);
+  }, [widthKey]);
+  const drag = useRef<{ k: string; x: number; w: number } | null>(null);
+  const startResize = (k: string, e: React.PointerEvent<HTMLSpanElement>) => {
+    e.preventDefault(); e.stopPropagation();
+    const th = e.currentTarget.parentElement!;
+    drag.current = { k, x: e.clientX, w: th.getBoundingClientRect().width };
+    const move = (ev: PointerEvent) => { const d = drag.current; if (d) setWidths((w) => ({ ...w, [d.k]: Math.max(70, Math.round(d.w + ev.clientX - d.x)) })); };
+    const up = () => {
+      drag.current = null; window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up);
+      setWidths((w) => { try { localStorage.setItem(widthKey, JSON.stringify(w)); } catch { /* private window */ } return w; });
+    };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+  };
+  const widthOf = (k: string) => widths[k] ?? (k === "name" ? 240 : k === "tags" || k === "address" || k === "email" ? 220 : 150);
   const [action, setAction] = useState<null | "addTag" | "removeTag" | "stage" | "followUp" | "assign">(null);
   const [value, setValue] = useState("");
   const [confirm, setConfirm] = useState(false);
@@ -78,7 +98,14 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
   ) : action === "assign" ? (
     <select className="input w-auto" value={value} onChange={(e) => setValue(e.target.value)} aria-label="Assign to"><option value="">No one</option>{options.team.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select>
   ) : null;
-  const th = (k: string, l: string) => <th key={k} className="whitespace-nowrap px-3 py-2"><button type="button" className="uppercase tracking-wide hover:text-charcoal" onClick={() => setSort(k)}>{l}{sort === k ? " ↓" : ""}</button></th>;
+  const th = (k: string, l: string) => (
+    <th key={k} className="relative whitespace-nowrap px-3 py-2" style={{ width: widthOf(k) }}>
+      <button type="button" className="uppercase tracking-wide hover:text-charcoal" onClick={() => setSort(k)}>{l}{sort === k ? " ↓" : ""}</button>
+      <span role="separator" aria-orientation="vertical" aria-label={`Resize ${l}`} title="Drag to resize; double-click to reset" onPointerDown={(e) => startResize(k, e)}
+        onDoubleClick={() => setWidths((w) => { const n = { ...w }; delete n[k]; try { localStorage.setItem(widthKey, JSON.stringify(n)); } catch { /* private window */ } return n; })}
+        className="absolute right-0 top-1 bottom-1 w-2 cursor-col-resize border-r-2 border-transparent hover:border-rabbit" />
+    </th>
+  );
 
   return (
     <>
@@ -102,10 +129,10 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
       <div className="mt-3 flex justify-end"><button type="button" className="text-sm font-semibold text-accent hover:underline" onClick={() => setEditCols(true)}>Columns</button></div>
       {editCols && <ColumnsModal listId={listId} columns={columns} onClose={() => setEditCols(false)} />}
       <div className="card mt-1 overflow-x-auto">
-        <table className="w-full min-w-[760px] text-left text-sm">
+        <table className="text-left text-sm" style={{ tableLayout: "fixed", width: 40 + widthOf("name") + columns.reduce((n, k) => n + widthOf(k), 0), minWidth: "100%" }}>
           <thead className="border-b border-misty text-xs uppercase tracking-wide muted">
             <tr>
-              <th className="w-8 px-3 py-2"><input type="checkbox" aria-label="Select all" checked={all} onChange={(e) => setSel(e.target.checked ? new Set(rows.map((r) => r.id)) : new Set())} /></th>
+              <th className="px-3 py-2" style={{ width: 40 }}><input type="checkbox" aria-label="Select all" checked={all} onChange={(e) => setSel(e.target.checked ? new Set(rows.map((r) => r.id)) : new Set())} /></th>
               {th("name", "Name")}{columns.map((k) => th(k, columnLabel(k)))}
             </tr>
           </thead>
@@ -113,8 +140,8 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
             {sorted.map((r) => (
               <tr key={r.id} className={`border-b border-misty/60 last:border-0 hover:bg-paper ${sel.has(r.id) ? "bg-accent-soft/60" : ""}`}>
                 <td className="px-3 py-2"><input type="checkbox" aria-label={`Select ${r.name}`} checked={sel.has(r.id)} onChange={() => toggle(r.id)} /></td>
-                <td className="px-3 py-2"><Link href={`/people/${r.id}`} className="link">{r.name}</Link>{r.phone && !columns.includes("phone") && <div className="text-xs muted">{r.phone}</div>}</td>
-                {columns.map((k) => <td key={k} className="px-3 py-2">{cellOf(k, r)[0]}</td>)}
+                <td className="truncate px-3 py-2"><Link href={`/people/${r.id}`} className="link">{r.name}</Link>{r.phone && !columns.includes("phone") && <div className="text-xs muted">{r.phone}</div>}</td>
+                {columns.map((k) => <td key={k} className={`px-3 py-2 ${k === "tags" ? "" : "truncate"}`}>{cellOf(k, r)[0]}</td>)}
               </tr>
             ))}
           </tbody>
