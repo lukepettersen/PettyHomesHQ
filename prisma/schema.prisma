@@ -230,6 +230,7 @@ model TimelineEntry {
   kind      String // "note" | "call" | "text" | "email" | "system" | "task" (a completed task)
   taskId    String? // for "task" entries: the task that was completed
   gmailId   String?   @unique // for "email" entries: the Gmail message, so syncing never adds it twice
+  fubKey    String?   @unique // copied from Follow Up Boss ("note:123", "call:45", "text:67"), never added twice
   body      String
   outcome   String?
   authorId  String?
@@ -506,6 +507,8 @@ model MessageTemplate {
   body      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  fubKey String? @unique // copied from a Follow Up Boss template
 
   @@unique([kind, name])
 }

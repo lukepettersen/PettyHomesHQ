@@ -114,3 +114,34 @@ export async function cachedFubPeople(): Promise<{ people: FubPerson[]; loadedAt
   const [p, at] = await Promise.all([db.appSetting.findUnique({ where: { key: "fub.people" } }), db.appSetting.findUnique({ where: { key: "fub.loadedAt" } })]);
   return { people: Array.isArray(p?.value) ? (p.value as unknown as FubPerson[]) : [], loadedAt: typeof at?.value === "string" ? at.value : null };
 }
+
+const arrayIn = (j: Record<string, unknown>) => (Object.entries(j).find(([k, v]) => k !== "_metadata" && Array.isArray(v))?.[1] ?? []) as Record<string, unknown>[];
+/** Every row of a FUB list (follows FUB's "next" pages). */
+export async function fubList(path: string, maxPages = 200): Promise<Record<string, unknown>[]> {
+  const out: Record<string, unknown>[] = [];
+  const sep = path.includes("?") ? "&" : "?";
+  let next: string | null = `${path}${sep}limit=100`;
+  for (let page = 0; next && page < maxPages; page++) {
+    const j = await fubGet(next);
+    out.push(...arrayIn(j));
+    const meta = (j._metadata ?? {}) as { nextLink?: string; next?: string };
+    next = meta.nextLink || (meta.next ? `${path}${sep}limit=100&next=${encodeURIComponent(meta.next)}` : null);
+  }
+  return out;
+}
+
+/** FUB email and text templates (read only). */
+export async function fubTemplates() {
+  const [emails, texts] = await Promise.all([fubList("templates"), fubList("textMessageTemplates")]);
+  return {
+    emails: emails.map((t) => ({ id: str(t.id), name: str(t.name).trim(), subject: str(t.subject), body: str(t.body) })),
+    texts: texts.map((t) => ({ id: str(t.id), name: str(t.name).trim(), body: str(t.message) || str(t.body) })),
+  };
+}
+
+/** One FUB person's notes, calls and texts (read only). A list FUB won't give is skipped. */
+export async function fubHistoryFor(personId: number) {
+  const get = (path: string) => fubList(`${path}?personId=${personId}`, 20).catch(() => [] as Record<string, unknown>[]);
+  const [notes, calls, texts] = await Promise.all([get("notes"), get("calls"), get("textMessages")]);
+  return { notes, calls, texts };
+}

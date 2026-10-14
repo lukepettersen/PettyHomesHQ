@@ -518,6 +518,15 @@ Sections (left menu):
   Load again) brings these in for people already imported, along with partners, kids and
   partner birthdays. People texted from a personal phone that FUB never saw: select them on
   People and use the bulk action **Mark contacted** (a date, default today).
+- **Templates** *(built 2026-10-14)*: step 5 on the import page previews and copies every FUB
+  email and text template (name, subject, wording; email HTML kept as bold/links/lists;
+  folder from the name prefix BPC/BUC/SPC/SUC/Leads; FUB merge fields like
+  %contact_first_name% → {first_name}; unmatched ones listed so they can be edited). Names
+  already in HQ are skipped; **Remove copied templates** undoes it.
+- **History** *(built 2026-10-14)*: step 6 copies each imported contact's FUB **notes, calls and
+  texts** (not the realtor database) onto their timeline with the original dates and author;
+  last text / last contact update. Runs in small groups with a progress bar; running it again
+  adds only what's new; **Remove copied history** undoes it. Email history comes from Gmail.
 - Contacts have a **Kids** line on the Details card (editable; also a People column). Kids
   are not separate contacts.
 - *(Original plan)* Contacts via FUB CSV export (no API needed): names, phones, emails, address, stage,

@@ -3,6 +3,7 @@ import { db } from "@/server/db";
 import { cachedFubPeople, fubKeySet } from "@/server/fub";
 import { defaultPlan, summarize, type Plan } from "@/lib/fubImport";
 import { ImportClient } from "./ImportClient";
+import { HistoryTemplates } from "./HistoryTemplates";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,11 @@ export default async function Page() {
     db.appSetting.findUnique({ where: { key: "fub.plan" } }), db.importBatch.findMany({ orderBy: { createdAt: "desc" }, take: 10 }),
   ]);
   const summary = summarize(people);
+  const [hp, hc, ht] = await Promise.all([
+    db.person.count({ where: { fubId: { not: null }, deletedAt: null, partnerType: null } }),
+    db.timelineEntry.count({ where: { fubKey: { not: null } } }), db.messageTemplate.count({ where: { fubKey: { not: null } } }),
+  ]);
+  const history = { people: hp, copied: hc, templates: ht };
   const hq = { stages: stages.map((s) => s.name), sources: sources.map((s) => s.name), users };
   const suggested = defaultPlan(summary, hq);
   // A saved matching wins; anything new in FUB since then gets the suggestion.
@@ -29,6 +35,7 @@ export default async function Page() {
       <p className="mb-4 mt-1 text-sm muted">Copies your contacts from Follow Up Boss into HQ. Nothing in Follow Up Boss is changed, people already in HQ are never added twice, and every import can be undone.</p>
       <ImportClient key={loadedAt ?? "none"} keySet={fubKeySet()} loadedAt={loadedAt} summary={summary} plan={plan} planSaved={!!s} hq={hq}
         batches={batches.map((b) => ({ id: b.id, at: b.createdAt.toISOString(), added: b.added, duplicates: b.duplicates, undone: !!b.undoneAt }))} />
+      {fubKeySet() && history.people > 0 && <HistoryTemplates people={history.people} copied={history.copied} copiedTemplates={history.templates} />}
     </>
   );
 }
