@@ -494,11 +494,14 @@ Sections (left menu):
   attachments). *(Built 2026-10-15 as Admin → Text & email templates: name, folder, subject,
   body, merge-field buttons, preview with sample details; open to "Edit text and email
   templates". Attachments come with the Files card and Gmail drafts.)*
-- **Task templates have folders** to organize the list *(owner request)*.
+- **Task templates have folders** to organize the list *(owner request)*; same side panel as Text & email
+  templates below (folders on top, searchable list, drag to move).
 - **Text & email templates** *(owner request 2026-10-15)*: folders listed at the top of the side
   panel (click one to open just its templates, click again or Show all to go back); below, a
   searchable list of all templates (searches names and folders). The Folder box suggests
   existing folders; + New template starts in the open folder.
+  **Drag a template onto a folder** (or "No folder") to move it; **+ New folder** adds an empty
+  folder to drag into.
 - **Connections:** Tools menu; Integrations (Google Workspace, Texting/Twilio, Follow Up
   Boss, File storage, Ask Claude, later website lead form).
 - All Admin edits use the unsaved-changes Save / Discard bar.

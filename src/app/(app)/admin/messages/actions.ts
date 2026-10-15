@@ -37,3 +37,18 @@ export async function deleteMessageTemplate(id: string) {
     revalidatePath("/admin/messages"); revalidatePath("/admin/templates");
   });
 }
+
+const moveSchema = z.object({ id: z.string().min(1).max(40), folder: z.string().trim().max(40) });
+
+/** Dragging a template onto a folder (or "No folder") moves it there. */
+export async function moveMessageTemplate(input: z.input<typeof moveSchema>) {
+  return guarded("editMessageTemplates", async (user) => {
+    const v = moveSchema.parse(input);
+    const before = await db.messageTemplate.findUnique({ where: { id: v.id } });
+    if (!before) throw new UserError("That template was deleted.");
+    if (before.folder === v.folder) return;
+    await db.messageTemplate.update({ where: { id: v.id }, data: { folder: v.folder } });
+    await logActivity(user.id, "update", "messageTemplate", v.id, `Moved ${before.kind} template "${before.name}" from ${before.folder || "no folder"} to ${v.folder || "no folder"}`);
+    revalidatePath("/admin/messages"); revalidatePath("/admin/templates");
+  });
+}

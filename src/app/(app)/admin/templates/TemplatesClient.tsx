@@ -6,7 +6,8 @@ import { SaveBar } from "@/components/SaveBar";
 import type { StatusRow } from "@/server/files";
 import { ANCHORS, CONDS, expand, MINUTE_OPTIONS, newId, STEP_TYPES, TIMED_ANCHORS, triggerLabel, type Phase, type Step, type Template } from "@/lib/templates";
 import { longIso } from "@/lib/tasks";
-import { deleteTemplate, duplicateTemplate, saveTemplate } from "./actions";
+import { deleteTemplate, duplicateTemplate, moveTemplate, saveTemplate } from "./actions";
+import { FolderList } from "@/components/FolderList";
 
 type Props = { messages: { id: string; kind: string; name: string; folder: string }[]; templates: Template[]; statuses: StatusRow[]; team: string[]; tags: string[]; today: string; initialId: string | null };
 const blankStep = (): Step => ({ id: newId("s"), name: "New step", assignee: "", type: "task", days: 0, dir: "on", anchor: "start", cond: "always" });
@@ -18,44 +19,28 @@ export function TemplatesClient(p: Props) {
   const [msg, setMsg] = useState("");
   const [, start] = useTransition();
   const sel = p.templates.find((t) => t.id === selId) ?? p.templates[0] ?? null;
-  // Grouped by folder (named folders A–Z, then templates without one).
-  const folders = [...new Set(p.templates.map((t) => t.folder ?? ""))].sort((a, b) => (a ? (b ? a.localeCompare(b) : -1) : 1));
+  const folders = [...new Set(p.templates.map((t) => t.folder ?? "").filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const [folder, setFolder] = useState<string | null>(null); // the folder open in the side panel
   const pick = (id: string) => {
     if (dirty) { setMsg("Save or discard your changes first."); return; }
     setMsg(""); setSelId(id); window.history.replaceState(null, "", `/admin/templates?t=${id}`);
   };
   const create = () => start(async () => {
     if (dirty) { setMsg("Save or discard your changes first."); return; }
-    const r = await saveTemplate({ id: null, name: "New template", trigger: null, folder: sel?.folder ?? "", phases: [{ id: newId("p"), name: "Steps", steps: [blankStep()] }] });
+    const r = await saveTemplate({ id: null, name: "New template", trigger: null, folder: folder ?? "", phases: [{ id: newId("p"), name: "Steps", steps: [blankStep()] }] });
     if (!r.ok) { setMsg(r.error); return; }
     setSelId(r.data!.id); router.refresh();
   });
-  const item = (t: Template) => {
-    const n = t.phases.reduce((x, ph) => x + ph.steps.length, 0);
-    return (
-      <li key={t.id}>
-        <button type="button" aria-current={t.id === sel?.id ? "true" : undefined} onClick={() => pick(t.id)}
-          className={`flex w-full flex-col rounded-md px-2.5 py-1.5 text-left ${t.id === sel?.id ? "bg-accent-soft" : "hover:bg-sunken"}`}>
-          <b className="text-sm">{t.name}</b>
-          <span className="text-xs muted">{triggerLabel(t.trigger, p.statuses)} · {n} step{n === 1 ? "" : "s"}</span>
-        </button>
-      </li>
-    );
-  };
   return (
     <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
-      <aside className="card flex flex-col gap-2 p-2 lg:sticky lg:top-3">
-        <button type="button" className="btn btn-primary" onClick={create}>+ New template</button>
-        {folders.map((f) => (
-          <div key={f || "none"}>
-            <h2 className="px-2.5 pt-2 text-[11px] font-semibold uppercase tracking-wider muted">{f || (folders.length > 1 ? "No folder" : "Templates")}</h2>
-            <ul className="flex flex-col">{p.templates.filter((t) => (t.folder ?? "") === f).map(item)}</ul>
-          </div>
-        ))}
-      </aside>
+      <FolderList items={p.templates.map((t) => { const n = t.phases.reduce((x, ph) => x + ph.steps.length, 0); return { id: t.id, name: t.name, folder: t.folder ?? "", sub: `${triggerLabel(t.trigger, p.statuses)} · ${n} step${n === 1 ? "" : "s"}` }; })}
+        selectedId={sel?.id ?? null} onSelect={pick} onFolderChange={setFolder}
+        canMove={(id) => (dirty && id === sel?.id ? "Save or discard your changes first." : null)}
+        onMove={async (id, f) => { const r = await moveTemplate({ id, folder: f }); if (r.ok) router.refresh(); return r.ok ? { ok: true } : r; }}
+        top={<button type="button" className="btn btn-primary" onClick={create}>+ New template</button>} />
       <div className="min-w-0">
         {msg && <p role="alert" className="mb-2 text-sm text-bad">{msg}</p>}
-        {sel ? <Editor folders={folders.filter(Boolean)} key={sel.id + JSON.stringify(sel)} {...p} t={sel} onDirty={setDirty} onSelect={(id) => { setSelId(id); router.refresh(); }} /> : <div className="card p-6 muted">No templates yet. Create one with + New template.</div>}
+        {sel ? <Editor folders={folders} key={sel.id + JSON.stringify(sel)} {...p} t={sel} onDirty={setDirty} onSelect={(id) => { setSelId(id); router.refresh(); }} /> : <div className="card p-6 muted">No templates yet. Create one with + New template.</div>}
       </div>
     </div>
   );

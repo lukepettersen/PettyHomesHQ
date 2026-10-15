@@ -65,3 +65,18 @@ export async function deleteTemplate(id: string) {
     revalidatePath("/admin/templates");
   });
 }
+
+const moveSchema = z.object({ id: z.string().min(1).max(40), folder: z.string().trim().max(60) });
+
+/** Dragging a task template onto a folder (or "No folder") moves it there. */
+export async function moveTemplate(input: z.input<typeof moveSchema>) {
+  return guarded("editTaskTemplates", async (user) => {
+    const v = moveSchema.parse(input);
+    const before = await db.taskTemplate.findUnique({ where: { id: v.id } });
+    if (!before) throw new UserError("That template was deleted.");
+    if ((before.folder ?? "") === v.folder) return;
+    await db.taskTemplate.update({ where: { id: v.id }, data: { folder: v.folder } });
+    await logActivity(user.id, "update", "taskTemplate", v.id, `Moved task template "${before.name}" from ${before.folder || "no folder"} to ${v.folder || "no folder"}`);
+    revalidatePath("/admin/templates");
+  });
+}
