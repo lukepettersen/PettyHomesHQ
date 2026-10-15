@@ -225,6 +225,10 @@ Principles:
   - **Listing:** address, estimated value, timeframe, consult date (early statuses); then
     list price, listing signed/expires, commission, BAC offered, photos, active date, and
     property details.
+- **Deal notes** *(owner request 2026-10-15)*: each buyer/seller deal has a free-text notes box
+  at the top of the deal ("+ Add deal notes"; click to edit; Save / Cancel), showing when and by
+  whom it was last changed. Kept at every status and on closed deals. The first line shows on
+  the Pipeline card (full text on hover). The activity log records that notes changed, not the text.
 - Status changes happen **only from the contact page** (status dropdown), or automatically
   when a checklist step marked "moves deal to" is completed.
 - **Buyer and seller forms are editable** in Admin → Buyer and seller forms *(owner request,

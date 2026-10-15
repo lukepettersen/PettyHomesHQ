@@ -99,10 +99,11 @@ export const kMoney = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(n % 1e6 ?
 export type FileView = {
   id: string; kind: FileKind; personId: string; personName: string; statusId: string | null; status: string; statusSince: string;
   address: string | null; price: number | null; info: Answers; commission: string | null; bac: string | null; closedAt: string | null;
+  notes: string; notesAt: string | null; notesBy: string | null;
 };
 
 export function toFileView(
-  f: { id: string; kind: string; personId: string; statusId: string | null; statusSince: Date; address: string | null; price: number | null; info: unknown; closedAt: Date | null; person: { name: string }; status: { name: string } | null; commission?: { commission: string; bac: string } | null },
+  f: { id: string; kind: string; personId: string; statusId: string | null; statusSince: Date; address: string | null; price: number | null; info: unknown; closedAt: Date | null; notes?: string; notesAt?: Date | null; notesBy?: string | null; person: { name: string }; status: { name: string } | null; commission?: { commission: string; bac: string } | null },
   canSeeCommission: boolean,
 ): FileView {
   const info = f.info && typeof f.info === "object" && !Array.isArray(f.info) ? (f.info as Answers) : {};
@@ -113,6 +114,7 @@ export function toFileView(
     commission: canSeeCommission ? f.commission?.commission ?? "" : null,
     bac: canSeeCommission ? f.commission?.bac ?? "" : null,
     closedAt: f.closedAt ? f.closedAt.toISOString() : null,
+    notes: f.notes ?? "", notesAt: f.notesAt ? f.notesAt.toISOString() : null, notesBy: f.notesBy ?? null,
   };
 }
 

@@ -87,6 +87,7 @@ function Card({ card, today }: { card: PipelineCard; today: string }) {
       </span>
       <span className="truncate text-xs muted">{sub}</span>
       {meta && <span className="text-xs muted">{meta}</span>}
+      {card.notes && <span title={card.notes} className="mt-1 truncate rounded bg-[#fdf8e8] px-1.5 py-0.5 text-xs text-[#6b5413]">✎ {card.notes.split("\n")[0]}</span>}
       <span className={`mt-1 text-xs ${late ? "font-semibold text-bad" : ""}`}>{n ? `${n.title} · ${late ? "overdue" : n.due ? shortDay(n.due) : "no date"}` : "All caught up"}</span>
       {card.assignees.length > 0 && (
         <span className="mt-1 flex gap-1">{card.assignees.map((a) => <span key={a} title={a} className="grid h-5 w-5 place-items-center rounded-full bg-accent-soft text-[9px] font-bold text-accent">{initials(a)}</span>)}</span>

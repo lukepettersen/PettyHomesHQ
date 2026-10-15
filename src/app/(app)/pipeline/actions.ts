@@ -125,6 +125,24 @@ export async function deleteFile(fileId: string) {
   });
 }
 
+// ---------- Deal notes ----------
+const notesSchema = z.object({ id, notes: z.string().max(5000, "That's a lot for deal notes. Put the rest in a timeline note.") });
+
+/** Free-text notes about a buyer or seller deal, shown at the top of the deal (SPEC.md §7.1). */
+export async function saveFileNotes(input: z.input<typeof notesSchema>) {
+  return guarded(null, async (user) => {
+    const v = notesSchema.parse(input);
+    const f = await db.clientFile.findFirst({ where: { id: v.id, deletedAt: null }, include: { person: { select: { name: true } } } });
+    if (!f) throw new UserError("That deal was deleted.");
+    const notes = v.notes.trim();
+    if (notes === f.notes) return;
+    await db.clientFile.update({ where: { id: f.id }, data: { notes, notesAt: new Date(), notesBy: user.name } });
+    // The log says notes changed, not what they say (they can hold personal details).
+    await logActivity(user.id, "update", "clientFile", f.id, `${notes ? "Updated" : "Cleared"} deal notes on ${f.person.name}'s ${f.kind === "buyer" ? "buyer" : "seller"} deal`);
+    refresh(f.personId);
+  });
+}
+
 // ---------- Edit stages (Pipeline board and Admin → Client statuses) ----------
 const UNTIL = ["inspection", "hoaRescission", "writtenStatement", "closing"] as const;
 const stagesSchema = z.object({

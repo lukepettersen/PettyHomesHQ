@@ -13,6 +13,7 @@ import { PaBox } from "./PaBox";
 import type { PaSection, PaView, Side } from "@/lib/pa";
 import type { TaskRow, TeamMember } from "@/server/tasks";
 import { Checklist } from "./Checklist";
+import { DealNotes } from "./DealNotes";
 
 type Props = { fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean; canDelete: boolean; timeline: React.ReactNode;
   contracts: PaView[]; forms: Record<Side, PaSection[]>; today: string; checklists: TaskRow[]; team: TeamMember[] };
@@ -92,6 +93,7 @@ function FilePane({ fileForms, file, personId, personName, statuses, canSeeCommi
           </label>}
         </div>
       </div>
+      <DealNotes key={file.id + file.notes} fileId={file.id} notes={file.notes} notesAt={file.notesAt} notesBy={file.notesBy} />
       {facts.length > 0 && (
         <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
           {facts.map(([k, v]) => <div key={k} className="flex gap-1.5"><dt className="muted">{k}</dt><dd className="font-semibold">{v}</dd></div>)}

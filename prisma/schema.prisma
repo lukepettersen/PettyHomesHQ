@@ -359,6 +359,9 @@ model ClientFile {
   price       Int? // listing: list price or estimated value, whole dollars
   info        Json                @default("{}") // status questions (areas, range, dates…), validated in src/lib/files.ts
   closedAt    DateTime?
+  notes       String              @default("") // Deal notes: free text about this deal (SPEC.md §7.1)
+  notesAt     DateTime?
+  notesBy     String? // name of who last changed the notes
   createdById String?
   createdBy   User?               @relation(fields: [createdById], references: [id])
   createdAt   DateTime            @default(now())
