@@ -174,3 +174,6 @@ export function parseSubtasks(v: unknown): Subtask[] {
   if (!Array.isArray(v)) return [];
   return v.filter((x): x is Subtask => !!x && typeof x === "object" && typeof (x as Subtask).title === "string").map((x) => ({ title: x.title, done: !!x.done }));
 }
+
+/** Cookie remembering the Tasks page Everyone / Me / teammate filter on this device. */
+export const WHO_COOKIE = "hq-tasks-who";

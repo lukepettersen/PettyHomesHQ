@@ -361,7 +361,7 @@ Principles:
   homeiversary → Important dates; `#list` → that list; anything else → Misc.
 - **Quick add** with natural language: "call lender re Ortiz Fri 9am", "rent check every
   month", `#list`, `@alyssa`, today/tomorrow/weekday/next week.
-- Assignee filter: Everyone / Me / each team member.
+- Assignee filter: Everyone / Me / each team member; the choice is remembered on each device (owner request 2026-10-15).
 - Task details: title, due date (locked for steps timed from a contract date), time (12-hour, 15-minute steps; the Create task pop-up has the same picker), repeat,
   list, assignee, linked person, checklist source and timing, notes (behind "+ Add notes"
   until used), delete. Save changes / Cancel. No priority or subtasks (owner decision
