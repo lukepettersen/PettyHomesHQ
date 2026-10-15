@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import type { ListRow, TaskRow, TeamMember, TouchRow } from "@/server/tasks";
 import { diffDays, formatTime, longIso, parseQuickAdd, PRIORITIES, repeatLabel, WHO_COOKIE } from "@/lib/tasks";
-import { completeDateTask, completeTask, createList, deleteList, logTouch, quickAddTask, spreadTouches, renameList, reopenTask, setListOnToday } from "./actions";
+import { completeDateTask, completeTask, createList, deleteList, logTouch, quickAddTask, spreadTouches, unspreadTouches, renameList, reopenTask, setListOnToday } from "./actions";
 import { ArrangeLists } from "./ArrangeLists";
 import { TaskDetail } from "./TaskDetail";
 import { PersonLink, TaskLine, Toast } from "./parts";
 
-type Props = { today: string; team: TeamMember[]; lists: ListRow[]; tasks: TaskRow[]; touches: TouchRow[]; meId: string; initialView: string; initialWho: string; initialTask: string | null };
+type Props = { today: string; team: TeamMember[]; lists: ListRow[]; tasks: TaskRow[]; touches: TouchRow[]; waiting: number; meId: string; initialView: string; initialWho: string; initialTask: string | null };
 type Done = { row: TaskRow; realId: string; nextId: string | null };
 
 const keyOf = (l: ListRow) => l.builtin ?? `list:${l.id}`;
@@ -52,6 +52,7 @@ export function TasksApp(p: Props) {
   const [confirmDelList, setConfirmDelList] = useState(false);
   const [perDay, setPerDay] = useState("5");
   const [confirmSpread, setConfirmSpread] = useState(false);
+  const [confirmUnspread, setConfirmUnspread] = useState(false);
   const [pending, start] = useTransition();
   const clearToast = useCallback(() => setToast(""), []);
   const refresh = () => router.refresh();
@@ -295,8 +296,19 @@ export function TasksApp(p: Props) {
               </label>
             </span>
           )}
-          {view === "touch" && touches.length > 1 && (
+          {view === "touch" && (touches.length > 1 || p.waiting > 0) && (
             <span className="flex flex-wrap items-center gap-2 text-sm">
+              {p.waiting > 0 && (
+                <button type="button" className="btn" disabled={pending} onBlur={() => setConfirmUnspread(false)} onClick={() => {
+                  if (!confirmUnspread) { setConfirmUnspread(true); return; }
+                  setConfirmUnspread(false);
+                  start(async () => {
+                    const r = await unspreadTouches();
+                    if (!r.ok) { setToast(r.error); return; }
+                    setToast("Undone. Everyone due shows up again."); refresh();
+                  });
+                }}>{confirmUnspread ? `Click again to show all ${p.waiting} now` : `Undo spread out (${p.waiting} waiting)`}</button>
+              )}
               <label className="flex items-center gap-1.5">Show
                 <input type="number" min={1} max={100} className="input w-16" value={perDay} onChange={(e) => { setPerDay(e.target.value); setConfirmSpread(false); }} aria-label="People a day" />
                 a day</label>

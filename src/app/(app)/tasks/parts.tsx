@@ -33,17 +33,18 @@ export function TaskLine({ task, today, team, selected, showPerson = true, onTog
   return (
     <div className={`grid grid-cols-[24px_minmax(0,1fr)] items-center gap-x-2.5 border-t border-misty px-3 py-2 first:border-t-0 sm:grid-cols-[24px_minmax(0,1fr)_auto] ${selected ? "bg-accent-soft" : "hover:bg-paper"}`}>
       <CheckButton task={task} onToggle={onToggle} />
-      <button type="button" onClick={onOpen} className="flex min-w-0 flex-col gap-0.5 text-left">
-        <span className={`font-medium ${task.done ? "text-muted line-through" : ""}`}>{task.title}</span>
+      {/* The whole row opens the task; the contact's name is its own link to their page. */}
+      <div onClick={onOpen} className="flex min-w-0 cursor-pointer flex-col gap-0.5 text-left">
+        <button type="button" onClick={(e) => { e.stopPropagation(); onOpen(); }} className={`text-left font-medium ${task.done ? "text-muted line-through" : ""}`}>{task.title}</button>
         <span className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs muted">
           <KindIcon kind={task.kind} />
-          {showPerson && task.personName && <span className="font-semibold text-accent">{task.personName}</span>}
+          {showPerson && task.personName && task.personId && <PersonLink id={task.personId} name={task.personName} small />}
           {subs > 0 && <span>☐ {task.subtasks.filter((s) => s.done).length}/{subs}</span>}
           {task.repeat && <span>↻ {repeatLabel(task.repeat)}</span>}
           {task.cat === "dates" && <span className="rounded bg-sunken px-1.5">From Important Dates</span>}
           {task.step && <span className="rounded bg-sunken px-1.5">{task.step.source}</span>}
         </span>
-      </button>
+      </div>
       <span className="col-start-2 flex items-center gap-2 sm:col-start-3">
         <span className={`whitespace-nowrap text-[12.5px] ${late ? "font-medium text-bad" : "muted"}`}>{dueLabel(task.due, task.time, today)}</span>
         <Avatar member={team.find((m) => m.id === task.assigneeId)} />
@@ -52,8 +53,12 @@ export function TaskLine({ task, today, team, selected, showPerson = true, onTog
   );
 }
 
-export function PersonLink({ id, name }: { id: string; name: string }) {
-  return <Link href={`/people/${id}?from=tasks`} className="link">{name}</Link>;
+/** A contact's name that highlights on hover and opens their page. */
+export function PersonLink({ id, name, small }: { id: string; name: string; small?: boolean }) {
+  return (
+    <Link href={`/people/${id}?from=tasks`} onClick={(e) => e.stopPropagation()} title={`Open ${name}`}
+      className={`-mx-1 rounded px-1 font-semibold text-accent hover:bg-accent-soft hover:underline ${small ? "" : "self-start"}`}>{name}</Link>
+  );
 }
 
 export function Toast({ message, onDone }: { message: string; onDone: () => void }) {

@@ -287,6 +287,17 @@ export async function spreadTouches(input: z.input<typeof spreadSchema>) {
   });
 }
 
+/** Undo Spread out: everyone held back shows up again right away. */
+export async function unspreadTouches() {
+  return guarded(null, async (user) => {
+    const r = await db.person.updateMany({ where: { touchAfter: { not: null } }, data: { touchAfter: null } });
+    await logActivity(user.id, "update", "person", "touches", `Undid Spread out on Due for a touch (${r.count} people)`);
+    refresh();
+    revalidatePath("/people");
+    return { count: r.count };
+  });
+}
+
 // ---------- Lists ----------
 export async function createList(name: string) {
   return guarded(null, async (user) => {

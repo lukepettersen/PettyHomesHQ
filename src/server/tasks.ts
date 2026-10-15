@@ -100,8 +100,10 @@ export async function loadTaskBoard() {
     .filter((p) => isDueForTouch(p))
     .map((p) => ({ personId: p.id, name: p.name, followUpDays: p.followUpDays!, lastContact: p.lastTextAt ? p.lastTextAt.toISOString() : null, assigneeId: p.assignedToId }))
     .sort((a, b) => (a.lastContact ?? "").localeCompare(b.lastContact ?? ""));
+  // People held back by Spread out who would otherwise be due now ("Show all now" puts them back).
+  const waiting = people.filter((p) => p.touchAfter && !isDueForTouch(p) && isDueForTouch({ ...p, touchAfter: null })).length;
   return {
-    today, team, touches,
+    today, team, touches, waiting,
     lists: lists.map((l): ListRow => ({ id: l.id, name: l.name, builtin: l.builtin, showOnToday: l.showOnToday })),
     tasks: [...tasks.map(toRow), ...dateTasks],
   };

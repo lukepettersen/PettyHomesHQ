@@ -352,7 +352,7 @@ Principles:
   red. Opening a task slides details over the board.
 - **Lists (sidebar):** Today, then built-in lists and user lists in one order.
   - Built-in: **Clients** (grouped by client, click name to open), **Due for a touch**
-    (people past their follow-up frequency **since their last text**; texts are the touch, owner decision 2026-10-14 — calls and emails don't restart it; the card shows "Last text …"; **Log text** records a text on their timeline and restarts the clock, as do logging a text on the timeline, checking off a text task (incl. "Text Happy Birthday"; it's logged on the timeline as a text, not "Task done"), the bulk action **Mark texted**, and the last text date pulled from Follow Up Boss; **Spread out** *(owner request 2026-10-15)*: "Show 5 a day" gives everyone due right now a day to appear — the first 5 today, the next 5 tomorrow, and so on — without faking texts, so timelines and "Last text" stay true; anyone not texted stays on the list), **Important dates**, **Recurring**,
+    (people past their follow-up frequency **since their last text**; texts are the touch, owner decision 2026-10-14 — calls and emails don't restart it; the card shows "Last text …"; **Log text** records a text on their timeline and restarts the clock, as do logging a text on the timeline, checking off a text task (incl. "Text Happy Birthday"; it's logged on the timeline as a text, not "Task done"), the bulk action **Mark texted**, and the last text date pulled from Follow Up Boss; **Spread out** *(owner request 2026-10-15)*: "Show 5 a day" gives everyone due right now a day to appear — the first 5 today, the next 5 tomorrow, and so on — without faking texts, so timelines and "Last text" stay true; anyone not texted stays on the list; **Undo spread out (N waiting)** puts everyone back right away), **Important dates**, **Recurring**,
     **Misc** (any task with no client).
   - User lists: create, rename, delete (tasks are kept).
   - **Edit columns / Edit:** reorder every list, untick "On Today" to hide one from Today,
@@ -361,6 +361,7 @@ Principles:
   homeiversary → Important dates; `#list` → that list; anything else → Misc.
 - **Quick add** with natural language: "call lender re Ortiz Fri 9am", "rent check every
   month", `#list`, `@alyssa`, today/tomorrow/weekday/next week.
+- Contact names on task rows and Due for a touch highlight on hover and open the contact (owner request 2026-10-15); clicking elsewhere on a task opens its details.
 - Assignee filter: Everyone / Me / each team member; the choice is remembered on each device (owner request 2026-10-15).
 - Task details: title, due date (locked for steps timed from a contract date), time (12-hour, 15-minute steps; the Create task pop-up has the same picker), repeat,
   list, assignee, linked person, checklist source and timing, notes (behind "+ Add notes"
