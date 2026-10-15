@@ -6,6 +6,7 @@ import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { loadDateTasks, loadTeam } from "@/server/tasks";
+import { isDueForTouch } from "@/lib/filters";
 import { CONTRACT_ANCHORS } from "@/lib/templates";
 import { applyTemplate, contractAnchors, factsOf, loadTemplates, moveFile } from "@/server/automation";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
@@ -259,6 +260,30 @@ export async function logTouch(personId: string) {
     refresh(p.id);
     revalidatePath("/people");
     return { name: p.name, followUpDays: p.followUpDays };
+  });
+}
+
+// ---------- Spread out Due for a touch ----------
+const spreadSchema = z.object({ perDay: z.coerce.number().int().min(1, "At least 1 a day").max(100) });
+
+/** Everyone due now gets a day to show up: the first few today, the next few tomorrow, and so on. No fake texts. */
+export async function spreadTouches(input: z.input<typeof spreadSchema>) {
+  return guarded(null, async (user) => {
+    const { perDay } = spreadSchema.parse(input);
+    const people = await db.person.findMany({ where: { deletedAt: null, followUpDays: { gt: 0 } }, select: { id: true, followUpDays: true, lastTextAt: true, touchAfter: true } });
+    // Same order as the list: never texted first, then the longest since the last text.
+    const due = people.filter((p) => isDueForTouch(p)).sort((a, b) => (a.lastTextAt?.getTime() ?? 0) - (b.lastTextAt?.getTime() ?? 0));
+    if (!due.length) throw new UserError("No one is due for a touch right now.");
+    const today = todayCentral();
+    const days = Math.ceil(due.length / perDay);
+    await db.$transaction(Array.from({ length: days }, (_, d) => db.person.updateMany({
+      where: { id: { in: due.slice(d * perDay, (d + 1) * perDay).map((p) => p.id) } },
+      data: { touchAfter: d === 0 ? null : new Date(today.getTime() + d * 86400000) },
+    })));
+    await logActivity(user.id, "update", "person", "touches", `Spread out Due for a touch: ${due.length} people, ${perDay} a day over ${days} days`);
+    refresh();
+    revalidatePath("/people");
+    return { people: due.length, days, lastDay: isoFromDate(new Date(today.getTime() + (days - 1) * 86400000)) };
   });
 }
 

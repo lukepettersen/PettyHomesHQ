@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import type { ListRow, TaskRow, TeamMember, TouchRow } from "@/server/tasks";
 import { diffDays, formatTime, longIso, parseQuickAdd, PRIORITIES, repeatLabel, WHO_COOKIE } from "@/lib/tasks";
-import { completeDateTask, completeTask, createList, deleteList, logTouch, quickAddTask, renameList, reopenTask, setListOnToday } from "./actions";
+import { completeDateTask, completeTask, createList, deleteList, logTouch, quickAddTask, spreadTouches, renameList, reopenTask, setListOnToday } from "./actions";
 import { ArrangeLists } from "./ArrangeLists";
 import { TaskDetail } from "./TaskDetail";
 import { PersonLink, TaskLine, Toast } from "./parts";
@@ -16,7 +16,7 @@ type Done = { row: TaskRow; realId: string; nextId: string | null };
 const keyOf = (l: ListRow) => l.builtin ?? `list:${l.id}`;
 const SUBTITLE: Record<string, string> = {
   clients: "Grouped by client · click a name to open their page",
-  touch: "People past their follow-up frequency",
+  touch: "People past their follow-up frequency · Spread out shows only a few a day",
   recurring: "Each one shows up in Today when it's due, then schedules the next",
   dates: "Birthday and homeiversary cards and texts for the next 60 days · rules in Admin → Date reminders",
   misc: "Tasks that aren't linked to a client",
@@ -50,6 +50,8 @@ export function TasksApp(p: Props) {
   const [newList, setNewList] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [confirmDelList, setConfirmDelList] = useState(false);
+  const [perDay, setPerDay] = useState("5");
+  const [confirmSpread, setConfirmSpread] = useState(false);
   const [pending, start] = useTransition();
   const clearToast = useCallback(() => setToast(""), []);
   const refresh = () => router.refresh();
@@ -291,6 +293,22 @@ export function TasksApp(p: Props) {
                   {p.team.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                 </select>
               </label>
+            </span>
+          )}
+          {view === "touch" && touches.length > 1 && (
+            <span className="flex flex-wrap items-center gap-2 text-sm">
+              <label className="flex items-center gap-1.5">Show
+                <input type="number" min={1} max={100} className="input w-16" value={perDay} onChange={(e) => { setPerDay(e.target.value); setConfirmSpread(false); }} aria-label="People a day" />
+                a day</label>
+              <button type="button" className="btn" disabled={pending || !(+perDay >= 1)} onBlur={() => setConfirmSpread(false)} onClick={() => {
+                if (!confirmSpread) { setConfirmSpread(true); return; }
+                setConfirmSpread(false);
+                start(async () => {
+                  const r = await spreadTouches({ perDay: +perDay });
+                  if (!r.ok) { setToast(r.error); return; }
+                  setToast(`Spread out ${r.data!.people} people: ${perDay} a day through ${longIso(r.data!.lastDay)}.`); refresh();
+                });
+              }}>{confirmSpread ? `Click again to spread ${touches.length} over ${Math.ceil(touches.length / Math.max(1, +perDay || 1))} days` : "Spread out"}</button>
             </span>
           )}
         </div>

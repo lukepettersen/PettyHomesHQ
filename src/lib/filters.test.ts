@@ -55,3 +55,15 @@ describe("smart list filters", () => {
     expect(matchesAll(p, [{ field: "hasPhone", op: "is", value: "no" }], now)).toBe(true);
   });
 });
+
+describe("isDueForTouch with Spread out", () => {
+  const now = new Date("2026-10-15T15:00:00Z");
+  it("waits until the touchAfter day (Central)", () => {
+    expect(isDueForTouch({ followUpDays: 90, lastTextAt: null, touchAfter: new Date("2026-10-16T00:00:00Z") }, now)).toBe(false);
+    expect(isDueForTouch({ followUpDays: 90, lastTextAt: null, touchAfter: new Date("2026-10-15T00:00:00Z") }, now)).toBe(true);
+    expect(isDueForTouch({ followUpDays: 90, lastTextAt: null, touchAfter: null }, now)).toBe(true);
+  });
+  it("still needs the follow-up time to pass", () => {
+    expect(isDueForTouch({ followUpDays: 90, lastTextAt: new Date("2026-10-01T00:00:00Z"), touchAfter: new Date("2026-10-10T00:00:00Z") }, now)).toBe(false);
+  });
+});

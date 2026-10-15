@@ -1,5 +1,6 @@
 // Smart list filters (SPEC.md §6.2). Pure so they can be unit tested; the People page applies them.
 // A filter is { field, op, value }; several values (any of / all of) are joined with "||".
+import { todayCentral } from "@/lib/normalize";
 
 export type Filter = { field: FilterField; op: string; value: string };
 export type FilterField =
@@ -16,6 +17,7 @@ export type PersonFacts = {
   lastContactAt: Date | null;
   lastCallAt?: Date | null;
   lastTextAt?: Date | null;
+  touchAfter?: Date | null; // "Spread out": not due before this day (a date)
   lastEmailAt?: Date | null;
   createdAt?: Date | null;
   assignedTo: string | null; // user name
@@ -55,8 +57,9 @@ const DAY = 86400000;
 export const valuesOf = (f: Filter) => f.value.split("||").map((x) => x.trim()).filter(Boolean);
 
 /** Due for a touch: longer than their follow-up since the last text (texts are the touch; owner, 2026-10-14). */
-export function isDueForTouch(p: Pick<PersonFacts, "followUpDays" | "lastTextAt">, now = new Date()): boolean {
+export function isDueForTouch(p: Pick<PersonFacts, "followUpDays" | "lastTextAt" | "touchAfter">, now = new Date()): boolean {
   if (!p.followUpDays) return false;
+  if (p.touchAfter && p.touchAfter.getTime() > todayCentral(now).getTime()) return false;
   if (!p.lastTextAt) return true;
   return now.getTime() - p.lastTextAt.getTime() >= p.followUpDays * DAY;
 }
