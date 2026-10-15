@@ -16,13 +16,18 @@ export function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase();
 }
 
+/** The people in a contact name: "Sam & Lena Ortiz", "Caitlin and Luke Pettersen" or "Ann + Bo Lee" → two parts. */
+export function splitCouple(name: string): string[] {
+  return name.split(/\s*&\s*|\s+and\s+|\s*\+\s*/i);
+}
+
 /** "Sam Ortiz & Lena Brooks" → "Sam" ; used for greetings and labels. */
 export function firstName(name: string): string {
-  return name.split("&")[0].trim().split(/\s+/)[0] ?? name;
+  return splitCouple(name)[0].trim().split(/\s+/)[0] ?? name;
 }
 
 export function initials(name: string): string {
-  const words = name.split("&")[0].trim().split(/\s+/).filter(Boolean);
+  const words = splitCouple(name)[0].trim().split(/\s+/).filter(Boolean);
   return ((words[0]?.[0] ?? "") + (words.length > 1 ? words[words.length - 1][0] : "")).toUpperCase();
 }
 

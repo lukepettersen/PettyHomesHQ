@@ -12,6 +12,7 @@ import type { FileSection } from "@/lib/files";
 import { bookAppointment, deleteAppointment, updateAppointment } from "../apptActions";
 import { TimeSelect } from "@/components/TimeSelect";
 import { FileForm } from "../../pipeline/FileForm";
+import { splitCouple } from "@/lib/normalize";
 
 type Props = {
   fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; appts: ApptView[]; today: string; phone: string; address: string; hasEmail: boolean; team: string[];
@@ -87,7 +88,7 @@ function Appt({ a, today, personName, onEdit, onDeleted }: { a: ApptView; today:
 
 function BookModal({ type, personId, personName, today, phone, address, hasEmail, team, callTemplates, activeKinds, calendarConnected, onClose, onBooked, edit }: Props & { type: ApptType; edit?: ApptView; onClose: () => void; onBooked: (m: string, file?: { kind: "buyer" | "listing"; consult: string }) => void }) {
   const [, label, mins] = APPT_TYPES.find(([k]) => k === type)!;
-  const client = personName.split("&")[0].trim();
+  const client = splitCouple(personName)[0].trim();
   const [f, setF] = useState(edit
     ? { title: edit.title, date: edit.date, start: edit.start ?? "", end: edit.end ?? "", location: edit.location, invitees: edit.invitees }
     : { title: defaultTitle(personName, type), date: addDays(today, 1), start: "12:00", end: addMinutes("12:00", mins), location: type === "call" ? phone : type === "seller" ? address : "", invitees: [client, ...team] });

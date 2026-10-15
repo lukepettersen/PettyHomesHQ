@@ -1,5 +1,6 @@
 // Task rules from SPEC.md §9, kept pure so they can be unit tested (tasks.test.ts).
 // Dates are ISO "YYYY-MM-DD" strings for Central-time calendar days.
+import { splitCouple } from "@/lib/normalize";
 
 export type Repeat = "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
 export const REPEATS: [Repeat, string][] = [["DAILY", "Daily"], ["WEEKLY", "Weekly"], ["MONTHLY", "Monthly"], ["YEARLY", "Yearly"]];
@@ -146,7 +147,7 @@ export function importantDateTasks(dates: DateInput[], reminders: ReminderInput[
   const out: DateTask[] = [];
   const year = +today.slice(0, 4);
   for (const d of dates) {
-    const who = d.whose.trim() || d.personName.split("&")[0].trim().split(/\s+/)[0];
+    const who = d.whose.trim() || splitCouple(d.personName)[0].trim().split(/\s+/)[0];
     for (const r of reminders) {
       if (r.dateKind !== d.kind) continue;
       if (r.appliesTo !== "Everyone" && r.appliesTo.toLowerCase() !== (d.stage ?? "").toLowerCase()) continue;

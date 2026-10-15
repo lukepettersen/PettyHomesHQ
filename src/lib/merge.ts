@@ -2,6 +2,7 @@
 // Every question on the purchase agreement and buyer/listing forms is a merge field too (formMergeFields);
 // commission and BAC fill in only for people with "See commissions".
 import type { PaSection } from "./pa";
+import { splitCouple } from "@/lib/normalize";
 
 export const MERGE_FIELDS: [string, string][] = [
   ["first_name", "Client first name(s)"], ["last_name", "Client last name"], ["full_name", "Client full name"], ["mailing_name", "Mailing name"],
@@ -35,7 +36,7 @@ const clock = (t: string) => { const [h, m] = t.split(":").map(Number); return `
 
 /** "Sam & Lena Ortiz" → first "Sam & Lena", last "Ortiz"; "Sam Ortiz & Lena Brooks" → "Sam & Lena", "Ortiz/Brooks". */
 export function nameParts(name: string): { first: string; last: string } {
-  const parts = name.split("&").map((p) => p.trim().split(/\s+/)).filter((p) => p[0]);
+  const parts = splitCouple(name).map((p) => p.trim().split(/\s+/)).filter((p) => p[0]);
   const firsts = parts.map((p) => p[0]);
   const lasts = [...new Set(parts.filter((p) => p.length > 1).map((p) => p[p.length - 1]))];
   return { first: firsts.join(" & "), last: lasts.join("/") };
@@ -44,7 +45,7 @@ export function nameParts(name: string): { first: string; last: string } {
 export function mergeValues(c: MergeCtx): Record<string, string> {
   const { first, last } = nameParts(c.personName);
   const d = c.dates ?? {};
-  const firsts = c.personName.split("&").map((x) => x.trim().split(/\s+/)[0]).filter(Boolean);
+  const firsts = splitCouple(c.personName).map((x) => x.trim().split(/\s+/)[0]).filter(Boolean);
   const home = (c.homeAddress ?? "").split(",").map((x) => x.trim());
   const base: Record<string, string> = {
     primary_first_name: firsts[0] ?? "", partner_first_name: firsts[1] ?? "",

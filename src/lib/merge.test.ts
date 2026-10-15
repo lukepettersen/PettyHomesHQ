@@ -36,3 +36,11 @@ describe("merge fields", () => {
     expect(mergeValues({ personName: "Sam Ortiz & Lena Brooks" }).partner_first_name).toBe("Lena");
   });
 });
+
+describe("couple names written with and / +", () => {
+  it("splits Caitlin and Luke Pettersen like Caitlin & Luke", () => {
+    expect(nameParts("Caitlin and Luke Pettersen")).toEqual({ first: "Caitlin & Luke", last: "Pettersen" });
+    expect(nameParts("Ann + Bo Lee")).toEqual({ first: "Ann & Bo", last: "Lee" });
+    expect(nameParts("Andrea Sanders")).toEqual({ first: "Andrea", last: "Sanders" });
+  });
+});

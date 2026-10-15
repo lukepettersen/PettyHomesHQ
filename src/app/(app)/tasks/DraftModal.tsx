@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { FormatBar } from "@/components/FormatBar";
+import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
 import { Modal } from "@/components/Modal";
 import { useRouter } from "next/navigation";
 import { getDraft } from "./draftActions";
@@ -21,6 +22,14 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
   const [confirm, setConfirm] = useState(false);
   const [signature, setSignature] = useState(true);
   const box = useRef<HTMLTextAreaElement>(null);
+  const slash = useSlashTemplates({ box, value: body, templates: d?.templates ?? [], onChoose: (id, from, to) => start(async () => {
+    const r = await getDraft({ taskId, templateId: id });
+    if (!r.ok) { setError(r.error); return; }
+    const next = body.slice(0, from) + r.data!.body + body.slice(to);
+    setBody(next); if (!subject.trim()) setSubject(r.data!.subject);
+    setD((x) => x && { ...x, templateId: id, missing: r.data!.missing });
+  }) });
+  const slashProps = { onKeyDown: slash.onKeyDown, onKeyUp: slash.track, onClick: slash.track };
   const router = useRouter();
   const canSend = !!(d && d.kind === "email" && d.sendsFrom && d.personId && d.to.length);
   const send = () => {
@@ -49,10 +58,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
       {d && (
         <div className="flex flex-col gap-3">
           <label className="label">Template
-            <select className="input" value={d.templateId ?? ""} disabled={pending} onChange={(e) => load(e.target.value || null)}>
-              <option value="">{d.templates.length ? "Pick a template…" : `No ${d.kind} templates yet`}</option>
-              {d.templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
+            <TemplateSearch templates={d.templates} value={d.templateId ?? ""} disabled={pending} onPick={(id) => load(id || null)} emptyLabel="Pick a template" noneLabel={`No ${d.kind} templates yet`} />
           </label>
           {d.stepMessage && !d.templateId && <p className="text-sm text-[#9a6400]">This step expects &quot;{d.stepMessage}&quot;, which hasn&apos;t been created yet. Add it in Admin → Text &amp; email templates, or pick another one.</p>}
           <p className="text-sm"><b>To:</b> {d.to.length ? d.to.join(", ") : <span className="text-bad">No {d.kind === "email" ? "email address" : "phone number"} on file</span>}</p>
@@ -61,10 +67,11 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
             <div className="label">Message
               <div>
                 <FormatBar box={box} value={body} onChange={setBody} />
-                <textarea ref={box} aria-label="Message" className="input min-h-56 rounded-t-none font-normal" value={body} onChange={(e) => setBody(e.target.value)} />
+                <textarea ref={box} aria-label="Message" className="input min-h-56 rounded-t-none font-normal" value={body} onChange={(e) => { setBody(e.target.value); slash.track(); }} {...slashProps} />
+                {slash.menu}
               </div>
             </div>
-          ) : <label className="label">Message<textarea className="input min-h-56 font-normal" value={body} onChange={(e) => setBody(e.target.value)} /></label>}
+          ) : <div className="label">Message<textarea ref={box} aria-label="Message" className="input min-h-56 font-normal" value={body} onChange={(e) => { setBody(e.target.value); slash.track(); }} {...slashProps} />{slash.menu}</div>}
           {canSend && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={signature} onChange={(e) => setSignature(e.target.checked)} /> Add my Gmail signature</label>}
           {d.missing.length > 0 && <p className="text-sm text-[#9a6400]">Not filled in (nothing on file): {d.missing.join(", ")}. Check the message before sending.</p>}
           <p className="text-xs muted">{d.kind === "email" ? (canSend ? `Send email sends it from ${d.sendsFrom}, puts it on the timeline and checks off this task.` : "Gmail isn't connected, so HQ can't send it. Open it in your email app, or copy it. An Admin can connect Gmail in Admin → Integrations.") : "Copy it and send it from your phone, then check off the task."}</p>

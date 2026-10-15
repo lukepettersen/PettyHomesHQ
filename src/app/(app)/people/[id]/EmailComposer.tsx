@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { FormatBar } from "@/components/FormatBar";
+import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
 import { fillEmailTemplate, sendEmail } from "../emailActions";
 
 /** Timeline → Email: pick a template (optional), check it over, send from the connected Gmail (SPEC.md §12). */
@@ -18,8 +19,23 @@ export function EmailComposer({ personId, emails, templates, sendsFrom }: { pers
   const [notice, setNotice] = useState("");
   const [pending, start] = useTransition();
   const [signature, setSignature] = useState(true);
+  const [confirmClear, setConfirmClear] = useState(false);
   const box = useRef<HTMLTextAreaElement>(null);
+  // "/name" in the message puts that template in where the slash was (subject too, if it's empty).
+  const slash = useSlashTemplates({ box, value: body, templates, onChoose: (id, from, to) => start(async () => {
+    const r = await fillEmailTemplate({ personId, templateId: id });
+    if (!r.ok) { setError(r.error); return; }
+    const next = body.slice(0, from) + r.data!.body + body.slice(to);
+    setBody(next); setTemplateId(id); setMissing(r.data!.missing); setConfirm(false);
+    if (!subject.trim()) setSubject(r.data!.subject);
+    const at = from + r.data!.body.length;
+    requestAnimationFrame(() => { box.current?.focus(); box.current?.setSelectionRange(at, at); });
+  }) });
 
+  const clear = () => {
+    if (!confirmClear) { setConfirmClear(true); return; }
+    setConfirmClear(false); setSubject(""); setBody(""); setTemplateId(""); setMissing([]); setConfirm(false); setError(""); setNotice("");
+  };
   if (!sendsFrom) return <p className="mt-2 rounded-md bg-sunken px-3 py-2 text-sm muted">Gmail isn&apos;t connected yet. An Admin can connect it in Admin → Integrations (Connect Google), then emails send from here and show on the timeline.</p>;
   if (!emails.length) return <p className="mt-2 rounded-md bg-sunken px-3 py-2 text-sm muted">No email address on file. Add one to their contact first.</p>;
 
@@ -51,25 +67,27 @@ export function EmailComposer({ personId, emails, templates, sendsFrom }: { pers
         ))}
       </fieldset>
       <label className="label">Template
-        <select className="input" value={templateId} disabled={pending} onChange={(e) => pick(e.target.value)}>
-          <option value="">{templates.length ? "None (write your own)" : "No email templates yet"}</option>
-          {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
+        <TemplateSearch templates={templates} value={templateId} disabled={pending} onPick={pick} noneLabel="No email templates yet" />
       </label>
       <label className="label">Subject<input className="input" value={subject} onChange={(e) => { setConfirm(false); setSubject(e.target.value); }} /></label>
       <div className="label">Message
         <div>
           <FormatBar box={box} value={body} onChange={(v) => { setConfirm(false); setBody(v); }} />
-          <textarea ref={box} aria-label="Message" className="input min-h-40 rounded-t-none font-normal" value={body} onChange={(e) => { setConfirm(false); setBody(e.target.value); }} />
+          <textarea ref={box} aria-label="Message" placeholder="Write here, or type / and a template name" className="input min-h-40 rounded-t-none font-normal" value={body}
+            onChange={(e) => { setConfirm(false); setBody(e.target.value); slash.track(); }} onKeyDown={slash.onKeyDown} onKeyUp={slash.track} onClick={slash.track} />
+          {slash.menu}
         </div>
       </div>
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={signature} onChange={(e) => setSignature(e.target.checked)} /> Add my Gmail signature</label>
       {missing.length > 0 && <p className="text-sm text-[#9a6400]">Not filled in (nothing on file): {missing.join(", ")}. Check the message before sending.</p>}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs muted">Sends from {sendsFrom}. A copy is in its Gmail Sent folder and here on the timeline.</span>
+        <span className="flex gap-2">
+        {(subject || body || templateId) && <button type="button" className="btn" disabled={pending} onClick={clear} onBlur={() => setConfirmClear(false)}>{confirmClear ? "Click again to clear" : "Clear"}</button>}
         <button type="button" className="btn btn-primary" disabled={pending || !to.length || !subject.trim() || !body.trim()} onClick={send} onBlur={() => setConfirm(false)}>
           {pending ? "Sending…" : confirm ? `Click again to send to ${to.length === 1 ? to[0] : `${to.length} addresses`}` : "Send email"}
         </button>
+        </span>
       </div>
       {error && <p role="alert" className="text-sm text-bad">{error}</p>}
       {notice && <p role="status" className="text-sm text-accent">{notice}</p>}

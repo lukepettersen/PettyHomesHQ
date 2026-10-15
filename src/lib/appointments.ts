@@ -1,4 +1,5 @@
 // Appointments (SPEC.md §10). Pure, unit tested in appointments.test.ts.
+import { splitCouple } from "@/lib/normalize";
 
 export type ApptType = "call" | "buyer" | "seller" | "showing" | "other";
 export const APPT_TYPES: [ApptType, string, number][] = [["call", "Phone Call", 30], ["buyer", "Buyer Consult", 60], ["seller", "Seller Consult", 60], ["showing", "Showing", 60], ["other", "Appointment", 60]];
@@ -6,7 +7,7 @@ export const apptLabel = (t: string) => APPT_TYPES.find(([k]) => k === t)?.[1] ?
 
 /** "Sam & Lena Ortiz" → "Ortiz"; "Sam Ortiz & Lena Brooks" → "Ortiz/Brooks"; "Cher" → "Cher". */
 export function apptName(name: string): string {
-  const parts = name.split("&").map((p) => p.trim()).filter(Boolean);
+  const parts = splitCouple(name).map((p) => p.trim()).filter(Boolean);
   const lasts = parts.map((p) => p.split(/\s+/).pop()!).filter(Boolean);
   if (parts.length > 1 && parts[0].split(/\s+/).length === 1) return lasts[lasts.length - 1]; // "Sam & Lena Ortiz"
   return [...new Set(lasts)].join("/");

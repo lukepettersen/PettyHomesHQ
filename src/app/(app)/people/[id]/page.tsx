@@ -21,6 +21,7 @@ import { FilesCard } from "./FilesCard";
 import { PartnerDeals } from "./PartnerDeals";
 import { storageConnected } from "@/server/storage";
 import { PAGE_SIZE, queryPeople } from "@/server/people";
+import { RememberRecent } from "@/components/SearchBox";
 
 const BACK: Record<string, [string, string]> = { tasks: ["/tasks", "Tasks"], people: ["/people", "People"], pipeline: ["/pipeline", "Pipeline"] };
 
@@ -87,6 +88,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
 
   return (
     <div className="mx-auto max-w-[1500px] px-4 py-3">
+      <RememberRecent id={p.id} name={p.name} detail={p.phones[0]?.number ?? p.emails[0]?.address ?? ""} stage={p.stage?.name ?? ""} />
       <div className="flex flex-wrap items-center gap-3">
         <Link href={backHref} className="link text-sm">← {backLabel}</Link>
         {nav && (

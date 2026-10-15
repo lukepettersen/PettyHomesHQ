@@ -5,6 +5,7 @@ import { isoFromDate } from "@/lib/normalize";
 import { contractAppointments } from "@/lib/appointments";
 import { apptEvent, contractKey, inviteeEmails, type GEvent } from "@/lib/calendar";
 import { addressesIn, buildMime, messageText } from "@/lib/email";
+import { splitCouple } from "@/lib/normalize";
 
 // Google Calendar (SPEC.md §12). Off until configured: every call here quietly does nothing when Google
 // isn't connected, and a Google error never stops HQ from saving.
@@ -105,7 +106,7 @@ export function syncAppointment(id: string) {
     const a = await db.appointment.findUnique({ where: { id }, include: { person: { include: { emails: { orderBy: { position: "asc" } } } } } });
     if (!a || a.deletedAt || a.person.deletedAt) { await deleteEvent(`appt:${id}`); return; }
     const invitees = Array.isArray(a.invitees) ? (a.invitees as string[]) : [];
-    const people = inviteeEmails(invitees, await team(), { firstName: a.person.name.split("&")[0].trim(), email: a.person.emails[0]?.address ?? null });
+    const people = inviteeEmails(invitees, await team(), { firstName: splitCouple(a.person.name)[0].trim(), email: a.person.emails[0]?.address ?? null });
     await upsertEvent(`appt:${id}`, apptEvent({ title: a.title, date: isoFromDate(a.date), start: a.start, end: a.end, location: a.location }, people, "Booked in Petty Homes HQ."));
   });
 }

@@ -85,6 +85,8 @@ Principles:
 - **Top bar:** logo + "Petty Homes HQ", then tabs in this order:
   **People · Tasks · Messages · Pipeline · Tools ▾ · Admin**, and a notification **bell** on
   the right.
+- **Recent contacts** *(owner request 2026-10-15)*: clicking the empty search box lists the
+  last 5 contacts opened on this device (from search or their page).
 - **Search from anywhere** in the top bar: matching people drop down as you type (name,
   phone or email); Enter opens the highlighted person; "See all results" opens People.
 - **Tools ▾:** dropdown of external links the owner adds in Admin → Tools menu (name + link).
@@ -454,6 +456,12 @@ Principles:
   two-step confirm). Task **Draft email** has **Send email** too, which also checks off the
   task. Mail goes from the connected account, lands in its Sent folder and shows on the
   timeline (filter: Emails). HQ only sends to addresses saved on that person.
+- **Finding templates** *(owner request 2026-10-15)*: the Template box is searchable (type
+  any words of the name or folder; arrows + Enter). In the message, type **/** and a template
+  name to drop it in where you're typing (fills the subject too if it's empty). **Clear**
+  (two-step) wipes the subject, message and template to start over. Same in Draft email/text.
+- **Couple names**: "Sam & Lena Ortiz", "Caitlin and Luke Pettersen" and "Ann + Bo Lee" are all
+  read as two people for merge fields ("Caitlin & Luke"), greetings and appointment names.
 - **Formatting** *(built 2026-10-16)*: email messages and email templates have a Bold / Link /
   • List bar (stored as **bold**, [words](https://…), "- " lines); web addresses become links.
   Emails go out as HTML with a plain-text copy. "Add my Gmail signature" (on by default)
