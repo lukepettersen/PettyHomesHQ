@@ -6,7 +6,7 @@ import type { TaskRow, TeamMember } from "@/server/tasks";
 import { diffDays, dueLabel, TASK_KINDS } from "@/lib/tasks";
 import { Modal } from "@/components/Modal";
 import { TimeSelect } from "@/components/TimeSelect";
-import { applyTemplateToPerson, completeTask, createTask, reopenTask } from "../../tasks/actions";
+import { applyTemplateToPerson, completeDateTask, completeTask, createTask, reopenTask } from "../../tasks/actions";
 import { Avatar, CheckButton, KindIcon } from "../../tasks/parts";
 import { TaskDetail } from "../../tasks/TaskDetail";
 import type { ListRow } from "@/server/tasks";
@@ -23,7 +23,7 @@ export function TasksCard({ personId, personName, rows, team, today, meId, templ
   const [openId, setOpenId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [msg, setMsg] = useState("");
-  const [done, setDone] = useState<Record<string, { row: TaskRow; nextId: string | null }>>({});
+  const [done, setDone] = useState<Record<string, { row: TaskRow; realId: string; nextId: string | null }>>({});
   const [error, setError] = useState("");
   const [, start] = useTransition();
   // Checked-off tasks stay where they were (crossed out) until the page is reloaded, so a mis-click is easy to undo.
@@ -42,14 +42,17 @@ export function TasksCard({ personId, personName, rows, team, today, meId, templ
     setError("");
     const d = done[t.id];
     if (d) {
-      const r = await reopenTask({ id: t.id, nextId: d.nextId });
+      const r = await reopenTask({ id: d.realId, nextId: d.nextId });
       if (!r.ok) { setError(r.error); return; }
       setDone((x) => { const n = { ...x }; delete n[t.id]; return n; });
     } else {
-      setDone((x) => ({ ...x, [t.id]: { row: t, nextId: null } }));
-      const r = await completeTask(t.id);
+      setDone((x) => ({ ...x, [t.id]: { row: t, realId: t.id, nextId: null } }));
+      // Birthday / homeiversary tasks are saved when checked off; undo then needs the saved task's id.
+      const r = t.virtual ? await completeDateTask(t.id) : await completeTask(t.id);
       if (!r.ok) { setError(r.error); setDone((x) => { const n = { ...x }; delete n[t.id]; return n; }); return; }
-      setDone((x) => ({ ...x, [t.id]: { row: t, nextId: r.data?.nextId ?? null } }));
+      const realId = t.virtual ? (r.data as { id: string }).id : t.id;
+      const nextId = t.virtual ? null : (r.data as { nextId: string | null } | undefined)?.nextId ?? null;
+      setDone((x) => ({ ...x, [t.id]: { row: t, realId, nextId } }));
     }
     router.refresh();
   });

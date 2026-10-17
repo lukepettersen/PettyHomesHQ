@@ -118,10 +118,12 @@ export async function loadChecklists(personId: string): Promise<TaskRow[]> {
 /** Open tasks for one person, soonest first (contact page Tasks card). */
 export async function loadPersonTasks(personId: string) {
   const today = isoFromDate(todayCentral());
-  const [tasks, team] = await Promise.all([
+  const team = await loadTeam();
+  // Birthday / homeiversary tasks aren't saved until checked off, so they're worked out here like on the Tasks page.
+  const [tasks, dateTasks] = await Promise.all([
     db.task.findMany({ where: { personId, completedAt: null, deletedAt: null, ...LIVE_STEPS }, include: taskInclude }),
-    loadTeam(),
+    loadDateTasks(team, today, personId),
   ]);
-  const rows = tasks.map(toRow).sort((a, b) => (a.due ?? "9999").localeCompare(b.due ?? "9999") || (a.time ?? "99").localeCompare(b.time ?? "99"));
+  const rows = [...tasks.map(toRow), ...dateTasks].sort((a, b) => (a.due ?? "9999").localeCompare(b.due ?? "9999") || (a.time ?? "99").localeCompare(b.time ?? "99"));
   return { today, team, rows };
 }
