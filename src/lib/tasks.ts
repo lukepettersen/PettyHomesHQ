@@ -2,8 +2,8 @@
 // Dates are ISO "YYYY-MM-DD" strings for Central-time calendar days.
 import { splitCouple } from "@/lib/normalize";
 
-export type Repeat = "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
-export const REPEATS: [Repeat, string][] = [["DAILY", "Daily"], ["WEEKLY", "Weekly"], ["MONTHLY", "Monthly"], ["YEARLY", "Yearly"]];
+export type Repeat = "DAILY" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "YEARLY";
+export const REPEATS: [Repeat, string][] = [["DAILY", "Daily"], ["WEEKLY", "Weekly"], ["BIWEEKLY", "Every other week"], ["MONTHLY", "Monthly"], ["YEARLY", "Yearly"]];
 export const repeatLabel = (r: string | null | undefined) => REPEATS.find(([k]) => k === r)?.[1] ?? "";
 
 export const PRIORITIES = ["None", "Low", "Medium", "High"];
@@ -42,6 +42,7 @@ export function nextDue(iso: string, repeat: Repeat): string {
   switch (repeat) {
     case "DAILY": return addDays(iso, 1);
     case "WEEKLY": return addDays(iso, 7);
+    case "BIWEEKLY": return addDays(iso, 14);
     case "MONTHLY": return addMonths(iso, 1);
     case "YEARLY": return addMonths(iso, 12);
   }
@@ -103,7 +104,8 @@ export function parseQuickAdd(text: string, today: string): QuickAdd {
   const take = (re: RegExp) => { const m = s.match(re); if (m) s = s.replace(m[0], " "); return m; };
   let m: RegExpMatchArray | null;
 
-  if ((m = take(/\s(every\s+(day|week|month|year)|daily|weekly|monthly|yearly)(?=\s)/i))) {
+  if (take(/\s(every\s+(other|2|two)\s+weeks?|bi-?weekly)(?=\s)/i)) out.repeat = "BIWEEKLY";
+  else if ((m = take(/\s(every\s+(day|week|month|year)|daily|weekly|monthly|yearly)(?=\s)/i))) {
     const w = (m[2] ?? m[1]).toLowerCase();
     out.repeat = w.startsWith("da") ? "DAILY" : w.startsWith("w") ? "WEEKLY" : w.startsWith("m") ? "MONTHLY" : "YEARLY";
   }

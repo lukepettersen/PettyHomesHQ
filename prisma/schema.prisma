@@ -295,7 +295,7 @@ model Task {
   kind            String             @default("task") // task | followup | call | text | email | showing | closing | other
   dueDate         DateTime?          @db.Date
   dueTime         String? // "14:00"
-  repeat          String? // DAILY | WEEKLY | MONTHLY | YEARLY
+  repeat          String? // DAILY | WEEKLY | BIWEEKLY | MONTHLY | YEARLY
   priority        Int                @default(0)
   subtasks        Json               @default("[]")
   listId          String?

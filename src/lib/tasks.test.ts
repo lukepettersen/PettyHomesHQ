@@ -82,3 +82,12 @@ describe("important dates", () => {
     expect(out[0].title).toBe("Send Homeiversary Card");
   });
 });
+
+describe("every other week", () => {
+  it("repeats 14 days later and is understood by quick add", () => {
+    expect(nextDue("2026-10-30", "BIWEEKLY")).toBe("2026-11-13");
+    expect(parseQuickAdd("Pay Alyssa $500 every other week", "2026-10-17")).toMatchObject({ title: "Pay Alyssa $500", repeat: "BIWEEKLY" });
+    expect(parseQuickAdd("payroll biweekly", "2026-10-17")).toMatchObject({ title: "payroll", repeat: "BIWEEKLY" });
+    expect(parseQuickAdd("rent every week", "2026-10-17").repeat).toBe("WEEKLY");
+  });
+});

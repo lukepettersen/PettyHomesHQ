@@ -14,7 +14,7 @@ import { categoryOf, longIso, nextDue, parseQuickAdd, parseTime, stripPersonWord
 
 const id = z.string().trim().min(1).max(200);
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date");
-const repeatSchema = z.enum(["DAILY", "WEEKLY", "MONTHLY", "YEARLY"]).nullable();
+const repeatSchema = z.enum(["DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY", "YEARLY"]).nullable();
 const kindSchema = z.enum(["task", "followup", "call", "text", "email", "showing", "closing", "other"]);
 const listName = z.string().trim().min(1, "Give the list a name").max(60);
 const timeSchema = z.string().trim().max(20).transform((v, ctx) => {
