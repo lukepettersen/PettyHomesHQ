@@ -370,9 +370,26 @@ model ClientFile {
   commission  FileCommission?
   contracts   PurchaseAgreement[]
   tasks       Task[]
+  offers      Offer[]
 
   @@index([personId])
   @@index([kind, closedAt])
+}
+
+// An offer submitted from HQ (Submit offer, ported from Relay; SPEC.md §7.5): the organized terms and the note text.
+model Offer {
+  id          String     @id @default(cuid())
+  fileId      String
+  file        ClientFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  personId    String
+  data        Json // terms, see src/lib/offer.ts OfferData
+  summary     String // the "RELAY: OFFER INSTRUCTIONS" note
+  createdById String?
+  createdAt   DateTime   @default(now())
+  deletedAt   DateTime?
+
+  @@index([fileId])
+  @@index([personId])
 }
 
 // Commission and BAC, kept apart so they're only read for users with "See commissions".

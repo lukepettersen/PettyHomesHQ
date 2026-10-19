@@ -301,6 +301,25 @@ Principles:
   homeiversary to the close date; starts post-close template.
 - **Fell through:** contract ends; file returns to its pre-contract status.
 
+### 7.5 Submit offer (Relay built in) *(owner decision 2026-10-19)*
+- The Relay app's offer flow now lives in HQ. **Submit offer** is on every contact (Pipeline card)
+  and on each buyer deal.
+- Talk (browser speech-to-text; never auto-restarts, like Relay) or type the terms; **Organize**
+  sends them to Claude with Relay's own instructions (same fields: property, price, earnest money,
+  closing, inspection, seller-paid costs, financing, down payment, buyer broker comp, appliances;
+  optional escalation, material defect, appraisal guarantee, expiration, written statement, sale
+  contingency, FHA/VA terms, notes). Keep talking to fill gaps ("Still needed: …"); **Review**
+  shows the note in Relay's "RELAY: OFFER INSTRUCTIONS" format; **Submit offer**.
+- Submitting: saves the offer on the buyer deal (starts a buyer deal at Submitting offers if there
+  is none; asks which one if there are several), puts the note on the timeline @mentioning the rest
+  of the team (bell), moves an earlier-status deal to **Submitting offers**, and starts every task
+  template set to **"When an offer is submitted (every offer)"** (each offer gets its own tasks;
+  the loan type feeds the FHA/VA condition). The FUB "Offer" tag isn't used.
+- The buyer deal lists **Offers submitted** (view the note). **+ Add purchase agreement** starts
+  filled in from the latest offer (address, price, earnest money, seller contributions, close date,
+  financing, material defect, written statement).
+- Needs ANTHROPIC_API_KEY (same as Ask Claude).
+
 ## 8. Task templates and automations
 
 - A **template** = phases of steps. Each step: name, timing (days before/on/after an anchor

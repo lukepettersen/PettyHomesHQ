@@ -30,7 +30,7 @@ export function triggerLabel(trigger: string | null, statuses: { id: string; kin
   }
   return ({ "pa:buyer": "When a buyer-side purchase agreement is added", "pa:seller": "When a seller-side purchase agreement is added",
     "closed:buyer": "When a buyer-side contract closes", "closed:seller": "When a seller-side contract closes", phonecall: "When a phone call is booked",
-    buyerconsult: "When a Buyer consult is booked", sellerconsult: "When a Seller consult is booked", anyconsult: "When a Buyer consult or Seller consult is booked" } as Record<string, string>)[trigger] ?? trigger;
+    buyerconsult: "When a Buyer consult is booked", sellerconsult: "When a Seller consult is booked", anyconsult: "When a Buyer consult or Seller consult is booked", offer: "When an offer is submitted (every offer)" } as Record<string, string>)[trigger] ?? trigger;
 }
 
 /** Facts that conditions read: from the contract, or the listing file. */

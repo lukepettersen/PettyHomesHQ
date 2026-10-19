@@ -14,11 +14,12 @@ import type { PaSection, PaView, Side } from "@/lib/pa";
 import type { TaskRow, TeamMember } from "@/server/tasks";
 import { Checklist } from "./Checklist";
 import { EmailComposer } from "./EmailComposer";
-import { Modal } from "@/components/Modal";
+import { OfferModal } from "./OfferModal";
 import { DealNotes } from "./DealNotes";
 
 type EmailProps = { emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null };
-type Props = { email: EmailProps; fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean; canDelete: boolean; timeline: React.ReactNode;
+export type OfferRow = { id: string; fileId: string; createdAt: string; address: string; price: number | null; summary: string; prefill: Record<string, string> };
+type Props = { offers: OfferRow[]; email: EmailProps; fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean; canDelete: boolean; timeline: React.ReactNode;
   contracts: PaView[]; forms: Record<Side, PaSection[]>; today: string; checklists: TaskRow[]; team: TeamMember[] };
 
 /** Middle column: a tab per active buyer/listing file, then Timeline (SPEC.md §6.3). */
@@ -56,11 +57,14 @@ export function SideChip({ kind }: { kind: string }) {
   return <span className={`rounded px-1.5 text-[11px] font-bold uppercase tracking-wide ${kind === "buyer" ? "bg-accent-soft text-accent" : "bg-[#f6e3d9] text-[#9a4f2e]"}`}>{kind === "buyer" ? "Buyer" : kind === "listing" ? "Seller" : kind}</span>;
 }
 
-function FilePane({ email, fileForms, file, personId, personName, statuses, canSeeCommission, canDelete, onDeleted, contracts, forms, today, checklists, team }: Props & { file: FileView; onDeleted: () => void }) {
+function FilePane({ offers, email, fileForms, file, personId, personName, statuses, canSeeCommission, canDelete, onDeleted, contracts, forms, today, checklists, team }: Props & { file: FileView; onDeleted: () => void }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [addingPa, setAddingPa] = useState(false);
   const [emailing, setEmailing] = useState(false);
+  const [offering, setOffering] = useState(false);
+  const [viewOffer, setViewOffer] = useState<string | null>(null);
+  const myOffers = offers.filter((o) => o.fileId === file.id);
   const mine = contracts.filter((c) => c.fileId === file.id);
   const activePa = mine.find((c) => c.state === "active");
   const earlier = mine.filter((c) => c.state !== "active");
@@ -85,7 +89,8 @@ function FilePane({ email, fileForms, file, personId, personName, statuses, canS
           <p className="text-xs muted">{activePa ? `Under contract${activePa.dates.closing ? ` · closing ${shortDay(activePa.dates.closing)}` : ""}` : `In ${file.status} since ${shortDay(file.statusSince.slice(0, 10))}`}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" className="btn" onClick={() => setEmailing(true)}>Send email</button>
+          {file.kind === "buyer" && <button type="button" className="btn" onClick={() => setOffering(true)}>Submit offer</button>}
+          <button type="button" className="btn" aria-expanded={emailing} onClick={() => setEmailing((x) => !x)}>Send email</button>
           <button type="button" className="btn" onClick={() => setEditing(true)}>Edit</button>
           {canDelete && <button type="button" className="btn btn-danger" disabled={pending} onBlur={() => setConfirm(false)}
             onClick={() => confirm ? run(() => deleteFile(file.id), onDeleted) : setConfirm(true)}>{confirm ? "Click again to delete" : "Delete"}</button>}
@@ -98,10 +103,13 @@ function FilePane({ email, fileForms, file, personId, personName, statuses, canS
           </label>}
         </div>
       </div>
+      {/* Email opens right here on the deal, so the checklist stays in view while writing. */}
       {emailing && (
-        <Modal title={`Email ${personName}`} onClose={() => setEmailing(false)} wide>
+        <div className="mt-3 rounded-lg border border-misty bg-paper p-3">
+          <div className="flex items-center justify-between"><b className="text-sm">Email {personName}</b>
+            <button type="button" className="text-xs font-semibold text-accent hover:underline" onClick={() => setEmailing(false)}>Close</button></div>
           <EmailComposer personId={personId} emails={email.emails} templates={email.templates} sendsFrom={email.sendsFrom} onSent={() => setEmailing(false)} />
-        </Modal>
+        </div>
       )}
       <DealNotes key={file.id + file.notes} fileId={file.id} notes={file.notes} notesAt={file.notesAt} notesBy={file.notesBy} />
       {facts.length > 0 && (
@@ -110,13 +118,26 @@ function FilePane({ email, fileForms, file, personId, personName, statuses, canS
         </dl>
       )}
       {facts.length === 0 && <p className="mt-3 text-sm muted">Nothing filled in yet. Use Edit to add details.</p>}
+      {myOffers.length > 0 && (
+        <div className="mt-3">
+          <h4 className="text-xs font-semibold uppercase tracking-wider muted">Offers submitted</h4>
+          {myOffers.map((o) => (
+            <div key={o.id} className="border-t border-misty/60 py-1.5 text-sm first:border-0">
+              <button type="button" className="flex w-full justify-between gap-2 text-left hover:underline" aria-expanded={viewOffer === o.id} onClick={() => setViewOffer(viewOffer === o.id ? null : o.id)}>
+                <span>{o.address.split(",")[0] || "Offer"}{o.price != null ? ` · ${money(o.price)}` : ""}</span><span className="muted">{shortDay(o.createdAt.slice(0, 10))} · {viewOffer === o.id ? "Hide" : "View"}</span>
+              </button>
+              {viewOffer === o.id && <pre className="mt-1 max-h-72 overflow-auto whitespace-pre-wrap rounded-md bg-sunken p-2 font-mono text-xs">{o.summary}</pre>}
+            </div>
+          ))}
+        </div>
+      )}
       {activePa ? (
         <PaBox pa={activePa} personName={personName} fileKind={file.kind} fileLine={fileLine(file)} forms={forms} today={today} canSeeCommission={canSeeCommission}>
           <Checklist title={activePa.side === "buyer" ? "Buyer contract checklist" : "Seller contract checklist"} tasks={checklists.filter((t) => t.paId === activePa.id)} today={today} team={team} personId={personId} />
         </PaBox>
       ) : (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-misty px-3 py-2.5">
-          <span><b>Offer accepted?</b> <span className="text-sm muted">Add the purchase agreement to put {personName.split(" ")[0]} under contract.</span></span>
+          <span><b>Offer accepted?</b> <span className="text-sm muted">Add the purchase agreement to put {personName.split(" ")[0]} under contract{myOffers.length ? "; it starts filled in from the latest offer" : ""}.</span></span>
           <button type="button" className="btn btn-primary" onClick={() => setAddingPa(true)}>+ Add purchase agreement</button>
         </div>
       )}
@@ -134,9 +155,10 @@ function FilePane({ email, fileForms, file, personId, personName, statuses, canS
       )}
       {addingPa && (
         <PaWizard fileId={file.id} fileKind={file.kind} personName={personName} fileLine={fileLine(file)} forms={forms} canSeeCommission={canSeeCommission}
-          prefill={file.kind === "listing" ? { address: file.address ?? "", price: file.price ? String(file.price) : "", ...pick(file.info, ["ptype", "year", "hoa", "newc"]) } : {}}
+          prefill={file.kind === "listing" ? { address: file.address ?? "", price: file.price ? String(file.price) : "", ...pick(file.info, ["ptype", "year", "hoa", "newc"]) } : myOffers[0]?.prefill ?? {}}
           onClose={() => setAddingPa(false)} onSaved={(m) => { setAddingPa(false); setMsg(m); router.refresh(); }} />
       )}
+      {offering && <OfferModal personId={personId} personName={personName} buyerFiles={[{ id: file.id, label: fileLine(file) }]} fileId={file.id} onClose={() => setOffering(false)} />}
       {msg && <p role="status" className="mt-2 text-sm text-accent">{msg}</p>}
       {error && <p role="alert" className="mt-2 text-sm text-bad">{error}</p>}
       {editing && (

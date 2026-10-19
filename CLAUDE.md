@@ -111,6 +111,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 - Industry partners: `src/lib/partners.ts` (types, section → type, fill/save; tested), `src/server/partners.ts` (`savePaPartners`), `/api/partners`, `pipeline/PartnerPicker.tsx`, `people/[id]/PartnerDeals.tsx`
 - FUB import: `src/lib/fubImport.ts` (summary, default matching from owner decisions, apply; tested), `src/server/fub.ts` (API, cached copy in AppSetting), Admin → Import from Follow Up Boss in `src/app/(app)/admin/import/`; templates + notes/calls/texts: `src/lib/fubHistory.ts` (tested), `admin/import/historyActions.ts`, `HistoryTemplates.tsx`
 - Ask Claude: `src/lib/assistant.ts` (proposal checks; tested), `src/server/assistant.ts` (Claude call with find_people / propose_task / propose_note tools; proposes only), `src/app/(app)/assistant/actions.ts`, `src/components/AskClaude.tsx` (mic, review cards, Save via createTask / addTimelineEntry)
+- Submit offer (Relay port): `src/lib/offer.ts` (offer fields, note format, PA prefill; tested), `src/server/offer.ts` + `src/server/offerPrompt.ts` (Relay's Claude prompt), `src/app/(app)/pipeline/offerActions.ts`, `people/[id]/OfferModal.tsx`, `src/components/useSpeech.ts`
 - `src/lib/customFields.ts` — custom field types and value cleaning
 - Owner setup and ops runbook: `docs/ops.md`
 

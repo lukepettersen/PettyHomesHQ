@@ -7,12 +7,14 @@ import type { StatusRow } from "@/server/files";
 import { FileForm } from "../../pipeline/FileForm";
 import { SideChip } from "./FileTabs";
 import type { PaView } from "@/lib/pa";
+import { OfferModal } from "./OfferModal";
 
 /** Contact page → Pipeline: this person's buyer and listing files, + Add buyer / + Add seller. */
 export function PipelineCard({ fileForms, personId, personName, files, contracts, statuses, canSeeCommission }: { fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; files: FileView[]; contracts: PaView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean }) {
   const router = useRouter();
   const [adding, setAdding] = useState<FileKind | null>(null);
   const [msg, setMsg] = useState("");
+  const [offering, setOffering] = useState(false);
   return (
     <section className="card p-4" aria-labelledby="pipe-h">
       <h3 id="pipe-h" className="font-bold">Pipeline <span className="text-sm font-normal muted">{files.length || ""}</span></h3>
@@ -40,7 +42,10 @@ export function PipelineCard({ fileForms, personId, personName, files, contracts
       <div className="mt-2 flex flex-wrap gap-2">
         <button type="button" className="btn" onClick={() => setAdding("buyer")}>+ Add buyer</button>
         <button type="button" className="btn" onClick={() => setAdding("listing")}>+ Add seller</button>
+        <button type="button" className="btn btn-primary" onClick={() => setOffering(true)}>Submit offer</button>
       </div>
+      {offering && <OfferModal personId={personId} personName={personName} fileId={null} onClose={() => setOffering(false)}
+        buyerFiles={files.filter((f) => f.kind === "buyer" && !f.closedAt).map((f) => ({ id: f.id, label: `Buyer · ${contracts.find((c) => c.fileId === f.id && c.state === "active")?.address.split(",")[0] ?? fileLine(f)} (${f.status})` }))} />}
       {msg && <p role="status" className="mt-2 text-sm text-accent">{msg}</p>}
       {adding && (
         <FileForm form={fileForms[adding]} kind={adding} personId={personId} personName={personName} statuses={statuses[adding]} canSeeCommission={canSeeCommission}

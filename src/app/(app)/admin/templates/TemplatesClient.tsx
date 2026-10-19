@@ -82,6 +82,9 @@ function Editor({ t: initial, statuses, team, tags, today, templates, messages, 
               <option value="">By hand, from a contact</option>
               <optgroup label="Buyers">{statuses.filter((s) => s.kind === "buyer").map((s) => <option key={s.id} value={`status:${s.id}`}>When a buyer moves to {s.name}</option>)}</optgroup>
               <optgroup label="Listings">{statuses.filter((s) => s.kind === "listing").map((s) => <option key={s.id} value={`status:${s.id}`}>When a listing moves to {s.name}</option>)}</optgroup>
+              <optgroup label="Offers">
+                <option value="offer">When an offer is submitted (every offer)</option>
+              </optgroup>
               <optgroup label="Purchase agreements">
                 <option value="pa:buyer">When a buyer-side purchase agreement is added</option>
                 <option value="pa:seller">When a seller-side purchase agreement is added</option>
