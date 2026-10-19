@@ -192,7 +192,7 @@ Principles:
     **+ Add buyer** and **+ Add seller**.
   - **Appointments:** upcoming list, then "Past appointments (N)" (§10).
   - **Files:** upload, download, delete (two-step). Shows file type, name and date.
-    Built: private bucket (off until the storage variables are set), up to 25 MB per file,
+    Built: private bucket (off until the storage variables are set), up to 100 MB per file *(raised 2026-10-19)*,
     program files refused, drag-and-drop onto the card; downloads go through HQ with links
     that expire in 5 minutes; deleted files go to Trash and are removed from storage after 30
     days.

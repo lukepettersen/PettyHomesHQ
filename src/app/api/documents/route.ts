@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   const user = session?.user;
   if (!user?.id) return Response.json({ error: "Sign in first." }, { status: 401 });
   if (!storageConnected()) return Response.json({ error: "File storage isn't connected yet (Admin → Integrations)." }, { status: 400 });
-  if (Number(req.headers.get("content-length") ?? 0) > MAX_BYTES + 1024 * 1024) return Response.json({ error: "Files can be up to 25 MB." }, { status: 413 });
+  if (Number(req.headers.get("content-length") ?? 0) > MAX_BYTES + 1024 * 1024) return Response.json({ error: "Files can be up to 100 MB." }, { status: 413 });
   const form = await req.formData().catch(() => null);
   const personId = String(form?.get("personId") ?? "");
   const file = form?.get("file");

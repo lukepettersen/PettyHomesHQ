@@ -127,7 +127,7 @@ download fees).
 4. Admin → Integrations shows File storage **Connected**; the Files card on contacts turns on.
    Upload a test file. If it says the token isn't allowed into the bucket, the token was made with
    "Object Read only": edit it (or make a new one) with **Object Read & Write**. Connected 2026-10-19.
-Uploads are limited to 25 MB and program files are refused. Downloads go through HQ (sign-in
+Uploads are limited to 100 MB and program files are refused. Downloads go through HQ (sign-in
 required) and use links that expire after 5 minutes. Deleted files sit in Trash for 30 days,
 then are removed from the bucket.
 

@@ -15,7 +15,7 @@ describe("files", () => {
   });
   it("blocks empty, huge and program files", () => {
     expect(uploadProblem("a.pdf", 0)).toMatch(/empty/);
-    expect(uploadProblem("a.pdf", 26 * 1024 * 1024)).toMatch(/25 MB/);
+    expect(uploadProblem("a.pdf", 101 * 1024 * 1024)).toMatch(/100 MB/);
     expect(uploadProblem("setup.EXE", 10)).toMatch(/program file/);
     expect(uploadProblem("PA.pdf", 1000)).toBeNull();
   });
