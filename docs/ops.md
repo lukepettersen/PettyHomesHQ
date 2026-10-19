@@ -133,7 +133,9 @@ then are removed from the bucket.
 1. console.anthropic.com → sign in (or sign up with your pettyhomes.com Google account).
 2. **Billing** → add a little prepaid credit (for example $10; each request costs about a cent
    or two). Optional: set a monthly spend limit there.
-3. **Settings → API keys → Create key** → name it `PettyHomes HQ` → copy it (shown once).
+3. **Settings → Workspaces** → open a workspace (e.g. Default) → **API keys → Create key** → name it
+   `PettyHomes HQ` → copy it (shown once). It must be a workspace key: an organization-wide key fails with
+   "This API key is not scoped to a workspace". The Relay app's key works too.
 4. Railway → HQ app → **Variables** → add `ANTHROPIC_API_KEY` = that key (never send it in chat).
 5. Admin → Integrations shows Ask Claude **Connected**; the mic button in the top bar works.
 
