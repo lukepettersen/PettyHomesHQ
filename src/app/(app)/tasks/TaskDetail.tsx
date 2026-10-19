@@ -19,7 +19,7 @@ const draftOf = (t: TaskRow): Draft => ({
 export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSaved, onDeleted, notify, popup }: {
   popup?: boolean; // contact page: a centered pop-up instead of the side panel
   task: TaskRow; lists: ListRow[]; team: TeamMember[];
-  onClose: () => void; onToggle: () => void; onDirty: (dirty: boolean) => void; onSaved: (id: string) => void; onDeleted: () => void; notify: (m: string) => void;
+  onClose: (discarded?: boolean) => void; onToggle: () => void; onDirty: (dirty: boolean) => void; onSaved: (id: string) => void; onDeleted: () => void; notify: (m: string) => void;
 }) {
   const [orig, setOrig] = useState(() => draftOf(task));
   const [d, setD] = useState<Draft>(orig);
@@ -66,7 +66,7 @@ export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSa
       <div className="flex items-start gap-2.5 border-b border-misty px-3.5 pt-3.5 pb-2.5">
         <span className="pt-1"><CheckButton task={task} onToggle={onToggle} /></span>
         <textarea aria-label="Title" rows={2} value={d.title} onChange={(e) => set({ title: e.target.value })} className="min-w-0 flex-1 resize-none bg-transparent text-[15px] font-semibold outline-none" />
-        <button type="button" onClick={onClose} aria-label="Close" className="px-1 text-xl leading-none muted hover:text-charcoal">×</button>
+        <button type="button" onClick={() => onClose()} aria-label="Close" className="px-1 text-xl leading-none muted hover:text-charcoal">×</button>
       </div>
 
       {task.step && (
@@ -137,7 +137,7 @@ export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSa
 
       {error && <p role="alert" className="px-3.5 text-sm text-bad">{error}</p>}
       <div className="flex justify-end gap-2 px-3.5 py-3">
-        <button type="button" className="btn" disabled={!dirty || pending} onClick={() => { setD(orig); onDirty(false); notify("Changes discarded."); }}>Cancel</button>
+        <button type="button" className="btn" disabled={pending} onClick={() => { if (dirty) { setD(orig); onDirty(false); notify("Changes discarded."); } onClose(true); }}>Cancel</button>
         <button type="button" className="btn btn-primary" disabled={!dirty || pending} onClick={save}>{dirty ? "Save changes" : "Saved"}</button>
       </div>
       <div className="px-3.5 pt-1 pb-4">

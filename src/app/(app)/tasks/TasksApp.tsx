@@ -344,7 +344,7 @@ export function TasksApp(p: Props) {
 
       {selected && (
         <TaskDetail key={selected.id} task={selected} lists={p.lists} team={p.team} notify={setToast}
-          onClose={() => { if (guard()) setSelId(null); }} onToggle={() => toggle(selected)} onDirty={setDirty}
+          onClose={(discarded) => { if (discarded) { setDirty(false); setSelId(null); } else if (guard()) setSelId(null); }} onToggle={() => toggle(selected)} onDirty={setDirty}
           onSaved={(id) => { setSelId(id); refresh(); }} onDeleted={() => { setSelId(null); refresh(); }} />
       )}
       <Toast message={toast} onDone={clearToast} />

@@ -85,7 +85,7 @@ export function TasksCard({ personId, personName, rows, team, today, meId, templ
       {openId && list.find((t) => t.id === openId) && (
         <div className="fixed inset-0 z-40 grid place-items-center bg-black/35 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget && !dirty) setOpenId(null); }}>
           <TaskDetail popup key={openId} task={list.find((t) => t.id === openId)!} lists={lists} team={team} notify={setMsg}
-            onClose={() => { if (dirty) { setMsg("Save or cancel your changes first."); return; } setOpenId(null); }}
+            onClose={(discarded) => { if (dirty && !discarded) { setMsg("Save or cancel your changes first."); return; } setDirty(false); setMsg(""); setOpenId(null); }}
             onToggle={() => toggle(list.find((t) => t.id === openId)!)} onDirty={setDirty}
             onSaved={() => router.refresh()} onDeleted={() => { setDirty(false); setOpenId(null); router.refresh(); }} />
         </div>

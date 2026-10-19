@@ -97,7 +97,7 @@ Principles:
 - **Save rule:** editing that changes settings or records uses explicit Save / Cancel:
   - Admin: an "unsaved changes · Discard / Save changes" bar.
   - Contact cards: Edit → Save / Cancel.
-  - Task details: changes wait for Save changes / Cancel; switching away asks to save first.
+  - Task details: changes wait for Save changes / Cancel; Cancel always closes the task (throwing away unsaved changes); switching away or × asks to save first.
   - Deal forms, stage editing, Tasks list arrangement: Save / Cancel.
 - Two-step confirm ("Click again to delete") on every delete.
 - Times always show on a 12-hour clock in Central time (e.g. 8:00pm), never 24-hour.
