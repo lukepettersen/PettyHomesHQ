@@ -43,7 +43,7 @@ export function OfferModal({ personId, personName, buyerFiles, fileId: initialFi
     const r = await submitOffer({ personId, fileId: fileId || null, offer });
     if (!r.ok) { setError(r.error); return; }
     const d = r.data!;
-    setDone([`Offer submitted. It's on ${personName}'s timeline${d.mentioned.length ? ` for ${d.mentioned.join(" and ")}` : ""}`, d.started ? "a buyer deal was started" : d.moved ? `the deal moved to ${d.moved}` : "", d.tasks ? `${d.tasks} offer task${d.tasks === 1 ? "" : "s"} added` : ""].filter(Boolean).join(", ") + ".");
+    setDone([`Offer submitted. It's on ${personName}'s timeline${d.mentioned.length ? ` for ${d.mentioned.join(" and ")}` : ""}`, d.started ? "a buyer deal was started" : d.moved ? `the deal moved to ${d.moved}` : "", d.tasks ? `${d.tasks} offer task${d.tasks === 1 ? "" : "s"} added` : "", d.emailed.length ? `emailed to ${d.emailed.join(" and ")}` : ""].filter(Boolean).join(", ") + ".");
     router.refresh();
   });
 

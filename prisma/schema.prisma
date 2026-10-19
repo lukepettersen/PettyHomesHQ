@@ -252,6 +252,7 @@ model Notification {
   personId  String?
   person    Person?   @relation(fields: [personId], references: [id], onDelete: Cascade)
   text      String
+  alert     Boolean   @default(false) // pop up with a chime (e.g. an offer was submitted), not just the bell
   readAt    DateTime?
   createdAt DateTime  @default(now())
 

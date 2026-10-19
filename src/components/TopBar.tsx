@@ -18,7 +18,7 @@ export function TopBar({ name, tools, canEditTools, bell, claude }: { name: stri
       </Link>
       <Suspense fallback={<nav aria-label="Main" className="flex-1" />}><NavLinks tools={tools} canEditTools={canEditTools} /></Suspense>
       <SearchBox />
-      <div className="ml-auto flex items-center gap-3 text-sm md:ml-0">
+      <div className="flex items-center gap-3 text-sm">
         <AskClaude connected={claude} />
         <Bell initial={bell} />
         <span className="hidden sm:inline">{name}</span>

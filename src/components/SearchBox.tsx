@@ -26,6 +26,9 @@ export function SearchBox() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [recent, setRecent] = useState<Result[]>([]);
+  // On phones the search is a magnifier button that opens a full-width search bar over the header.
+  const [mobile, setMobile] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,16 +51,21 @@ export function SearchBox() {
   }, []);
 
   const go = (r?: Result) => {
-    setOpen(false);
+    setOpen(false); setMobile(false);
     if (r) { addRecent(r); setQ(""); setResults([]); router.push(`/people/${r.id}`); }
     else if (q.trim()) router.push(`/people?q=${encodeURIComponent(q.trim())}`);
   };
   const searching = q.trim().length >= 2;
   const shown = searching ? results : recent;
 
+  const openMobile = () => { setMobile(true); setRecent(loadRecent()); setActive(0); setOpen(true); requestAnimationFrame(() => input.current?.focus()); };
   return (
-    <div ref={box} className="relative ml-auto hidden md:block" role="search">
-      <input type="search" value={q} placeholder="Search people…" aria-label="Search people" role="combobox" aria-expanded={open && shown.length > 0} aria-controls="search-results" aria-autocomplete="list"
+    <>
+    <button type="button" onClick={openMobile} aria-label="Search people" className="ml-auto grid h-9 w-9 place-items-center rounded-md text-white hover:bg-white/10 md:hidden">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+    </button>
+    <div ref={box} className={`${mobile ? "fixed inset-x-0 top-0 z-50 flex items-center gap-2 bg-moss px-3 py-3" : "hidden"} md:relative md:ml-auto md:block md:bg-transparent md:p-0`} role="search">
+      <input ref={input} type="search" value={q} placeholder="Search people…" aria-label="Search people" role="combobox" aria-expanded={open && shown.length > 0} aria-controls="search-results" aria-autocomplete="list"
         onChange={(e) => { setQ(e.target.value); if (e.target.value.trim().length < 2) { setRecent(loadRecent()); setActive(0); } }}
         onFocus={() => { setRecent(loadRecent()); setActive(0); setOpen(true); }}
         onKeyDown={(e) => {
@@ -66,10 +74,11 @@ export function SearchBox() {
           else if (e.key === "Enter") { e.preventDefault(); go(open ? shown[active] : undefined); }
           else if (e.key === "Escape") setOpen(false);
         }}
-        className="w-56 rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white placeholder:text-misty/70 outline-none focus:bg-white focus:text-charcoal lg:w-72" />
-      {open && !searching && recent.length > 0 && <p className="absolute right-0 top-full z-50 mt-1 w-80 rounded-t-lg border border-b-0 border-misty bg-white px-3 pt-2 text-xs font-semibold uppercase tracking-wide muted">Recent</p>}
+        className="w-full min-w-0 flex-1 rounded-md border border-white/20 bg-white/10 px-3 py-2 text-base text-white placeholder:text-misty/70 outline-none focus:bg-white focus:text-charcoal md:w-56 md:py-1.5 md:text-sm lg:w-72" />
+      {mobile && <button type="button" className="px-1 text-sm font-semibold text-white md:hidden" onClick={() => { setMobile(false); setOpen(false); }}>Cancel</button>}
+      {open && !searching && recent.length > 0 && <p className="absolute left-3 right-3 top-full z-50 mt-1 rounded-t-lg md:left-auto md:right-0 md:w-80 border border-b-0 border-misty bg-white px-3 pt-2 text-xs font-semibold uppercase tracking-wide muted">Recent</p>}
       {open && (searching || recent.length > 0) && (
-        <ul id="search-results" role="listbox" aria-label={searching ? "Matching people" : "Recent contacts"} className={`absolute right-0 z-50 w-80 overflow-hidden border border-misty bg-white text-charcoal shadow-xl ${searching ? "top-full mt-1 rounded-lg" : "top-[calc(100%+1.75rem)] rounded-b-lg border-t-0"}`}>
+        <ul id="search-results" role="listbox" aria-label={searching ? "Matching people" : "Recent contacts"} className={`absolute left-3 right-3 z-50 max-h-[70vh] overflow-y-auto border md:left-auto md:right-0 md:w-80 border-misty bg-white text-charcoal shadow-xl ${searching ? "top-full mt-1 rounded-lg" : "top-[calc(100%+1.75rem)] rounded-b-lg border-t-0"}`}>
           {shown.map((r, i) => (
             <li key={r.id} role="option" aria-selected={i === active}>
               <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => go(r)} onMouseEnter={() => setActive(i)}
@@ -84,5 +93,6 @@ export function SearchBox() {
         </ul>
       )}
     </div>
+    </>
   );
 }

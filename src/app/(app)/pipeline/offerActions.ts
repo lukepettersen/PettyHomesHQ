@@ -8,6 +8,7 @@ import { logActivity } from "@/server/activity";
 import { extractOffer } from "@/server/offer";
 import { applyTemplate, factsOf, loadTemplates, moveFile, runTrigger } from "@/server/automation";
 import { findMentions } from "@/lib/mentions";
+import { emailConnection, sendGmail } from "@/server/google";
 import { isoFromDate, todayCentral } from "@/lib/normalize";
 import { normalizeOffer, offerSummary, writtenStatementIncomplete } from "@/lib/offer";
 
@@ -77,7 +78,7 @@ export async function submitOffer(input: z.input<typeof submitSchema>) {
       const o = await tx.offer.create({ data: { fileId, personId: person.id, data: offer, summary, createdById: user.id } });
       await tx.timelineEntry.create({ data: { personId: person.id, kind: "note", body, authorId: user.id } });
       for (const m of mentioned) {
-        await tx.notification.create({ data: { toId: m.id, fromId: user.id, personId: person.id, text: `${user.name.split(" ")[0]} submitted an offer for ${person.name}: ${offer.propertyAddress} · $${offer.purchasePrice!.toLocaleString("en-US")}` } });
+        await tx.notification.create({ data: { toId: m.id, fromId: user.id, personId: person.id, alert: true, text: `${user.name.split(" ")[0]} submitted an offer for ${person.name}: ${offer.propertyAddress} · $${offer.purchasePrice!.toLocaleString("en-US")}` } });
       }
       // Every offer gets its own set of offer tasks (unlike status templates, which run once per deal).
       let n = 0;
@@ -92,8 +93,19 @@ export async function submitOffer(input: z.input<typeof submitSchema>) {
       moved = offerStatus.name;
     }
 
+    // Email the offer note to whoever was notified, from the connected Gmail, so it reaches their phone.
+    // A failed email never undoes the offer; the bell and timeline already have it.
+    const emailed: string[] = [];
+    if (mentioned.length && (await emailConnection())) {
+      const link = `${(process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "")}/people/${person.id}`;
+      const users = await db.user.findMany({ where: { id: { in: mentioned.map((m) => m.id) } }, select: { name: true, email: true } });
+      for (const u of users) {
+        const r = await sendGmail({ to: [u.email], subject: `Offer submitted: ${person.name} · ${offer.propertyAddress}`, body: `${user.name.split(" ")[0]} submitted an offer for ${person.name}.\n\nOpen in HQ: ${link}\n\n${summary}`, signature: false });
+        if (r.ok) emailed.push(u.name.split(" ")[0]);
+      }
+    }
     await logActivity(user.id, "create", "offer", offerId, `Submitted an offer for ${person.name}: ${offer.propertyAddress}${tasks ? ` (${tasks} tasks)` : ""}`);
     revalidatePath(`/people/${person.id}`); revalidatePath("/pipeline"); revalidatePath("/tasks");
-    return { fileId, started, moved, tasks, mentioned: mentioned.map((m) => m.name.split(" ")[0]) };
+    return { fileId, started, moved, tasks, emailed, mentioned: mentioned.map((m) => m.name.split(" ")[0]) };
   });
 }

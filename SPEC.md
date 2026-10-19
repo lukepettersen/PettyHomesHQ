@@ -85,6 +85,8 @@ Principles:
 - **Top bar:** logo + "Petty Homes HQ", then tabs in this order:
   **People · Tasks · Messages · Pipeline · Tools ▾ · Admin**, and a notification **bell** on
   the right.
+- **Search on phones** *(owner request 2026-10-19)*: a magnifier in the top bar opens a full-width
+  search bar (recent contacts first, results as you type).
 - **Recent contacts** *(owner request 2026-10-15)*: clicking the empty search box lists the
   last 5 contacts opened on this device (from search or their page).
 - **Search from anywhere** in the top bar: matching people drop down as you type (name,
@@ -315,6 +317,10 @@ Principles:
   of the team (bell), moves an earlier-status deal to **Submitting offers**, and starts every task
   template set to **"When an offer is submitted (every offer)"** (each offer gets its own tasks;
   the loan type feeds the FHA/VA condition). The FUB "Offer" tag isn't used.
+- **Telling the team** *(owner request 2026-10-19)*: whoever was @mentioned gets a bell notification
+  that **pops up with a chime** over any HQ page (Open contact / Dismiss; once per device; stays in
+  the bell until read) and an **email with the offer note** from the connected Gmail (skipped if
+  Gmail isn't connected; a failed email never undoes the offer).
 - The buyer deal lists **Offers submitted** (view the note). **+ Add purchase agreement** starts
   filled in from the latest offer (address, price, earnest money, seller contributions, close date,
   financing, material defect, written statement).
