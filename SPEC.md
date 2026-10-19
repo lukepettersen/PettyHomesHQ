@@ -306,6 +306,10 @@ Principles:
 ### 7.5 Submit offer (Relay built in) *(owner decision 2026-10-19)*
 - The Relay app's offer flow now lives in HQ. **Submit offer** is on every contact (Pipeline card)
   and on each buyer deal.
+- Laid out like Relay *(owner request 2026-10-19)*: full screen on a phone; client card; the
+  required terms as small tiles in three columns, each with a check circle that fills when the term
+  is heard; optional clauses as checkboxes; one big round mic (**Tap to record** / **Listening… tap
+  to stop**). Tapping to stop organizes right away; **Type instead** switches to a text box.
 - Talk (browser speech-to-text; never auto-restarts, like Relay) or type the terms; **Organize**
   sends them to Claude with Relay's own instructions (same fields: property, price, earnest money,
   closing, inspection, seller-paid costs, financing, down payment, buyer broker comp, appliances;
