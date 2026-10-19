@@ -37,7 +37,14 @@ ${transcript.trim()}`;
     if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) throw new UserError("The Claude key in Railway isn't working. Check ANTHROPIC_API_KEY (Admin → Integrations).");
     if (e instanceof Anthropic.RateLimitError) throw new UserError("Claude is busy right now. Try again in a minute.");
     if (e instanceof Anthropic.APIConnectionError) throw new UserError("Couldn't reach Claude. Check your connection and try again.");
-    if (e instanceof Anthropic.APIError) throw new UserError("Claude couldn't organize that. Try again.");
+    if (e instanceof Anthropic.APIError) {
+      // Say what Claude's service actually said (e.g. out of credit, overloaded), so it can be fixed.
+      const why = (e.error as { error?: { message?: string } } | undefined)?.error?.message ?? e.message;
+      console.error("Offer extraction failed", e.status, why);
+      if (/credit balance/i.test(why)) throw new UserError("The Anthropic account behind HQ's Claude key is out of credit. Add credit at console.anthropic.com → Billing.");
+      if (e.status === 529 || e.status === 503) throw new UserError("Claude is overloaded right now. Try again in a minute.");
+      throw new UserError(`Claude couldn't organize that (${e.status ?? "error"}: ${why.slice(0, 200)}).`);
+    }
     throw e;
   }
   if (msg.stop_reason === "refusal") throw new UserError("Claude couldn't help with that one. Try saying it another way.");

@@ -90,7 +90,11 @@ function friendly(e: unknown): never {
   if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) throw new UserError("The Claude key in Railway isn't working. Check ANTHROPIC_API_KEY (Admin → Integrations).");
   if (e instanceof Anthropic.RateLimitError) throw new UserError("Claude is busy right now. Try again in a minute.");
   if (e instanceof Anthropic.APIConnectionError) throw new UserError("Couldn't reach Claude. Check your connection and try again.");
-  if (e instanceof Anthropic.APIError) throw new UserError(e.status === 400 && /credit|billing/i.test(e.message) ? "The Anthropic account is out of credit. Add credit at console.anthropic.com → Billing." : "Claude couldn't answer that. Try again.");
+  if (e instanceof Anthropic.APIError) {
+    const why = (e.error as { error?: { message?: string } } | undefined)?.error?.message ?? e.message;
+    console.error("Ask Claude failed", e.status, why);
+    throw new UserError(/credit balance|billing/i.test(why) ? "The Anthropic account is out of credit. Add credit at console.anthropic.com → Billing." : `Claude couldn't answer that (${e.status ?? "error"}: ${why.slice(0, 200)}).`);
+  }
   throw e;
 }
 
