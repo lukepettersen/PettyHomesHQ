@@ -46,7 +46,7 @@ export function AppointmentsCard(p: Props) {
       </div>
       <ul className="mt-2 flex flex-col gap-2">{up.map((a, i) => <Appt key={a.id ?? `c${i}`} a={a} today={p.today} personName={p.personName} onEdit={() => setEditing(a)} onDeleted={() => router.refresh()} />)}</ul>
       {up.length === 0 && <p className="mt-1 text-sm muted">Nothing scheduled. Contract dates show up here once a purchase agreement is added.</p>}
-      {p.appts.some((a) => a.fromContract) && <p className="mt-2 text-xs muted">&quot;From contract&quot; items come from the purchase agreement&apos;s inspection appointment and key dates. Change them there.</p>}
+      {p.appts.some((a) => a.fromContract) && <p className="mt-2 text-xs muted">&quot;From contract&quot; items come from the purchase agreement&apos;s dates (change the date there). Which dates show, and how they&apos;re titled, is set in Admin → Calendar invites.</p>}
       {past.length > 0 && <button type="button" className="link mt-2 text-sm" aria-expanded={showPast} onClick={() => setShowPast(!showPast)}>{showPast ? "Hide past appointments" : `Past appointments (${past.length})`}</button>}
       {showPast && <ul className="mt-2 flex flex-col gap-2 opacity-80">{past.map((a, i) => <Appt key={a.id ?? `p${i}`} a={a} today={p.today} personName={p.personName} onEdit={() => setEditing(a)} onDeleted={() => router.refresh()} />)}</ul>}
       {msg && <p role="status" className="mt-2 text-sm text-accent">{msg}</p>}

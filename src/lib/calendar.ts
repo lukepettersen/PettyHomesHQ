@@ -35,4 +35,5 @@ export function inviteeEmails(invitees: string[], team: { name: string; email: s
 }
 
 /** Stable keys for contract-date events, so they're updated instead of duplicated. */
-export const contractKey = (paId: string, title: string) => `pa:${paId}:${title.split(" - ").slice(1).join(" - ").toLowerCase().replace(/[^a-z]+/g, "-")}`;
+/** One calendar event per contract and invite rule (rule ids for the original four match the older title-based keys). */
+export const contractKey = (paId: string, ruleId: string) => `pa:${paId}:${ruleId}`;

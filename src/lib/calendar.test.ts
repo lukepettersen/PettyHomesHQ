@@ -16,7 +16,6 @@ describe("calendar events", () => {
     expect(inviteeEmails(["Bob"], team, { firstName: "Bob", email: null })).toEqual([]);
   });
   it("keys contract events by contract and kind", () => {
-    expect(contractKey("pa1", "Baker - Inspection Deadline at 11:59pm")).toBe("pa:pa1:inspection-deadline-at-pm");
-    expect(contractKey("pa1", "Ortiz/Brooks - Close Date HOLD")).toBe("pa:pa1:close-date-hold");
+    expect(contractKey("pa1", "inspection-deadline-at-pm")).toBe("pa:pa1:inspection-deadline-at-pm");
   });
 });

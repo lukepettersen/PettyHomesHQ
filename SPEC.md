@@ -455,6 +455,16 @@ Principles:
 
 - **Sign-in** (Phase 1): Google, pettyhomes.com only.
 - **Calendar** (Phase 3): appointments and contract deadlines create events with invites.
+- **Calendar invites** *(owner request 2026-10-19)*: Admin → Calendar invites lists each contract
+  date that goes on Google Calendar: **on/off**, **title** with fields ({last_name},
+  {first_name}, {client_name}, {address}, {street}; example shown), **which date** (any Date or
+  Date-and-time question on the purchase agreement forms, so adding a question like "Sewer
+  scope" makes it available), **time** (all day, the time entered on the form, or a set time in
+  15-minute steps, 1 hour long), **deals** (buyer, seller or both) and **invite** (team and/or
+  client; partners never). The starting four match what HQ did before (Inspection at the
+  appointment time, Inspection Deadline at 11:59pm, Written Statement Deadline, Close Date HOLD)
+  and keep the events already made. Contact Appointments cards follow the same settings. New and
+  changed contracts use the settings right away; **Refresh calendar invites** updates the rest.
 - **Sending email** *(built 2026-10-16)*: one Google connection (Admin → Integrations) covers
   Calendar and Gmail send. Timeline has an **Email** tab (To: the person's addresses as
   checkboxes, optional template with merge fields, Subject, Message, **Send email** with a

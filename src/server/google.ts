@@ -2,7 +2,8 @@ import "server-only";
 import { db } from "@/server/db";
 import { seal, unseal } from "@/server/crypto";
 import { isoFromDate } from "@/lib/normalize";
-import { contractAppointments } from "@/lib/appointments";
+import { contractEvents } from "@/lib/contractInvites";
+import { inviteContext, loadInviteRules } from "@/server/contractInvites";
 import { apptEvent, contractKey, inviteeEmails, type GEvent } from "@/lib/calendar";
 import { addressesIn, buildMime, messageText } from "@/lib/email";
 import { splitCouple } from "@/lib/normalize";
@@ -124,14 +125,12 @@ export function syncContract(paId: string) {
     const active = pa && pa.state === "active" && !pa.deletedAt && !pa.file.deletedAt && !pa.file.person.deletedAt;
     const wanted = new Map<string, GEvent>();
     if (active) {
-      const answers = (pa.answers && typeof pa.answers === "object" ? pa.answers : {}) as Record<string, string>;
-      const d = (x: Date | null) => (x ? isoFromDate(x) : null);
-      const emails = [
-        ...(await team()).map((t) => ({ email: t.email, name: t.name })),
-        ...pa.file.person.emails.map((e) => ({ email: e.address, name: pa.file.person.name })),
-      ];
-      for (const a of contractAppointments(pa.file.person.name, { address: pa.address, inspAppt: answers.inspAppt, inspection: d(pa.inspection), writtenStatement: pa.writtenStatementNA ? null : d(pa.writtenStatement), closing: d(pa.closing) })) {
-        wanted.set(contractKey(paId, a.title), apptEvent(a, emails, `${pa.address} · from the purchase agreement in Petty Homes HQ.`));
+      // Which dates, titles, times and guests come from Admin → Calendar invites. Partners are never invited.
+      const teamEmails = (await team()).map((t) => ({ email: t.email, name: t.name }));
+      const clientEmails = pa.file.person.emails.map((e) => ({ email: e.address, name: pa.file.person.name }));
+      for (const e of contractEvents(await loadInviteRules(), inviteContext(pa, pa.file.person.name))) {
+        const guests = [...(e.team ? teamEmails : []), ...(e.client ? clientEmails : [])];
+        wanted.set(contractKey(paId, e.ruleId), apptEvent({ title: e.title, date: e.date, start: e.start, end: null, location: pa.address }, guests, `${pa.address} · from the purchase agreement in Petty Homes HQ.`));
       }
     }
     for (const [key, ev] of wanted) await upsertEvent(key, ev);

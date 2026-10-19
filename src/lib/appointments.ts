@@ -23,19 +23,7 @@ export function addMinutes(start: string, mins: number): string {
   return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
 }
 
-export type ContractDates = { address: string; inspAppt?: string; inspection: string | null; writtenStatement: string | null; closing: string | null };
 export type ApptView = { id: string | null; type: string; title: string; date: string; start: string | null; end: string | null; location: string; invitees: string[]; fromContract: boolean };
-
-/** While a contract is active, its inspection appointment and deadlines show as appointments. */
-export function contractAppointments(name: string, c: ContractDates): ApptView[] {
-  const ln = apptName(name), out: ApptView[] = [];
-  const auto = (title: string, date: string, start: string | null = null): ApptView => ({ id: null, type: "contract", title: `${ln} - ${title}`, date, start, end: null, location: c.address, invitees: [], fromContract: true });
-  if (c.inspAppt) out.push(auto("Inspection", c.inspAppt.slice(0, 10), c.inspAppt.slice(11, 16)));
-  if (c.inspection) out.push(auto("Inspection Deadline at 11:59pm", c.inspection));
-  if (c.writtenStatement) out.push(auto("Written Statement Deadline", c.writtenStatement));
-  if (c.closing) out.push(auto("Close Date HOLD", c.closing));
-  return out;
-}
 
 /** Soonest first; deadlines ("at 11:59pm") sort at the end of their day, other all-day items first. */
 const sortKey = (a: ApptView) => a.date + (a.start ?? (a.title.includes("11:59pm") ? "23:59" : ""));
