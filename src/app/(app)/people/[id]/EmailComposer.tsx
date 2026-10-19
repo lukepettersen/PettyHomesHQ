@@ -7,7 +7,7 @@ import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
 import { fillEmailTemplate, sendEmail } from "../emailActions";
 
 /** Timeline → Email: pick a template (optional), check it over, send from the connected Gmail (SPEC.md §12). */
-export function EmailComposer({ personId, emails, templates, sendsFrom }: { personId: string; emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null }) {
+export function EmailComposer({ personId, emails, templates, sendsFrom, onSent }: { personId: string; emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; onSent?: () => void }) {
   const router = useRouter();
   const [to, setTo] = useState<string[]>(emails);
   const [templateId, setTemplateId] = useState("");
@@ -54,7 +54,7 @@ export function EmailComposer({ personId, emails, templates, sendsFrom }: { pers
     start(async () => {
       const r = await sendEmail({ personId, to, subject, body, signature });
       if (!r.ok) { setError(r.error); return; }
-      setNotice(`Sent to ${to.join(", ")}.`); setSubject(""); setBody(""); setTemplateId(""); setMissing([]); router.refresh();
+      setNotice(`Sent to ${to.join(", ")}.`); setSubject(""); setBody(""); setTemplateId(""); setMissing([]); router.refresh(); onSent?.();
     });
   };
   return (

@@ -6,16 +6,19 @@ import type { TaskRow, TeamMember } from "@/server/tasks";
 import { diffDays, dueLabel } from "@/lib/tasks";
 import { completeTask, reopenTask } from "../../tasks/actions";
 import { Avatar, CheckButton, KindIcon } from "../../tasks/parts";
+import { DraftModal } from "../../tasks/DraftModal";
 
 /** A file's or contract's checklist: phases folded (open steps already show in the Tasks card). */
-export function Checklist({ title, tasks, today, team }: { title: string; tasks: TaskRow[]; today: string; team: TeamMember[] }) {
+export function Checklist({ title, tasks, today, team, personId }: { title: string; tasks: TaskRow[]; today: string; team: TeamMember[]; personId?: string }) {
   const router = useRouter();
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
+  const [drafting, setDrafting] = useState<string | null>(null); // email/text step whose template is open
   const [, start] = useTransition();
   if (!tasks.length) return <p className="mt-3 text-sm muted">No checklist for this yet. Templates for it can be added in Admin → Task templates.</p>;
   const done = tasks.filter((t) => t.done).length;
-  const phases = [...new Set(tasks.map((t) => t.step?.phase ?? "Steps"))];
+  // Newest section first: sections come in the order their steps were added, so flip it (owner request 2026-10-19).
+  const phases = [...new Set(tasks.map((t) => t.step?.phase ?? "Steps"))].reverse();
   const toggle = (t: TaskRow) => start(async () => {
     setError("");
     const r = t.done ? await reopenTask({ id: t.id }) : await completeTask(t.id);
@@ -44,6 +47,9 @@ export function Checklist({ title, tasks, today, team }: { title: string; tasks:
                         <CheckButton task={t} onToggle={() => toggle(t)} />
                         <KindIcon kind={t.kind} />
                         <span className={`min-w-0 flex-1 ${t.done ? "muted line-through" : ""}`}>{t.title}</span>
+                        {!t.done && personId && (t.kind === "email" || t.kind === "text") && (
+                          <button type="button" className="btn px-2 py-0.5 text-xs" onClick={() => setDrafting(t.id)}>{t.kind === "email" ? "Draft email" : "Draft text"}</button>
+                        )}
                         <span className={`whitespace-nowrap text-xs ${overdue ? "font-semibold text-bad" : "muted"}`}>{t.due ? dueLabel(t.due, t.time, today) : t.step?.timing ? `Waits for date · ${t.step.timing}` : "No due date"}</span>
                         <Avatar member={team.find((m) => m.id === t.assigneeId)} />
                       </li>
@@ -56,6 +62,7 @@ export function Checklist({ title, tasks, today, team }: { title: string; tasks:
         })}
       </div>
       {error && <p role="alert" className="mt-1 text-sm text-bad">{error}</p>}
+      {drafting && <DraftModal taskId={drafting} onClose={() => { setDrafting(null); router.refresh(); }} />}
     </div>
   );
 }

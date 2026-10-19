@@ -13,9 +13,12 @@ import { PaBox } from "./PaBox";
 import type { PaSection, PaView, Side } from "@/lib/pa";
 import type { TaskRow, TeamMember } from "@/server/tasks";
 import { Checklist } from "./Checklist";
+import { EmailComposer } from "./EmailComposer";
+import { Modal } from "@/components/Modal";
 import { DealNotes } from "./DealNotes";
 
-type Props = { fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean; canDelete: boolean; timeline: React.ReactNode;
+type EmailProps = { emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null };
+type Props = { email: EmailProps; fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean; canDelete: boolean; timeline: React.ReactNode;
   contracts: PaView[]; forms: Record<Side, PaSection[]>; today: string; checklists: TaskRow[]; team: TeamMember[] };
 
 /** Middle column: a tab per active buyer/listing file, then Timeline (SPEC.md §6.3). */
@@ -53,10 +56,11 @@ export function SideChip({ kind }: { kind: string }) {
   return <span className={`rounded px-1.5 text-[11px] font-bold uppercase tracking-wide ${kind === "buyer" ? "bg-accent-soft text-accent" : "bg-[#f6e3d9] text-[#9a4f2e]"}`}>{kind === "buyer" ? "Buyer" : kind === "listing" ? "Seller" : kind}</span>;
 }
 
-function FilePane({ fileForms, file, personId, personName, statuses, canSeeCommission, canDelete, onDeleted, contracts, forms, today, checklists, team }: Props & { file: FileView; onDeleted: () => void }) {
+function FilePane({ email, fileForms, file, personId, personName, statuses, canSeeCommission, canDelete, onDeleted, contracts, forms, today, checklists, team }: Props & { file: FileView; onDeleted: () => void }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [addingPa, setAddingPa] = useState(false);
+  const [emailing, setEmailing] = useState(false);
   const mine = contracts.filter((c) => c.fileId === file.id);
   const activePa = mine.find((c) => c.state === "active");
   const earlier = mine.filter((c) => c.state !== "active");
@@ -81,6 +85,7 @@ function FilePane({ fileForms, file, personId, personName, statuses, canSeeCommi
           <p className="text-xs muted">{activePa ? `Under contract${activePa.dates.closing ? ` · closing ${shortDay(activePa.dates.closing)}` : ""}` : `In ${file.status} since ${shortDay(file.statusSince.slice(0, 10))}`}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button type="button" className="btn" onClick={() => setEmailing(true)}>Send email</button>
           <button type="button" className="btn" onClick={() => setEditing(true)}>Edit</button>
           {canDelete && <button type="button" className="btn btn-danger" disabled={pending} onBlur={() => setConfirm(false)}
             onClick={() => confirm ? run(() => deleteFile(file.id), onDeleted) : setConfirm(true)}>{confirm ? "Click again to delete" : "Delete"}</button>}
@@ -93,6 +98,11 @@ function FilePane({ fileForms, file, personId, personName, statuses, canSeeCommi
           </label>}
         </div>
       </div>
+      {emailing && (
+        <Modal title={`Email ${personName}`} onClose={() => setEmailing(false)} wide>
+          <EmailComposer personId={personId} emails={email.emails} templates={email.templates} sendsFrom={email.sendsFrom} onSent={() => setEmailing(false)} />
+        </Modal>
+      )}
       <DealNotes key={file.id + file.notes} fileId={file.id} notes={file.notes} notesAt={file.notesAt} notesBy={file.notesBy} />
       {facts.length > 0 && (
         <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
@@ -102,7 +112,7 @@ function FilePane({ fileForms, file, personId, personName, statuses, canSeeCommi
       {facts.length === 0 && <p className="mt-3 text-sm muted">Nothing filled in yet. Use Edit to add details.</p>}
       {activePa ? (
         <PaBox pa={activePa} personName={personName} fileKind={file.kind} fileLine={fileLine(file)} forms={forms} today={today} canSeeCommission={canSeeCommission}>
-          <Checklist title={activePa.side === "buyer" ? "Buyer contract checklist" : "Seller contract checklist"} tasks={checklists.filter((t) => t.paId === activePa.id)} today={today} team={team} />
+          <Checklist title={activePa.side === "buyer" ? "Buyer contract checklist" : "Seller contract checklist"} tasks={checklists.filter((t) => t.paId === activePa.id)} today={today} team={team} personId={personId} />
         </PaBox>
       ) : (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-misty px-3 py-2.5">
@@ -110,7 +120,7 @@ function FilePane({ fileForms, file, personId, personName, statuses, canSeeCommi
           <button type="button" className="btn btn-primary" onClick={() => setAddingPa(true)}>+ Add purchase agreement</button>
         </div>
       )}
-      <Checklist title={file.kind === "buyer" ? "Buyer checklist" : "Seller checklist"} tasks={checklists.filter((t) => t.fileId === file.id && !t.paId)} today={today} team={team} />
+      <Checklist title={file.kind === "buyer" ? "Buyer checklist" : "Seller checklist"} tasks={checklists.filter((t) => t.fileId === file.id && !t.paId)} today={today} team={team} personId={personId} />
       {earlier.length > 0 && (
         <div className="mt-3">
           <h4 className="text-xs font-semibold uppercase tracking-wider muted">Earlier contracts</h4>

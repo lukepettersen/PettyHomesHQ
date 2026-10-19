@@ -225,6 +225,9 @@ Principles:
   - **Listing:** address, estimated value, timeframe, consult date (early statuses); then
     list price, listing signed/expires, commission, BAC offered, photos, active date, and
     property details.
+- **On the deal** *(owner request 2026-10-19)*: a **Send email** button opens the email composer
+  (templates, merge fields, Gmail) right on the deal; open Email/Text checklist steps have **Draft
+  email / Draft text** to send that step's template. Checklist sections show **newest first**.
 - **Deal notes** *(owner request 2026-10-15)*: each buyer/seller deal has a free-text notes box
   at the top of the deal ("+ Add deal notes"; click to edit; Save / Cancel), showing when and by
   whom it was last changed. Kept at every status and on closed deals. The first line shows on
