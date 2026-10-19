@@ -4,7 +4,7 @@ import { authOptions } from "@/server/auth";
 import { db } from "@/server/db";
 import { logActivity } from "@/server/activity";
 import { putFile, storageConnected } from "@/server/storage";
-import { MAX_BYTES, safeName, uploadProblem } from "@/lib/documents";
+import { MAX_BYTES, safeName, storageProblem, uploadProblem } from "@/lib/documents";
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +29,9 @@ export async function POST(req: Request) {
   try {
     await putFile(key, new Uint8Array(await file.arrayBuffer()), contentType);
   } catch (e) {
-    console.error("File storage: upload failed", e instanceof Error ? e.name : "unknown");
-    return Response.json({ error: "The upload didn't go through. Try again, or check File storage in Admin → Integrations." }, { status: 502 });
+    const why = storageProblem(e);
+    console.error("File storage: upload failed", why);
+    return Response.json({ error: `The upload didn't go through. ${why}` }, { status: 502 });
   }
   const doc = await db.document.create({ data: { personId: person.id, name, size: file.size, contentType, key, uploadedById: user.id } });
   await logActivity(user.id, "create", "document", doc.id, `Uploaded "${name}" for ${person.name}`);
