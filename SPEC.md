@@ -162,7 +162,14 @@ Principles:
 - Table: name, stage, last contact, follow-up, deal, tags, source; sort by name / stage /
   last contact; search box.
 - Bulk actions on selected rows: Add tag, Change stage, Set follow-up, Assign, Export,
-  Delete.
+  Delete, **Email** *(owner request 2026-10-20)*.
+- **Mass email (Email):** up to 1,000 people at a time. Pick a template or write it (merge fields fill in
+  for each person), preview as the first person gets it, then **Send to N** (two-step). Each person gets
+  their own email from the connected Gmail (never CC/BCC), a few at a time with a progress bar and Stop;
+  it goes on their timeline. Skipped: no email address, or tagged Email Unsubscribed, Unsubscribed or
+  Bounced. Every email ends with the business mailing address (asked once, remembered) and an
+  **Unsubscribe** link: a public page with an Unsubscribe button (so link scanners can't trigger it) that
+  tags them **Email Unsubscribed** (texting isn't affected) and notes it on their timeline.
 - **Add person:** first/last, phone, email, optional second person, stage, source (picking the
   Industry Partners stage also asks Type and Company, §6.4). Calls are
   booked afterwards from the contact page (Appointments → + Book), owner decision 2026-10-14.
@@ -474,6 +481,9 @@ Principles:
 
 ## 11. Messages (texting) — built, off until Twilio is connected
 
+- **Send text → + Add:** send the same text to another contact or a typed number too; each gets their own
+  text (US business texting can't do group texts), and replies come back separately *(owner request
+  2026-10-20)*.
 - Two-way SMS from **each team member's own business number** *(owner decision 2026-10-20: Luke and
   Alyssa each have a number)*, plus missed calls. No email here (email stays in Gmail).
 - **Messages page:** conversations on your number (switch to a teammate's to read theirs; you can only
@@ -524,7 +534,8 @@ Principles:
   checkboxes, optional template with merge fields, Subject, Message, **Send email** with a
   two-step confirm). Task **Draft email** has **Send email** too, which also checks off the
   task. Mail goes from the connected account, lands in its Sent folder and shows on the
-  timeline (filter: Emails). HQ only sends to addresses saved on that person.
+  timeline (filter: Emails). **+ Add** puts another contact's email or a typed address on it too *(owner
+  request 2026-10-20)*; other contacts it went to get it on their timeline as well.
 - **Finding templates** *(owner request 2026-10-15)*: the Template box is searchable (type
   any words of the name or folder; arrows + Enter). In the message, type **/** and a template
   name to drop it in where you're typing (fills the subject too if it's empty). **Clear**

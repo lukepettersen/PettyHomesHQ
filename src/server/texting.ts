@@ -84,7 +84,7 @@ export async function updateStatus(sid: string, status: string, errorCode?: stri
  * Sends a text from the user's own number, typed by them (so quiet hours don't apply; they hold only automatic
  * texts). To a phone saved on the contact, or back to a number that texted this line. Never to Unsubscribed.
  */
-export async function sendTextAs(user: { id: string; name: string }, o: { personId: string | null; to: string; body: string }) {
+export async function sendTextAs(user: { id: string; name: string }, o: { personId: string | null; to: string; body: string; typed?: boolean }) {
   if (!(await textingEnabled())) throw new UserError("Texting is off. An Admin can turn it on in Admin → Integrations.");
   const me = await db.user.findUnique({ where: { id: user.id }, select: { textNumber: true } });
   if (!me?.textNumber) throw new UserError("You don't have a texting number yet. An Admin can add it in Admin → Integrations.");
@@ -99,7 +99,8 @@ export async function sendTextAs(user: { id: string; name: string }, o: { person
   if (person && !person.phones.some((p) => p.normalized === theirs)) throw new UserError(`HQ only texts numbers saved on ${person.name}. Add the number to their contact first.`);
   if (!person) {
     const texted = await db.textMessage.count({ where: { ourNumber: me.textNumber, theirNumber: theirs, direction: "in" } });
-    if (!texted) throw new UserError("HQ only texts saved contacts, or people who texted your number first.");
+    // A number typed in on purpose ("+ Add" on Send text) is allowed; otherwise only replies to people who texted first.
+    if (!texted && !o.typed) throw new UserError("HQ only texts saved contacts, or people who texted your number first.");
     const p = await personForNumber(theirs);
     person = p ? { ...p, phones: [] } : null;
   }

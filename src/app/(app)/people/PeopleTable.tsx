@@ -1,5 +1,6 @@
 "use client";
 
+import { BulkEmail } from "./BulkEmail";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -80,6 +81,7 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
   const [value, setValue] = useState("");
   const [confirm, setConfirm] = useState(false);
   const [msg, setMsg] = useState("");
+  const [emailing, setEmailing] = useState(false);
   const [pending, start] = useTransition();
   const router = useRouter();
   const sorted = rows; // already in order (HQ sorts the whole list, not just this page)
@@ -118,6 +120,7 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
 
   return (
     <>
+      {emailing && <BulkEmail ids={ids} onClose={() => setEmailing(false)} />}
       {(ids.length > 0 || msg) && (
         <div className="mt-3 flex flex-wrap items-center gap-1.5 rounded-lg bg-charcoal px-3 py-2 text-sm text-white">
           {ids.length > 0 && <b className="mr-2">{ids.length.toLocaleString()} selected</b>}
@@ -126,6 +129,7 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
             {([["addTag", "Add tag"], ["removeTag", "Remove tag"], ["stage", "Change stage"], ["followUp", "Set follow-up"], ["assign", "Assign"], ["contacted", "Mark texted"]] as const).map(([k, l]) => (
               <button key={k} type="button" className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" onClick={() => { setAction(k); setValue(k === "contacted" ? new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" }) : ""); setMsg(""); }}>{l}</button>
             ))}
+            <button type="button" className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" onClick={() => { setEmailing(true); setMsg(""); }}>Email</button>
             {canExport && <a className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" href={`/api/export/people?ids=${ids.join(",")}`}>Export</a>}
             {canDelete && <button type="button" className="rounded-md bg-white/15 px-2.5 py-1 font-semibold text-red-200 hover:bg-white/25" disabled={pending}
               onClick={() => { if (!confirm) { setConfirm(true); return; } start(async () => { const r = await bulkDelete(ids); if (!r.ok) setMsg(r.error); else { setMsg(`Moved ${r.data?.count} to Trash.`); setSel(new Set()); setConfirm(false); router.refresh(); } }); }}>

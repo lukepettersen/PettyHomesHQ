@@ -15,13 +15,13 @@ import { completeTask } from "../tasks/actions";
 const id = z.string().trim().min(1).max(40);
 const digits = z.string().trim().min(7).max(30).transform(normalizePhone);
 
-const sendSchema = z.object({ personId: id.nullable(), to: z.string().trim().min(7).max(30), body: z.string().trim().min(1, "Write a message.").max(MAX_TEXT), taskId: z.string().trim().max(200).nullable().optional() });
+const sendSchema = z.object({ personId: id.nullable(), to: z.string().trim().min(7).max(30), body: z.string().trim().min(1, "Write a message.").max(MAX_TEXT), taskId: z.string().trim().max(200).nullable().optional(), typed: z.boolean().optional() });
 
 /** Send text (contact timeline, Messages, Draft text): from the user's own number. A task it came from is checked off. */
 export async function sendText(input: z.input<typeof sendSchema>) {
   return guarded("sendTexts", async (user) => {
     const v = sendSchema.parse(input);
-    const r = await sendTextAs(user, { personId: v.personId, to: v.to, body: v.body });
+    const r = await sendTextAs(user, { personId: v.personId, to: v.to, body: v.body, typed: v.typed });
     if (v.taskId && v.personId) {
       const t = await db.task.findFirst({ where: { id: v.taskId, personId: v.personId, deletedAt: null, completedAt: null } });
       if (t) await completeTask(t.id);

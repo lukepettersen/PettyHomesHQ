@@ -33,22 +33,24 @@ const sendSchema = z.object({
 });
 
 /**
- * Sends an email from the connected Gmail account (SPEC.md §12). Only to the person's own email addresses,
- * so HQ can't be used to email anyone else. It goes on their timeline; a task it came from is checked off.
+ * Sends an email from the connected Gmail account (SPEC.md §12) to the person's addresses plus anyone added
+ * (another contact or a typed address; owner request 2026-10-20). It goes on their timeline, and on the
+ * timeline of any other contact it went to; a task it came from is checked off.
  */
 export async function sendEmail(input: z.input<typeof sendSchema>) {
   return guarded(null, async (user) => {
     const v = sendSchema.parse(input);
     const p = await db.person.findFirst({ where: { id: v.personId, deletedAt: null }, include: { emails: true } });
     if (!p) throw new UserError("That person was deleted.");
-    const theirs = new Set(p.emails.map((e) => e.address.toLowerCase()));
     const to = [...new Set(v.to.map((x) => x.toLowerCase()))];
-    if (to.some((x) => !theirs.has(x))) throw new UserError(`HQ only emails addresses saved on ${p.name}. Add the address to their contact first.`);
     const r = await sendGmail({ to, subject: v.subject, body: v.body, signature: v.signature });
     if (!r.ok) throw new UserError(r.error);
+    // Other contacts it went to get it on their timeline too.
+    const others = await db.person.findMany({ where: { id: { not: p.id }, deletedAt: null, emails: { some: { normalized: { in: to } } } }, select: { id: true } });
+    const entry = (personId: string) => db.timelineEntry.create({ data: { personId, kind: "email", gmailId: r.id ? `${r.id}:${personId}` : null, body: `To ${to.join(", ")} · ${v.subject}\n\n${toPlain(v.body)}`, authorId: user.id } });
     await db.$transaction([
-      db.timelineEntry.create({ data: { personId: p.id, kind: "email", gmailId: r.id ? `${r.id}:${p.id}` : null, body: `To ${to.join(", ")} · ${v.subject}\n\n${toPlain(v.body)}`, authorId: user.id } }),
-      db.person.update({ where: { id: p.id }, data: { lastContactAt: new Date() } }),
+      entry(p.id), ...others.map((o) => entry(o.id)),
+      db.person.updateMany({ where: { id: { in: [p.id, ...others.map((o) => o.id)] } }, data: { lastContactAt: new Date() } }),
     ]);
     await logActivity(user.id, "create", "email", p.id, `Emailed ${p.name}: "${v.subject}"`);
     if (v.taskId) {

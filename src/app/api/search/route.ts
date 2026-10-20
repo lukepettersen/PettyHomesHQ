@@ -31,8 +31,8 @@ export async function GET(req: Request) {
     const phone = digits.length >= 3 ? p.phones.find((x) => x.normalized.includes(digits)) : undefined;
     const email = p.emails.find((x) => x.normalized.includes(q.toLowerCase()));
     const detail = phone ? formatPhone(phone.number) : email ? email.address : p.phones[0] ? formatPhone(p.phones[0].number) : p.emails[0]?.address ?? "";
-    // phones: 10-digit numbers, for Messages → New message.
-    return { id: p.id, name: p.name, detail, stage: p.stage?.name ?? "", phones: p.phones.map((x) => x.normalized).filter((n) => n.length === 10) };
+    // phones (10 digits) and emails: for New message and adding people to an email or text.
+    return { id: p.id, name: p.name, detail, stage: p.stage?.name ?? "", phones: p.phones.map((x) => x.normalized).filter((n) => n.length === 10), emails: p.emails.map((x) => x.address) };
   });
   return Response.json({ results }, { headers: { "Cache-Control": "no-store" } });
 }

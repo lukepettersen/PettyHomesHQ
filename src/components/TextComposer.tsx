@@ -6,6 +6,7 @@ import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
 import { formatPhone } from "@/lib/normalize";
 import { MAX_TEXT } from "@/lib/texting";
 import { fillTextTemplate, sendText } from "@/app/(app)/messages/actions";
+import { AddRecipient, ExtraChips, type Extra } from "@/components/AddRecipient";
 
 /**
  * Write and send a text from your own business number (SPEC.md §11): a template (optional, or "/name" in the
@@ -17,6 +18,8 @@ export function TextComposer({ personId, phones, templates, from, blocked, taskI
 }) {
   const router = useRouter();
   const [to, setTo] = useState(phones[0] ?? "");
+  // Others to send the same text to, each as their own text (US business texting can't do group texts).
+  const [extras, setExtras] = useState<Extra[]>([]);
   const [templateId, setTemplateId] = useState("");
   const [body, setBody] = useState(initial);
   const [missing, setMissing] = useState<string[]>([]);
@@ -49,7 +52,13 @@ export function TextComposer({ personId, phones, templates, from, blocked, taskI
     setError(""); setNotice("");
     const r = await sendText({ personId, to, body, taskId: taskId ?? null });
     if (!r.ok) { setError(r.error); return; }
-    setNotice(`Sent to ${r.data!.name}.`); setBody(""); setTemplateId(""); setMissing([]); router.refresh(); onSent?.(r.data!.name);
+    const names = [r.data!.name], failed: string[] = [];
+    for (const x of extras) {
+      const e = await sendText({ personId: x.personId, to: x.value, body, typed: !x.personId });
+      if (e.ok) names.push(e.data!.name); else failed.push(`${x.label}: ${e.error}`);
+    }
+    setNotice(`Sent to ${names.join(", ")}.`); if (failed.length) setError(`Not sent to ${failed.join("; ")}`);
+    setBody(""); setTemplateId(""); setMissing([]); setExtras([]); router.refresh(); onSent?.(r.data!.name);
   });
   const onKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     slash.onKeyDown(e);
@@ -64,6 +73,11 @@ export function TextComposer({ personId, phones, templates, from, blocked, taskI
             <select className="input" value={to} onChange={(e) => setTo(e.target.value)}>{phones.map((p) => <option key={p} value={p}>{formatPhone(p)}</option>)}</select>
           </label>
         ) : !compact && <div className="label">To<span className="py-1.5 text-sm font-semibold text-charcoal">{formatPhone(to)}</span></div>}
+        <div className="flex flex-wrap items-center gap-1.5 sm:col-span-2">
+          <ExtraChips extras={extras} onRemove={(v) => setExtras(extras.filter((x) => x.value !== v))} />
+          <AddRecipient mode="phone" exclude={[...phones, ...extras.map((x) => x.value)]} onAdd={(x) => setExtras([...extras, x])} />
+          {extras.length > 0 && <span className="text-xs muted">Each person gets their own text; replies come back separately.</span>}
+        </div>
         <label className="label">Template<TemplateSearch templates={templates} value={templateId} disabled={pending} onPick={pick} noneLabel="No text templates yet" /></label>
       </div>
       <div className="relative">
