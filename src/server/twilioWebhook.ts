@@ -13,7 +13,9 @@ export async function twilioForm(req: Request, path: string): Promise<Record<str
   if (!form) return null;
   const params: Record<string, string> = {};
   form.forEach((v, k) => { if (typeof v === "string") params[k] = v; });
-  return validTwilioRequest(`${publicBase()}${path}`, params, twilioToken(), req.headers.get("x-twilio-signature")) ? params : null;
+  // Twilio signs the full address it called, including any ?query (e.g. ?retry=1).
+  const query = new URL(req.url).search;
+  return validTwilioRequest(`${publicBase()}${path}${query}`, params, twilioToken(), req.headers.get("x-twilio-signature")) ? params : null;
 }
 
 export const xml = (body: string, status = 200) => new Response(body, { status, headers: { "Content-Type": "text/xml" } });

@@ -480,7 +480,8 @@ Principles:
   delivered with the reason; refreshes every 15 seconds. **Send text** on a contact's timeline and in
   **Draft text** on checklist steps (template, "/name" in the message; the task is checked off).
 - Incoming texts and missed calls **pop up with a chime** for the number's owner (Open conversation).
-- **Calls** to a number ring that person's cell if one is set in Admin → Integrations (Luke); otherwise
+- **Calls** to a number ring that person's cell if one is set in Admin → Integrations (Luke), showing the
+  caller's number (if the carrier refuses that, it rings again showing the business number); otherwise
   the caller hears "Sorry we missed your call, please text this number" (Alyssa). Unanswered calls are
   logged as missed calls in Messages and on the contact's timeline.
 - HQ only texts phones saved on the contact, or back to someone who texted that number. Texts sent and
