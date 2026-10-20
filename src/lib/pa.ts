@@ -9,7 +9,7 @@ export type PaSection = { id: string; name: string; showIf?: string; people?: bo
 export const FIELD_TYPES: [FieldType, string][] = [["text", "Text"], ["money", "Money"], ["number", "Number"], ["pct", "Percent"], ["date", "Date"], ["date-na", "Date or N/A"], ["datetime", "Date and time"], ["yesno", "Yes/No"], ["choice", "Dropdown"]];
 
 /** Keys the app reads (Pipeline, calendar, templates). Address and price can't be removed. */
-export const AUTOMATION_KEYS = ["address", "price", "ptype", "year", "hoa", "newc", "fin", "commission", "bac", "em", "sc", "closing", "finalAcceptance", "inspection", "writtenStatement", "hoaRescission", "inspAppt"];
+export const AUTOMATION_KEYS = ["address", "price", "ptype", "year", "hoa", "newc", "defect", "fin", "commission", "bac", "em", "sc", "closing", "finalAcceptance", "inspection", "writtenStatement", "hoaRescission", "inspAppt"];
 export const LOCKED_KEYS = ["address", "price"];
 export const COMMISSION_KEYS = ["commission", "bac"];
 

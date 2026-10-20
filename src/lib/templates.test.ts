@@ -13,6 +13,10 @@ describe("conditions", () => {
     expect(condMet("pre1978", { year: "1990" })).toBe(false);
     expect(condMet("ws", { ws: "Yes" })).toBe(true);
     expect(condMet("ws", { ws: "No" })).toBe(false);
+    expect(condMet("defect", { defect: "Yes" })).toBe(true);
+    expect(condMet("defect", {})).toBe(false);
+    expect(condMet("nodefect", { defect: "No" })).toBe(true);
+    expect(condMet("nodefect", { defect: "Yes" })).toBe(false);
     expect(condMet("pre1978", {})).toBe(false);
     expect(condMet("fhava", { fin: "VA" })).toBe(true);
     expect(condMet("condo", { ptype: "Townhome" })).toBe(true);
