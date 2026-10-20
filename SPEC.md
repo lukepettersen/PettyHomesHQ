@@ -394,6 +394,8 @@ Principles:
 - Quick add while the filter shows a teammate makes the task **theirs** (shown as "For Alyssa"
   before you add; an @name in the text still wins). Everyone or Me → the person typing.
 - **Lists (sidebar):** Today, Upcoming, then built-in lists and user lists in one order.
+- A contact opened from Tasks shows **‹ Prev · 3 of 12 in Today · Next ›** to step through the people
+  in the list you came from, in the order shown *(owner request 2026-10-20)*.
   - Built-in: **Clients** (grouped by client, click name to open), **Due for a touch**
     (people past their follow-up frequency **since their last text**; texts are the touch, owner decision 2026-10-14 — calls and emails don't restart it; the card shows "Last text …"; **Log text** records a text on their timeline and restarts the clock, as do logging a text on the timeline, checking off a text task (incl. "Text Happy Birthday"; it's logged on the timeline as a text, not "Task done"), the bulk action **Mark texted**, and the last text date pulled from Follow Up Boss; **Spread out** *(owner request 2026-10-15)*: "Show 5 a day" gives everyone due right now a day to appear — the first 5 today, the next 5 tomorrow, and so on — without faking texts, so timelines and "Last text" stay true; anyone not texted stays on the list; **Undo spread out (N waiting)** puts everyone back right away), **Important dates**, **Recurring**,
     **Misc** (any task with no client).

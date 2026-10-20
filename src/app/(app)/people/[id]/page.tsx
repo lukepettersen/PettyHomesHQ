@@ -13,6 +13,7 @@ import { loadForm, loadPersonContracts } from "@/server/pa";
 import { daysAgo, isoFromDate } from "@/lib/normalize";
 import { InfoCard, DetailsCard, CustomFieldsCard, TagsCard, DatesCard, DeletePerson } from "./cards";
 import { Timeline } from "./Timeline";
+import { TaskTrail } from "@/components/TaskTrail";
 import { textComposerFor } from "@/server/texting";
 import { TasksCard } from "./TasksCard";
 import { FileTabs } from "./FileTabs";
@@ -100,6 +101,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
       <RememberRecent id={p.id} name={p.name} detail={p.phones[0]?.number ?? p.emails[0]?.address ?? ""} stage={p.stage?.name ?? ""} />
       <div className="flex flex-wrap items-center gap-3">
         <Link href={backHref} className="link text-sm">← {backLabel}</Link>
+        {sp.from === "tasks" && <TaskTrail id={p.id} />}
         {nav && (
           <nav aria-label="Step through the list" className="ml-auto flex items-center gap-2 text-sm">
             {nav.prev ? <Link className="btn px-2.5 py-1" href={nav.prev} rel="prev">‹ Prev</Link> : <span className="btn px-2.5 py-1 opacity-40">‹ Prev</span>}

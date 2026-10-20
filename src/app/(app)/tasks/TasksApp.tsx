@@ -9,6 +9,7 @@ import { completeDateTask, completeTask, createList, deleteList, logTouch, quick
 import { ArrangeLists } from "./ArrangeLists";
 import { TaskDetail } from "./TaskDetail";
 import { PersonLink, TaskLine, Toast } from "./parts";
+import { saveTrail } from "@/components/TaskTrail";
 
 type Props = { today: string; team: TeamMember[]; lists: ListRow[]; tasks: TaskRow[]; touches: TouchRow[]; waiting: number; meId: string; initialView: string; initialWho: string; initialTask: string | null };
 type Done = { row: TaskRow; realId: string; nextId: string | null };
@@ -80,6 +81,20 @@ export function TasksApp(p: Props) {
   const title = (v: string) => (v === "today" ? "Today" : v === "upcoming" ? "Upcoming" : listByKey.get(v)?.name ?? "Tasks");
   // Quick add while looking at a teammate's tasks makes the task theirs (an @name in the text still wins).
   const viewing = who !== "everyone" && who !== "me" && who !== p.meId ? p.team.find((m) => m.id === who) ?? null : null;
+  // The people in this list, top to bottom, so a contact opened from here can step to the next one.
+  useEffect(() => {
+    const ids: string[] = [];
+    const add = (pid: string | null | undefined) => { if (pid && !ids.includes(pid)) ids.push(pid); };
+    if (view === "touch") touches.forEach((t) => add(t.personId));
+    else if (view === "today") {
+      const due = visible("today");
+      for (const l of p.lists.filter((x) => x.showOnToday)) {
+        const k = keyOf(l);
+        if (k === "touch") touches.forEach((t) => add(t.personId)); else due.filter((t) => t.cat === k).forEach((t) => add(t.personId));
+      }
+    } else visible(view).forEach((t) => add(t.personId));
+    saveTrail({ list: title(view), ids });
+  }); // runs after every render: the list on screen is what Next follows
   const selected = rows.find((t) => t.id === selId) ?? null;
   const currentList = view.startsWith("list:") ? listByKey.get(view) : undefined;
 
