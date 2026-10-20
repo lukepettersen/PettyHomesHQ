@@ -347,7 +347,7 @@ Principles:
   Closing. Steps can also be due **5, 10, 15, 30 or 60 minutes before or after** the phone call
   or consult; they move with it. Steps timed from a date that isn't set yet **wait for it**; when
   the date is set or changes, the step's due date updates.
-- **Conditions:** Always, HOA property, Built before 1978, New construction, Not new construction *(owner request 2026-10-20: one Buyer · Under contract template for both)*, FHA/VA loan,
+- **Conditions:** Always, HOA property, Built before 1978, New construction, Written statement included *(owner request 2026-10-20; not marked N/A on the contract)*, FHA/VA loan,
   Condo/townhome. *(Later: Lead source is…, for the Stacie Rihl referral step.)*
 - **Triggers:** when a buyer/listing moves to a status; when a buyer-side or seller-side PA
   is added; when a contract closes (each side); **when a phone call is booked**; **when a

@@ -92,9 +92,9 @@ export async function closeStepsForWaived(tx: Tx, paId: string, anchor: string) 
 }
 
 /** Facts for "Only when" conditions: a contract's answers, or a listing's property questions. */
-export const factsOf = (info: unknown): Facts => {
+export const factsOf = (info: unknown, writtenStatementNA?: boolean): Facts => {
   const o = info && typeof info === "object" ? (info as Record<string, string>) : {};
-  return { hoa: o.hoa, year: o.year, newc: o.newc, fin: o.fin, ptype: o.ptype };
+  return { hoa: o.hoa, year: o.year, newc: o.newc, fin: o.fin, ptype: o.ptype, ...(writtenStatementNA === undefined ? {} : { ws: writtenStatementNA ? "No" : "Yes" }) };
 };
 
 /** Contract dates as anchors for templates. */

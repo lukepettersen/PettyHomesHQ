@@ -11,9 +11,8 @@ describe("conditions", () => {
   it("reads the property facts", () => {
     expect(condMet("pre1978", { year: "1965" })).toBe(true);
     expect(condMet("pre1978", { year: "1990" })).toBe(false);
-    expect(condMet("notnewc", { newc: "No" })).toBe(true);
-    expect(condMet("notnewc", {})).toBe(true);
-    expect(condMet("notnewc", { newc: "Yes" })).toBe(false);
+    expect(condMet("ws", { ws: "Yes" })).toBe(true);
+    expect(condMet("ws", { ws: "No" })).toBe(false);
     expect(condMet("pre1978", {})).toBe(false);
     expect(condMet("fhava", { fin: "VA" })).toBe(true);
     expect(condMet("condo", { ptype: "Townhome" })).toBe(true);
