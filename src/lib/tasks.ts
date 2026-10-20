@@ -154,6 +154,8 @@ export function importantDateTasks(dates: DateInput[], reminders: ReminderInput[
       if (r.dateKind !== d.kind) continue;
       if (r.appliesTo !== "Everyone" && r.appliesTo.toLowerCase() !== (d.stage ?? "").toLowerCase()) continue;
       for (const y of [year - 1, year, year + 1]) {
+        // The date itself isn't an anniversary: a homeiversary set from this year's closing first comes up next year.
+        if (y <= +d.date.slice(0, 4)) continue;
         const occ = `${y}${d.date.slice(4)}`;
         const due = addDays(occ, r.direction === "before" ? -r.days : r.direction === "after" ? r.days : 0);
         const n = diffDays(due, today);

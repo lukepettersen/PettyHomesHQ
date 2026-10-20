@@ -419,7 +419,7 @@ Principles:
   in Admin → Date reminders, titled with capitals: birthdays add whose it is ("Text Happy
   Birthday · Lena"), homeiversaries are just the action ("Send Homeiversary Card")
   (default: text happy birthday/homeiversary on the day to
-  everyone; send card 7 days before to Past Clients). Shown up to 60 days ahead. They also show on
+  everyone; send card 7 days before to Past Clients). Shown up to 60 days ahead. A homeiversary set from a closing first comes up a year later (no card for the closing itself; owner report 2026-10-20). They also show on
   the contact's Tasks card, where checking one off works the same (owner report 2026-10-17).
 - **Task alarms:** a task with a set time rings for the person it's assigned to when it comes
   due: a pop-up over every page (Done · Snooze 5 min · Open contact · Dismiss), a chime that

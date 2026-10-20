@@ -81,6 +81,12 @@ describe("important dates", () => {
       [{ id: "r", dateKind: "homeiversary", title: "send homeiversary card", days: 0, direction: "on", assignee: "", kind: "task", appliesTo: "Everyone" }], [], "2026-10-12");
     expect(out[0].title).toBe("Send Homeiversary Card");
   });
+  it("a homeiversary from this year's closing waits a year (owner report 2026-10-20)", () => {
+    const home = { id: "h", kind: "homeiversary", whose: "", date: "2026-10-21", personId: "p", personName: "Jack & Darby Rotman", stage: "Past Client", assignedToId: null };
+    const card = [{ id: "r", dateKind: "homeiversary", title: "Send homeiversary card", days: 7, direction: "before", assignee: "", kind: "task", appliesTo: "Everyone" }];
+    expect(importantDateTasks([home], card, [], "2026-10-20")).toHaveLength(0);
+    expect(importantDateTasks([home], card, [], "2027-10-01")[0].due).toBe("2027-10-14");
+  });
 });
 
 describe("every other week", () => {
