@@ -1,0 +1,78 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { formatPhone } from "@/lib/normalize";
+import { saveDailyCap, saveTextLine } from "./actions";
+
+type Line = { userId: string; name: string; number: string | null; forwardTo: string | null };
+
+/** Admin → Integrations → Texting: each team member's own number, call forwarding, and the daily limit. */
+export function TextLines({ lines, cap }: { lines: Line[]; cap: number }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <h3 className="text-xs font-semibold uppercase tracking-wider muted">Numbers</h3>
+      {lines.map((l) => <LineRow key={l.userId} line={l} />)}
+      <CapRow cap={cap} />
+    </div>
+  );
+}
+
+function LineRow({ line }: { line: Line }) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [number, setNumber] = useState(line.number ? formatPhone(line.number) : "");
+  const [cell, setCell] = useState(line.forwardTo ? formatPhone(line.forwardTo) : "");
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pending, start] = useTransition();
+  const cancel = () => { setEditing(false); setNumber(line.number ? formatPhone(line.number) : ""); setCell(line.forwardTo ? formatPhone(line.forwardTo) : ""); };
+  const save = () => start(async () => {
+    const r = await saveTextLine({ userId: line.userId, number, forwardTo: cell });
+    if (!r.ok) { setMsg({ ok: false, text: r.error }); return; }
+    setMsg({ ok: !r.data!.message.startsWith("Saved, but"), text: r.data!.message }); setEditing(false); router.refresh();
+  });
+  return (
+    <div className="rounded-md border border-misty px-3 py-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <b className="text-sm">{line.name}</b>
+        {!editing && <button type="button" className="link text-sm" onClick={() => { setMsg(null); setEditing(true); }}>{line.number ? "Edit" : "Add number"}</button>}
+      </div>
+      {!editing ? (
+        <p className="text-sm muted">{line.number ? <>Texts from <b className="text-charcoal">{formatPhone(line.number)}</b> · {line.forwardTo ? <>calls ring {formatPhone(line.forwardTo)}</> : "calls go to missed calls"}</> : "No texting number yet."}</p>
+      ) : (
+        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label className="label">Texting number (from Twilio)<input className="input" inputMode="tel" value={number} onChange={(e) => setNumber(e.target.value)} placeholder="952-243-7646" /></label>
+          <label className="label">Forward calls to (cell)<input className="input" inputMode="tel" value={cell} onChange={(e) => setCell(e.target.value)} placeholder="Leave empty for missed calls only" /></label>
+          <span className="flex gap-2 sm:col-span-2 sm:justify-end">
+            <button type="button" className="btn" onClick={cancel}>Cancel</button>
+            <button type="button" className="btn btn-primary" disabled={pending} onClick={save}>{pending ? "Saving…" : "Save"}</button>
+          </span>
+        </div>
+      )}
+      {msg && <p role={msg.ok ? "status" : "alert"} className={`mt-1 text-sm ${msg.ok ? "text-accent" : "text-bad"}`}>{msg.text}</p>}
+    </div>
+  );
+}
+
+function CapRow({ cap }: { cap: number }) {
+  const router = useRouter();
+  const [value, setValue] = useState(String(cap));
+  const [msg, setMsg] = useState("");
+  const [pending, start] = useTransition();
+  const changed = value !== String(cap);
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      <label className="flex items-center gap-2">Daily limit per number
+        <input type="number" min={1} max={5000} className="input w-24" value={value} onChange={(e) => { setValue(e.target.value); setMsg(""); }} /> texts</label>
+      {changed && <>
+        <button type="button" className="btn" onClick={() => setValue(String(cap))}>Cancel</button>
+        <button type="button" className="btn btn-primary" disabled={pending} onClick={() => start(async () => {
+          const r = await saveDailyCap(Number(value));
+          setMsg(r.ok ? "Saved." : r.error); if (r.ok) router.refresh();
+        })}>Save</button>
+      </>}
+      {msg && <span role="status" className="muted">{msg}</span>}
+      <span className="w-full text-xs muted">Texts you type send any time. Quiet hours (8am–8pm Central) hold only automatic texts.</span>
+    </div>
+  );
+}

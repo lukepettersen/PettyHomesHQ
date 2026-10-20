@@ -46,6 +46,9 @@ model User {
   tasksCreated    Task[]          @relation("TaskCreator")
   notifications   Notification[]  @relation("NotificationTo")
   notificationsBy Notification[]  @relation("NotificationFrom")
+  textNumber      String?         @unique // their Twilio texting number, +16125550100 (Admin → Integrations; owner 2026-10-20: one number each)
+  forwardTo       String? // calls to their texting number ring this cell; empty = missed call only
+  textsSent       TextMessage[]   @relation("TextSender")
 }
 
 model ActivityLog {
@@ -166,6 +169,7 @@ model Person {
   appointments  Appointment[]
   documents     Document[]
   partnerOn     PaPartner[]
+  texts         TextMessage[]
 
   @@index([deletedAt])
   @@index([name])
@@ -253,6 +257,7 @@ model Notification {
   person    Person?   @relation(fields: [personId], references: [id], onDelete: Cascade)
   text      String
   alert     Boolean   @default(false) // pop up with a chime (e.g. an offer was submitted), not just the bell
+  link      String? // where "Open" goes when it isn't a contact page (e.g. a text from an unknown number)
   readAt    DateTime?
   createdAt DateTime  @default(now())
 
@@ -559,4 +564,26 @@ model ImportBatch {
   added       Int       @default(0)
   duplicates  Int       @default(0)
   undoneAt    DateTime?
+}
+
+/// Business texting (SPEC.md §11): texts and missed calls on a team member's Twilio number.
+model TextMessage {
+  id          String    @id @default(cuid())
+  ourNumber   String // the team member's Twilio number, +16125550100
+  theirNumber String // the other person's number, digits only (normalizePhone)
+  personId    String?
+  person      Person?   @relation(fields: [personId], references: [id], onDelete: SetNull)
+  direction   String // in | out
+  kind        String    @default("sms") // sms | missed_call
+  body        String    @default("")
+  twilioSid   String?   @unique
+  status      String    @default("") // queued | sent | delivered | failed | undelivered | received
+  error       String?
+  sentById    String?
+  sentBy      User?     @relation("TextSender", fields: [sentById], references: [id])
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([ourNumber, theirNumber, createdAt])
+  @@index([personId])
 }

@@ -7,9 +7,10 @@ import { Modal } from "@/components/Modal";
 import { useRouter } from "next/navigation";
 import { getDraft } from "./draftActions";
 import { sendEmail } from "../people/emailActions";
+import { sendText } from "../messages/actions";
 import { toPlain } from "@/lib/email";
 
-type Draft = { kind: "email" | "text"; templateId: string | null; stepMessage: string | null; templates: { id: string; name: string }[]; to: string[]; subject: string; body: string; missing: string[]; personId: string | null; sendsFrom: string | null };
+type Draft = { kind: "email" | "text"; templateId: string | null; stepMessage: string | null; templates: { id: string; name: string }[]; to: string[]; subject: string; body: string; missing: string[]; personId: string | null; sendsFrom: string | null; textBlocked: string | null };
 
 /** Draft email / Draft text: the filled-in template to review, then copy or open in the email app. */
 export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () => void }) {
@@ -32,6 +33,14 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
   const slashProps = { onKeyDown: slash.onKeyDown, onKeyUp: slash.track, onClick: slash.track };
   const router = useRouter();
   const canSend = !!(d && d.kind === "email" && d.sendsFrom && d.personId && d.to.length);
+  const canText = !!(d && d.kind === "text" && !d.textBlocked && d.personId && d.to.length);
+  const [toPhone, setToPhone] = useState("");
+  const text = () => start(async () => {
+    setError("");
+    const r = await sendText({ personId: d!.personId, to: toPhone || d!.to[0], body, taskId });
+    if (!r.ok) { setError(r.error); return; }
+    router.refresh(); onClose();
+  });
   const send = () => {
     if (!confirm) { setConfirm(true); return; }
     setConfirm(false); setError("");
@@ -74,13 +83,15 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
           ) : <div className="label">Message<textarea ref={box} aria-label="Message" className="input min-h-56 font-normal" value={body} onChange={(e) => { setBody(e.target.value); slash.track(); }} {...slashProps} />{slash.menu}</div>}
           {canSend && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={signature} onChange={(e) => setSignature(e.target.checked)} /> Add my Gmail signature</label>}
           {d.missing.length > 0 && <p className="text-sm text-[#9a6400]">Not filled in (nothing on file): {d.missing.join(", ")}. Check the message before sending.</p>}
-          <p className="text-xs muted">{d.kind === "email" ? (canSend ? `Send email sends it from ${d.sendsFrom}, puts it on the timeline and checks off this task.` : "Gmail isn't connected, so HQ can't send it. Open it in your email app, or copy it. An Admin can connect Gmail in Admin → Integrations.") : "Copy it and send it from your phone, then check off the task."}</p>
+          <p className="text-xs muted">{d.kind === "email" ? (canSend ? `Send email sends it from ${d.sendsFrom}, puts it on the timeline and checks off this task.` : "Gmail isn't connected, so HQ can't send it. Open it in your email app, or copy it. An Admin can connect Gmail in Admin → Integrations.") : canText ? "Send text sends it from your business number, puts it on the timeline and checks off this task." : `${d.textBlocked ? `${d.textBlocked} ` : ""}Copy it and send it from your phone, then check off the task.`}</p>
           <div className="flex flex-wrap justify-end gap-2">
             <button type="button" className="btn" onClick={onClose}>Close</button>
             <button type="button" className="btn" disabled={!body} onClick={copy}>{copied ? "Copied" : "Copy"}</button>
             {d.kind === "email" && <a className={`btn ${canSend ? "" : "btn-primary"} ${body ? "" : "pointer-events-none opacity-50"}`} href={mailto}>Open in email</a>}
             {canSend && <button type="button" className="btn btn-primary" disabled={pending || !subject.trim() || !body.trim()} onClick={send} onBlur={() => setConfirm(false)}>
               {pending ? "Sending…" : confirm ? `Click again to send to ${d.to.length === 1 ? d.to[0] : `${d.to.length} addresses`}` : "Send email"}</button>}
+            {canText && d.to.length > 1 && <select aria-label="Text to" className="input w-auto" value={toPhone || d.to[0]} onChange={(e) => setToPhone(e.target.value)}>{d.to.map((p) => <option key={p}>{p}</option>)}</select>}
+            {canText && <button type="button" className="btn btn-primary" disabled={pending || !body.trim()} onClick={text}>{pending ? "Sending…" : "Send text"}</button>}
           </div>
         </div>
       )}

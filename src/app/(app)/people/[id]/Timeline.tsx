@@ -5,20 +5,23 @@ import { useRef, useState, useTransition } from "react";
 import { addTimelineEntry } from "../actions";
 import { mentionLabel, mentionQuery, splitMentions, type Member } from "@/lib/mentions";
 import { EmailComposer } from "./EmailComposer";
+import { TextComposer } from "@/components/TextComposer";
 
 type Entry = { id: string; kind: string; body: string; outcome: string | null; author: string | null; at: string };
 const TABS: [Kind, string, string, string][] = [
   ["note", "Note", "Add a note.", "Save note"],
+  ["send", "Send text", "", ""],
   ["text", "Log text", "What did you text them? For texts sent from your own phone.", "Log text"],
   ["call", "Log call", "What did you talk about?", "Log call"],
   ["email", "Email", "", ""],
 ];
-type Kind = "note" | "text" | "call" | "email";
+type Kind = "note" | "send" | "text" | "call" | "email";
 const KIND_LABEL: Record<string, string> = { note: "Note", text: "Text", call: "Call", email: "Email", system: "Update", task: "Task done" };
 const FILTERS: [string, string][] = [["all", "All"], ["note", "Notes"], ["email", "Emails"], ["text", "Texts"], ["call", "Calls"], ["task", "Tasks"]];
 type EmailProps = { emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null };
+type TextProps = { phones: string[]; templates: { id: string; name: string }[]; from: string | null; blocked: string | null };
 
-export function Timeline({ personId, entries, team, email }: { personId: string; entries: Entry[]; team: Member[]; email: EmailProps }) {
+export function Timeline({ personId, entries, team, email, text }: { personId: string; entries: Entry[]; team: Member[]; email: EmailProps; text: TextProps }) {
   const [kind, setKind] = useState<Kind>("note");
   const [body, setBody] = useState("");
   const [outcome, setOutcome] = useState("Talked");
@@ -57,7 +60,7 @@ export function Timeline({ personId, entries, team, email }: { personId: string;
   function save() {
     setError("");
     start(async () => {
-      if (kind === "email") return;
+      if (kind === "email" || kind === "send") return;
       const r = await addTimelineEntry({ personId, kind, body, outcome: kind === "call" ? outcome : undefined });
       if (!r.ok) { setError(r.error); return; }
       const names = r.data?.mentioned ?? [];
@@ -75,12 +78,13 @@ export function Timeline({ personId, entries, team, email }: { personId: string;
         ))}
       </div>
       {kind === "email" && <EmailComposer personId={personId} {...email} />}
+      {kind === "send" && <TextComposer personId={personId} {...text} />}
       {kind === "call" && (
         <select className="input mt-2 w-auto" value={outcome} onChange={(e) => setOutcome(e.target.value)} aria-label="Call outcome">
           <option>Talked</option><option>Left voicemail</option><option>No answer</option>
         </select>
       )}
-      {kind !== "email" && <><div className="relative">
+      {kind !== "email" && kind !== "send" && <><div className="relative">
         <textarea ref={box} className="input mt-2 min-h-24" value={body} placeholder={`${tab[2]} Type @ to mention a teammate.`} aria-label={tab[1]}
           aria-controls={pick && matches.length ? "mention-list" : undefined}
           onChange={(e) => onType(e.target.value, e.target.selectionStart)} onKeyDown={onKey} onBlur={() => setTimeout(() => setPick(null), 150)} />

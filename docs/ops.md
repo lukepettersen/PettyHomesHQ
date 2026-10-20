@@ -44,7 +44,7 @@ You need: your luke@pettyhomes.com Google account (Workspace admin) and your Git
    | `GOOGLE_CLIENT_SECRET` | from Google (A4) |
    | `ALLOWED_EMAIL_DOMAIN` | `pettyhomes.com` |
 
-   Leave the Twilio variables out. Texting stays off until you add them (Phase 4).
+   Leave the Twilio variables out. Texting stays off until you add them (see Business texting below).
 5. App service → **Settings → Networking → Generate Domain.** That's HQ's address. Put it in
    `NEXTAUTH_URL` and in Google's redirect URI (A4).
 6. Postgres service → **Backups** → turn on daily backups (if your plan shows the option).
@@ -140,6 +140,23 @@ then are removed from the bucket.
    "This API key is not scoped to a workspace". The Relay app's key works too.
 4. Railway → HQ app → **Variables** → add `ANTHROPIC_API_KEY` = that key (never send it in chat).
 5. Admin → Integrations shows Ask Claude **Connected**; the mic button in the top bar works.
+
+### Business texting (Twilio)
+Set up 2026-10-20: business profile approved, brand registered, campaign "Low Volume Mixed" submitted
+(Messaging Service "Low Volume Mixed A2P Messaging Service"), test number 952-243-7646 in its Sender Pool.
+1. Each person who texts needs their own Twilio number: Phone Numbers → Manage → Buy a number (Local, SMS),
+   then Messaging → Services → Low Volume Mixed A2P Messaging Service → Sender Pool → Add Senders.
+2. Railway → HQ app → **Variables**: `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN` (Twilio Console → Account
+   Info; never send them in chat). Deploy.
+3. HQ → Admin → Integrations → Business texting: for each person click **Add number**, enter their Twilio
+   number and (optional) the cell their calls should ring; empty = callers hear "text us" and it's logged as a
+   missed call. **Save** points the number's texts and calls at HQ in Twilio automatically and says if
+   anything is left to do. Then turn the **Texting** switch on.
+4. Texts only deliver once the A2P 10DLC campaign is approved (Twilio emails you). Test by texting a contact
+   whose number is your own cell (Send text), then reply from your cell.
+5. Porting the Follow Up Boss number later: ask FUB support for the port-out details, submit a port in
+   Twilio (Phone Numbers → Port & Host) with a switch date, add the number to the Sender Pool when it arrives,
+   then change your number in Admin → Integrations to it. Keep FUB until the switch day.
 
 ### Rotate a secret
 Create the new value (Google: Credentials → the HQ client → reset secret), update the

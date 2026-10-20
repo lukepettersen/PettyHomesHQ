@@ -472,20 +472,33 @@ Principles:
 
 ## 11. Messages (texting) — built, off until Twilio is connected
 
-- Two-way SMS from a **business number**, plus missed calls. No email here (email stays in
-  Gmail).
+- Two-way SMS from **each team member's own business number** *(owner decision 2026-10-20: Luke and
+  Alyssa each have a number)*, plus missed calls. No email here (email stays in Gmail).
+- **Messages page:** conversations on your number (switch to a teammate's to read theirs; you can only
+  send from your own); unread counts on the Messages tab; bubbles show Sending / Sent / Delivered / Not
+  delivered with the reason; refreshes every 15 seconds. **Send text** on a contact's timeline and in
+  **Draft text** on checklist steps (template, "/name" in the message; the task is checked off).
+- Incoming texts and missed calls **pop up with a chime** for the number's owner (Open conversation).
+- **Calls** to a number ring that person's cell if one is set in Admin → Integrations (Luke); otherwise
+  the caller hears "Sorry we missed your call, please text this number" (Alyssa). Unanswered calls are
+  logged as missed calls in Messages and on the contact's timeline.
+- HQ only texts phones saved on the contact, or back to someone who texted that number. Texts sent and
+  received go on the contact's timeline ("Sent:" / "Received:") and count as their touch.
 - Threads sorted like iMessage; unknown numbers can be added as a new person or linked to an
   existing one; delete thread (two-step); call back; make task / follow-up task.
 - Texts appear on the contact's timeline.
 - **Off by default.** Until Twilio keys are present in Railway, Messages shows "Texting not
   connected" with setup steps, and "Send text" on contacts is hidden; "Log text" still
   works.
-- **Turning it on:** owner creates a Twilio account, buys a number, completes carrier
-  business-texting registration (A2P 10DLC), then adds the Twilio keys in Railway settings.
-  HQ detects them; no code change.
+- **Turning it on:** owner creates a Twilio account, buys a number per person, completes carrier
+  business-texting registration (A2P 10DLC), adds TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in Railway,
+  then enters each person's number (and cell to forward calls to) in Admin → Integrations. Saving points
+  the number at HQ in Twilio. Steps in docs/ops.md.
 - **Admin → Integrations → Texting** on/off switch to pause sending anytime.
-- Safety when on: honor STOP/opt-out automatically; never text people tagged Unsubscribed;
-  quiet hours 8am–8pm Central (later sends wait for morning); daily send cap.
+- Safety when on: honor STOP/opt-out automatically (a STOP reply tags them **Unsubscribed**; START or
+  YES removes it); never text people tagged Unsubscribed; quiet hours 8am–8pm Central apply to
+  **automatic** texts only — texts you type send right away *(owner decision 2026-10-20)*; daily limit of
+  **200 texts per number** (Admin → Integrations). Webhooks from Twilio are checked with Twilio's signature.
 - Texts from Luke's personal phone can't be read by HQ; use "Log text".
 
 ## 12. Google Workspace

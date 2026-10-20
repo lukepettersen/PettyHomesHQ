@@ -12,12 +12,11 @@ export type Integration = {
   connected: boolean;
   missing: string[];
   note?: string;
-  detail?: string; // safe-to-show info, e.g. the texting number
 };
 
 const set = (name: string) => !!process.env[name]?.trim();
 
-const DEFS: Omit<Integration, "connected" | "missing" | "detail">[] = [
+const DEFS: Omit<Integration, "connected" | "missing">[] = [
   {
     id: "google", name: "Google Workspace",
     what: "Sign-in for pettyhomes.com accounts, Google Calendar (appointments and contract dates with invites) and sending email from HQ through Gmail.",
@@ -29,13 +28,12 @@ const DEFS: Omit<Integration, "connected" | "missing" | "detail">[] = [
   },
   {
     id: "texting", name: "Business texting (Twilio)",
-    what: "Two-way texts and missed calls in Messages from a business number. Off until all three keys are set.",
+    what: "Two-way texts and missed calls in Messages, from each team member's own business number (set below). Off until both keys are set.",
     vars: [
       { name: "TWILIO_ACCOUNT_SID", help: "Twilio Console → Account info" },
       { name: "TWILIO_AUTH_TOKEN", help: "Twilio Console → Account info" },
-      { name: "TWILIO_PHONE_NUMBER", help: "The business number you bought, like +16125550100" },
     ],
-    note: "Before texting customers, finish Twilio's business-texting registration (A2P 10DLC).",
+    note: "Texts only go through once Twilio's business-texting registration (A2P 10DLC) is approved and each number is in the registered Messaging Service.",
   },
   {
     id: "fub", name: "Follow Up Boss",
@@ -66,8 +64,7 @@ const DEFS: Omit<Integration, "connected" | "missing" | "detail">[] = [
 export function integrationStatus(): Integration[] {
   return DEFS.map((d) => {
     const missing = d.vars.filter((v) => !set(v.name)).map((v) => v.name);
-    const phone = process.env.TWILIO_PHONE_NUMBER?.trim();
-    return { ...d, missing, connected: missing.length === 0, detail: d.id === "texting" && phone && missing.length === 0 ? phone : undefined };
+    return { ...d, missing, connected: missing.length === 0 };
   });
 }
 

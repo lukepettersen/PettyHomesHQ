@@ -63,8 +63,11 @@ export function Bell({ initial }: { initial: Bell }) {
   const openItem = async (n: BellItem) => {
     setOpen(false);
     if (!n.read) { setData((d) => ({ unread: Math.max(0, d.unread - 1), items: d.items.map((x) => (x.id === n.id ? { ...x, read: true } : x)) })); await markNotificationRead(n.id); }
-    if (n.personId) router.push(`/people/${n.personId}`);
+    if (n.link) router.push(n.link);
+    else if (n.personId) router.push(`/people/${n.personId}`);
   };
+  // Texts and missed calls open the conversation in Messages; offers open the contact.
+  const heading = (n: BellItem) => (!n.link?.startsWith("/messages") ? "New offer submitted" : n.text.startsWith("Missed call") ? "Missed call" : "New text");
   const readAll = async () => {
     setData((d) => ({ unread: 0, items: d.items.map((x) => ({ ...x, read: true })) }));
     await markAllNotificationsRead();
@@ -75,12 +78,12 @@ export function Bell({ initial }: { initial: Bell }) {
       {popup.length > 0 && createPortal(
         <div className="fixed inset-0 z-[60] grid place-items-center bg-black/40 p-4">
           <div role="alertdialog" aria-modal="true" aria-labelledby="alert-h" className="w-full max-w-md overflow-hidden rounded-2xl bg-white text-charcoal shadow-2xl">
-            <h2 id="alert-h" className="bg-moss px-5 py-3 text-lg font-extrabold text-white">{popup.length === 1 ? "New offer submitted" : `${popup.length} new alerts`}</h2>
+            <h2 id="alert-h" className="bg-moss px-5 py-3 text-lg font-extrabold text-white">{popup.length === 1 ? heading(popup[0]) : `${popup.length} new alerts`}</h2>
             <ul className="divide-y divide-misty">
               {popup.map((n) => (
                 <li key={n.id} className="flex flex-col gap-2 px-5 py-3">
                   <span className="text-sm">{n.text}</span>
-                  {n.personId && <button type="button" className="btn btn-primary self-start" onClick={() => { markSeen([n.id]); setPopup((p) => p.filter((x) => x.id !== n.id)); void openItem(n); }}>Open contact</button>}
+                  {(n.link || n.personId) && <button type="button" className="btn btn-primary self-start" onClick={() => { markSeen([n.id]); setPopup((p) => p.filter((x) => x.id !== n.id)); void openItem(n); }}>{n.link ? "Open conversation" : "Open contact"}</button>}
                 </li>
               ))}
             </ul>

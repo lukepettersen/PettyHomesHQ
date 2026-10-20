@@ -7,6 +7,8 @@ import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { isConnected } from "@/server/integrations";
 import { calendarConnection, disconnect, syncContract } from "@/server/google";
+import { connectNumber } from "@/server/twilio";
+import { toE164 } from "@/lib/texting";
 
 /** Admin → Integrations → Texting on/off: pause or resume sending. */
 export async function setTexting(on: boolean) {
@@ -15,6 +17,42 @@ export async function setTexting(on: boolean) {
     if (value && !isConnected("texting")) throw new UserError("Add the Twilio keys in Railway first.");
     await db.appSetting.upsert({ where: { key: "texting.enabled" }, update: { value }, create: { key: "texting.enabled", value } });
     await logActivity(user.id, "update", "setting", "texting.enabled", `Texting turned ${value ? "on" : "off"}`);
+    revalidatePath("/admin/integrations");
+  });
+}
+
+const lineSchema = z.object({ userId: z.string().trim().min(1).max(40), number: z.string().trim().max(30), forwardTo: z.string().trim().max(30) });
+
+/**
+ * Admin → Integrations → Texting: a team member's own Twilio number and the cell their calls ring (empty = missed
+ * call only). Saving points the number's texts and calls at HQ in Twilio.
+ */
+export async function saveTextLine(input: z.input<typeof lineSchema>) {
+  return guarded("manageUsers", async (user) => {
+    const v = lineSchema.parse(input);
+    const number = v.number ? toE164(v.number) : null;
+    if (v.number && !number) throw new UserError("The texting number should be a US number, like 952-243-7646.");
+    const forwardTo = v.forwardTo ? toE164(v.forwardTo) : null;
+    if (v.forwardTo && !forwardTo) throw new UserError("The cell number should be a US number, like 612-555-0101.");
+    if (number && forwardTo === number) throw new UserError("Calls can't forward to the same number.");
+    const member = await db.user.findUnique({ where: { id: v.userId }, select: { name: true } });
+    if (!member) throw new UserError("That team member was removed.");
+    if (number && (await db.user.findFirst({ where: { textNumber: number, id: { not: v.userId } } }))) throw new UserError("Another team member already has that number.");
+    await db.user.update({ where: { id: v.userId }, data: { textNumber: number, forwardTo } });
+    await logActivity(user.id, "update", "user", v.userId, `Texting number for ${member.name}: ${number ?? "none"}${forwardTo ? ", calls forward to their cell" : ", calls go to missed calls"}`);
+    revalidatePath("/admin/integrations");
+    if (!number || !isConnected("texting")) return { message: "Saved." };
+    const r = await connectNumber(number);
+    return { message: r.ok ? `Saved. ${r.message}` : `Saved, but: ${r.message}` };
+  });
+}
+
+/** Admin → Integrations → Texting: most texts each number can send in a day (a safety net; owner default 200). */
+export async function saveDailyCap(cap: number) {
+  return guarded("manageUsers", async (user) => {
+    const value = z.number().int("Use a whole number.").min(1, "At least 1.").max(5000, "At most 5,000.").parse(cap);
+    await db.appSetting.upsert({ where: { key: "texting.dailyCap" }, update: { value }, create: { key: "texting.dailyCap", value } });
+    await logActivity(user.id, "update", "setting", "texting.dailyCap", `Daily text limit set to ${value}`);
     revalidatePath("/admin/integrations");
   });
 }
