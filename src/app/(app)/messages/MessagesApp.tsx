@@ -26,6 +26,8 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
 }) {
   const router = useRouter();
   const [q, setQ] = useState("");
+  const [tab, setTab] = useState<"all" | "unread">("all");
+  const [starting, setStarting] = useState(false);
   const end = useRef<HTMLDivElement>(null);
   const href = (n: string | null, lineId = line?.userId) => `/messages?${new URLSearchParams({ ...(lineId ? { line: lineId } : {}), ...(n ? { n } : {}) })}`;
   const current = threads.find((t) => t.number === open);
@@ -40,20 +42,30 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
       <p className="card mt-4 p-5 text-sm">Nobody has a texting number yet. An Admin adds each person&apos;s Twilio number in Admin → Integrations.</p>
     </div>
   );
-  const shown = threads.filter((t) => !q.trim() || t.name.toLowerCase().includes(q.trim().toLowerCase()) || t.number.includes(q.replace(/\D/g, "") || "~"));
+  const unreadThreads = threads.filter((t) => t.unread > 0).length;
+  const shown = threads.filter((t) => tab === "all" || t.unread > 0 || t.number === open).filter((t) => !q.trim() || t.name.toLowerCase().includes(q.trim().toLowerCase()) || t.number.includes(q.replace(/\D/g, "") || "~"));
   return (
     <div className="mx-auto grid max-w-[1400px] grid-cols-1 items-start gap-3 px-4 py-4 md:grid-cols-[320px_minmax(0,1fr)]">
       <section aria-label="Conversations" className={`card flex flex-col overflow-hidden ${open ? "max-md:hidden" : ""}`}>
         <div className="flex flex-col gap-2 border-b border-misty p-3">
           <div className="flex items-center justify-between gap-2">
             <h1 className="text-xl font-extrabold">Messages</h1>
-            {lines.length > 1 && (
-              <select aria-label="Whose texts" className="input w-auto text-sm font-semibold" value={line.userId} onChange={(e) => router.push(href(null, e.target.value))}>
-                {lines.map((l) => <option key={l.userId} value={l.userId}>{l.name.split(" ")[0]} · {formatPhone(l.number)}</option>)}
-              </select>
-            )}
+            <button type="button" className="btn btn-primary" onClick={() => setStarting(!starting)} aria-expanded={starting}>{starting ? "Cancel" : "+ New message"}</button>
           </div>
-          <input className="input" type="search" aria-label="Search conversations" placeholder="Search name or number" value={q} onChange={(e) => setQ(e.target.value)} />
+          {lines.length > 1 && (
+            <select aria-label="Whose texts" className="input text-sm font-semibold" value={line.userId} onChange={(e) => router.push(href(null, e.target.value))}>
+              {lines.map((l) => <option key={l.userId} value={l.userId}>{l.userId === line.userId ? "" : "View "}{l.name.split(" ")[0]}&apos;s texts · {formatPhone(l.number)}</option>)}
+            </select>
+          )}
+          {starting && <NewMessage onPick={(n) => { setStarting(false); router.push(href(n)); }} />}
+          <span className="flex items-center gap-2">
+            <span className="inline-flex overflow-hidden rounded-full border border-misty text-sm" role="group" aria-label="Show">
+              {([["all", "All"], ["unread", `Unread${unreadThreads ? ` (${unreadThreads})` : ""}`]] as const).map(([k, l]) => (
+                <button key={k} type="button" aria-pressed={tab === k} onClick={() => setTab(k)} className={`px-3 py-1 font-semibold ${tab === k ? "bg-charcoal text-white" : "hover:bg-sunken"}`}>{l}</button>
+              ))}
+            </span>
+            <input className="input min-w-0 flex-1" type="search" aria-label="Search conversations" placeholder="Search name or number" value={q} onChange={(e) => setQ(e.target.value)} />
+          </span>
         </div>
         {shown.length ? (
           <ul className="max-h-[calc(100vh-220px)] overflow-y-auto">
@@ -69,7 +81,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
               </li>
             ))}
           </ul>
-        ) : <p className="p-4 text-sm muted">{threads.length ? "No conversations match." : `No texts yet on ${formatPhone(line.number)}. Text a contact from their page (Send text), or wait for someone to text this number.`}</p>}
+        ) : <p className="p-4 text-sm muted">{tab === "unread" && !q.trim() ? "All caught up. No unread texts or missed calls." : threads.length ? "No conversations match." : `No texts yet on ${formatPhone(line.number)}. Click + New message to text a contact.`}</p>}
       </section>
 
       <section aria-label="Conversation" className={`card flex min-h-[60vh] flex-col ${open ? "" : "max-md:hidden"}`}>
@@ -115,6 +127,30 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
           </>
         )}
       </section>
+    </div>
+  );
+}
+
+/** + New message: find a contact, pick their number, and the conversation opens with the text box ready. */
+function NewMessage({ onPick }: { onPick: (number: string) => void }) {
+  const [q, setQ] = useState("");
+  const [hits, setHits] = useState<{ id: string; name: string; phones: string[] }[]>([]);
+  useEffect(() => {
+    if (q.trim().length < 2) return;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => { fetch(`/api/search?q=${encodeURIComponent(q)}`, { signal: ctrl.signal }).then((r) => r.json()).then((d) => setHits(d.results ?? [])).catch(() => {}); }, 200);
+    return () => { clearTimeout(t); ctrl.abort(); };
+  }, [q]);
+  return (
+    <div className="flex flex-col gap-1 rounded-md bg-sunken p-2">
+      <input autoFocus className="input" aria-label="Text who?" placeholder="Text who? Type a name or number" value={q} onChange={(e) => setQ(e.target.value)} />
+      {q.trim().length >= 2 && (hits.length ? hits.map((h) => (
+        <div key={h.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 py-1 text-sm">
+          <b>{h.name}</b>
+          {h.phones.length ? h.phones.map((n) => <button key={n} type="button" className="rounded-full border border-misty bg-white px-2 py-0.5 text-xs font-semibold hover:border-accent" onClick={() => onPick(n)}>{formatPhone(n)}</button>)
+            : <span className="text-xs muted">No phone number on file</span>}
+        </div>
+      )) : <p className="px-1 text-sm muted">No contacts match.</p>)}
     </div>
   );
 }

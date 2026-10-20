@@ -41,7 +41,8 @@ export async function saveTextLine(input: z.input<typeof lineSchema>) {
     await db.user.update({ where: { id: v.userId }, data: { textNumber: number, forwardTo } });
     await logActivity(user.id, "update", "user", v.userId, `Texting number for ${member.name}: ${number ?? "none"}${forwardTo ? ", calls forward to their cell" : ", calls go to missed calls"}`);
     revalidatePath("/admin/integrations");
-    if (!number || !isConnected("texting")) return { message: "Saved." };
+    if (!number) return { message: "Saved." };
+    if (!isConnected("texting")) return { message: "Saved, but Twilio isn't connected yet (add the Twilio keys in Railway), so the number wasn't set up in Twilio. Save again once it says Connected." };
     const r = await connectNumber(number);
     return { message: r.ok ? `Saved. ${r.message}` : `Saved, but: ${r.message}` };
   });
