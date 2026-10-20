@@ -46,7 +46,7 @@ async function findOrCreateList(name: string) {
 }
 
 // ---------- Quick add ----------
-const quickSchema = z.object({ text: z.string().trim().min(1, "Type a task first").max(300), view: z.string().max(60).default("today") });
+const quickSchema = z.object({ text: z.string().trim().min(1, "Type a task first").max(300), view: z.string().max(60).default("today"), assigneeId: z.string().max(40).nullish() });
 
 export async function quickAddTask(input: z.input<typeof quickSchema>) {
   return guarded(null, async (user) => {
@@ -68,12 +68,17 @@ export async function quickAddTask(input: z.input<typeof quickSchema>) {
       }
     }
 
-    let assigneeId = user.id;
+    // Who it's for: an @name in the text, else the teammate whose tasks are on screen, else whoever typed it.
+    let assigneeId = user.id, forName = "";
+    const team = await loadTeam();
     if (p.assignee && p.assignee !== "me") {
-      const team = await loadTeam();
       const m = team.find((t) => t.name.toLowerCase().split(/\s+/)[0] === p.assignee || (p.assignee === "assistant" && !t.isOwner));
       if (m) assigneeId = m.id; else notes.push(`no team member called @${p.assignee}`);
+    } else if (!p.assignee && v.assigneeId) {
+      const m = team.find((t) => t.id === v.assigneeId);
+      if (m) assigneeId = m.id;
     }
+    if (assigneeId !== user.id) forName = team.find((t) => t.id === assigneeId)?.name.split(/\s+/)[0] ?? "";
 
     let listId: string | null = null;
     if (p.list) {
@@ -94,7 +99,7 @@ export async function quickAddTask(input: z.input<typeof quickSchema>) {
     if (v.view === "recurring" && !p.repeat) notes.push("repeats weekly (change it in the task)");
     if (v.view === "clients" && !personId) notes.push(p.personWord ? `no one matched "${p.personWord}"` : 'use "re" and a name to link a client');
     const where = await listNameFor(categoryOf(t));
-    return { id: t.id, message: `Added "${title}" to ${where}, due ${longIso(due)}${notes.length ? `; ${notes.join("; ")}` : ""}.` };
+    return { id: t.id, message: `Added "${title}"${forName ? ` for ${forName}` : ""} to ${where}, due ${longIso(due)}${notes.length ? `; ${notes.join("; ")}` : ""}.` };
   });
 }
 

@@ -20,6 +20,7 @@ const SUBTITLE: Record<string, string> = {
   recurring: "Each one shows up in Today when it's due, then schedules the next",
   dates: "Birthday and homeiversary cards and texts for the next 60 days · rules in Admin → Date reminders",
   misc: "Tasks that aren't linked to a client",
+  upcoming: "Everything due after today, from every list, by day",
 };
 const PLACEHOLDER: Record<string, string> = {
   clients: 'Add a client task, e.g. "call lender re Ortiz Fri 9am"',
@@ -32,6 +33,7 @@ const EMPTY: Record<string, string> = {
   recurring: 'Nothing recurring yet. Try "rent check every month".',
   dates: "Nothing coming up. Birthdays and homeiversaries from people's Important Dates show here, using the rules in Admin → Date reminders.",
   misc: "Nothing here. Tasks with no client land in Misc.",
+  upcoming: "Nothing scheduled after today.",
 };
 const sortTasks = (a: TaskRow, b: TaskRow) =>
   (a.due ?? "9999").localeCompare(b.due ?? "9999") || b.priority - a.priority || (a.time ?? "99").localeCompare(b.time ?? "99");
@@ -71,11 +73,13 @@ export function TasksApp(p: Props) {
   const touches = p.touches.filter((t) => !touched.includes(t.personId));
   const onToday = (k: string) => listByKey.get(k)?.showOnToday !== false;
   const whoOk = (t: TaskRow) => who === "everyone" || t.assigneeId === (who === "me" ? p.meId : who);
-  const inView = (t: TaskRow, v: string) => (v === "today" ? !!t.due && diffDays(t.due, p.today) <= 0 && onToday(t.cat) : t.cat === v);
+  const inView = (t: TaskRow, v: string) => (v === "today" ? !!t.due && diffDays(t.due, p.today) <= 0 && onToday(t.cat) : v === "upcoming" ? !!t.due && diffDays(t.due, p.today) > 0 : t.cat === v);
   const visible = (v: string) => rows.filter(whoOk).filter((t) => inView(t, v)).sort(sortTasks);
   const openCount = (v: string) => (v === "touch" ? touches.length : visible(v).filter((t) => !t.done).length + (v === "today" && onToday("touch") ? touches.length : 0));
   const lateCount = (v: string) => (v === "touch" ? 0 : visible(v).filter((t) => !t.done && t.due && diffDays(t.due, p.today) < 0).length);
-  const title = (v: string) => (v === "today" ? "Today" : listByKey.get(v)?.name ?? "Tasks");
+  const title = (v: string) => (v === "today" ? "Today" : v === "upcoming" ? "Upcoming" : listByKey.get(v)?.name ?? "Tasks");
+  // Quick add while looking at a teammate's tasks makes the task theirs (an @name in the text still wins).
+  const viewing = who !== "everyone" && who !== "me" && who !== p.meId ? p.team.find((m) => m.id === who) ?? null : null;
   const selected = rows.find((t) => t.id === selId) ?? null;
   const currentList = view.startsWith("list:") ? listByKey.get(view) : undefined;
 
@@ -116,7 +120,7 @@ export function TasksApp(p: Props) {
     const text = qa.trim();
     if (!text) return;
     start(async () => {
-      const r = await quickAddTask({ text, view });
+      const r = await quickAddTask({ text, view, assigneeId: viewing?.id ?? null });
       if (!r.ok) { setToast(r.error); return; }
       setQa(""); setToast(r.data!.message); refresh();
     });
@@ -195,6 +199,10 @@ export function TasksApp(p: Props) {
       });
     }
     if (view === "recurring") return box(list.map((t) => line(t)));
+    if (view === "upcoming") {
+      const days = [...new Set(list.map((t) => t.due!))];
+      return days.map((d) => group(d, <span>{diffDays(d, p.today) === 1 ? `Tomorrow · ${longIso(d)}` : longIso(d)}</span>, list.filter((t) => t.due === d), false));
+    }
     const when = (t: TaskRow) => (!t.due ? 4 : diffDays(t.due, p.today) < 0 ? 0 : t.due === p.today ? 1 : diffDays(t.due, p.today) === 1 ? 2 : 3);
     return ["Overdue", "Today", "Tomorrow", "Later", "No date"].map((h, i) => {
       const items = list.filter((t) => when(t) === i);
@@ -205,7 +213,7 @@ export function TasksApp(p: Props) {
   const parsed = qa.trim() ? parseQuickAdd(qa, p.today) : null;
   const chips = parsed ? [
     parsed.due && longIso(parsed.due), parsed.time && formatTime(parsed.time), parsed.personWord && `Person: ${parsed.personWord}`,
-    parsed.assignee && `Assignee: @${parsed.assignee}`, parsed.list && `List: ${parsed.list}`, parsed.priority && `${PRIORITIES[parsed.priority]} priority`,
+    parsed.assignee ? `Assignee: @${parsed.assignee}` : viewing && `For ${viewing.name.split(/\s+/)[0]}`, parsed.list && `List: ${parsed.list}`, parsed.priority && `${PRIORITIES[parsed.priority]} priority`,
     parsed.repeat && `↻ ${repeatLabel(parsed.repeat)}`,
   ].filter(Boolean) as string[] : [];
 
@@ -225,7 +233,7 @@ export function TasksApp(p: Props) {
   return (
     <div className={`mx-auto grid max-w-[1400px] grid-cols-1 items-start gap-5 px-4 py-4 lg:grid-cols-[210px_minmax(0,1fr)] ${selected ? "xl:grid-cols-[210px_minmax(0,1fr)_340px]" : ""}`}>
       <nav aria-label="Task lists" className="flex flex-col gap-3.5 lg:sticky lg:top-3 max-lg:flex-row max-lg:overflow-x-auto">
-        <ul className="flex flex-col gap-px max-lg:flex-row max-lg:gap-1.5">{navItem("today", "Today")}</ul>
+        <ul className="flex flex-col gap-px max-lg:flex-row max-lg:gap-1.5">{navItem("today", "Today")}{navItem("upcoming", "Upcoming")}</ul>
         <div>
           <h2 className="mb-1 flex items-center justify-between px-2.5 text-[11px] font-semibold tracking-wider uppercase muted max-lg:hidden">
             Lists <button type="button" className="link text-[11px] normal-case" onClick={() => { if (guard()) { setArranging(true); setView("today"); setSelId(null); } }}>Edit</button>
