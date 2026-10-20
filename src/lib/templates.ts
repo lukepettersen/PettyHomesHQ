@@ -2,7 +2,7 @@
 
 export type StepType = "task" | "call" | "text" | "email" | "tags";
 export type Anchor = "start" | "phoneCall" | "consult" | "finalAcceptance" | "inspection" | "writtenStatement" | "hoaRescission" | "closing";
-export type Cond = "always" | "hoa" | "pre1978" | "newc" | "fhava" | "condo";
+export type Cond = "always" | "hoa" | "pre1978" | "newc" | "notnewc" | "fhava" | "condo";
 export type Step = {
   id: string; name: string; assignee: string; // team member first name; "" = the person's assignee
   type: StepType; days: number; dir: "before" | "on" | "after" | "none" | "minutesBefore" | "minutesAfter"; anchor: Anchor; cond: Cond;
@@ -16,7 +16,7 @@ export type Phase = { id: string; name: string; steps: Step[] };
 export type Template = { id: string; name: string; trigger: string | null; folder?: string; phases: Phase[] };
 
 export const ANCHORS: [Anchor, string][] = [["start", "Start date"], ["phoneCall", "Phone call"], ["consult", "Consult"], ["finalAcceptance", "Final Acceptance"], ["inspection", "Inspection"], ["writtenStatement", "Written Statement"], ["hoaRescission", "HOA Rescission"], ["closing", "Closing"]];
-export const CONDS: [Cond, string][] = [["always", "Always"], ["hoa", "HOA property"], ["pre1978", "Built before 1978"], ["newc", "New construction"], ["fhava", "FHA / VA loan"], ["condo", "Condo / townhome"]];
+export const CONDS: [Cond, string][] = [["always", "Always"], ["hoa", "HOA property"], ["pre1978", "Built before 1978"], ["newc", "New construction"], ["notnewc", "Not new construction"], ["fhava", "FHA / VA loan"], ["condo", "Condo / townhome"]];
 export const STEP_TYPES: [StepType, string][] = [["task", "Task"], ["call", "Call"], ["email", "Email"], ["text", "Text"], ["tags", "Add/remove tags"]];
 export const CONTRACT_ANCHORS: Anchor[] = ["finalAcceptance", "inspection", "writtenStatement", "hoaRescission", "closing"];
 export const anchorLabel = (a: string) => ANCHORS.find(([k]) => k === a)?.[1] ?? a;
@@ -40,6 +40,7 @@ export function condMet(cond: Cond, f: Facts): boolean {
     case "hoa": return f.hoa === "Yes";
     case "pre1978": return !!f.year && Number(f.year) > 0 && Number(f.year) < 1978;
     case "newc": return f.newc === "Yes";
+    case "notnewc": return f.newc !== "Yes"; // one template covers both (owner request 2026-10-20)
     case "fhava": return f.fin === "FHA" || f.fin === "VA";
     case "condo": return f.ptype === "Condo" || f.ptype === "Townhome";
     default: return true;
