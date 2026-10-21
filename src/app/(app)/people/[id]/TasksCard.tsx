@@ -26,7 +26,8 @@ export function TasksCard({ personId, personName, rows, team, today, meId, templ
   const [done, setDone] = useState<Record<string, { row: TaskRow; realId: string; nextId: string | null }>>({});
   const [error, setError] = useState("");
   const [, start] = useTransition();
-  // Checked-off tasks stay where they were (crossed out) until the page is reloaded, so a mis-click is easy to undo.
+  // Checked-off tasks move to the bottom, crossed out, until the page is reloaded, so a mis-click is easy to undo
+  // (owner request 2026-10-21).
   const ids = rows.map((r) => r.id).join(",");
   const [seen, setSeen] = useState(ids);
   const [order, setOrder] = useState(() => rows.map((r) => r.id));
@@ -35,7 +36,8 @@ export function TasksCard({ personId, personName, rows, team, today, meId, templ
     for (const id of Object.keys(done)) if (!next.includes(id)) next.splice(Math.min(Math.max(0, order.indexOf(id)), next.length), 0, id);
     setSeen(ids); setOrder(next);
   }
-  const list = order.map((id) => (done[id] ? { ...done[id].row, done: true } : rows.find((r) => r.id === id))).filter((t): t is TaskRow => !!t);
+  const inOrder = order.map((id) => (done[id] ? { ...done[id].row, done: true } : rows.find((r) => r.id === id))).filter((t): t is TaskRow => !!t);
+  const list = [...inOrder.filter((t) => !t.done), ...inOrder.filter((t) => t.done)];
   const shown = all ? list : list.slice(0, 6);
 
   const toggle = (t: TaskRow) => start(async () => {
