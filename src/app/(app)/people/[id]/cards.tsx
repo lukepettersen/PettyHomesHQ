@@ -1,5 +1,6 @@
 "use client";
 
+import { AddressInput } from "@/components/AddressInput";
 import { PARTNER_TYPES, partnerLabel } from "@/lib/partners";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -73,7 +74,7 @@ export function InfoCard(p: { id: string; name: string; address: string; phones:
         <label className="label">Name<input className="input" value={name} onChange={(x) => setName(x.target.value)} /></label>
         <div className="label">Phones<RowsEditor rows={phones} setRows={setPhones} kind="phone" labelPh="Label" valuePh="Phone" /></div>
         <div className="label">Emails<RowsEditor rows={emails} setRows={setEmails} kind="email" labelPh="Label" valuePh="Email" /></div>
-        <label className="label">Address<input className="input" value={address} onChange={(x) => setAddress(x.target.value)} placeholder="Street, city" /></label>
+        <div className="label">Address<AddressInput label="Address" value={address} onChange={setAddress} /></div>
       </div>
       <SaveRow pending={e.pending} error={e.error} onCancel={reset} />
     </form>

@@ -560,6 +560,11 @@ Principles:
   messages for matching) and compose/send.
 - Admin → Integrations shows Connected / Not connected with connect/disconnect.
 
+- **Address lookup** *(owner request 2026-10-21)*: address boxes (contact Address, purchase agreement
+  and buyer/listing Property address) suggest full US addresses as you type (Google Places; Twin Cities
+  first); picking one fills street, city, state and ZIP. You can still type anything. Off until
+  GOOGLE_MAPS_API_KEY is set (Admin → Integrations), then they're plain text boxes.
+
 ## 13. Admin
 
 Sections (left menu):

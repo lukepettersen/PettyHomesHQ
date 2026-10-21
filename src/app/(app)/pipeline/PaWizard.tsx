@@ -1,5 +1,6 @@
 "use client";
 
+import { AddressInput } from "@/components/AddressInput";
 import { useState, useTransition } from "react";
 import { Modal } from "@/components/Modal";
 import { COMMISSION_KEYS, visibleSections, type Answers, type PaField, type PaSection, type PaView, type Side } from "@/lib/pa";
@@ -128,6 +129,7 @@ function PaInput({ f, v, set }: { f: PaField; v: Answers; set: (k: string, x: st
     );
   }
   if (f.type === "datetime") return <div className="label">{label}<DateTimeInput label={f.label} value={value} onChange={(x) => set(f.key, x)} /></div>;
+  if (f.key === "address") return <div className="label">{label}<AddressInput label={f.label} value={value} onChange={(x) => set(f.key, x)} placeholder={f.hint ?? "Street, city"} /></div>;
   const type = f.type === "date" ? "date" : "text";
   const ph = f.hint ?? (f.type === "money" ? "$" : f.type === "pct" ? "e.g. 2.7" : "");
   return (

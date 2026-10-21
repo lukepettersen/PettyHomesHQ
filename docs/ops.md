@@ -158,6 +158,15 @@ Set up 2026-10-20: business profile approved, brand registered, campaign "Low Vo
    Twilio (Phone Numbers → Port & Host) with a switch date, add the number to the Sender Pool when it arrives,
    then change your number in Admin → Integrations to it. Keep FUB until the switch day.
 
+### Address lookup (Google Maps)
+1. Google Cloud (same project as sign-in) → APIs & Services → Library → **Places API (New)** → Enable.
+   Billing must be on for the project; Google's monthly free allowance covers a small team.
+2. APIs & Services → Credentials → **Create credentials → API key**. Edit the key → API restrictions →
+   **Restrict key** → Places API (New) → Save.
+3. Railway → HQ app → Variables → `GOOGLE_MAPS_API_KEY` = that key (never in chat). Deploy.
+4. Admin → Integrations shows Address lookup **Connected**; address boxes (contact, purchase agreement,
+   listing) suggest full addresses with ZIP as you type.
+
 ### Rotate a secret
 Create the new value (Google: Credentials → the HQ client → reset secret), update the
 Railway variable, Railway redeploys. Changing `NEXTAUTH_SECRET` signs everyone out.

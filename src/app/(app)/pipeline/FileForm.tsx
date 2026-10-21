@@ -1,5 +1,6 @@
 "use client";
 
+import { AddressInput } from "@/components/AddressInput";
 import { useState, useTransition } from "react";
 import { Modal } from "@/components/Modal";
 import { sectionsAt, type Answers, type FileKind, type FileSection } from "@/lib/files";
@@ -94,6 +95,7 @@ function Field({ q, v, set }: { q: PaField; v: Answers; set: (k: string, x: stri
       </div>
     );
   }
+  if (q.key === "address") return <div className="label">{label}<AddressInput label={q.label} value={value} onChange={(x) => set(q.key, x)} placeholder={q.hint ?? "Street, city"} /></div>;
   if (q.type === "datetime") return <div className="label">{label}<DateTimeInput label={q.label} value={value} onChange={(x) => set(q.key, x)} /></div>;
   return (
     <label className="label">{label}

@@ -114,6 +114,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 - Submit offer (Relay port): `src/lib/offer.ts` (offer fields, note format, PA prefill; tested), `src/server/offer.ts` + `src/server/offerPrompt.ts` (Relay's Claude prompt), `src/app/(app)/pipeline/offerActions.ts`, `people/[id]/OfferModal.tsx`, `src/components/useSpeech.ts`
 - Texting: `src/lib/texting.ts` (numbers, STOP words, TwiML, errors, day start; tested), `src/lib/twilioSig.ts` (webhook signature), `src/server/twilio.ts` (REST: send, connect number; tested), `src/server/texting.ts` (incoming, missed calls, `sendTextAs`, threads), `src/app/api/twilio/*` (sms, status, voice, voice/done; outside sign-in, signature-checked), `src/app/(app)/messages/` (page, MessagesApp, actions), `src/components/TextComposer.tsx`, Admin → Integrations `TextLines.tsx`
 - Mass email: `src/lib/bulkEmail.ts` (recipients, unsubscribe token, footer; tested), `src/app/(app)/people/bulkEmailActions.ts` + `BulkEmail.tsx` (bulk bar → Email), public `src/app/unsubscribe/` + `src/app/api/unsubscribe/`; extra recipients on email/text: `src/components/AddRecipient.tsx`
+- Address lookup: `src/server/places.ts` (Google Places API (New), key server-side), `/api/address` + `/api/address/details`, `src/components/AddressInput.tsx` (contact Address, PA and file `address` fields)
 - `src/lib/customFields.ts` — custom field types and value cleaning
 - Owner setup and ops runbook: `docs/ops.md`
 

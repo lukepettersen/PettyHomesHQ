@@ -5,7 +5,7 @@ import { db } from "@/server/db";
 // whether they are set and never returns their values.
 
 export type Integration = {
-  id: "google" | "texting" | "fub" | "storage" | "claude";
+  id: "google" | "texting" | "fub" | "storage" | "claude" | "maps";
   name: string;
   what: string;
   vars: { name: string; help: string }[];
@@ -34,6 +34,12 @@ const DEFS: Omit<Integration, "connected" | "missing">[] = [
       { name: "TWILIO_AUTH_TOKEN", help: "Twilio Console → Account info" },
     ],
     note: "Texts only go through once Twilio's business-texting registration (A2P 10DLC) is approved and each number is in the registered Messaging Service.",
+  },
+  {
+    id: "maps", name: "Address lookup (Google Maps)",
+    what: "Address boxes suggest full addresses as you type (street, city, state and ZIP), so they're spelled right. Off: address boxes are plain text.",
+    vars: [{ name: "GOOGLE_MAPS_API_KEY", help: "Google Cloud → APIs & Services → Credentials → Create credentials → API key (limit it to the Places API (New))" }],
+    note: "In Google Cloud, enable the Places API (New) and make sure billing is on. Google's monthly free allowance covers a team this size.",
   },
   {
     id: "fub", name: "Follow Up Boss",
