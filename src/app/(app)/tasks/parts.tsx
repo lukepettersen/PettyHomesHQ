@@ -25,11 +25,28 @@ export function CheckButton({ task, onToggle, disabled }: { task: Pick<TaskRow, 
   );
 }
 
-export function TaskLine({ task, today, team, selected, showPerson = true, onToggle, onOpen }: {
-  task: TaskRow; today: string; team: TeamMember[]; selected?: boolean; showPerson?: boolean; onToggle: () => void; onOpen: () => void;
+export function TaskLine({ task, today, team, selected, showPerson = true, compact, onToggle, onOpen }: {
+  task: TaskRow; today: string; team: TeamMember[]; selected?: boolean; showPerson?: boolean; compact?: boolean; onToggle: () => void; onOpen: () => void;
 }) {
   const late = !task.done && !!task.due && diffDays(task.due, today) < 0;
   const subs = task.subtasks.length;
+  // Today's narrow columns: smaller type, due date and assignee on the second line, no source badges
+  // (the column header already says where it's from). Owner request 2026-10-21.
+  if (compact) return (
+    <div className={`grid grid-cols-[19px_minmax(0,1fr)_auto] items-start gap-x-2 border-t border-misty px-2.5 py-1.5 first:border-t-0 ${selected ? "bg-accent-soft" : "hover:bg-paper"}`}>
+      <span className="pt-0.5"><CheckButton task={task} onToggle={onToggle} /></span>
+      <div onClick={onOpen} className="flex min-w-0 cursor-pointer flex-col text-left">
+        <button type="button" onClick={(e) => { e.stopPropagation(); onOpen(); }} className={`text-left text-sm font-medium leading-snug ${task.done ? "text-muted line-through" : ""}`}>{task.title}</button>
+        <span className="flex flex-wrap items-center gap-x-2 text-xs muted">
+          {showPerson && task.personName && task.personId && <PersonLink id={task.personId} name={task.personName} small />}
+          <span className={`whitespace-nowrap ${late ? "font-medium text-bad" : ""}`}>{dueLabel(task.due, task.time, today)}</span>
+          {task.repeat && <span>↻</span>}
+          {subs > 0 && <span>☐ {task.subtasks.filter((s) => s.done).length}/{subs}</span>}
+        </span>
+      </div>
+      <Avatar member={team.find((m) => m.id === task.assigneeId)} />
+    </div>
+  );
   return (
     <div className={`grid grid-cols-[24px_minmax(0,1fr)] items-center gap-x-2.5 border-t border-misty px-3 py-2 first:border-t-0 sm:grid-cols-[24px_minmax(0,1fr)_auto] ${selected ? "bg-accent-soft" : "hover:bg-paper"}`}>
       <CheckButton task={task} onToggle={onToggle} />

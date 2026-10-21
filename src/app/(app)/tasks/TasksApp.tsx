@@ -158,13 +158,12 @@ export function TasksApp(p: Props) {
   };
 
   // ---------- Pieces ----------
-  const line = (t: TaskRow, showPerson = true) => (
-    <TaskLine key={t.id} task={t} today={p.today} team={p.team} selected={t.id === selId} showPerson={showPerson} onToggle={() => toggle(t)} onOpen={() => open(t.id)} />
+  const line = (t: TaskRow, showPerson = true, compact = false) => (
+    <TaskLine key={t.id} task={t} today={p.today} team={p.team} selected={t.id === selId} showPerson={showPerson} compact={compact} onToggle={() => toggle(t)} onOpen={() => open(t.id)} />
   );
   const touchLine = (t: TouchRow) => (
-    <div key={t.personId} className="grid grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-2.5 border-t border-misty px-3 py-2 first:border-t-0">
-      <span />
-      <span className="flex min-w-0 flex-col gap-0.5">
+    <div key={t.personId} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-t border-misty px-2.5 py-1.5 text-sm first:border-t-0">
+      <span className="flex min-w-0 flex-col">
         <PersonLink id={t.personId} name={t.name} />
         <span className="flex flex-wrap gap-x-2.5 text-xs muted"><span>Every {t.followUpDays} days</span><span>Last text {t.lastContact ? longIso(t.lastContact.slice(0, 10)) : "never"}</span></span>
       </span>
@@ -185,7 +184,8 @@ export function TasksApp(p: Props) {
       const cols = p.lists.filter((l) => l.showOnToday && (touchVisible || keyOf(l) !== "touch"));
       const due = visible("today");
       return (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] items-start gap-3">
+        // Every Today column on one row on a laptop or bigger (up to 6); phones and tablets wrap.
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] items-start gap-2.5 lg:grid-cols-[repeat(var(--cols),minmax(0,1fr))]" style={{ "--cols": Math.min(Math.max(cols.length, 1), 6) } as React.CSSProperties}>
           {cols.map((l) => {
             const k = keyOf(l);
             const head = <button type="button" className="text-left uppercase hover:underline" onClick={() => go(k)}>{l.name} ›</button>;
@@ -200,7 +200,7 @@ export function TasksApp(p: Props) {
             return (
               <section key={k} className="flex flex-col">
                 <h3 className={`mb-1.5 flex gap-2 text-xs font-semibold tracking-wider ${late ? "text-bad" : "muted"}`}>{head}<span className="font-medium">{items.filter((t) => !t.done).length || ""}</span></h3>
-                {box(items.length ? items.map((t) => line(t)) : <div className="px-3 py-3 text-sm muted">Nothing due</div>)}
+                {box(items.length ? items.map((t) => line(t, true, true)) : <div className="px-3 py-2.5 text-sm muted">Nothing due</div>)}
               </section>
             );
           })}
@@ -251,7 +251,7 @@ export function TasksApp(p: Props) {
   };
 
   return (
-    <div className={`mx-auto grid max-w-[1400px] grid-cols-1 items-start gap-5 px-4 py-4 lg:grid-cols-[210px_minmax(0,1fr)] ${selected ? "xl:grid-cols-[210px_minmax(0,1fr)_340px]" : ""}`}>
+    <div className={`mx-auto grid max-w-[1800px] grid-cols-1 items-start gap-5 px-4 py-4 lg:grid-cols-[210px_minmax(0,1fr)] ${selected ? "xl:grid-cols-[210px_minmax(0,1fr)_340px]" : ""}`}>
       <nav aria-label="Task lists" className="flex flex-col gap-3.5 lg:sticky lg:top-3 max-lg:flex-row max-lg:overflow-x-auto">
         <ul className="flex flex-col gap-px max-lg:flex-row max-lg:gap-1.5">{navItem("today", "Today")}{navItem("upcoming", "Upcoming")}</ul>
         <div>
