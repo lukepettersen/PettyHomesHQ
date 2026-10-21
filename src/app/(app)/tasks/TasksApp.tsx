@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { ListRow, TaskRow, TeamMember, TouchRow } from "@/server/tasks";
 import { diffDays, formatTime, longIso, parseQuickAdd, PRIORITIES, repeatLabel, WHO_COOKIE } from "@/lib/tasks";
 import { completeDateTask, completeTask, createList, deleteList, logTouch, quickAddTask, spreadTouches, unspreadTouches, renameList, reopenTask, setListOnToday } from "./actions";
@@ -99,6 +99,21 @@ export function TasksApp(p: Props) {
     } else visible(view).forEach((t) => add(t.personId));
     saveTrail({ list: title(view), ids });
   }); // runs after every render: the list on screen is what Next follows
+  // Clicking anywhere outside the open task closes it, like the × (owner request 2026-10-21). Unsaved edits
+  // keep it open with a reminder; clicks in pop-ups opened from it (Draft email, confirm) don't count.
+  const panel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!selId) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Element | null;
+      // Another task row: its own click switches to that task.
+      if (!t || panel.current?.contains(t) || t.closest('[data-task-row],[role="dialog"],[role="alertdialog"],[aria-modal="true"]')) return;
+      if (dirty) { setToast("Save or cancel your changes first."); return; }
+      setSelId(null);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [selId, dirty]);
   const selected = rows.find((t) => t.id === selId) ?? null;
   const currentList = view.startsWith("list:") ? listByKey.get(view) : undefined;
 
@@ -371,9 +386,11 @@ export function TasksApp(p: Props) {
       </main>
 
       {selected && (
+        <div ref={panel} className="contents">
         <TaskDetail key={selected.id} task={selected} lists={p.lists} team={p.team} notify={setToast}
           onClose={(discarded) => { if (discarded) { setDirty(false); setSelId(null); } else if (guard()) setSelId(null); }} onToggle={() => toggle(selected)} onDirty={setDirty}
           onSaved={(id) => { setSelId(id); refresh(); }} onDeleted={() => { setSelId(null); refresh(); }} />
+        </div>
       )}
       <Toast message={toast} onDone={clearToast} />
     </div>

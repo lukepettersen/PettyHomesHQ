@@ -394,7 +394,7 @@ Principles:
   off everywhere.
 - **Today** view: a board of columns side by side for Clients, Due for a touch, Important
   dates, Recurring, Misc, plus any user lists set to show on Today. Overdue items marked in
-  red. Opening a task slides details over the board. On a laptop or bigger every Today column (up to 6) fits on one row with compact cards (title, contact, due date, initials) *(owner request 2026-10-21)*.
+  red. Opening a task slides details over the board; clicking anywhere outside it closes it, like the × (unsaved edits keep it open with a reminder; owner request 2026-10-21). On a laptop or bigger every Today column (up to 6) fits on one row with compact cards (title, contact, due date, initials) *(owner request 2026-10-21)*.
 - **Upcoming** *(owner request 2026-10-20)*: under Today in the sidebar; every task due after
   today from every list, grouped by day (Tomorrow, then each date). Follows the Everyone / Me /
   teammate filter.

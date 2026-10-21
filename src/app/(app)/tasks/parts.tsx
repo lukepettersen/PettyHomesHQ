@@ -33,7 +33,7 @@ export function TaskLine({ task, today, team, selected, showPerson = true, compa
   // Today's narrow columns: smaller type, due date and assignee on the second line, no source badges
   // (the column header already says where it's from). Owner request 2026-10-21.
   if (compact) return (
-    <div className={`grid grid-cols-[19px_minmax(0,1fr)_auto] items-start gap-x-2 border-t border-misty px-2.5 py-1.5 first:border-t-0 ${selected ? "bg-accent-soft" : "hover:bg-paper"}`}>
+    <div data-task-row className={`grid grid-cols-[19px_minmax(0,1fr)_auto] items-start gap-x-2 border-t border-misty px-2.5 py-1.5 first:border-t-0 ${selected ? "bg-accent-soft" : "hover:bg-paper"}`}>
       <span className="pt-0.5"><CheckButton task={task} onToggle={onToggle} /></span>
       <div onClick={onOpen} className="flex min-w-0 cursor-pointer flex-col text-left">
         <button type="button" onClick={(e) => { e.stopPropagation(); onOpen(); }} className={`text-left text-sm font-medium leading-snug ${task.done ? "text-muted line-through" : ""}`}>{task.title}</button>
@@ -48,7 +48,7 @@ export function TaskLine({ task, today, team, selected, showPerson = true, compa
     </div>
   );
   return (
-    <div className={`grid grid-cols-[24px_minmax(0,1fr)] items-center gap-x-2.5 border-t border-misty px-3 py-2 first:border-t-0 sm:grid-cols-[24px_minmax(0,1fr)_auto] ${selected ? "bg-accent-soft" : "hover:bg-paper"}`}>
+    <div data-task-row className={`grid grid-cols-[24px_minmax(0,1fr)] items-center gap-x-2.5 border-t border-misty px-3 py-2 first:border-t-0 sm:grid-cols-[24px_minmax(0,1fr)_auto] ${selected ? "bg-accent-soft" : "hover:bg-paper"}`}>
       <CheckButton task={task} onToggle={onToggle} />
       {/* The whole row opens the task; the contact's name is its own link to their page. */}
       <div onClick={onOpen} className="flex min-w-0 cursor-pointer flex-col gap-0.5 text-left">
