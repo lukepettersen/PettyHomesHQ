@@ -370,6 +370,7 @@ Principles:
   grouped in Admin → Text & email templates. Money, dates and times are written out
   ("$389,000", "Friday, November 20", "10:00am"). Commission, BAC and commission amount
   ({commission}, {bac}, {commission_amount}) fill in only for people with "See commissions".
+- **Change stage** step *(owner request 2026-10-21)*: sets the contact's stage (e.g. Past Client) when the template runs, like Add/remove tags (no task; noted on their timeline).
 - **Automatic tag changes on close** *(new)*: a step type "Add/remove tags" so closing adds
   Past Client, Email Newsletter, Mailers, Petty Homes Event List, Real Estate Health Check
   and removes Buyer / Seller / Under contract.

@@ -11,11 +11,11 @@ const FIXED_TRIGGERS = ["pa:buyer", "pa:seller", "closed:buyer", "closed:seller"
 const tags = z.array(z.string().trim().min(1).max(60)).max(20).optional();
 const stepSchema = z.object({
   id: z.string().regex(/^[\w-]{1,40}$/), name: z.string().trim().max(160), assignee: z.string().trim().max(40),
-  type: z.enum(["task", "call", "text", "email", "tags"]), days: z.number().int().min(0).max(730),
+  type: z.enum(["task", "call", "text", "email", "tags", "stage"]), days: z.number().int().min(0).max(730),
   dir: z.enum(["before", "on", "after", "none", "minutesBefore", "minutesAfter"]), minutes: z.number().int().optional(),
   anchor: z.enum(["start", "phoneCall", "consult", "finalAcceptance", "inspection", "writtenStatement", "hoaRescission", "closing"]),
   cond: z.enum(["always", "hoa", "pre1978", "newc", "ws", "defect", "nodefect", "fhava", "condo"]),
-  advance: z.string().max(40).optional(), message: z.string().trim().max(120).optional(), messageId: z.string().max(40).optional(), addTags: tags, removeTags: tags,
+  advance: z.string().max(40).optional(), message: z.string().trim().max(120).optional(), messageId: z.string().max(40).optional(), addTags: tags, removeTags: tags, stage: z.string().trim().max(60).optional(),
 });
 const templateSchema = z.object({
   id: z.string().max(40).nullable(), name: z.string().trim().max(120), trigger: z.string().max(60).nullable(), folder: z.string().trim().max(60).default(""),

@@ -50,6 +50,8 @@ describe("labels and checks", () => {
     expect(templateProblem(tpl)).toBeNull();
     expect(templateProblem({ ...tpl, name: " " })).toMatch(/name/);
     expect(templateProblem({ ...tpl, phases: [{ id: "p", name: "X", steps: [s("Tags", { type: "tags" })] }] })).toMatch(/tags to add or remove/);
+    expect(templateProblem({ ...tpl, phases: [{ id: "p", name: "X", steps: [s("Stage", { type: "stage" })] }] })).toMatch(/needs a stage/);
+    expect(templateProblem({ ...tpl, phases: [{ id: "p", name: "X", steps: [s("Stage", { type: "stage", stage: "Past Client" })] }] })).toBeNull();
   });
 });
 

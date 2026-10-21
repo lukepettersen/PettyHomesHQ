@@ -9,7 +9,7 @@ import { longIso } from "@/lib/tasks";
 import { deleteTemplate, duplicateTemplate, moveTemplate, saveTemplate } from "./actions";
 import { FolderList } from "@/components/FolderList";
 
-type Props = { messages: { id: string; kind: string; name: string; folder: string }[]; templates: Template[]; statuses: StatusRow[]; team: string[]; tags: string[]; today: string; initialId: string | null };
+type Props = { messages: { id: string; kind: string; name: string; folder: string }[]; templates: Template[]; statuses: StatusRow[]; team: string[]; tags: string[]; stages: string[]; today: string; initialId: string | null };
 const blankStep = (): Step => ({ id: newId("s"), name: "New step", assignee: "", type: "task", days: 0, dir: "on", anchor: "start", cond: "always" });
 
 export function TemplatesClient(p: Props) {
@@ -46,7 +46,7 @@ export function TemplatesClient(p: Props) {
   );
 }
 
-function Editor({ t: initial, statuses, team, tags, today, templates, messages, folders, onDirty, onSelect }: Props & { folders: string[]; t: Template; onDirty: (d: boolean) => void; onSelect: (id: string | null) => void }) {
+function Editor({ t: initial, statuses, team, tags, stages, today, templates, messages, folders, onDirty, onSelect }: Props & { folders: string[]; t: Template; onDirty: (d: boolean) => void; onSelect: (id: string | null) => void }) {
   const router = useRouter();
   const [t, setT] = useState<Template>(initial);
   const [error, setError] = useState("");
@@ -181,7 +181,7 @@ function Editor({ t: initial, statuses, team, tags, today, templates, messages, 
                     {CONDS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
                   </select>
                 </label>
-                {advanceOptions.length > 0 && s.type !== "tags" && (
+                {advanceOptions.length > 0 && s.type !== "tags" && s.type !== "stage" && (
                   <label className="flex items-center gap-1 text-xs font-semibold muted">When done
                     <select className={field} value={s.advance ?? ""} onChange={(e) => setStep(i, si, { advance: e.target.value || undefined })}>
                       <option value="">Nothing else</option>{advanceOptions.map((o) => <option key={o.id} value={o.id}>Move deal to {o.name}</option>)}
@@ -201,6 +201,14 @@ function Editor({ t: initial, statuses, team, tags, today, templates, messages, 
                     </select>
                       );
                     })()}
+                  </label>
+                )}
+                {s.type === "stage" && (
+                  <label className="flex items-center gap-1 text-xs font-semibold muted">Change contact&apos;s stage to
+                    <select className={field} value={s.stage ?? ""} onChange={(e) => setStep(i, si, { stage: e.target.value || undefined })}>
+                      <option value="">Pick a stage…</option>{stages.map((n) => <option key={n}>{n}</option>)}
+                      {s.stage && !stages.includes(s.stage) && <option value={s.stage}>{s.stage} (removed)</option>}
+                    </select>
                   </label>
                 )}
                 {s.type === "tags" && (
@@ -224,7 +232,7 @@ function Editor({ t: initial, statuses, team, tags, today, templates, messages, 
           <ul className="mt-2 flex flex-col text-sm">
             {preview.tasks.slice(0, 10).map((x) => (
               <li key={x.step.id} className="flex justify-between gap-2 border-t border-misty/60 py-1 first:border-0">
-                <span>{x.step.type === "tags" ? `Tags: ${[...(x.step.addTags ?? []).map((g) => `+${g}`), ...(x.step.removeTags ?? []).map((g) => `−${g}`)].join(", ")}` : x.step.name}</span>
+                <span>{x.step.type === "stage" ? `Stage → ${x.step.stage ?? "?"}` : x.step.type === "tags" ? `Tags: ${[...(x.step.addTags ?? []).map((g) => `+${g}`), ...(x.step.removeTags ?? []).map((g) => `−${g}`)].join(", ")}` : x.step.name}</span>
                 <span className="text-xs muted">{x.due ? longIso(x.due) : x.waiting ? `Waits for the ${ANCHORS.find(([k]) => k === x.step.anchor)?.[1]} date` : "No due date"} · {x.step.assignee || "Person's assignee"}</span>
               </li>
             ))}

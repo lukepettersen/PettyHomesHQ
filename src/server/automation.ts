@@ -50,6 +50,7 @@ export async function applyTemplate(tx: Tx, t: Template, ctxIn: Ctx, userId: str
   for (const spec of tasks) {
     const s = spec.step;
     if (s.type === "tags") { await applyTags(tx, ctx.personId, s.addTags ?? [], s.removeTags ?? []); continue; }
+    if (s.type === "stage") { await applyStage(tx, ctx.personId, s.stage ?? "", t.name); continue; }
     await tx.task.create({
       data: {
         title: s.name, kind: s.type, personId: ctx.personId, fileId: ctx.fileId ?? null, paId: ctx.paId ?? null,
@@ -62,6 +63,16 @@ export async function applyTemplate(tx: Tx, t: Template, ctxIn: Ctx, userId: str
     n++;
   }
   return n;
+}
+
+/** "Change stage" step: sets the contact's stage (a stage that was renamed or removed is skipped). */
+async function applyStage(tx: Tx, personId: string, name: string, template: string) {
+  const stage = name ? await tx.stage.findUnique({ where: { name } }) : null;
+  if (!stage) return;
+  const p = await tx.person.findUnique({ where: { id: personId }, select: { stageId: true } });
+  if (p?.stageId === stage.id) return;
+  await tx.person.update({ where: { id: personId }, data: { stageId: stage.id } });
+  await tx.timelineEntry.create({ data: { personId, kind: "system", body: `Stage changed to ${stage.name} (task template "${template}").` } });
 }
 
 async function applyTags(tx: Tx, personId: string, add: string[], remove: string[]) {

@@ -1,6 +1,6 @@
 // Task templates and automations (SPEC.md §8). Pure, unit tested in templates.test.ts.
 
-export type StepType = "task" | "call" | "text" | "email" | "tags";
+export type StepType = "task" | "call" | "text" | "email" | "tags" | "stage";
 export type Anchor = "start" | "phoneCall" | "consult" | "finalAcceptance" | "inspection" | "writtenStatement" | "hoaRescission" | "closing";
 export type Cond = "always" | "hoa" | "pre1978" | "newc" | "ws" | "defect" | "nodefect" | "fhava" | "condo";
 export type Step = {
@@ -11,13 +11,14 @@ export type Step = {
   messageId?: string; // the text/email template it drafts (Admin → Text & email templates)
   message?: string; // a template name typed before templates existed; shown until one is picked
   addTags?: string[]; removeTags?: string[]; // "Add/remove tags" steps
+  stage?: string; // "Change stage" steps: the stage name to set on the contact (owner request 2026-10-21)
 };
 export type Phase = { id: string; name: string; steps: Step[] };
 export type Template = { id: string; name: string; trigger: string | null; folder?: string; phases: Phase[] };
 
 export const ANCHORS: [Anchor, string][] = [["start", "Start date"], ["phoneCall", "Phone call"], ["consult", "Consult"], ["finalAcceptance", "Final Acceptance"], ["inspection", "Inspection"], ["writtenStatement", "Written Statement"], ["hoaRescission", "HOA Rescission"], ["closing", "Closing"]];
 export const CONDS: [Cond, string][] = [["always", "Always"], ["hoa", "HOA property"], ["pre1978", "Built before 1978"], ["newc", "New construction"], ["ws", "Written statement included"], ["defect", "YES material defect clause"], ["nodefect", "NO material defect clause"], ["fhava", "FHA / VA loan"], ["condo", "Condo / townhome"]];
-export const STEP_TYPES: [StepType, string][] = [["task", "Task"], ["call", "Call"], ["email", "Email"], ["text", "Text"], ["tags", "Add/remove tags"]];
+export const STEP_TYPES: [StepType, string][] = [["task", "Task"], ["call", "Call"], ["email", "Email"], ["text", "Text"], ["tags", "Add/remove tags"], ["stage", "Change stage"]];
 export const CONTRACT_ANCHORS: Anchor[] = ["finalAcceptance", "inspection", "writtenStatement", "hoaRescission", "closing"];
 export const anchorLabel = (a: string) => ANCHORS.find(([k]) => k === a)?.[1] ?? a;
 
@@ -103,6 +104,7 @@ export function templateProblem(t: Template): string | null {
     for (const s of p.steps) {
       if (!s.name.trim()) return `A step in "${p.name}" needs a name.`;
       if (s.type === "tags" && !(s.addTags?.length || s.removeTags?.length)) return `"${s.name}" needs tags to add or remove.`;
+      if (s.type === "stage" && !s.stage) return `"${s.name}" needs a stage to change to.`;
       if (s.days < 0 || s.days > 730) return `"${s.name}": use 0 to 730 days.`;
       const byMinutes = s.dir === "minutesBefore" || s.dir === "minutesAfter";
       if (byMinutes && !TIMED_ANCHORS.includes(s.anchor)) return `"${s.name}": minutes before/after only works with the Phone call or Consult (they have a time).`;

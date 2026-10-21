@@ -11,8 +11,8 @@ export const dynamic = "force-dynamic";
 export default async function Page({ searchParams }: { searchParams: Promise<{ t?: string }> }) {
   const denied = await adminGate("editTaskTemplates");
   if (denied) return denied;
-  const [templates, statuses, team, tags, sp, messages] = await Promise.all([loadTemplates(), loadStatuses(), loadTeam(), db.tag.findMany({ orderBy: { name: "asc" } }), searchParams,
-    db.messageTemplate.findMany({ orderBy: [{ folder: "asc" }, { name: "asc" }], select: { id: true, kind: true, name: true, folder: true } })]);
+  const [templates, statuses, team, tags, sp, messages, stages] = await Promise.all([loadTemplates(), loadStatuses(), loadTeam(), db.tag.findMany({ orderBy: { name: "asc" } }), searchParams,
+    db.messageTemplate.findMany({ orderBy: [{ folder: "asc" }, { name: "asc" }], select: { id: true, kind: true, name: true, folder: true } }), db.stage.findMany({ orderBy: { position: "asc" } })]);
   return (
     <>
       <h1 className="text-2xl font-extrabold">Task templates</h1>
@@ -21,7 +21,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
         Due dates count from the start date or a contract date and move when that date changes. If the date isn&apos;t set yet, the task waits for it.
       </p>
       <TemplatesClient messages={messages} templates={templates} statuses={[...statuses.buyer, ...statuses.listing]} team={team.map((m) => m.name.split(/\s+/)[0])}
-        tags={tags.map((t) => t.name)} today={isoFromDate(todayCentral())} initialId={sp.t ?? templates[0]?.id ?? null} />
+        tags={tags.map((t) => t.name)} stages={stages.map((s) => s.name)} today={isoFromDate(todayCentral())} initialId={sp.t ?? templates[0]?.id ?? null} />
     </>
   );
 }
