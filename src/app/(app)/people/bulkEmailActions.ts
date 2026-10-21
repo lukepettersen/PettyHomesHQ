@@ -11,6 +11,7 @@ import { publicBase } from "@/server/twilio";
 import { fill } from "@/lib/merge";
 import { toPlain } from "@/lib/email";
 import { BATCH, BULK_MAX, bulkFooter, pickRecipients, unsubToken } from "@/lib/bulkEmail";
+import { attachmentList, loadAttachments } from "@/server/attachments";
 
 // Mass email from People (SPEC.md §6.2): one email per person from the connected Gmail, merge fields filled
 // for each, an unsubscribe link and mailing address at the bottom. The browser sends it in small groups.
@@ -56,6 +57,7 @@ const sendSchema = z.object({
   address: z.string().trim().min(8, "Add your business mailing address for the footer (the law requires one on marketing email).").max(200),
   signature: z.boolean().optional(),
   batch: z.string().trim().min(8).max(60), // one mass email send, for open counts
+  attachments: attachmentList,
 });
 
 /** Sends to a few people. Anyone who opted out or has no email since the preview is skipped. */
@@ -67,6 +69,7 @@ export async function sendBulkEmailBatch(input: z.input<typeof sendSchema>) {
     if (!secret || !publicBase()) throw new UserError("HQ's address isn't set up for unsubscribe links (NEXTAUTH_URL / NEXTAUTH_SECRET).");
     await db.appSetting.upsert({ where: { key: ADDRESS_KEY }, update: { value: v.address }, create: { key: ADDRESS_KEY, value: v.address } });
     const { send } = await loadPeople(v.personIds);
+    const files = await loadAttachments(v.attachments);
     const sent: string[] = [], failed: { name: string; error: string }[] = [];
     for (const r of send) {
       const { values } = await mergeFor(user, r.personId);
@@ -75,7 +78,7 @@ export async function sendBulkEmailBatch(input: z.input<typeof sendSchema>) {
       const body = fill(v.body, values).text + bulkFooter(v.address, url);
       // Open tracking (mass emails only; owner decision 2026-10-21).
       const track = await db.emailTrack.create({ data: { batch: v.batch, subject: v.subject, personId: r.personId, sentById: user.id } });
-      const res = await sendGmail({ to: [r.email], subject, body, signature: v.signature, pixelUrl: `${publicBase()}/api/e/${track.id}.gif` });
+      const res = await sendGmail({ to: [r.email], subject, body, signature: v.signature, pixelUrl: `${publicBase()}/api/e/${track.id}.gif`, attachments: files });
       if (!res.ok) {
         await db.emailTrack.delete({ where: { id: track.id } });
         failed.push({ name: r.name, error: res.error });
@@ -84,7 +87,7 @@ export async function sendBulkEmailBatch(input: z.input<typeof sendSchema>) {
       }
       sent.push(r.name);
       const [entry] = await db.$transaction([
-        db.timelineEntry.create({ data: { personId: r.personId, kind: "email", gmailId: res.id ? `${res.id}:${r.personId}` : null, body: `To ${r.email} · ${subject}\n\n${toPlain(fill(v.body, values).text)}`, authorId: user.id } }),
+        db.timelineEntry.create({ data: { personId: r.personId, kind: "email", gmailId: res.id ? `${res.id}:${r.personId}` : null, body: `To ${r.email} · ${subject}\n\n${toPlain(fill(v.body, values).text)}${files.length ? `\n\n📎 ${files.map((f) => f.name).join(", ")}` : ""}`, authorId: user.id } }),
         db.person.update({ where: { id: r.personId }, data: { lastContactAt: new Date() } }),
       ]);
       await db.emailTrack.update({ where: { id: track.id }, data: { entryId: entry.id } });

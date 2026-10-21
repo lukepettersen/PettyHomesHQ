@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Modal } from "@/components/Modal";
 import { FormatBar } from "@/components/FormatBar";
 import { TemplateSearch } from "@/components/TemplateSearch";
+import { AttachFiles, type Attached } from "@/components/AttachFiles";
 import { prepareBulkEmail, previewBulkEmail, sendBulkEmailBatch } from "./bulkEmailActions";
 
 type Prep = { recipients: { personId: string; name: string }[]; skipped: { noEmail: number; optedOut: number }; sendsFrom: string | null; address: string; templates: { id: string; name: string; subject: string; body: string }[] };
@@ -23,6 +24,7 @@ export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: ()
   const [body, setBody] = useState("");
   const [address, setAddress] = useState("");
   const [signature, setSignature] = useState(true);
+  const [files, setFiles] = useState<Attached[]>([]);
   const [preview, setPreview] = useState<{ name: string; subject: string; body: string; missing: string[] } | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [progress, setProgress] = useState<{ done: number; sent: number; failed: { name: string; error: string }[]; finished: boolean } | null>(null);
@@ -53,7 +55,7 @@ export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: ()
     let state = { done: 0, sent: 0, failed: [] as { name: string; error: string }[], finished: false };
     setProgress(state);
     for (let i = 0; i < list.length && !stop.current; i += BATCH) {
-      const r = await sendBulkEmailBatch({ personIds: list.slice(i, i + BATCH), subject, body, address, signature, batch });
+      const r = await sendBulkEmailBatch({ personIds: list.slice(i, i + BATCH), subject, body, address, signature, batch, attachments: files });
       if (!r.ok) { setError(r.error); break; }
       state = { ...state, done: Math.min(i + BATCH, list.length), sent: state.sent + r.data!.sent, failed: [...state.failed, ...r.data!.failed] };
       setProgress(state);
@@ -84,6 +86,7 @@ export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: ()
                 onChange={(e) => { setBody(e.target.value); setPreview(null); setConfirm(false); }} />
             </div>
           </div>
+          <AttachFiles files={files} onChange={setFiles} />
           <label className="label">Your business mailing address (shown at the bottom, with an unsubscribe link)
             <input className="input" value={address} onChange={(e) => { setAddress(e.target.value); setConfirm(false); }} placeholder="Street, city, state ZIP" />
           </label>

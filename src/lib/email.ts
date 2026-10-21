@@ -50,7 +50,13 @@ export function htmlToText(html: string): string {
  * The email as Gmail's API wants it (base64url): plain text and HTML versions, with the Gmail signature
  * (HTML, from Gmail settings) when there is one. Line breaks in To/Subject can't add headers.
  */
-export function buildMime(m: { from: string; to: string[]; subject: string; body: string; signatureHtml?: string | null; pixelUrl?: string | null }): string {
+export type Attachment = { name: string; type: string; data: Uint8Array };
+type MimeInput = { from: string; to: string[]; subject: string; body: string; signatureHtml?: string | null; pixelUrl?: string | null; attachments?: Attachment[] };
+/** base64url, for Gmail's JSON send. */
+export const buildMime = (m: MimeInput): string => Buffer.from(buildMimeRaw(m), "utf8").toString("base64url");
+
+/** The raw email: plain + HTML versions, and any attachments (PDFs etc.) around them. */
+export function buildMimeRaw(m: MimeInput): string {
   const to = m.to.map(oneLine).filter(isEmail);
   if (!to.length) throw new Error("No email address to send to.");
   const sig = m.signatureHtml?.trim() || "";
@@ -60,12 +66,15 @@ export function buildMime(m: { from: string; to: string[]; subject: string; body
   const html = toHtml(m.body) + (sig ? `<br><div class="gmail_signature">${sig}</div>` : "") + pixel;
   const boundary = `hq-${b64(m.subject + to.join()).replace(/[^A-Za-z0-9]/g, "").slice(0, 16)}-${to.length}`;
   const part = (type: string, s: string) => [`--${boundary}`, `Content-Type: ${type}; charset="UTF-8"`, "Content-Transfer-Encoding: base64", "", wrap76(b64(s.replace(/\r?\n/g, "\r\n")))].join("\r\n");
-  const lines = [
-    `From: ${oneLine(m.from)}`, `To: ${to.join(", ")}`, `Subject: ${header(oneLine(m.subject))}`,
-    "MIME-Version: 1.0", `Content-Type: multipart/alternative; boundary="${boundary}"`, "",
-    part("text/plain", plain), part("text/html", html), `--${boundary}--`, "",
-  ];
-  return Buffer.from(lines.join("\r\n"), "utf8").toString("base64url");
+  const head = [`From: ${oneLine(m.from)}`, `To: ${to.join(", ")}`, `Subject: ${header(oneLine(m.subject))}`, "MIME-Version: 1.0"];
+  const alt = [`Content-Type: multipart/alternative; boundary="${boundary}"`, "", part("text/plain", plain), part("text/html", html), `--${boundary}--`, ""];
+  const files = (m.attachments ?? []).filter((a) => a.data.length);
+  if (!files.length) return [...head, ...alt].join("\r\n");
+  const outer = `${boundary}-mixed`;
+  const fname = (n: string) => n.replace(/["\r\n\\]/g, "_");
+  const attach = (a: Attachment) => [`--${outer}`, `Content-Type: ${oneLine(a.type) || "application/octet-stream"}; name="${fname(a.name)}"`,
+    `Content-Disposition: attachment; filename="${fname(a.name)}"`, "Content-Transfer-Encoding: base64", "", wrap76(Buffer.from(a.data).toString("base64"))].join("\r\n");
+  return [...head, `Content-Type: multipart/mixed; boundary="${outer}"`, "", `--${outer}`, ...alt, ...files.map(attach), `--${outer}--`, ""].join("\r\n");
 }
 
 // ---------- Reading Gmail ----------

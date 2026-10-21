@@ -10,6 +10,7 @@ import { sendGmail } from "@/server/google";
 import { fill } from "@/lib/merge";
 import { toPlain } from "@/lib/email";
 import { completeTask } from "../tasks/actions";
+import { attachmentList, loadAttachments } from "@/server/attachments";
 
 const id = z.string().trim().min(1).max(40);
 
@@ -30,6 +31,7 @@ const sendSchema = z.object({
   to: z.array(z.string().trim().email("That isn't an email address.").max(200)).min(1, "Pick who to send it to.").max(10),
   subject: z.string().trim().min(1, "Add a subject.").max(300), body: z.string().trim().min(1, "Write a message.").max(20000),
   signature: z.boolean().optional(),
+  attachments: attachmentList,
 });
 
 /**
@@ -43,11 +45,12 @@ export async function sendEmail(input: z.input<typeof sendSchema>) {
     const p = await db.person.findFirst({ where: { id: v.personId, deletedAt: null }, include: { emails: true } });
     if (!p) throw new UserError("That person was deleted.");
     const to = [...new Set(v.to.map((x) => x.toLowerCase()))];
-    const r = await sendGmail({ to, subject: v.subject, body: v.body, signature: v.signature });
+    const files = await loadAttachments(v.attachments);
+    const r = await sendGmail({ to, subject: v.subject, body: v.body, signature: v.signature, attachments: files });
     if (!r.ok) throw new UserError(r.error);
     // Other contacts it went to get it on their timeline too.
     const others = await db.person.findMany({ where: { id: { not: p.id }, deletedAt: null, emails: { some: { normalized: { in: to } } } }, select: { id: true } });
-    const entry = (personId: string) => db.timelineEntry.create({ data: { personId, kind: "email", gmailId: r.id ? `${r.id}:${personId}` : null, body: `To ${to.join(", ")} · ${v.subject}\n\n${toPlain(v.body)}`, authorId: user.id } });
+    const entry = (personId: string) => db.timelineEntry.create({ data: { personId, kind: "email", gmailId: r.id ? `${r.id}:${personId}` : null, body: `To ${to.join(", ")} · ${v.subject}\n\n${toPlain(v.body)}${files.length ? `\n\n📎 ${files.map((f) => f.name).join(", ")}` : ""}`, authorId: user.id } });
     await db.$transaction([
       entry(p.id), ...others.map((o) => entry(o.id)),
       db.person.updateMany({ where: { id: { in: [p.id, ...others.map((o) => o.id)] } }, data: { lastContactAt: new Date() } }),

@@ -5,7 +5,7 @@ import { isoFromDate } from "@/lib/normalize";
 import { contractEvents } from "@/lib/contractInvites";
 import { inviteContext, loadInviteRules } from "@/server/contractInvites";
 import { apptEvent, contractKey, inviteeEmails, type GEvent } from "@/lib/calendar";
-import { addressesIn, buildMime, messageText } from "@/lib/email";
+import { addressesIn, buildMime, messageText, buildMimeRaw, type Attachment } from "@/lib/email";
 import { splitCouple } from "@/lib/normalize";
 
 // Google Calendar (SPEC.md §12). Off until configured: every call here quietly does nothing when Google
@@ -166,7 +166,7 @@ async function gmailSignature(email: string): Promise<string | null> {
 }
 
 /** Sends a plain-text email from the connected Gmail account. It lands in that account's Sent folder. */
-export async function sendGmail(m: { to: string[]; subject: string; body: string; signature?: boolean; pixelUrl?: string | null }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+export async function sendGmail(m: { to: string[]; subject: string; body: string; signature?: boolean; pixelUrl?: string | null; attachments?: Attachment[] }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const c = await emailConnection();
   if (!c) return { ok: false, error: "Gmail isn't connected. An Admin can reconnect Google in Admin → Integrations." };
   const token = await accessToken().catch(() => null);
@@ -175,11 +175,20 @@ export async function sendGmail(m: { to: string[]; subject: string; body: string
   // "Luke Pettersen <luke@pettyhomes.com>": a real name as the sender looks less like a bulk mailer.
   const name = (await db.user.findUnique({ where: { id: c.userId }, select: { name: true } }))?.name?.replace(/["<>\r\n]/g, "").trim();
   const from = name ? (/^[\x20-\x7e]*$/.test(name) ? `"${name}" <${c.email}>` : `=?UTF-8?B?${Buffer.from(name).toString("base64")}?= <${c.email}>`) : c.email;
-  try { raw = buildMime({ from, ...m, signatureHtml: m.signature === false ? null : await gmailSignature(c.email) }); } catch (e) { return { ok: false, error: (e as Error).message }; }
+  const withFiles = !!m.attachments?.length;
   try {
-    const r = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
-      method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ raw }),
-    });
+    const mime = { from, ...m, signatureHtml: m.signature === false ? null : await gmailSignature(c.email) };
+    raw = withFiles ? buildMimeRaw(mime) : buildMime(mime);
+  } catch (e) { return { ok: false, error: (e as Error).message }; }
+  try {
+    // With attachments the whole email goes to Gmail's upload address (up to 35 MB); otherwise the JSON one.
+    const r = withFiles
+      ? await fetch("https://gmail.googleapis.com/upload/gmail/v1/users/me/messages/send?uploadType=media", {
+        method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "message/rfc822" }, body: raw,
+      })
+      : await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+        method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ raw }),
+      });
     if (!r.ok) {
       return { ok: false, error: await gmailError(r, "send") };
     }

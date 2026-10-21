@@ -170,6 +170,9 @@ Principles:
   Bounced. Every email ends with the business mailing address (asked once, remembered) and an
   **Unsubscribe** link: a public page with an Unsubscribe button (so link scanners can't trigger it) that
   tags them **Email Unsubscribed** (texting isn't affected) and notes it on their timeline.
+- **Attachments** *(owner request 2026-10-21)*: **📎 Attach file** on mass emails and the timeline Email
+  tab (PDFs, Word/Excel, images; up to 5 files, 20 MB total). Files upload once to the private file
+  storage and go with each email; the timeline notes the file names. Needs File storage connected.
 - **Open tracking (mass emails only)** *(owner decision 2026-10-21)*: each mass email carries a tiny image;
   the first load marks it **Opened** (shown under that email on the contact's timeline, else "Not opened
   yet"). **People → Mass emails** lists each send with "N of M opened" and who. One-to-one emails are never

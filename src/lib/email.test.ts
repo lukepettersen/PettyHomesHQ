@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addressesIn, buildMime, htmlToText, isEmail, messageText, toHtml, toPlain } from "./email";
+import { addressesIn, buildMime, buildMimeRaw, htmlToText, isEmail, messageText, toHtml, toPlain } from "./email";
 
 const decode = (raw: string) => Buffer.from(raw, "base64url").toString("utf8");
 /** The decoded text/plain and text/html parts of a built email. */
@@ -68,5 +68,13 @@ describe("reading Gmail", () => {
     expect(Buffer.from(html(withPixel).split("\r\n\r\n")[1].split("\r\n--")[0].replace(/\r\n/g, ""), "base64").toString()).toContain('<img src="https://hq.example.com/api/e/abc.gif"');
     const plain = buildMime({ from: "a@b.com", to: ["c@d.com"], subject: "Hi", body: "Hello" });
     expect(Buffer.from(html(plain).split("\r\n\r\n")[1].split("\r\n--")[0].replace(/\r\n/g, ""), "base64").toString()).not.toContain("<img");
+  });
+  it("attaches files", () => {
+    const raw = buildMimeRaw({ from: "a@b.com", to: ["c@d.com"], subject: "Docs", body: "See attached", attachments: [{ name: 'Inspection "final".pdf', type: "application/pdf", data: new Uint8Array([37, 80, 68, 70]) }] });
+    expect(raw).toContain("Content-Type: multipart/mixed;");
+    expect(raw).toContain('Content-Disposition: attachment; filename="Inspection _final_.pdf"');
+    expect(raw).toContain("JVBERg=="); // "%PDF"
+    expect(raw).toContain("multipart/alternative");
+    expect(buildMimeRaw({ from: "a@b.com", to: ["c@d.com"], subject: "x", body: "y" })).not.toContain("multipart/mixed");
   });
 });

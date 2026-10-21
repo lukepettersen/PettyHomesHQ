@@ -6,6 +6,7 @@ import { FormatBar } from "@/components/FormatBar";
 import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
 import { fillEmailTemplate, sendEmail } from "../emailActions";
 import { AddRecipient, ExtraChips, type Extra } from "@/components/AddRecipient";
+import { AttachFiles, type Attached } from "@/components/AttachFiles";
 
 /** Timeline → Email: pick a template (optional), check it over, send from the connected Gmail (SPEC.md §12). */
 export function EmailComposer({ personId, emails, templates, sendsFrom, onSent }: { personId: string; emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; onSent?: () => void }) {
@@ -22,6 +23,7 @@ export function EmailComposer({ personId, emails, templates, sendsFrom, onSent }
   const [notice, setNotice] = useState("");
   const [pending, start] = useTransition();
   const [signature, setSignature] = useState(true);
+  const [files, setFiles] = useState<Attached[]>([]);
   const [confirmClear, setConfirmClear] = useState(false);
   const box = useRef<HTMLTextAreaElement>(null);
   // "/name" in the message puts that template in where the slash was (subject too, if it's empty).
@@ -54,9 +56,9 @@ export function EmailComposer({ personId, emails, templates, sendsFrom, onSent }
     if (!confirm) { setConfirm(true); return; }
     setConfirm(false); setError("");
     start(async () => {
-      const r = await sendEmail({ personId, to: all, subject, body, signature });
+      const r = await sendEmail({ personId, to: all, subject, body, signature, attachments: files });
       if (!r.ok) { setError(r.error); return; }
-      setNotice(`Sent to ${all.join(", ")}.`); setSubject(""); setBody(""); setTemplateId(""); setMissing([]); setExtras([]); router.refresh(); onSent?.();
+      setNotice(`Sent to ${all.join(", ")}.`); setSubject(""); setBody(""); setTemplateId(""); setMissing([]); setExtras([]); setFiles([]); router.refresh(); onSent?.();
     });
   };
   return (
@@ -83,6 +85,7 @@ export function EmailComposer({ personId, emails, templates, sendsFrom, onSent }
           {slash.menu}
         </div>
       </div>
+      <AttachFiles files={files} onChange={setFiles} />
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={signature} onChange={(e) => setSignature(e.target.checked)} /> Add my Gmail signature</label>
       {missing.length > 0 && <p className="text-sm text-[#9a6400]">Not filled in (nothing on file): {missing.join(", ")}. Check the message before sending.</p>}
       <div className="flex flex-wrap items-center justify-between gap-2">
