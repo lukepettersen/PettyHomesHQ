@@ -400,6 +400,7 @@ Principles:
   teammate filter.
 - Quick add while the filter shows a teammate makes the task **theirs** (shown as "For Alyssa"
   before you add; an @name in the text still wins). Everyone or Me → the person typing.
+- **Due for a touch is the owner's list** *(owner request 2026-10-21)*: it shows for Everyone or the owner, never in a teammate's view (Alyssa's Today has no touch column).
 - **Lists (sidebar):** Today, Upcoming, then built-in lists and user lists in one order.
 - A contact opened from Tasks shows **‹ Prev · 3 of 12 in Today · Next ›** to step through the people
   in the list you came from, in the order shown *(owner request 2026-10-20)*.

@@ -71,7 +71,11 @@ export function TasksApp(p: Props) {
   const listByKey = useMemo(() => new Map(p.lists.map((l) => [keyOf(l), l])), [p.lists]);
   // Checked-off tasks stay visible (struck through) until you switch lists, so a mis-click is easy to undo.
   const rows = useMemo(() => [...p.tasks.filter((t) => !justDone[t.id]), ...Object.values(justDone).map((d) => ({ ...d.row, done: true }))], [p.tasks, justDone]);
-  const touches = p.touches.filter((t) => !touched.includes(t.personId));
+  // Due for a touch is Luke's list (owner, 2026-10-21): shown for Everyone or the owner, never for a teammate.
+  const ownerId = p.team.find((m) => m.isOwner)?.id;
+  const viewingId = who === "me" ? p.meId : who;
+  const touchVisible = who === "everyone" || viewingId === ownerId;
+  const touches = !touchVisible ? [] : p.touches.filter((t) => !touched.includes(t.personId));
   const onToday = (k: string) => listByKey.get(k)?.showOnToday !== false;
   const whoOk = (t: TaskRow) => who === "everyone" || t.assigneeId === (who === "me" ? p.meId : who);
   const inView = (t: TaskRow, v: string) => (v === "today" ? !!t.due && diffDays(t.due, p.today) <= 0 && onToday(t.cat) : v === "upcoming" ? !!t.due && diffDays(t.due, p.today) > 0 : t.cat === v);
@@ -178,7 +182,7 @@ export function TasksApp(p: Props) {
 
   function body() {
     if (view === "today") {
-      const cols = p.lists.filter((l) => l.showOnToday);
+      const cols = p.lists.filter((l) => l.showOnToday && (touchVisible || keyOf(l) !== "touch"));
       const due = visible("today");
       return (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] items-start gap-3">
@@ -203,6 +207,7 @@ export function TasksApp(p: Props) {
         </div>
       );
     }
+    if (view === "touch" && !touchVisible) return empty(`Due for a touch is ${p.team.find((m) => m.isOwner)?.name.split(" ")[0] ?? "the owner"}'s list. Switch to Everyone to see it.`);
     if (view === "touch") return touches.length ? box(touches.map(touchLine)) : empty("Everyone is up to date. Set a follow-up frequency on a person and they'll show up here when they're due.");
     const list = visible(view);
     if (!list.length) return empty(EMPTY[view] ?? "No tasks in this list yet. Type one above, or use #listname in quick add.");
