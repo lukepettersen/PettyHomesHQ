@@ -166,7 +166,7 @@ async function gmailSignature(email: string): Promise<string | null> {
 }
 
 /** Sends a plain-text email from the connected Gmail account. It lands in that account's Sent folder. */
-export async function sendGmail(m: { to: string[]; subject: string; body: string; signature?: boolean }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+export async function sendGmail(m: { to: string[]; subject: string; body: string; signature?: boolean; pixelUrl?: string | null }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const c = await emailConnection();
   if (!c) return { ok: false, error: "Gmail isn't connected. An Admin can reconnect Google in Admin → Integrations." };
   const token = await accessToken().catch(() => null);

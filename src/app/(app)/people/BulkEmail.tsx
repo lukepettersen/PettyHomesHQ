@@ -49,10 +49,11 @@ export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: ()
     if (!confirm) { setConfirm(true); return; }
     setConfirm(false); setError(""); stop.current = false;
     const list = prep!.recipients.map((r) => r.personId);
+    const batch = crypto.randomUUID();
     let state = { done: 0, sent: 0, failed: [] as { name: string; error: string }[], finished: false };
     setProgress(state);
     for (let i = 0; i < list.length && !stop.current; i += BATCH) {
-      const r = await sendBulkEmailBatch({ personIds: list.slice(i, i + BATCH), subject, body, address, signature });
+      const r = await sendBulkEmailBatch({ personIds: list.slice(i, i + BATCH), subject, body, address, signature, batch });
       if (!r.ok) { setError(r.error); break; }
       state = { ...state, done: Math.min(i + BATCH, list.length), sent: state.sent + r.data!.sent, failed: [...state.failed, ...r.data!.failed] };
       setProgress(state);

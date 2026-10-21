@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireUser } from "@/server/auth";
 import { hasPermission } from "@/server/permissions";
 import { applyFilters, loadOptions, PAGE_SIZE, queryPeople } from "@/server/people";
@@ -45,6 +46,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
               {sp.f && <input type="hidden" name="f" value={sp.f} />}
               <input className="input" type="search" name="q" defaultValue={q} placeholder="Search name, phone, email, tag…" aria-label="Search people" />
             </form>
+            <Link href="/people/emails" className="btn">Mass emails</Link>
             <AddPersonButton options={options} />
           </div>
         </div>

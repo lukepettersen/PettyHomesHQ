@@ -587,3 +587,19 @@ model TextMessage {
   @@index([ourNumber, theirNumber, createdAt])
   @@index([personId])
 }
+
+/// Open tracking for mass emails only (owner decision 2026-10-21): a tiny image in the email reports the first open.
+model EmailTrack {
+  id        String    @id @default(cuid()) // also the image address, so it's unguessable
+  batch     String // one mass email send
+  subject   String
+  personId  String
+  entryId   String? // the timeline entry for this email
+  sentById  String?
+  sentAt    DateTime  @default(now())
+  openedAt  DateTime?
+  opens     Int       @default(0)
+
+  @@index([batch])
+  @@index([personId])
+}

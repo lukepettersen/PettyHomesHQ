@@ -87,6 +87,8 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
     const d = normalizeOffer(o.data);
     return { id: o.id, fileId: o.fileId, createdAt: o.createdAt.toISOString(), address: d.propertyAddress ?? "", price: d.purchasePrice, summary: o.summary, prefill: paPrefill(d) };
   });
+  // Mass emails show whether they were opened (tracked for mass emails only).
+  const opens = new Map((await db.emailTrack.findMany({ where: { personId: p.id, entryId: { not: null } }, select: { entryId: true, openedAt: true } })).map((t) => [t.entryId!, t.openedAt ? t.openedAt.toISOString() : null] as const));
   const textProps = { ...(await textComposerFor(user, p.tags.some((t) => t.tag.name === "Unsubscribed") ? p.name : null)), phones: p.phones.map((x) => x.normalized).filter((n) => n.length === 10) };
   const emailProps = { emails: p.emails.map((e) => e.address), sendsFrom: gmail?.email ?? null, templates: emailTemplates.map((t) => ({ id: t.id, name: t.folder ? `${t.folder} · ${t.name}` : t.name })) };
   // A partner (lender, title, other agent) sees the deals they were picked for.
@@ -133,7 +135,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
 
         <section className="order-3 min-w-0 lg:order-2">
           <FileTabs offers={offers} email={emailProps} fileForms={fileForms} personId={p.id} personName={p.name} files={files} statuses={fileStatuses} canSeeCommission={canSeeCommission}
-            canDelete={hasPermission(user.permissions, "deleteRecords")} contracts={contracts} forms={{ buyer: buyerForm, seller: sellerForm }} today={tasks.today} checklists={checklists} team={tasks.team} timeline={<Timeline personId={p.id} team={tasks.team.map((m) => ({ id: m.id, name: m.name }))} entries={p.timeline.map((e) => ({ id: e.id, kind: e.kind, body: e.body, outcome: e.outcome, author: e.author?.name ?? null, at: e.createdAt.toISOString() }))}
+            canDelete={hasPermission(user.permissions, "deleteRecords")} contracts={contracts} forms={{ buyer: buyerForm, seller: sellerForm }} today={tasks.today} checklists={checklists} team={tasks.team} timeline={<Timeline personId={p.id} team={tasks.team.map((m) => ({ id: m.id, name: m.name }))} entries={p.timeline.map((e) => ({ id: e.id, kind: e.kind, body: e.body, outcome: e.outcome, author: e.author?.name ?? null, at: e.createdAt.toISOString(), opened: opens.get(e.id) }))}
             email={emailProps} text={textProps} />} />
         </section>
 

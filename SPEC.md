@@ -170,6 +170,10 @@ Principles:
   Bounced. Every email ends with the business mailing address (asked once, remembered) and an
   **Unsubscribe** link: a public page with an Unsubscribe button (so link scanners can't trigger it) that
   tags them **Email Unsubscribed** (texting isn't affected) and notes it on their timeline.
+- **Open tracking (mass emails only)** *(owner decision 2026-10-21)*: each mass email carries a tiny image;
+  the first load marks it **Opened** (shown under that email on the contact's timeline, else "Not opened
+  yet"). **People → Mass emails** lists each send with "N of M opened" and who. One-to-one emails are never
+  tracked. "Opened" means probably read (iPhones can load it on their own; blocked images never count).
 - **Add person:** first/last, phone, email, optional second person, stage, source (picking the
   Industry Partners stage also asks Type and Company, §6.4). Calls are
   booked afterwards from the contact page (Appointments → + Book), owner decision 2026-10-14.

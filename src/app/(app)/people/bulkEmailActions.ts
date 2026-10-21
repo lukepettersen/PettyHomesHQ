@@ -55,6 +55,7 @@ const sendSchema = z.object({
   subject: z.string().trim().min(1, "Add a subject.").max(300), body: z.string().trim().min(1, "Write a message.").max(20000),
   address: z.string().trim().min(8, "Add your business mailing address for the footer (the law requires one on marketing email).").max(200),
   signature: z.boolean().optional(),
+  batch: z.string().trim().min(8).max(60), // one mass email send, for open counts
 });
 
 /** Sends to a few people. Anyone who opted out or has no email since the preview is skipped. */
@@ -72,17 +73,21 @@ export async function sendBulkEmailBatch(input: z.input<typeof sendSchema>) {
       const subject = fill(v.subject, values).text;
       const url = `${publicBase()}/unsubscribe?p=${r.personId}&t=${unsubToken(r.personId, secret)}`;
       const body = fill(v.body, values).text + bulkFooter(v.address, url);
-      const res = await sendGmail({ to: [r.email], subject, body, signature: v.signature });
+      // Open tracking (mass emails only; owner decision 2026-10-21).
+      const track = await db.emailTrack.create({ data: { batch: v.batch, subject: v.subject, personId: r.personId, sentById: user.id } });
+      const res = await sendGmail({ to: [r.email], subject, body, signature: v.signature, pixelUrl: `${publicBase()}/api/e/${track.id}.gif` });
       if (!res.ok) {
+        await db.emailTrack.delete({ where: { id: track.id } });
         failed.push({ name: r.name, error: res.error });
         if (/isn't connected|didn't let HQ in|limit|quota/i.test(res.error)) break; // Gmail itself stopped: no point trying the rest
         continue;
       }
       sent.push(r.name);
-      await db.$transaction([
+      const [entry] = await db.$transaction([
         db.timelineEntry.create({ data: { personId: r.personId, kind: "email", gmailId: res.id ? `${res.id}:${r.personId}` : null, body: `To ${r.email} · ${subject}\n\n${toPlain(fill(v.body, values).text)}`, authorId: user.id } }),
         db.person.update({ where: { id: r.personId }, data: { lastContactAt: new Date() } }),
       ]);
+      await db.emailTrack.update({ where: { id: track.id }, data: { entryId: entry.id } });
     }
     if (sent.length) await logActivity(user.id, "create", "email", null, `Mass email "${v.subject}" sent to ${sent.length} ${sent.length === 1 ? "person" : "people"}`);
     revalidatePath("/people");

@@ -61,4 +61,12 @@ describe("reading Gmail", () => {
     expect(messageText(payload)).toBe("Sounds good, see you then!");
   });
   it("falls back to the HTML version", () => expect(messageText({ mimeType: "text/html", body: { data: b("<div>Hello<br>there</div>") } })).toBe("Hello\nthere"));
+  it("adds the open-tracking image only when asked", () => {
+    const dec = (raw: string) => Buffer.from(raw, "base64url").toString("utf8");
+    const html = (raw: string) => dec(raw).split("Content-Type: text/html")[1];
+    const withPixel = buildMime({ from: "a@b.com", to: ["c@d.com"], subject: "Hi", body: "Hello", pixelUrl: "https://hq.example.com/api/e/abc.gif" });
+    expect(Buffer.from(html(withPixel).split("\r\n\r\n")[1].split("\r\n--")[0].replace(/\r\n/g, ""), "base64").toString()).toContain('<img src="https://hq.example.com/api/e/abc.gif"');
+    const plain = buildMime({ from: "a@b.com", to: ["c@d.com"], subject: "Hi", body: "Hello" });
+    expect(Buffer.from(html(plain).split("\r\n\r\n")[1].split("\r\n--")[0].replace(/\r\n/g, ""), "base64").toString()).not.toContain("<img");
+  });
 });

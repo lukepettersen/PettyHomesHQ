@@ -50,12 +50,14 @@ export function htmlToText(html: string): string {
  * The email as Gmail's API wants it (base64url): plain text and HTML versions, with the Gmail signature
  * (HTML, from Gmail settings) when there is one. Line breaks in To/Subject can't add headers.
  */
-export function buildMime(m: { from: string; to: string[]; subject: string; body: string; signatureHtml?: string | null }): string {
+export function buildMime(m: { from: string; to: string[]; subject: string; body: string; signatureHtml?: string | null; pixelUrl?: string | null }): string {
   const to = m.to.map(oneLine).filter(isEmail);
   if (!to.length) throw new Error("No email address to send to.");
   const sig = m.signatureHtml?.trim() || "";
   const plain = toPlain(m.body) + (sig ? `\n\n-- \n${htmlToText(sig)}` : "");
-  const html = toHtml(m.body) + (sig ? `<br><div class="gmail_signature">${sig}</div>` : "");
+  // Mass emails only: a 1×1 image whose loading marks the email opened.
+  const pixel = m.pixelUrl && /^https?:\/\/[^\s"<>]+$/.test(m.pixelUrl) ? `<img src="${m.pixelUrl}" width="1" height="1" alt="" style="border:0;width:1px;height:1px">` : "";
+  const html = toHtml(m.body) + (sig ? `<br><div class="gmail_signature">${sig}</div>` : "") + pixel;
   const boundary = `hq-${b64(m.subject + to.join()).replace(/[^A-Za-z0-9]/g, "").slice(0, 16)}-${to.length}`;
   const part = (type: string, s: string) => [`--${boundary}`, `Content-Type: ${type}; charset="UTF-8"`, "Content-Transfer-Encoding: base64", "", wrap76(b64(s.replace(/\r?\n/g, "\r\n")))].join("\r\n");
   const lines = [

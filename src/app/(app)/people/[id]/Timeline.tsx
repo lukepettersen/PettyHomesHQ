@@ -7,7 +7,7 @@ import { mentionLabel, mentionQuery, splitMentions, type Member } from "@/lib/me
 import { EmailComposer } from "./EmailComposer";
 import { TextComposer } from "@/components/TextComposer";
 
-type Entry = { id: string; kind: string; body: string; outcome: string | null; author: string | null; at: string };
+type Entry = { id: string; kind: string; body: string; outcome: string | null; author: string | null; at: string; opened?: string | null };
 const TABS: [Kind, string, string, string][] = [
   ["note", "Note", "Add a note.", "Save note"],
   ["send", "Send text", "", ""],
@@ -119,7 +119,7 @@ export function Timeline({ personId, entries, team, email, text }: { personId: s
             <li key={e.id} className="grid grid-cols-[70px_minmax(0,1fr)] gap-3 border-t border-misty py-2.5 text-sm first:border-0">
               <span className="text-xs font-bold uppercase tracking-wide muted">{KIND_LABEL[e.kind] ?? e.kind}</span>
               <div>
-                {e.kind === "email" ? <EmailBody body={e.body} /> : <div className="whitespace-pre-wrap break-words">{e.outcome ? <b>{e.outcome}: </b> : null}{splitMentions(e.body, team).map((part, i) => part.mention ? <mark key={i} className="rounded bg-accent-soft px-0.5 font-semibold text-accent">{part.text}</mark> : part.text)}</div>}
+                {e.kind === "email" ? <><EmailBody body={e.body} />{e.opened !== undefined && <span className={`text-xs font-semibold ${e.opened ? "text-accent" : "muted"}`}>{e.opened ? `Opened ${new Date(e.opened).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).replace(/ (AM|PM)$/, (m) => m.trim().toLowerCase())}` : "Not opened yet"}</span>}</> : <div className="whitespace-pre-wrap break-words">{e.outcome ? <b>{e.outcome}: </b> : null}{splitMentions(e.body, team).map((part, i) => part.mention ? <mark key={i} className="rounded bg-accent-soft px-0.5 font-semibold text-accent">{part.text}</mark> : part.text)}</div>}
                 <div className="text-xs muted">{new Date(e.at).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}{e.author ? ` · ${e.author}` : ""}</div>
               </div>
             </li>
