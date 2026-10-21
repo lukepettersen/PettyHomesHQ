@@ -72,7 +72,7 @@ export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSa
       {task.step && (
         <p className="mx-3.5 mt-3 flex flex-col gap-1 rounded-md bg-sunken px-3 py-2 text-[12.5px] muted">
           <span>From {task.personName ? <b className="text-charcoal">{task.personName}</b> : "a person"}&apos;s {task.step.source.toLowerCase()}{task.step.phase ? ` · ${task.step.phase}` : ""}</span>
-          {task.step.timing && <span>Timing: {task.step.timing}.{task.step.locked ? " Change the date on their page and this moves with it." : ""}</span>}
+          {task.step.timing && <span>Timing: {task.step.timing}.{task.step.locked ? " It moves when that date changes on their page, unless you set a date here." : ""}</span>}
         </p>
       )}
       {canDraft && (
@@ -89,7 +89,7 @@ export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSa
 
       <div className="grid grid-cols-[96px_minmax(0,1fr)] items-center gap-x-2.5 gap-y-2 px-3.5 py-3 text-sm">
         <label htmlFor="d-due" className="text-xs font-semibold muted">Due</label>
-        <input id="d-due" type="date" className={field} value={d.due} disabled={task.step?.locked} title={task.step?.locked ? "Set by a contract date" : undefined} onChange={(e) => set({ due: e.target.value })} />
+        <input id="d-due" type="date" className={field} value={d.due} onChange={(e) => set({ due: e.target.value })} />
         <span className="text-xs font-semibold muted">Time</span>
         <TimeSelect label="Time" allowNone className={field} value={d.time} onChange={(x) => set({ time: x })} />
         <label htmlFor="d-repeat" className="text-xs font-semibold muted">Repeat</label>

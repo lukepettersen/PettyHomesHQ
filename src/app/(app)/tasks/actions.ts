@@ -7,7 +7,6 @@ import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { loadDateTasks, loadTeam } from "@/server/tasks";
 import { isDueForTouch } from "@/lib/filters";
-import { CONTRACT_ANCHORS } from "@/lib/templates";
 import { applyTemplate, contractAnchors, factsOf, loadTemplates, moveFile } from "@/server/automation";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
 import { categoryOf, longIso, nextDue, parseQuickAdd, parseTime, stripPersonWord, type Repeat } from "@/lib/tasks";
@@ -228,11 +227,14 @@ export async function updateTask(input: z.input<typeof updateSchema>) {
     const before = v.id.startsWith("date:") ? await materializeDateTask(v.id, user.id) : await db.task.findFirst({ where: { id: v.id, deletedAt: null } });
     if (!before) throw new UserError("That task was deleted.");
     if (v.listId && !(await db.taskList.findFirst({ where: { id: v.listId, builtin: null } }))) throw new UserError("That list was deleted.");
-    // Steps timed from a contract date keep that date; it changes from the contract.
-    const locked = !!before.anchor && CONTRACT_ANCHORS.includes(before.anchor as never);
+    // A step timed from a date (Closing + 1 day…) can be given its own date; from then on it stays put instead of
+    // moving when that date changes (owner request 2026-10-21).
+    const due = v.due ? dateFromIso(v.due) : null;
+    const dateChanged = (before.dueDate?.getTime() ?? 0) !== (due?.getTime() ?? 0);
+    const detach = dateChanged && !!before.anchor ? { anchor: null, offsetDays: null, offsetMinutes: null } : {};
     const t = await db.task.update({
       where: { id: before.id },
-      data: { title: v.title, notes: v.notes, dueDate: locked ? before.dueDate : v.due ? dateFromIso(v.due) : null, dueTime: v.time, repeat: v.repeat, priority: v.priority, listId: v.listId, assigneeId: v.assigneeId, subtasks: v.subtasks },
+      data: { title: v.title, notes: v.notes, dueDate: due, dueTime: v.time, repeat: v.repeat, priority: v.priority, listId: v.listId, assigneeId: v.assigneeId, subtasks: v.subtasks, ...detach },
     });
     const changed = [before.title !== t.title && "title", (before.dueDate?.getTime() ?? 0) !== (t.dueDate?.getTime() ?? 0) && "due date", before.assigneeId !== t.assigneeId && "assignee", before.listId !== t.listId && "list", before.repeat !== t.repeat && "repeat"].filter(Boolean);
     await logActivity(user.id, "update", "task", t.id, `Updated "${t.title}"${changed.length ? ` (${changed.join(", ")})` : ""}`);
