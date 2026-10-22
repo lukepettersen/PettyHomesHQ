@@ -7,6 +7,7 @@ import { formatPhone } from "@/lib/normalize";
 import { MAX_TEXT } from "@/lib/texting";
 import { fillTextTemplate, sendText, sendTextGroup } from "@/app/(app)/messages/actions";
 import { AddRecipient, ExtraChips, type Extra } from "@/components/AddRecipient";
+import { EmojiButton } from "@/components/EmojiButton";
 
 /**
  * Write and send a text from your own business number (SPEC.md §11): a template (optional, or "/name" in the
@@ -97,6 +98,7 @@ export function TextComposer({ personId, phones, templates, from, blocked, taskI
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs muted">From your number {from ? formatPhone(from) : ""} · {body.length > 160 ? `${body.length} characters (${Math.ceil(body.length / 153)} texts)` : `${body.length}/160`}</span>
         <span className="flex gap-2">
+          <EmojiButton box={box} value={body} onChange={setBody} />
           {body && <button type="button" className="btn" disabled={pending} onClick={() => { setBody(""); setTemplateId(""); setMissing([]); }}>Clear</button>}
           <button type="button" className="btn btn-primary" disabled={pending || !body.trim() || !to} onClick={send}>{pending ? "Sending…" : "Send text"}</button>
         </span>

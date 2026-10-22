@@ -9,6 +9,7 @@ import type { SessionUser } from "@/server/auth";
 import { sendSms } from "@/server/twilio";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { groupTitle, isGroupKey } from "@/lib/groupText";
+import { applyReaction, parseReaction, reactsTo, type ReactionMark } from "@/lib/reactions";
 import { callLength, centralDayStart, DEFAULT_DAILY_CAP, isStartWord, isStopWord, MAX_TEXT, toE164 } from "@/lib/texting";
 
 // Business texting (SPEC.md §11). Each team member has their own Twilio number (owner, 2026-10-20). Texts and
@@ -56,9 +57,27 @@ export async function saveOnce<T>(ourNumber: string, theirs: string, fn: (tx: Tx
   });
 }
 
+/**
+ * An iPhone reaction (Loved “…”) becomes an icon on the message it quotes, in the same thread, instead of a new
+ * text. Returns false when it isn't one or the message isn't found (then it's saved as a normal text).
+ */
+export async function recordReaction(o: { ourNumber: string; thread: string; by: string; body: string }): Promise<boolean> {
+  const r = parseReaction(o.body);
+  if (!r) return false;
+  const recent = await db.textMessage.findMany({ where: { ourNumber: o.ourNumber, theirNumber: o.thread, kind: "sms" }, orderBy: { createdAt: "desc" }, take: 100, select: { id: true, body: true, reactions: true } });
+  const hit = recent.find((m) => reactsTo(r.target, m.body));
+  if (!hit) return false;
+  // Applying the same reaction twice changes nothing, so a text Twilio delivers twice is fine.
+  const reactions = applyReaction((Array.isArray(hit.reactions) ? hit.reactions : []) as ReactionMark[], { emoji: r.emoji, by: o.by, removed: r.removed });
+  await db.textMessage.update({ where: { id: hit.id }, data: { reactions } });
+  revalidatePath("/messages");
+  return true;
+}
+
 /** A text that came in (from Twilio's webhook). STOP tags them Unsubscribed; START/YES removes it. */
 export async function recordIncoming(o: { from: string; to: string; body: string; sid: string }) {
   const theirs = normalizePhone(o.from);
+  if (await recordReaction({ ourNumber: o.to, thread: theirs, by: theirs, body: o.body })) return;
   const [owner, person] = await Promise.all([lineOwner(o.to), personForNumber(theirs)]);
   const body = o.body.slice(0, 5000);
   const saved = await saveOnce(o.to, theirs, async (tx) => {
@@ -174,7 +193,7 @@ export async function sendTextAs(user: { id: string; name: string }, o: { person
 
 // ---------- Messages page ----------
 export type Thread = { number: string; personId: string | null; name: string; last: string; lastKind: string; lastDir: string; at: string; unread: number; group?: boolean };
-export type Bubble = { id: string; direction: string; kind: string; body: string; status: string; error: string | null; by: string | null; at: string; from?: string | null };
+export type Bubble = { id: string; direction: string; kind: string; body: string; status: string; error: string | null; by: string | null; at: string; from?: string | null; reactions?: string[] };
 export type GroupInfo = { title: string; members: { name: string; personId: string | null; digits: string }[] };
 
 /** Group texts' names (the people in them, as contacts where we have them). */
@@ -207,7 +226,7 @@ export async function loadThreads(ourNumber: string): Promise<Thread[]> {
 export async function loadConversation(ourNumber: string, theirNumber: string): Promise<Bubble[]> {
   const rows = await db.textMessage.findMany({ where: { ourNumber, theirNumber }, orderBy: { createdAt: "asc" }, take: 500, include: { sentBy: { select: { name: true } }, person: { select: { name: true } } } });
   return rows.map((m) => ({ id: m.id, direction: m.direction, kind: m.kind, body: m.body, status: m.status, error: m.error, by: m.sentBy?.name.split(" ")[0] ?? null, at: m.createdAt.toISOString(),
-    from: m.fromNumber ? m.person?.name ?? formatPhone(m.fromNumber) : null }));
+    from: m.fromNumber ? m.person?.name ?? formatPhone(m.fromNumber) : null, reactions: ((Array.isArray(m.reactions) ? m.reactions : []) as ReactionMark[]).map((x) => x.emoji) }));
 }
 
 /** Unread texts and missed calls on the user's number, for the Messages tab. */

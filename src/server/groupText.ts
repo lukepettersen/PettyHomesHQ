@@ -6,7 +6,7 @@ import { UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { isConnected, textingEnabled } from "@/server/integrations";
 import { addGroupSender, closeConversation, conversationParticipants, createGroup, postGroupMessage, publicBase, setGroupAddress } from "@/server/twilio";
-import { COPY_WINDOW, dailyCap, isUnsubscribed, lineOwner, personForNumber, recordIncoming, saveOnce, setUnsubscribed } from "@/server/texting";
+import { COPY_WINDOW, dailyCap, isUnsubscribed, lineOwner, personForNumber, recordIncoming, recordReaction, saveOnce, setUnsubscribed } from "@/server/texting";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { centralDayStart, isStartWord, isStopWord, MAX_TEXT, toE164 } from "@/lib/texting";
 import { groupMembers, groupTitle, isGroupKey, MAX_GROUP, otherRecipients, readParticipants } from "@/lib/groupText";
@@ -79,6 +79,7 @@ type Thread = { sid: string; ourNumber: string; members: string[] };
  */
 async function recordGroupMessage(t: Thread, o: { from: string; body: string; sid: string }) {
   const from = normalizePhone(o.from);
+  if (await recordReaction({ ourNumber: t.ourNumber, thread: t.sid, by: from, body: o.body })) return;
   const members = t.members.includes(from) ? t.members : [...t.members, from];
   if (members !== t.members) await db.textThread.update({ where: { sid: t.sid }, data: { members } });
   const people = await membersOf(members);

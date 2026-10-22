@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { TextComposer } from "@/components/TextComposer";
+import { EmojiButton } from "@/components/EmojiButton";
 import { formatPhone } from "@/lib/normalize";
 import { sendProblem } from "@/lib/texting";
 import type { Bubble, GroupInfo, Thread } from "@/server/texting";
@@ -118,6 +119,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
                       <div className={`flex max-w-[80%] flex-col ${m.direction === "out" ? "items-end self-end" : "items-start self-start"}`}>
                         {m.from && <span className="px-1 text-[11px] font-semibold muted">{m.from}</span>}
                         <p className={`whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${m.direction === "out" ? "bg-accent text-white" : "bg-sunken"}`}>{m.body}</p>
+                        {!!m.reactions?.length && <span className="-mt-2 rounded-full border border-misty bg-white px-1.5 text-sm shadow-sm" aria-label={`Reactions: ${m.reactions.join(" ")}`}>{[...new Set(m.reactions)].join("")}{m.reactions.length > new Set(m.reactions).size ? ` ${m.reactions.length}` : ""}</span>}
                         <span className="px-1 text-[11px] muted">
                           {clock(m.at)}{m.direction === "out" ? ` · ${m.by ? `${m.by} · ` : ""}${STATUS[m.status] ?? m.status}` : ""}
                         </span>
@@ -201,6 +203,7 @@ function NewMessage({ onPick, groupsOn, blocked }: { onPick: (key: string) => vo
 /** Reply in a group text: everyone in the group gets it from your number. */
 function GroupComposer({ sid, blocked, from, onSent }: { sid: string; blocked: string | null; from: string | null; onSent: () => void }) {
   const [body, setBody] = useState("");
+  const box = useRef<HTMLTextAreaElement>(null);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   if (blocked) return <p className="rounded-md bg-sunken px-3 py-2 text-sm muted">{blocked}</p>;
@@ -212,11 +215,12 @@ function GroupComposer({ sid, blocked, from, onSent }: { sid: string; blocked: s
   });
   return (
     <div className="flex flex-col gap-2">
-      <textarea aria-label="Group text message" placeholder="Reply to the group" className="input min-h-20 font-normal" maxLength={1600} value={body}
+      <textarea ref={box} aria-label="Group text message" placeholder="Reply to the group" className="input min-h-20 font-normal" maxLength={1600} value={body}
         onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && body.trim() && !pending) { e.preventDefault(); send(); } }} />
       <span className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs muted">To everyone in the group, from your number {from ? formatPhone(from) : ""}</span>
-        <button type="button" className="btn btn-primary" disabled={pending || !body.trim()} onClick={send}>{pending ? "Sending…" : "Send to group"}</button>
+        <span className="flex gap-2"><EmojiButton box={box} value={body} onChange={setBody} />
+          <button type="button" className="btn btn-primary" disabled={pending || !body.trim()} onClick={send}>{pending ? "Sending…" : "Send to group"}</button></span>
       </span>
       {error && <p role="alert" className="text-sm text-bad">{error}</p>}
     </div>

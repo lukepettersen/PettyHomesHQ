@@ -546,6 +546,11 @@ Principles:
   Admin → Integrations warns under a number when Twilio says it can't receive MMS, and (switch on) lists **Recent
   incoming texts (troubleshooting)**: time, plain or Conversation, last 4 digits of the numbers, field names, never
   message text.
+- **Reactions** *(owner request 2026-10-22)*: an iPhone tapback sent to a business number arrives as a text like
+  Loved “See you tomorrow!”; HQ shows it as a small icon (❤️ 👍 👎 😂 ‼️ ❓, or the emoji in "Reacted 🎉 to …") on
+  the message it quotes in that thread, with no new bubble or alert ("Removed a heart from …" takes it off). If the
+  quoted message isn't found it shows as a normal text. Business numbers can't send tapbacks; a 😊 button on the
+  text boxes adds common emoji to a reply instead.
 - **Admin → Integrations → Texting** on/off switch to pause sending anytime.
 - Safety when on: honor STOP/opt-out automatically (a STOP reply tags them **Unsubscribed**; START or
   YES removes it); never text people tagged Unsubscribed; quiet hours 8am–8pm Central apply to
