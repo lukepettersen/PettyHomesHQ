@@ -96,7 +96,7 @@ export function Bell({ initial }: { initial: Bell }) {
         {data.unread > 0 && <span className="absolute -right-0.5 -top-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-coral px-1 text-[10px] font-bold text-white">{data.unread > 9 ? "9+" : data.unread}</span>}
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-40 mt-1 w-[min(340px,calc(100vw-24px))] rounded-lg border border-misty bg-white text-charcoal shadow-xl">
+        <div className="absolute right-0 top-full z-40 mt-1 w-[min(340px,calc(100vw-24px))] max-sm:fixed max-sm:inset-x-3 max-sm:top-auto max-sm:w-auto rounded-lg border border-misty bg-white text-charcoal shadow-xl">
           <div className="flex items-center justify-between border-b border-misty px-3 py-2">
             <b className="text-sm">Notifications</b>
             {data.unread > 0 && <button type="button" className="link text-xs" onClick={readAll}>Mark all read</button>}
@@ -108,7 +108,7 @@ export function Bell({ initial }: { initial: Bell }) {
                   <span aria-hidden="true" className={`mt-1.5 h-2 w-2 flex-none rounded-full ${n.read ? "bg-transparent" : "bg-coral"}`} />
                   <span className="min-w-0">
                     <span className="block break-words">{n.text}</span>
-                    <span className="text-xs muted">{new Date(n.at).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                    <span className="text-xs muted">{new Date(n.at).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).replace(/ (AM|PM)$/, (m) => m.trim().toLowerCase())}</span>
                   </span>
                 </button>
               </li>
