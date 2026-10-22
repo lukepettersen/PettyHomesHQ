@@ -78,3 +78,16 @@ describe("reading Gmail", () => {
     expect(buildMimeRaw({ from: "a@b.com", to: ["c@d.com"], subject: "x", body: "y" })).not.toContain("multipart/mixed");
   });
 });
+
+describe("email images", () => {
+  it("shows an image on its own line and inline, and leaves it out of the plain copy", async () => {
+    const { toHtml, toPlain } = await import("./email");
+    const html = toHtml("![Petty Homes banner](https://hq.example.com/api/img/abc_123456789012345.png)\nHi {first_name}\nSee https://x.com/a");
+    expect(html).toContain('<img src="https://hq.example.com/api/img/abc_123456789012345.png" alt="Petty Homes banner" style="display:block;max-width:600px;width:100%;height:auto;border:0">\nHi');
+    expect(html).toContain('<a href="https://x.com/a">https://x.com/a</a>');
+    expect(html).not.toContain('<a href="https://hq.example.com');
+    expect(toPlain("![b](https://hq.example.com/api/img/a.png)\nHello [site](https://x.com)")).toBe("Hello site (https://x.com)");
+    expect(toHtml('![x"><script>](https://e.com/a.png)')).not.toContain("<script>");
+    expect(toHtml("![a](http://insecure.com/a.png)")).not.toContain("<img");
+  });
+});

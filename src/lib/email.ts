@@ -7,14 +7,17 @@ const wrap76 = (s: string) => (s.match(/.{1,76}/g) ?? []).join("\r\n");
 const header = (s: string) => (/^[\x20-\x7e]*$/.test(s) ? s : `=?UTF-8?B?${b64(s)}?=`);
 export const isEmail = (s: string) => /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/.test(s);
 
-// ---------- Light formatting: **bold**, [words](https://link), "- " bullet lines ----------
+// ---------- Light formatting: **bold**, [words](https://link), "- " bullet lines, ![image](https://…) ----------
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const LINK = /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g;
+const IMAGE = /!\[([^\]\n]*)\]\((https:\/\/[^\s)]+)\)/g;
+const img = (alt: string, url: string) => `<img src="${url}" alt="${alt}" style="display:block;max-width:600px;width:100%;height:auto;border:0">`;
 function inline(line: string): string {
   // Escape first, then add only the tags HQ makes, so nothing typed can become HTML.
   let s = esc(line);
-  s = s.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, t: string, u: string) => `<a href="${u}">${t}</a>`);
-  s = s.replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, (_, pre: string, u: string) => `${pre}<a href="${u}">${u}</a>`);
+  s = s.replace(IMAGE, (_, a: string, u: string) => img(a, u));
+  s = s.replace(/(?<!src=")\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, t: string, u: string) => `<a href="${u}">${t}</a>`);
+  s = s.replace(/(^|[\s(])(?<!src=")(https?:\/\/[^\s<)"]+)/g, (_, pre: string, u: string) => `${pre}<a href="${u}">${u}</a>`);
   s = s.replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>");
   return s;
 }
@@ -27,13 +30,15 @@ export function toHtml(text: string): string {
     const m = /^\s*[-•]\s+(.*)$/.exec(line);
     if (m) { list.push(inline(m[1])); continue; }
     flush();
+    // An image on its own line (a banner or logo) needs no line break after it.
+    if (/^\s*!\[[^\]\n]*\]\(https:\/\/[^\s)]+\)\s*$/.test(line)) { out.push(inline(line.trim())); continue; }
     out.push(line.trim() ? `${inline(line)}<br>` : "<br>");
   }
   flush();
   return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.45">${out.join("\n")}</div>`;
 }
 /** The same message for mail apps that only show plain text. */
-export const toPlain = (text: string) => text.replace(LINK, "$1 ($2)").replace(/\*\*([^*\n]+)\*\*/g, "$1");
+export const toPlain = (text: string) => text.replace(/^\s*!\[[^\]\n]*\]\(https:\/\/[^\s)]+\)\s*\n?/gm, "").replace(IMAGE, "").replace(LINK, "$1 ($2)").replace(/\*\*([^*\n]+)\*\*/g, "$1");
 
 /** HTML (a Gmail signature) → readable plain text. */
 export function htmlToText(html: string): string {

@@ -6,6 +6,7 @@ import { Modal } from "@/components/Modal";
 import { FormatBar } from "@/components/FormatBar";
 import { TemplateSearch } from "@/components/TemplateSearch";
 import { AttachFiles, type Attached } from "@/components/AttachFiles";
+import { toHtml } from "@/lib/email";
 import { prepareBulkEmail, previewBulkEmail, sendBulkEmailBatch } from "./bulkEmailActions";
 
 type Prep = { recipients: { personId: string; name: string }[]; skipped: { noEmail: number; optedOut: number }; sendsFrom: string | null; address: string; templates: { id: string; name: string; subject: string; body: string }[] };
@@ -95,7 +96,8 @@ export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: ()
             <div className="rounded-md border border-misty bg-white p-3 text-sm">
               <p className="text-xs font-semibold uppercase tracking-wider muted">Preview for {preview.name}</p>
               <p className="mt-1 font-semibold">{preview.subject}</p>
-              <p className="mt-1 whitespace-pre-wrap">{preview.body}</p>
+              {/* toHtml escapes everything typed and adds only HQ's own tags (bold, links, lists, images). */}
+              <div className="mt-1" dangerouslySetInnerHTML={{ __html: toHtml(preview.body) }} />
               <p className="mt-2 border-t border-misty pt-2 text-xs muted">Petty Homes LLC · {address || "(your address)"} · Don&apos;t want these emails? Unsubscribe</p>
               {preview.missing.length > 0 && <p className="mt-2 text-[#9a6400]">Empty for {preview.name}: {preview.missing.join(", ")}. People missing a field get a blank there.</p>}
             </div>

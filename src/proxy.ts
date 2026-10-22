@@ -7,5 +7,5 @@ import { signInStillGood } from "@/lib/session";
 export default withAuth({ pages: { signIn: "/login" }, callbacks: { authorized: ({ token }) => signInStillGood(token) } });
 
 export const config = {
-  matcher: ["/((?!login|api/auth|api/health|api/twilio|api/unsubscribe|api/e/|unsubscribe|_next/static|_next/image|favicon.ico|logo-mark.svg|icon|apple-icon|manifest.webmanifest).*)"],
+  matcher: ["/((?!login|api/auth|api/health|api/twilio|api/unsubscribe|api/e/|api/img/|unsubscribe|_next/static|_next/image|favicon.ico|logo-mark.svg|icon|apple-icon|manifest.webmanifest).*)"],
 };
