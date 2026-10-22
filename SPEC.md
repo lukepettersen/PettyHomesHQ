@@ -538,6 +538,9 @@ Principles:
   **Send to N people** starts a group text. Group messages go on the timeline of every contact in the group
   ("Group text from Sam: …" / "Group text: …"). Unsubscribed people block sending to their group; the daily limit
   counts group texts. One-to-one texts keep working as before (they arrive through Conversations while it's on).
+  On a contact, **Send text** (group texting on) starts with the contact's other numbers and the owner's cell
+  already added (each removable); with more than one number it sends **one group text** (the same thread as
+  before if those people already have one). The **+ Add** search also lists the contact's own other numbers.
   Admin → Integrations warns under a number when Twilio says it can't receive MMS (group texts then arrive as
   separate texts) or when group texting isn't set up on it.
   If the same text also arrives as a plain one-to-one copy, only the group copy is kept. One-to-one Conversations

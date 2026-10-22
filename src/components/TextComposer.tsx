@@ -5,21 +5,22 @@ import { useRef, useState, useTransition } from "react";
 import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
 import { formatPhone } from "@/lib/normalize";
 import { MAX_TEXT } from "@/lib/texting";
-import { fillTextTemplate, sendText } from "@/app/(app)/messages/actions";
+import { fillTextTemplate, sendText, sendTextGroup } from "@/app/(app)/messages/actions";
 import { AddRecipient, ExtraChips, type Extra } from "@/components/AddRecipient";
 
 /**
  * Write and send a text from your own business number (SPEC.md §11): a template (optional, or "/name" in the
  * message), then Send. `blocked` explains why texting isn't available (not connected, no number, Unsubscribed…).
  */
-export function TextComposer({ personId, phones, templates, from, blocked, taskId, initial = "", compact, onSent }: {
+export function TextComposer({ personId, phones, templates, from, blocked, taskId, initial = "", compact, onSent, groupsOn, autoExtras = [] }: {
   personId: string | null; phones: string[]; templates: { id: string; name: string }[]; from: string | null; blocked: string | null;
-  taskId?: string | null; initial?: string; compact?: boolean; onSent?: (name: string) => void;
+  taskId?: string | null; initial?: string; compact?: boolean; onSent?: (name: string) => void; groupsOn?: boolean; autoExtras?: Extra[];
 }) {
   const router = useRouter();
   const [to, setTo] = useState(phones[0] ?? "");
-  // Others to send the same text to, each as their own text (US business texting can't do group texts).
-  const [extras, setExtras] = useState<Extra[]>([]);
+  // Others to send the same text to: one group text when group texting is on (starting with the contact's other
+  // numbers and the owner's cell), otherwise each gets their own text.
+  const [extras, setExtras] = useState<Extra[]>(autoExtras);
   const [templateId, setTemplateId] = useState("");
   const [body, setBody] = useState(initial);
   const [missing, setMissing] = useState<string[]>([]);
@@ -50,6 +51,13 @@ export function TextComposer({ personId, phones, templates, from, blocked, taskI
   };
   const send = () => start(async () => {
     setError(""); setNotice("");
+    if (groupsOn && extras.length) {
+      const g = await sendTextGroup({ numbers: [to, ...extras.map((x) => x.value)], body, personId, taskId: taskId ?? null });
+      if (!g.ok) { setError(g.error); return; }
+      setNotice(`Sent as a group text to ${extras.length + 1} people.`);
+      setBody(""); setTemplateId(""); setMissing([]); router.refresh(); onSent?.("the group");
+      return;
+    }
     const r = await sendText({ personId, to, body, taskId: taskId ?? null });
     if (!r.ok) { setError(r.error); return; }
     const names = [r.data!.name], failed: string[] = [];
@@ -75,8 +83,8 @@ export function TextComposer({ personId, phones, templates, from, blocked, taskI
         ) : !compact && <div className="label">To<span className="py-1.5 text-sm font-semibold text-charcoal">{formatPhone(to)}</span></div>}
         <div className="flex flex-wrap items-center gap-1.5 sm:col-span-2">
           <ExtraChips extras={extras} onRemove={(v) => setExtras(extras.filter((x) => x.value !== v))} />
-          <AddRecipient mode="phone" exclude={[...phones, ...extras.map((x) => x.value)]} onAdd={(x) => setExtras([...extras, x])} />
-          {extras.length > 0 && <span className="text-xs muted">Each person gets their own text; replies come back separately.</span>}
+          <AddRecipient mode="phone" exclude={[to, ...extras.map((x) => x.value)]} onAdd={(x) => setExtras([...extras, x])} />
+          {extras.length > 0 && <span className="text-xs muted">{groupsOn ? "Sends as one group text; everyone sees the replies." : "Each person gets their own text; replies come back separately."}</span>}
         </div>
         <label className="label">Template<TemplateSearch templates={templates} value={templateId} disabled={pending} onPick={pick} noneLabel="No text templates yet" /></label>
       </div>

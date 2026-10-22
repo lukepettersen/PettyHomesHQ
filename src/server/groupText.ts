@@ -145,16 +145,26 @@ export async function startGroupText(user: { id: string; name: string }, o: { nu
   if (digits.length < 2) throw new UserError("Pick at least two people for a group text.");
   if (digits.length > MAX_GROUP - 1) throw new UserError(`A group text can have up to ${MAX_GROUP - 1} people plus you.`);
   const people = await membersOf(digits);
+  const teamCells = (await db.user.findMany({ where: { forwardTo: { not: null } }, select: { forwardTo: true } })).map((u) => normalizePhone(u.forwardTo!));
   for (const m of people) {
     if (!toE164(m.digits)) throw new UserError(`${formatPhone(m.digits)} isn't a US phone number.`);
-    if (!m.person) throw new UserError(`HQ only texts saved contacts. Add ${formatPhone(m.digits)} to a contact first.`);
-    if (await isUnsubscribed(m.person.id)) throw new UserError(`${m.person.name} is tagged Unsubscribed, so HQ won't text them.`);
+    if (!m.person && !teamCells.includes(m.digits)) throw new UserError(`HQ only texts saved contacts. Add ${formatPhone(m.digits)} to a contact first.`);
+    if (m.person && (await isUnsubscribed(m.person.id))) throw new UserError(`${m.person.name} is tagged Unsubscribed, so HQ won't text them.`);
   }
   const sid = await createGroup({ ourNumber, numbers: digits.map((d) => toE164(d)!), name: groupTitle(people.map(nameOf)), webhookUrl: conversationHook() })
     .catch((e: Error) => { throw new UserError(e.message); });
   await db.textThread.create({ data: { sid, ourNumber, group: true, members: digits, sender: `hq:${ourNumber}` } });
   await sendGroupText(user, { sid, body: o.body });
   return { sid };
+}
+
+/** Send text with more than one number (group texting on): one group text, the same thread as before if these people already have one. */
+export async function textNumbersAsGroup(user: { id: string; name: string }, o: { numbers: string[]; body: string }) {
+  const me = await db.user.findUnique({ where: { id: user.id }, select: { textNumber: true } });
+  const want = [...new Set(o.numbers.map(normalizePhone))].sort();
+  const same = me?.textNumber ? (await db.textThread.findMany({ where: { ourNumber: me.textNumber, group: true }, orderBy: { createdAt: "desc" } })).find((t) => [...t.members].sort().join() === want.join()) : undefined;
+  if (same) { await sendGroupText(user, { sid: same.sid, body: o.body }); return { sid: same.sid }; }
+  return startGroupText(user, { numbers: want, body: o.body });
 }
 
 export const groupReady = async () => isConnected("texting") && (await groupTextingOn());

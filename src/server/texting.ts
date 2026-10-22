@@ -204,5 +204,9 @@ export async function textComposerFor(user: SessionUser, unsubscribedName?: stri
     : !hasPermission(user.permissions, "sendTexts") ? "You don't have permission to send texts."
     : !me?.textNumber ? "You don't have a texting number yet. An Admin can add it in Admin → Integrations."
     : unsubscribedName ? `${unsubscribedName} is tagged Unsubscribed (they replied STOP), so HQ won't text them.` : null;
-  return { from: me?.textNumber ?? null, blocked, templates: templates.map((t) => ({ id: t.id, name: t.folder ? `${t.folder} · ${t.name}` : t.name })) };
+  // Group texting on: Send text also goes to the owner's cell (Luke's, so he's on every client thread; owner 2026-10-22).
+  const groups = (await db.appSetting.findUnique({ where: { key: "texting.groups" } }))?.value === true;
+  const owner = groups ? await db.user.findFirst({ where: { isOwner: true, forwardTo: { not: null } }, select: { id: true, name: true, forwardTo: true } }) : null;
+  const ownerCell = owner?.forwardTo ? { value: normalizePhone(owner.forwardTo), label: owner.id === user.id ? `Your cell · ${formatPhone(owner.forwardTo)}` : `${owner.name.split(" ")[0]}'s cell · ${formatPhone(owner.forwardTo)}`, personId: (await personForNumber(normalizePhone(owner.forwardTo)))?.id ?? null } : null;
+  return { from: me?.textNumber ?? null, blocked, groupsOn: groups, ownerCell, templates: templates.map((t) => ({ id: t.id, name: t.folder ? `${t.folder} · ${t.name}` : t.name })) };
 }

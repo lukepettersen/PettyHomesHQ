@@ -15,6 +15,7 @@ import { InfoCard, DetailsCard, CustomFieldsCard, TagsCard, DatesCard, DeletePer
 import { Timeline } from "./Timeline";
 import { TaskTrail } from "@/components/TaskTrail";
 import { textComposerFor } from "@/server/texting";
+import { formatPhone } from "@/lib/normalize";
 import { TasksCard } from "./TasksCard";
 import { FileTabs } from "./FileTabs";
 import { PipelineCard } from "./PipelineCard";
@@ -90,7 +91,14 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
   // Mass emails show whether they were opened (tracked for mass emails only).
   const recordings = new Map((await db.phoneCall.findMany({ where: { personId: p.id, entryId: { not: null }, recordingSid: { not: null } }, select: { id: true, entryId: true } })).map((c) => [c.entryId!, `/api/calls/${c.id}/audio`] as const));
   const opens = new Map((await db.emailTrack.findMany({ where: { personId: p.id, entryId: { not: null } }, select: { entryId: true, openedAt: true } })).map((t) => [t.entryId!, t.openedAt ? t.openedAt.toISOString() : null] as const));
-  const textProps = { ...(await textComposerFor(user, p.tags.some((t) => t.tag.name === "Unsubscribed") ? p.name : null)), phones: p.phones.map((x) => x.normalized).filter((n) => n.length === 10) };
+  const composer = await textComposerFor(user, p.tags.some((t) => t.tag.name === "Unsubscribed") ? p.name : null);
+  const textPhones = p.phones.filter((x) => x.normalized.length === 10);
+  // With group texting on, Send text starts with everyone on the contact plus the owner's cell (owner 2026-10-22).
+  const autoExtras = composer.groupsOn ? [
+    ...textPhones.slice(1).map((x) => ({ value: x.normalized, label: `${formatPhone(x.normalized)}${x.label ? ` (${x.label})` : ""}`, personId: p.id })),
+    ...(composer.ownerCell && !textPhones.some((x) => x.normalized === composer.ownerCell!.value) ? [composer.ownerCell] : []),
+  ] : [];
+  const textProps = { ...composer, phones: textPhones.map((x) => x.normalized), autoExtras };
   const emailProps = { emails: p.emails.map((e) => e.address), sendsFrom: gmail?.email ?? null, templates: emailTemplates.map((t) => ({ id: t.id, name: t.folder ? `${t.folder} · ${t.name}` : t.name })) };
   // A partner (lender, title, other agent) sees the deals they were picked for.
   const partnerDeals = await db.paPartner.findMany({ where: { personId: p.id, pa: { deletedAt: null, file: { deletedAt: null } } }, include: { pa: { include: { file: { include: { person: { select: { id: true, name: true } } } } } } }, orderBy: { pa: { createdAt: "desc" } } });

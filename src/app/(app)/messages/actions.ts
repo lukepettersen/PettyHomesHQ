@@ -11,7 +11,7 @@ import { fill } from "@/lib/merge";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { MAX_TEXT } from "@/lib/texting";
 import { completeTask } from "../tasks/actions";
-import { sendGroupText, startGroupText } from "@/server/groupText";
+import { sendGroupText, startGroupText, textNumbersAsGroup } from "@/server/groupText";
 import { closeConversation } from "@/server/twilio";
 import { isGroupKey, MAX_GROUP } from "@/lib/groupText";
 
@@ -128,5 +128,19 @@ export async function startGroup(input: { numbers: string[]; body: string }) {
   return guarded("sendTexts", async (user) => {
     const v = z.object({ numbers: z.array(digits).min(2, "Pick at least two people.").max(MAX_GROUP - 1, `Up to ${MAX_GROUP - 1} people plus you.`), body: z.string().trim().min(1, "Write a message.").max(MAX_TEXT) }).parse(input);
     return startGroupText(user, v);
+  });
+}
+
+/** Send text to a contact plus others, as one group text (group texting on). A task it came from is checked off. */
+export async function sendTextGroup(input: { numbers: string[]; body: string; personId?: string | null; taskId?: string | null }) {
+  return guarded("sendTexts", async (user) => {
+    const v = z.object({ numbers: z.array(digits).min(2).max(MAX_GROUP - 1, `Up to ${MAX_GROUP - 1} people plus you.`), body: z.string().trim().min(1, "Write a message.").max(MAX_TEXT), personId: id.nullable().optional(), taskId: z.string().trim().max(200).nullable().optional() }).parse(input);
+    const r = await textNumbersAsGroup(user, v);
+    if (v.taskId && v.personId) {
+      const t = await db.task.findFirst({ where: { id: v.taskId, personId: v.personId, deletedAt: null, completedAt: null } });
+      if (t) await completeTask(t.id);
+      revalidatePath("/tasks");
+    }
+    return r;
   });
 }
