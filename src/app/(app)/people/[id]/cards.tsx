@@ -62,6 +62,18 @@ function RowsEditor({ rows, setRows, kind, labelPh, valuePh }: { rows: Row[]; se
   );
 }
 
+/** Copy: name, phones and emails as plain lines, ready to paste into a text or email. */
+function CopyContact({ name, phones, emails }: { name: string; phones: Row[]; emails: Row[] }) {
+  const [msg, setMsg] = useState("");
+  const line = (x: Row) => (x.label ? `${x.value} (${x.label})` : x.value);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText([name, ...phones.map(line), ...emails.map(line)].join("\n")); setMsg("Copied"); }
+    catch { setMsg("Couldn't copy"); }
+    setTimeout(() => setMsg(""), 2000);
+  };
+  return <button type="button" className="text-sm font-semibold text-accent hover:underline" onClick={copy} aria-live="polite">{msg || "Copy"}</button>;
+}
+
 export function InfoCard(p: { id: string; name: string; address: string; phones: Row[]; emails: Row[]; lastContactDays: number | null }) {
   const e = useEdit();
   const [name, setName] = useState(p.name), [address, setAddress] = useState(p.address);
@@ -87,7 +99,10 @@ export function InfoCard(p: { id: string; name: string; address: string; phones:
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <h1 className="text-xl font-extrabold break-words">{p.name}</h1>
-            <button type="button" className="text-sm font-semibold text-accent hover:underline" onClick={() => e.setEditing(true)}>Edit</button>
+            <span className="flex shrink-0 gap-3">
+              <CopyContact name={p.name} phones={p.phones} emails={p.emails} />
+              <button type="button" className="text-sm font-semibold text-accent hover:underline" onClick={() => e.setEditing(true)}>Edit</button>
+            </span>
           </div>
           <p className="text-sm muted">{last === null ? "No contact yet" : last === 0 ? "Last contact today" : `Last contact ${last} days ago`}</p>
         </div>

@@ -185,7 +185,9 @@ Principles:
 - **Back link** returns to where you came from (People, Tasks, Messages or Pipeline) and that
   tab stays highlighted.
 - **Left:** contact info card, Details (stage, follow-up, assigned, source, mailing name),
-  Tags, Important Dates. Each card has Edit → Save/Cancel. "Delete person" at the bottom
+  Tags, Important Dates. Each card has Edit → Save/Cancel. The contact info card also has **Copy**
+  *(owner request 2026-10-22)*: copies the name, phones and emails (with their labels), one per line, to
+  paste into a text or email. "Delete person" at the bottom
   (Admin only, two-step).
 - **Middle:** a tab per active client file (Buyer / Listing) plus **Timeline**.
   - **Timeline:** composer with Note, Send text, Log text, Log call (with outcome).
