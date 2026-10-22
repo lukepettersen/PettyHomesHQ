@@ -42,15 +42,36 @@ export async function isUnsubscribed(personId: string) {
   return (await db.personTag.count({ where: { personId, tag: { name: UNSUB } } })) > 0;
 }
 
+/** How far apart two deliveries of the same text can arrive. */
+export const COPY_WINDOW = 3 * 60 * 1000;
+type Tx = Parameters<Parameters<typeof db.$transaction>[0]>[0];
+/**
+ * Runs a check-then-save for one line and person at a time (a database lock), so two copies of a text arriving
+ * at the same moment can't both be saved.
+ */
+export async function saveOnce<T>(ourNumber: string, theirs: string, fn: (tx: Tx) => Promise<T>): Promise<T> {
+  return db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`text:${ourNumber}:${theirs}`}))`;
+    return fn(tx);
+  });
+}
+
 /** A text that came in (from Twilio's webhook). STOP tags them Unsubscribed; START/YES removes it. */
 export async function recordIncoming(o: { from: string; to: string; body: string; sid: string }) {
   const theirs = normalizePhone(o.from);
-  if (await db.textMessage.findUnique({ where: { twilioSid: o.sid } })) return; // Twilio retried
-  // Already here as part of a group text (group texting sometimes also delivers a plain copy).
-  if (await db.textMessage.findFirst({ where: { ourNumber: o.to, fromNumber: theirs, direction: "in", body: o.body.slice(0, 5000), createdAt: { gte: new Date(Date.now() - 3 * 60 * 1000) } } })) return;
   const [owner, person] = await Promise.all([lineOwner(o.to), personForNumber(theirs)]);
   const body = o.body.slice(0, 5000);
-  await db.textMessage.create({ data: { ourNumber: o.to, theirNumber: theirs, personId: person?.id ?? null, direction: "in", body, twilioSid: o.sid, status: "received" } });
+  const saved = await saveOnce(o.to, theirs, async (tx) => {
+    if (await tx.textMessage.findUnique({ where: { twilioSid: o.sid } })) return false; // Twilio retried
+    const since = new Date(Date.now() - COPY_WINDOW);
+    // With group texting on, Twilio can deliver one text twice: plainly (SM…) and through Conversations (IM…),
+    // or as part of a group text. Keep the first copy only.
+    const other = o.sid.startsWith("IM") ? "SM" : "IM";
+    if (await tx.textMessage.findFirst({ where: { ourNumber: o.to, direction: "in", body, createdAt: { gte: since }, OR: [{ fromNumber: theirs }, { theirNumber: theirs, twilioSid: { startsWith: other } }] } })) return false;
+    await tx.textMessage.create({ data: { ourNumber: o.to, theirNumber: theirs, personId: person?.id ?? null, direction: "in", body, twilioSid: o.sid, status: "received" } });
+    return true;
+  });
+  if (!saved) return;
   if (person) {
     let extra = "";
     if (isStopWord(body)) { await setUnsubscribed(person.id, true); extra = " They replied STOP: tagged Unsubscribed, and texts to them are blocked."; }

@@ -5,7 +5,7 @@ import { UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { isConnected, textingEnabled } from "@/server/integrations";
 import { addGroupSender, closeConversation, conversationParticipants, createGroup, postGroupMessage, publicBase, setGroupAddress } from "@/server/twilio";
-import { dailyCap, isUnsubscribed, lineOwner, personForNumber, recordIncoming, setUnsubscribed } from "@/server/texting";
+import { COPY_WINDOW, dailyCap, isUnsubscribed, lineOwner, personForNumber, recordIncoming, saveOnce, setUnsubscribed } from "@/server/texting";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { centralDayStart, isStartWord, isStopWord, MAX_TEXT, toE164 } from "@/lib/texting";
 import { groupTitle, isGroupKey, MAX_GROUP, readParticipants } from "@/lib/groupText";
@@ -16,8 +16,6 @@ import { noteInbound } from "@/server/textDebug";
 // the normal recordIncoming; sending one-to-one still uses plain Twilio texts. Message bodies are never logged.
 
 const KEY = "texting.groups";
-/** A group text and a plain copy of it arrive within seconds; this window catches the copy either way round. */
-export const DUP_WINDOW = 3 * 60 * 1000;
 export const conversationHook = () => `${publicBase()}/api/twilio/conversation`;
 
 export async function groupTextingOn(): Promise<boolean> {
@@ -79,14 +77,20 @@ export async function handleConversationMessage(f: Record<string, string>) {
   if (!info.members.includes(from)) await db.textThread.update({ where: { sid }, data: { members: [...info.members, from] } });
   const people = await membersOf([...new Set([...info.members, from])]);
   const sender = people.find((m) => m.digits === from)!;
-  // The same text can also arrive as a plain one-to-one text; keep only the group copy.
-  const since = new Date(Date.now() - DUP_WINDOW);
-  const dupes = await db.textMessage.findMany({ where: { ourNumber: info.ourNumber, theirNumber: from, direction: "in", body, createdAt: { gte: since } }, select: { id: true, personId: true } });
-  if (dupes.length) {
-    await db.textMessage.deleteMany({ where: { id: { in: dupes.map((d) => d.id) } } });
-    for (const d of dupes) if (d.personId) await db.timelineEntry.deleteMany({ where: { personId: d.personId, kind: "text", outcome: "Received", body, createdAt: { gte: since } } });
-  }
-  await db.textMessage.create({ data: { ourNumber: info.ourNumber, theirNumber: sid, fromNumber: from, personId: sender.person?.id ?? null, direction: "in", body, twilioSid: msg, status: "received" } });
+  // The same text can also arrive as a plain one-to-one copy; keep only the group copy (same lock as recordIncoming).
+  const since = new Date(Date.now() - COPY_WINDOW);
+  const saved = await saveOnce(info.ourNumber, from, async (tx) => {
+    if (await tx.textMessage.findUnique({ where: { twilioSid: msg } })) return false;
+    const dupes = await tx.textMessage.findMany({ where: { ourNumber: info.ourNumber, theirNumber: from, direction: "in", body, createdAt: { gte: since } }, select: { id: true, personId: true } });
+    if (dupes.length) {
+      await tx.textMessage.deleteMany({ where: { id: { in: dupes.map((d) => d.id) } } });
+      for (const d of dupes) if (d.personId) await tx.timelineEntry.deleteMany({ where: { personId: d.personId, kind: "text", outcome: "Received", body, createdAt: { gte: since } } });
+      await tx.notification.deleteMany({ where: { createdAt: { gte: since }, text: { startsWith: "Text from " }, link: `/messages?n=${from}` } });
+    }
+    await tx.textMessage.create({ data: { ourNumber: info.ourNumber, theirNumber: sid, fromNumber: from, personId: sender.person?.id ?? null, direction: "in", body, twilioSid: msg, status: "received" } });
+    return true;
+  });
+  if (!saved) return;
   if (sender.person) {
     if (isStopWord(body)) await setUnsubscribed(sender.person.id, true);
     else if (isStartWord(body) && (await isUnsubscribed(sender.person.id))) await setUnsubscribed(sender.person.id, false);
