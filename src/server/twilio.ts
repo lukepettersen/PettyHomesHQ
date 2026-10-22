@@ -41,6 +41,17 @@ export async function sendSms(o: { from: string; to: string; body: string }): Pr
   }
 }
 
+/** The phone numbers in the Twilio account, for the Texting lines picker. Null when Twilio can't be reached. */
+export async function listNumbers(): Promise<{ number: string; name: string }[] | null> {
+  try {
+    const r = await call(`${account("/IncomingPhoneNumbers.json")}?PageSize=100`);
+    if (!r.ok) return null;
+    return ((r.json.incoming_phone_numbers as Json[] | undefined) ?? []).map((n) => ({ number: String(n.phone_number), name: String(n.friendly_name ?? "") }));
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Points a number's texts and calls at HQ: its incoming-text and incoming-call webhooks, and the Messaging
  * Service it's in (registered for A2P 10DLC) set to use the number's own webhook. Returns what still needs doing.

@@ -5,27 +5,28 @@ import { useState, useTransition } from "react";
 import { formatPhone } from "@/lib/normalize";
 import { saveDailyCap, saveTextLine } from "./actions";
 
+type Twilio = { number: string; name: string };
 type Line = { userId: string; name: string; number: string | null; forwardTo: string | null };
 
 /** Admin → Integrations → Texting: each team member's own number, call forwarding, and the daily limit. */
-export function TextLines({ lines, cap }: { lines: Line[]; cap: number }) {
+export function TextLines({ lines, cap, numbers }: { lines: Line[]; cap: number; numbers: Twilio[] | null }) {
   return (
     <div className="flex flex-col gap-3">
       <h3 className="text-xs font-semibold uppercase tracking-wider muted">Numbers</h3>
-      {lines.map((l) => <LineRow key={l.userId} line={l} />)}
+      {lines.map((l) => <LineRow key={l.userId} line={l} numbers={numbers} taken={lines.filter((o) => o.userId !== l.userId && o.number)} />)}
       <CapRow cap={cap} />
     </div>
   );
 }
 
-function LineRow({ line }: { line: Line }) {
+function LineRow({ line, numbers, taken }: { line: Line; numbers: Twilio[] | null; taken: Line[] }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
-  const [number, setNumber] = useState(line.number ? formatPhone(line.number) : "");
+  const [number, setNumber] = useState(line.number ?? "");
   const [cell, setCell] = useState(line.forwardTo ? formatPhone(line.forwardTo) : "");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
-  const cancel = () => { setEditing(false); setNumber(line.number ? formatPhone(line.number) : ""); setCell(line.forwardTo ? formatPhone(line.forwardTo) : ""); };
+  const cancel = () => { setEditing(false); setNumber(line.number ?? ""); setCell(line.forwardTo ? formatPhone(line.forwardTo) : ""); };
   const save = () => start(async () => {
     const r = await saveTextLine({ userId: line.userId, number, forwardTo: cell });
     if (!r.ok) { setMsg({ ok: false, text: r.error }); return; }
@@ -41,7 +42,21 @@ function LineRow({ line }: { line: Line }) {
         <p className="text-sm muted">{line.number ? <>Texts from <b className="text-charcoal">{formatPhone(line.number)}</b> · {line.forwardTo ? <>calls ring {formatPhone(line.forwardTo)}</> : "calls go to missed calls"}</> : "No texting number yet."}</p>
       ) : (
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <label className="label">Texting number (from Twilio)<input className="input" inputMode="tel" value={number} onChange={(e) => setNumber(e.target.value)} placeholder="952-243-7646" /></label>
+          {numbers ? (
+            // A pick list of the Twilio account's numbers (owner request 2026-10-22); one taken by a teammate is marked.
+            <label className="label">Texting number (from Twilio)
+              <select className="input" value={number} onChange={(e) => setNumber(e.target.value)}>
+                <option value="">No number</option>
+                {line.number && !numbers.some((n) => n.number === line.number) && <option value={line.number}>{formatPhone(line.number)} (not in Twilio)</option>}
+                {numbers.map((n) => {
+                  const who = taken.find((o) => o.number === n.number);
+                  return <option key={n.number} value={n.number} disabled={!!who}>{formatPhone(n.number)}{who ? ` (${who.name})` : ""}</option>;
+                })}
+              </select>
+            </label>
+          ) : (
+            <label className="label">Texting number (from Twilio)<input className="input" inputMode="tel" value={number} onChange={(e) => setNumber(e.target.value)} placeholder="952-243-7646" /></label>
+          )}
           <label className="label">Forward calls to (cell)<input className="input" inputMode="tel" value={cell} onChange={(e) => setCell(e.target.value)} placeholder="Leave empty for missed calls only" /></label>
           <span className="flex gap-2 sm:col-span-2 sm:justify-end">
             <button type="button" className="btn" onClick={cancel}>Cancel</button>

@@ -517,7 +517,9 @@ Principles:
   works.
 - **Turning it on:** owner creates a Twilio account, buys a number per person, completes carrier
   business-texting registration (A2P 10DLC), adds TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in Railway,
-  then enters each person's number (and cell to forward calls to) in Admin → Integrations. Saving points
+  then picks each person's number (and enters a cell to forward calls to) in Admin → Integrations. The
+  number is a **drop-down of the numbers in the Twilio account** *(owner request 2026-10-22)*; one already
+  used by a teammate is greyed out with their name. If Twilio can't be reached it's a typed box. Saving points
   the number at HQ in Twilio. Steps in docs/ops.md.
 - **Admin → Integrations → Texting** on/off switch to pause sending anytime.
 - Safety when on: honor STOP/opt-out automatically (a STOP reply tags them **Unsubscribed**; START or

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-import { connectNumber, sendSms } from "./twilio";
+import { connectNumber, listNumbers, sendSms } from "./twilio";
 
 type Call = { url: string; body: string };
 let calls: Call[] = [];
@@ -35,6 +35,13 @@ describe("twilio", () => {
     expect(new URLSearchParams(upd.body).get("SmsUrl")).toBe("https://hq.example.com/api/twilio/sms");
     expect(new URLSearchParams(upd.body).get("VoiceUrl")).toBe("https://hq.example.com/api/twilio/voice");
     expect(calls.find((c) => c.url.endsWith("/Services/MG1"))!.body).toBe("UseInboundWebhookOnNumber=true");
+  });
+
+  it("lists the account's numbers", async () => {
+    fakeTwilio([[/IncomingPhoneNumbers\.json\?PageSize=100/, { incoming_phone_numbers: [{ phone_number: "+19522437646", friendly_name: "(952) 243-7646" }] }]]);
+    expect(await listNumbers()).toEqual([{ number: "+19522437646", name: "(952) 243-7646" }]);
+    fakeTwilio([[/IncomingPhoneNumbers/, { message: "no" }, 401]]);
+    expect(await listNumbers()).toBeNull();
   });
 
   it("says when the number isn't in the account or HQ isn't https", async () => {
