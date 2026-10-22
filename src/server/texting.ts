@@ -46,6 +46,8 @@ export async function isUnsubscribed(personId: string) {
 export async function recordIncoming(o: { from: string; to: string; body: string; sid: string }) {
   const theirs = normalizePhone(o.from);
   if (await db.textMessage.findUnique({ where: { twilioSid: o.sid } })) return; // Twilio retried
+  // Already here as part of a group text (group texting sometimes also delivers a plain copy).
+  if (await db.textMessage.findFirst({ where: { ourNumber: o.to, fromNumber: theirs, direction: "in", body: o.body.slice(0, 5000), createdAt: { gte: new Date(Date.now() - 3 * 60 * 1000) } } })) return;
   const [owner, person] = await Promise.all([lineOwner(o.to), personForNumber(theirs)]);
   const body = o.body.slice(0, 5000);
   await db.textMessage.create({ data: { ourNumber: o.to, theirNumber: theirs, personId: person?.id ?? null, direction: "in", body, twilioSid: o.sid, status: "received" } });

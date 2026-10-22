@@ -12,6 +12,7 @@ import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { MAX_TEXT } from "@/lib/texting";
 import { completeTask } from "../tasks/actions";
 import { sendGroupText, startGroupText } from "@/server/groupText";
+import { closeConversation } from "@/server/twilio";
 import { isGroupKey, MAX_GROUP } from "@/lib/groupText";
 
 const id = z.string().trim().min(1).max(40);
@@ -107,6 +108,8 @@ export async function deleteThread(input: { ourNumber: string; number: string })
   return guarded("sendTexts", async (user) => {
     const v = z.object({ ourNumber: z.string().trim().max(20), number: threadKey }).parse(input);
     const r = await db.textMessage.deleteMany({ where: { ourNumber: v.ourNumber, theirNumber: v.number } });
+    // A group text is also ended in Twilio, so its people's numbers are free for other group texts.
+    if (isGroupKey(v.number)) { await closeConversation(v.number); await db.textThread.deleteMany({ where: { sid: v.number } }); }
     await logActivity(user.id, "delete", "text", null, `Deleted the conversation with ${isGroupKey(v.number) ? "a group" : formatPhone(v.number)} (${r.count} messages)`);
     revalidatePath("/messages");
   });

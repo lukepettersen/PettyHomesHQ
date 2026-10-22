@@ -538,6 +538,9 @@ Principles:
   **Send to N people** starts a group text. Group messages go on the timeline of every contact in the group
   ("Group text from Sam: …" / "Group text: …"). Unsubscribed people block sending to their group; the daily limit
   counts group texts. One-to-one texts keep working as before (they arrive through Conversations while it's on).
+  If the same text also arrives as a plain one-to-one copy, only the group copy is kept. One-to-one Conversations
+  are closed right after their text is saved (HQ texts one-to-one the plain way), so a person's number stays free
+  for their group texts. Deleting a group thread in Messages also ends that group in Twilio.
   Turning the switch off removes the setup and closes HQ's Conversations so texts go back to the plain way;
   earlier split threads stay as they were. Twilio's Conversations fee: first 200 people a month free, then about
   $0.05 per person a month.

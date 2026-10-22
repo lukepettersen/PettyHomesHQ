@@ -15,6 +15,8 @@ import { groupTitle, isGroupKey, MAX_GROUP, readParticipants } from "@/lib/group
 // the normal recordIncoming; sending one-to-one still uses plain Twilio texts. Message bodies are never logged.
 
 const KEY = "texting.groups";
+/** A group text and a plain copy of it arrive within seconds; this window catches the copy either way round. */
+export const DUP_WINDOW = 3 * 60 * 1000;
 export const conversationHook = () => `${publicBase()}/api/twilio/conversation`;
 
 export async function groupTextingOn(): Promise<boolean> {
@@ -60,12 +62,26 @@ export async function handleConversationMessage(f: Record<string, string>) {
   if (!info) return;
   let body = (f.Body ?? "").slice(0, 5000);
   if (f.Media && f.Media !== "[]" && f.Media !== "null") body = body ? `${body}\n[picture]` : "[picture]";
-  if (!info.group) return recordIncoming({ from: author, to: info.ourNumber, body, sid: msg });
+  if (!info.group) {
+    await recordIncoming({ from: author, to: info.ourNumber, body, sid: msg });
+    // HQ handles one-to-one texts the plain way, so close this Conversation: while it's open Twilio ties the
+    // person's number to it and sends their later group texts here instead of to the group.
+    await closeConversation(sid);
+    await db.textThread.delete({ where: { sid } }).catch(() => null);
+    return;
+  }
 
   const from = normalizePhone(author);
   if (!info.members.includes(from)) await db.textThread.update({ where: { sid }, data: { members: [...info.members, from] } });
   const people = await membersOf([...new Set([...info.members, from])]);
   const sender = people.find((m) => m.digits === from)!;
+  // The same text can also arrive as a plain one-to-one text; keep only the group copy.
+  const since = new Date(Date.now() - DUP_WINDOW);
+  const dupes = await db.textMessage.findMany({ where: { ourNumber: info.ourNumber, theirNumber: from, direction: "in", body, createdAt: { gte: since } }, select: { id: true, personId: true } });
+  if (dupes.length) {
+    await db.textMessage.deleteMany({ where: { id: { in: dupes.map((d) => d.id) } } });
+    for (const d of dupes) if (d.personId) await db.timelineEntry.deleteMany({ where: { personId: d.personId, kind: "text", outcome: "Received", body, createdAt: { gte: since } } });
+  }
   await db.textMessage.create({ data: { ourNumber: info.ourNumber, theirNumber: sid, fromNumber: from, personId: sender.person?.id ?? null, direction: "in", body, twilioSid: msg, status: "received" } });
   if (sender.person) {
     if (isStopWord(body)) await setUnsubscribed(sender.person.id, true);
