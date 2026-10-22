@@ -1,6 +1,7 @@
 import { forbidden, twilioForm, xml } from "@/server/twilioWebhook";
 import { recordIncoming } from "@/server/texting";
 import { EMPTY_TWIML } from "@/lib/texting";
+import { noteInbound } from "@/server/textDebug";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const f = await twilioForm(req, "/api/twilio/sms");
   if (!f) return forbidden();
+  await noteInbound({ via: "plain", from: f.From, to: f.To, media: Number(f.NumMedia ?? 0), fields: Object.keys(f).filter((k) => !/^(Body|MediaUrl\d+)$/.test(k)) });
   if (f.MessageSid && f.From && f.To) await recordIncoming({ from: f.From, to: f.To, body: f.Body ?? "", sid: f.MessageSid });
   return xml(EMPTY_TWIML);
 }

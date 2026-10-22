@@ -9,6 +9,7 @@ import { dailyCap, isUnsubscribed, lineOwner, personForNumber, recordIncoming, s
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { centralDayStart, isStartWord, isStopWord, MAX_TEXT, toE164 } from "@/lib/texting";
 import { groupTitle, isGroupKey, MAX_GROUP, readParticipants } from "@/lib/groupText";
+import { noteInbound } from "@/server/textDebug";
 
 // Group texting (SPEC.md §11, owner request 2026-10-22). With it on, Twilio Conversations keeps each group text
 // together and posts every message to /api/twilio/conversation. One-to-one texts that arrive this way go through
@@ -50,6 +51,8 @@ async function threadInfo(sid: string) {
 async function membersOf(members: string[]) {
   return Promise.all(members.map(async (d) => ({ digits: d, person: await personForNumber(d) })));
 }
+/** One entry per contact: a couple's two numbers are one contact. */
+const uniqueContacts = <T extends { person: { id: string } | null }>(people: T[]) => people.filter((m, i) => !m.person || people.findIndex((x) => x.person?.id === m.person!.id) === i);
 const nameOf = (m: { digits: string; person: { name: string } | null }) => m.person?.name ?? formatPhone(m.digits);
 
 /** Twilio's onMessageAdded webhook for a Conversation. */
@@ -59,6 +62,7 @@ export async function handleConversationMessage(f: Record<string, string>) {
   if (!sid || !msg || !author.startsWith("+")) return; // our own messages have an "hq:" author
   if (await db.textMessage.findUnique({ where: { twilioSid: msg } })) return;
   const info = await threadInfo(sid);
+  await noteInbound({ via: "conversation", from: author, to: info?.ourNumber ?? "", group: info?.group, people: info ? info.members.length : undefined, media: f.Media && f.Media !== "[]" ? 1 : 0 });
   if (!info) return;
   let body = (f.Body ?? "").slice(0, 5000);
   if (f.Media && f.Media !== "[]" && f.Media !== "null") body = body ? `${body}\n[picture]` : "[picture]";
@@ -88,8 +92,8 @@ export async function handleConversationMessage(f: Record<string, string>) {
     else if (isStartWord(body) && (await isUnsubscribed(sender.person.id))) await setUnsubscribed(sender.person.id, false);
     await db.person.update({ where: { id: sender.person.id }, data: { lastTextAt: new Date(), lastContactAt: new Date() } });
   }
-  // On every contact in the group, so each timeline shows the whole conversation.
-  for (const m of people) if (m.person) {
+  // On every contact in the group (once each, even with two numbers in it), so each timeline shows the whole conversation.
+  for (const m of uniqueContacts(people)) if (m.person) {
     await db.timelineEntry.create({ data: { personId: m.person.id, kind: "text", outcome: "Received", body: `Group text from ${nameOf(sender)}: ${body}` } });
     revalidatePath(`/people/${m.person.id}`);
   }
@@ -127,14 +131,14 @@ export async function sendGroupText(user: { id: string; name: string }, o: { sid
   const r = await postGroupMessage(o.sid, author, text);
   if (!r.ok) throw new UserError(r.error);
   await db.textMessage.create({ data: { ourNumber, theirNumber: o.sid, direction: "out", body: text, twilioSid: r.sid, status: r.status, sentById: user.id, readAt: new Date() } });
-  for (const m of people) if (m.person) {
+  for (const m of uniqueContacts(people)) if (m.person) {
     await db.$transaction([
       db.timelineEntry.create({ data: { personId: m.person.id, kind: "text", outcome: "Sent", body: `Group text: ${text}`, authorId: user.id } }),
       db.person.update({ where: { id: m.person.id }, data: { lastTextAt: new Date(), lastContactAt: new Date() } }),
     ]);
     revalidatePath(`/people/${m.person.id}`);
   }
-  await logActivity(user.id, "create", "text", null, `Group text to ${groupTitle(people.map(nameOf))}`);
+  await logActivity(user.id, "create", "text", null, `Group text to ${groupTitle([...new Set(people.map(nameOf))])}`);
   revalidatePath("/messages");
 }
 
@@ -151,7 +155,7 @@ export async function startGroupText(user: { id: string; name: string }, o: { nu
     if (!m.person && !teamCells.includes(m.digits)) throw new UserError(`HQ only texts saved contacts. Add ${formatPhone(m.digits)} to a contact first.`);
     if (m.person && (await isUnsubscribed(m.person.id))) throw new UserError(`${m.person.name} is tagged Unsubscribed, so HQ won't text them.`);
   }
-  const sid = await createGroup({ ourNumber, numbers: digits.map((d) => toE164(d)!), name: groupTitle(people.map(nameOf)), webhookUrl: conversationHook() })
+  const sid = await createGroup({ ourNumber, numbers: digits.map((d) => toE164(d)!), name: groupTitle([...new Set(people.map(nameOf))]), webhookUrl: conversationHook() })
     .catch((e: Error) => { throw new UserError(e.message); });
   await db.textThread.create({ data: { sid, ourNumber, group: true, members: digits, sender: `hq:${ourNumber}` } });
   await sendGroupText(user, { sid, body: o.body });

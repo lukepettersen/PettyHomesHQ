@@ -161,7 +161,9 @@ export async function groupNames(sids: string[]): Promise<Map<string, GroupInfo>
   const out = new Map<string, GroupInfo>();
   for (const t of await db.textThread.findMany({ where: { sid: { in: sids } } })) {
     const members = await Promise.all(t.members.map(async (d) => { const p = await personForNumber(d); return { name: p?.name ?? formatPhone(d), personId: p?.id ?? null, digits: d }; }));
-    out.set(t.sid, { title: groupTitle(members.map((m) => m.name)), members });
+    // A contact with two numbers in the group shows once.
+    const shown = members.filter((m, i) => !m.personId || members.findIndex((x) => x.personId === m.personId) === i);
+    out.set(t.sid, { title: groupTitle(shown.map((m) => m.name)), members: shown });
   }
   return out;
 }

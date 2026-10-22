@@ -3,18 +3,29 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { formatPhone } from "@/lib/normalize";
+import type { InboundNote } from "@/server/textDebug";
 import { saveDailyCap, saveTextLine, setGroupTexting, setRecordCalls } from "./actions";
 
 type Twilio = { number: string; name: string; mms: boolean };
 type Line = { userId: string; name: string; number: string | null; forwardTo: string | null };
 
 /** Admin → Integrations → Texting: each team member's own number, call forwarding, and the daily limit. */
-export function TextLines({ lines, cap, numbers, record, groups, groupSetUp }: { lines: Line[]; cap: number; numbers: Twilio[] | null; record: boolean; groups: boolean; groupSetUp: string[] | null }) {
+export function TextLines({ lines, cap, numbers, record, groups, groupSetUp, inbound }: { lines: Line[]; cap: number; numbers: Twilio[] | null; record: boolean; groups: boolean; groupSetUp: string[] | null; inbound: InboundNote[] }) {
   return (
     <div className="flex flex-col gap-3">
       <h3 className="text-xs font-semibold uppercase tracking-wider muted">Numbers</h3>
       {lines.map((l) => <LineRow key={l.userId} line={l} numbers={numbers} groupSetUp={groupSetUp} taken={lines.filter((o) => o.userId !== l.userId && o.number)} />)}
       <GroupRow on={groups} />
+      {groups && inbound.length > 0 && (
+        <details className="text-xs">
+          <summary className="cursor-pointer font-semibold muted">Recent incoming texts (troubleshooting)</summary>
+          <ul className="mt-1 flex flex-col gap-0.5 font-mono">
+            {inbound.map((n, i) => (
+              <li key={i}>{new Date(n.at).toLocaleTimeString("en-US", { timeZone: "America/Chicago", hour: "numeric", minute: "2-digit", second: "2-digit" }).replace(" ", "").toLowerCase()} · {n.via === "plain" ? "PLAIN" : `CONVERSATION${n.group ? " GROUP" : " 1:1"}`} · from …{n.from} to …{n.to}{n.people !== undefined ? ` · ${n.people} other people` : ""}{n.media ? " · media" : ""}{n.fields ? ` · ${n.fields.join(",")}` : ""}</li>
+            ))}
+          </ul>
+        </details>
+      )}
       <RecordRow on={record} />
       <CapRow cap={cap} />
     </div>
