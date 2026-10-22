@@ -8,6 +8,7 @@ import { hasPermission } from "@/server/permissions";
 import type { SessionUser } from "@/server/auth";
 import { sendSms } from "@/server/twilio";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
+import { groupTitle, isGroupKey } from "@/lib/groupText";
 import { callLength, centralDayStart, DEFAULT_DAILY_CAP, isStartWord, isStopWord, MAX_TEXT, toE164 } from "@/lib/texting";
 
 // Business texting (SPEC.md §11). Each team member has their own Twilio number (owner, 2026-10-20). Texts and
@@ -30,9 +31,9 @@ export async function personForNumber(digits: string) {
   return phone?.person ?? null;
 }
 
-const lineOwner = (ourNumber: string) => db.user.findFirst({ where: { textNumber: ourNumber, status: { not: "DISABLED" } }, select: { id: true, name: true, forwardTo: true } });
+export const lineOwner = (ourNumber: string) => db.user.findFirst({ where: { textNumber: ourNumber, status: { not: "DISABLED" } }, select: { id: true, name: true, forwardTo: true } });
 
-async function setUnsubscribed(personId: string, on: boolean) {
+export async function setUnsubscribed(personId: string, on: boolean) {
   const tag = await db.tag.upsert({ where: { name: UNSUB }, create: { name: UNSUB }, update: {} });
   if (on) await db.personTag.upsert({ where: { personId_tagId: { personId, tagId: tag.id } }, create: { personId, tagId: tag.id }, update: {} });
   else await db.personTag.deleteMany({ where: { personId, tagId: tag.id } });
@@ -149,24 +150,39 @@ export async function sendTextAs(user: { id: string; name: string }, o: { person
 }
 
 // ---------- Messages page ----------
-export type Thread = { number: string; personId: string | null; name: string; last: string; lastKind: string; lastDir: string; at: string; unread: number };
-export type Bubble = { id: string; direction: string; kind: string; body: string; status: string; error: string | null; by: string | null; at: string };
+export type Thread = { number: string; personId: string | null; name: string; last: string; lastKind: string; lastDir: string; at: string; unread: number; group?: boolean };
+export type Bubble = { id: string; direction: string; kind: string; body: string; status: string; error: string | null; by: string | null; at: string; from?: string | null };
+export type GroupInfo = { title: string; members: { name: string; personId: string | null; digits: string }[] };
+
+/** Group texts' names (the people in them, as contacts where we have them). */
+export async function groupNames(sids: string[]): Promise<Map<string, GroupInfo>> {
+  const out = new Map<string, GroupInfo>();
+  for (const t of await db.textThread.findMany({ where: { sid: { in: sids } } })) {
+    const members = await Promise.all(t.members.map(async (d) => { const p = await personForNumber(d); return { name: p?.name ?? formatPhone(d), personId: p?.id ?? null, digits: d }; }));
+    out.set(t.sid, { title: groupTitle(members.map((m) => m.name)), members });
+  }
+  return out;
+}
 
 export async function loadThreads(ourNumber: string): Promise<Thread[]> {
   const latest = await db.textMessage.findMany({ where: { ourNumber }, orderBy: { createdAt: "desc" }, distinct: ["theirNumber"], take: 300, include: { person: { select: { id: true, name: true, deletedAt: true } } } });
   const unread = await db.textMessage.groupBy({ by: ["theirNumber"], where: { ourNumber, direction: "in", readAt: null }, _count: true });
   const unreadBy = new Map(unread.map((u) => [u.theirNumber, u._count]));
   const people = new Map<string, { id: string; name: string } | null>();
-  for (const m of latest) if (!m.person || m.person.deletedAt) people.set(m.theirNumber, await personForNumber(m.theirNumber));
+  const groups = await groupNames(latest.filter((m) => isGroupKey(m.theirNumber)).map((m) => m.theirNumber));
+  for (const m of latest) if (!isGroupKey(m.theirNumber) && (!m.person || m.person.deletedAt)) people.set(m.theirNumber, await personForNumber(m.theirNumber));
   return latest.map((m) => {
+    const base = { number: m.theirNumber, last: m.kind === "missed_call" ? "Missed call" : m.body, lastKind: m.kind, lastDir: m.direction, at: m.createdAt.toISOString(), unread: unreadBy.get(m.theirNumber) ?? 0 };
+    if (isGroupKey(m.theirNumber)) return { ...base, personId: null, name: groups.get(m.theirNumber)?.title ?? "Group text", group: true };
     const p = m.person && !m.person.deletedAt ? m.person : people.get(m.theirNumber) ?? null;
-    return { number: m.theirNumber, personId: p?.id ?? null, name: p?.name ?? formatPhone(m.theirNumber), last: m.kind === "missed_call" ? "Missed call" : m.body, lastKind: m.kind, lastDir: m.direction, at: m.createdAt.toISOString(), unread: unreadBy.get(m.theirNumber) ?? 0 };
+    return { ...base, personId: p?.id ?? null, name: p?.name ?? formatPhone(m.theirNumber) };
   });
 }
 
 export async function loadConversation(ourNumber: string, theirNumber: string): Promise<Bubble[]> {
-  const rows = await db.textMessage.findMany({ where: { ourNumber, theirNumber }, orderBy: { createdAt: "asc" }, take: 500, include: { sentBy: { select: { name: true } } } });
-  return rows.map((m) => ({ id: m.id, direction: m.direction, kind: m.kind, body: m.body, status: m.status, error: m.error, by: m.sentBy?.name.split(" ")[0] ?? null, at: m.createdAt.toISOString() }));
+  const rows = await db.textMessage.findMany({ where: { ourNumber, theirNumber }, orderBy: { createdAt: "asc" }, take: 500, include: { sentBy: { select: { name: true } }, person: { select: { name: true } } } });
+  return rows.map((m) => ({ id: m.id, direction: m.direction, kind: m.kind, body: m.body, status: m.status, error: m.error, by: m.sentBy?.name.split(" ")[0] ?? null, at: m.createdAt.toISOString(),
+    from: m.fromNumber ? m.person?.name ?? formatPhone(m.fromNumber) : null }));
 }
 
 /** Unread texts and missed calls on the user's number, for the Messages tab. */

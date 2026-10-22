@@ -530,6 +530,17 @@ Principles:
   number is a **drop-down of the numbers in the Twilio account** *(owner request 2026-10-22)*; one already
   used by a teammate is greyed out with their name. If Twilio can't be reached it's a typed box. Saving points
   the number at HQ in Twilio. Steps in docs/ops.md.
+- **Group texts** *(owner request 2026-10-22; FUB had them)*: an Admin → Integrations → Texting switch ("Group
+  texts", off until turned on) sets up Twilio Conversations on every team number. Then a group text that includes
+  a team number (started by a client, or an existing FUB group someone replies in) shows in Messages as **one
+  thread** marked GROUP, each message labelled with who sent it, and **Send to group** replies to everyone from
+  that person's number. **+ New message** → pick two or more contacts' numbers (up to 9 plus you) → write →
+  **Send to N people** starts a group text. Group messages go on the timeline of every contact in the group
+  ("Group text from Sam: …" / "Group text: …"). Unsubscribed people block sending to their group; the daily limit
+  counts group texts. One-to-one texts keep working as before (they arrive through Conversations while it's on).
+  Turning the switch off removes the setup and closes HQ's Conversations so texts go back to the plain way;
+  earlier split threads stay as they were. Twilio's Conversations fee: first 200 people a month free, then about
+  $0.05 per person a month.
 - **Admin → Integrations → Texting** on/off switch to pause sending anytime.
 - Safety when on: honor STOP/opt-out automatically (a STOP reply tags them **Unsubscribed**; START or
   YES removes it); never text people tagged Unsubscribed; quiet hours 8am–8pm Central apply to

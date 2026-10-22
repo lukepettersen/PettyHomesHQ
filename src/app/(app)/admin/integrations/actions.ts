@@ -7,7 +7,8 @@ import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { isConnected } from "@/server/integrations";
 import { calendarConnection, disconnect, syncContract } from "@/server/google";
-import { connectNumber } from "@/server/twilio";
+import { connectNumber, setGroupAddress } from "@/server/twilio";
+import { applyGroupTexting, conversationHook, groupTextingOn } from "@/server/groupText";
 import { toE164 } from "@/lib/texting";
 
 /** Admin → Integrations → Texting on/off: pause or resume sending. */
@@ -18,6 +19,20 @@ export async function setTexting(on: boolean) {
     await db.appSetting.upsert({ where: { key: "texting.enabled" }, update: { value }, create: { key: "texting.enabled", value } });
     await logActivity(user.id, "update", "setting", "texting.enabled", `Texting turned ${value ? "on" : "off"}`);
     revalidatePath("/admin/integrations");
+  });
+}
+
+/** Admin → Integrations → Texting: group texts kept together through Twilio Conversations (owner 2026-10-22). */
+export async function setGroupTexting(on: boolean) {
+  return guarded("manageUsers", async (user) => {
+    const value = z.boolean().parse(on);
+    if (!isConnected("texting")) throw new UserError("Add the Twilio keys in Railway first.");
+    const problems = await applyGroupTexting(value);
+    if (problems.length && value) { await applyGroupTexting(false); throw new UserError(`Group texting wasn't turned on. ${problems.join(" ")}`); }
+    await db.appSetting.upsert({ where: { key: "texting.groups" }, update: { value }, create: { key: "texting.groups", value } });
+    await logActivity(user.id, "update", "setting", "texting.groups", `Group texting turned ${value ? "on" : "off"}`);
+    revalidatePath("/admin/integrations");
+    return { message: problems.length ? `Turned off, but: ${problems.join(" ")}` : value ? "Group texting is on." : "Group texting is off." };
   });
 }
 
@@ -48,13 +63,24 @@ export async function saveTextLine(input: z.input<typeof lineSchema>) {
     const member = await db.user.findUnique({ where: { id: v.userId }, select: { name: true } });
     if (!member) throw new UserError("That team member was removed.");
     if (number && (await db.user.findFirst({ where: { textNumber: number, id: { not: v.userId } } }))) throw new UserError("Another team member already has that number.");
+    const before = (await db.user.findUnique({ where: { id: v.userId }, select: { textNumber: true } }))?.textNumber ?? null;
     await db.user.update({ where: { id: v.userId }, data: { textNumber: number, forwardTo } });
     await logActivity(user.id, "update", "user", v.userId, `Texting number for ${member.name}: ${number ?? "none"}${forwardTo ? ", calls forward to their cell" : ", calls go to missed calls"}`);
     revalidatePath("/admin/integrations");
-    if (!number) return { message: "Saved." };
+    if (!number) {
+      if (before && (await groupTextingOn())) await setGroupAddress(before, false, conversationHook());
+      return { message: "Saved." };
+    }
     if (!isConnected("texting")) return { message: "Saved, but Twilio isn't connected yet (add the Twilio keys in Railway), so the number wasn't set up in Twilio. Save again once it says Connected." };
     const r = await connectNumber(number);
-    return { message: r.ok ? `Saved. ${r.message}` : `Saved, but: ${r.message}` };
+    // Group texting follows the number: on for the new one, off for the one it replaced.
+    let group = "";
+    if (await groupTextingOn()) {
+      if (before && before !== number) await setGroupAddress(before, false, conversationHook());
+      const g = await setGroupAddress(number, true, conversationHook());
+      if (!g.ok) group = ` Group texting: ${g.message}`;
+    }
+    return { message: (r.ok ? `Saved. ${r.message}` : `Saved, but: ${r.message}`) + group };
   });
 }
 

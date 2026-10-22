@@ -5,7 +5,7 @@ import { sendProblem } from "@/lib/texting";
 // Railway variables and are never logged. TWILIO_API_BASE points tests at a fake server.
 
 const creds = () => ({ sid: process.env.TWILIO_ACCOUNT_SID?.trim() ?? "", token: process.env.TWILIO_AUTH_TOKEN?.trim() ?? "" });
-const host = (name: "api" | "messaging") => (process.env.TWILIO_API_BASE ? `${process.env.TWILIO_API_BASE.replace(/\/$/, "")}/${name}` : `https://${name}.twilio.com`);
+const host = (name: "api" | "messaging" | "conversations") => (process.env.TWILIO_API_BASE ? `${process.env.TWILIO_API_BASE.replace(/\/$/, "")}/${name}` : `https://${name}.twilio.com`);
 export const twilioToken = () => creds().token;
 /** HQ's public address, which Twilio calls back (the same one Google sign-in uses). */
 export const publicBase = () => (process.env.NEXTAUTH_URL ?? "").trim().replace(/\/$/, "");
@@ -91,4 +91,89 @@ export async function connectNumber(number: string): Promise<{ ok: boolean; mess
   } catch {
     return { ok: false, message: "Couldn't reach Twilio. Try again." };
   }
+}
+
+// ---------- Group texting: Twilio Conversations (owner request 2026-10-22) ----------
+// With an Address Configuration on a team number, Twilio keeps each group text (and each one-to-one chat) as a
+// Conversation and posts every new message to HQ's /api/twilio/conversation webhook.
+
+const conv = (path: string) => `${host("conversations")}/v1${path}`;
+const formOf = (o: Record<string, string | string[]>) => {
+  const f = new URLSearchParams();
+  for (const [k, v] of Object.entries(o)) for (const x of Array.isArray(v) ? v : [v]) f.append(k, x);
+  return f;
+};
+async function callForm(url: string, form: URLSearchParams, method = "POST"): Promise<{ ok: boolean; status: number; json: Json }> {
+  const { sid, token } = creds();
+  const res = await fetch(url, {
+    method, headers: { Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`, "Content-Type": "application/x-www-form-urlencoded" },
+    body: method === "DELETE" ? undefined : form.toString(), signal: AbortSignal.timeout(15000), cache: "no-store",
+  });
+  return { ok: res.ok, status: res.status, json: (await res.json().catch(() => ({}))) as Json };
+}
+const problem = (r: { status: number; json: Json }, what: string) => (r.status === 401 ? sendProblem(20003) : `${what} (Twilio said: ${String(r.json.message ?? r.status).slice(0, 160)})`);
+
+/** Turns group texting on or off for one number (its Address Configuration). */
+export async function setGroupAddress(number: string, on: boolean, webhookUrl: string): Promise<{ ok: boolean; message: string }> {
+  try {
+    const list = await call(`${conv("/Configuration/Addresses")}?Type=sms&PageSize=50`);
+    if (!list.ok) return { ok: false, message: problem(list, "Couldn't read Twilio's group texting settings.") };
+    const mine = ((list.json.address_configurations as Json[] | undefined) ?? []).filter((a) => a.address === number);
+    if (!on) {
+      for (const a of mine) await callForm(conv(`/Configuration/Addresses/${a.sid}`), new URLSearchParams(), "DELETE");
+      return { ok: true, message: "Group texting off." };
+    }
+    if (mine.length) return { ok: true, message: "Group texting on." };
+    const r = await callForm(conv("/Configuration/Addresses"), formOf({
+      Type: "sms", Address: number, FriendlyName: "PettyHomes HQ", "AutoCreation.Enabled": "true", "AutoCreation.Type": "webhook",
+      "AutoCreation.WebhookUrl": webhookUrl, "AutoCreation.WebhookMethod": "post", "AutoCreation.WebhookFilters": ["onMessageAdded"],
+    }));
+    return r.ok ? { ok: true, message: "Group texting on." } : { ok: false, message: problem(r, "Twilio didn't turn on group texting for this number.") };
+  } catch {
+    return { ok: false, message: "Couldn't reach Twilio. Try again." };
+  }
+}
+
+export async function conversationParticipants(sid: string) {
+  const r = await call(`${conv(`/Conversations/${encodeURIComponent(sid)}/Participants`)}?PageSize=50`);
+  if (!r.ok) throw new Error(`Twilio participants ${r.status}`);
+  return (r.json.participants as { identity?: string | null; messaging_binding?: Record<string, string | null> | null }[] | undefined) ?? [];
+}
+
+/** Our sending identity in a group text: a participant that shows as our number to everyone else. */
+export async function addGroupSender(sid: string, ourNumber: string): Promise<string> {
+  const identity = `hq:${ourNumber}`;
+  const r = await callForm(conv(`/Conversations/${encodeURIComponent(sid)}/Participants`), formOf({ Identity: identity, "MessagingBinding.ProjectedAddress": ourNumber }));
+  if (!r.ok && r.status !== 409) throw new Error(problem(r, "Twilio didn't let HQ join the group text."));
+  return identity;
+}
+
+/** A new group text: the people (E.164) and us, with HQ's webhook for replies. Returns the Conversation SID. */
+export async function createGroup(o: { ourNumber: string; numbers: string[]; name: string; webhookUrl: string }): Promise<string> {
+  const c = await callForm(conv("/Conversations"), formOf({ FriendlyName: o.name.slice(0, 250) }));
+  if (!c.ok) throw new Error(problem(c, "Twilio didn't start the group text."));
+  const sid = String(c.json.sid);
+  for (const n of o.numbers) {
+    const p = await callForm(conv(`/Conversations/${sid}/Participants`), formOf({ "MessagingBinding.Address": n }));
+    if (!p.ok) throw new Error(problem(p, `Twilio couldn't add ${n} to the group text.`));
+  }
+  await addGroupSender(sid, o.ourNumber);
+  const w = await callForm(conv(`/Conversations/${sid}/Webhooks`), formOf({ Target: "webhook", "Configuration.Url": o.webhookUrl, "Configuration.Method": "post", "Configuration.Filters": ["onMessageAdded"] }));
+  if (!w.ok) throw new Error(problem(w, "Twilio didn't set up replies for the group text."));
+  return sid;
+}
+
+export async function postGroupMessage(sid: string, author: string, body: string): Promise<SendResult> {
+  try {
+    const r = await callForm(conv(`/Conversations/${encodeURIComponent(sid)}/Messages`), formOf({ Author: author, Body: body }));
+    if (!r.ok) { console.error("Twilio group send failed", r.status, r.json.code ?? ""); return { ok: false, error: problem(r, "Twilio didn't send the group text.") }; }
+    return { ok: true, sid: String(r.json.sid), status: "sent" };
+  } catch {
+    return { ok: false, error: "Couldn't reach Twilio. Check your connection and try again." };
+  }
+}
+
+/** Closing a Conversation hands its numbers back to normal texting (used when group texting is turned off). */
+export async function closeConversation(sid: string) {
+  await callForm(conv(`/Conversations/${encodeURIComponent(sid)}`), formOf({ State: "closed" })).catch(() => null);
 }

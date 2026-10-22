@@ -11,9 +11,13 @@ import { fill } from "@/lib/merge";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { MAX_TEXT } from "@/lib/texting";
 import { completeTask } from "../tasks/actions";
+import { sendGroupText, startGroupText } from "@/server/groupText";
+import { isGroupKey, MAX_GROUP } from "@/lib/groupText";
 
 const id = z.string().trim().min(1).max(40);
 const digits = z.string().trim().min(7).max(30).transform(normalizePhone);
+/** A conversation: a phone number (digits) or a group text's Conversation SID. */
+const threadKey = z.string().trim().min(7).max(40).transform((s) => (isGroupKey(s) ? s : normalizePhone(s)));
 
 const sendSchema = z.object({ personId: id.nullable(), to: z.string().trim().min(7).max(30), body: z.string().trim().min(1, "Write a message.").max(MAX_TEXT), taskId: z.string().trim().max(200).nullable().optional(), typed: z.boolean().optional() });
 
@@ -46,7 +50,7 @@ export async function fillTextTemplate(input: { personId: string | null; templat
 /** Opening a conversation marks its texts and missed calls read. */
 export async function markRead(input: { ourNumber: string; number: string }) {
   return guarded(null, async () => {
-    const v = z.object({ ourNumber: z.string().trim().max(20), number: digits }).parse(input);
+    const v = z.object({ ourNumber: z.string().trim().max(20), number: threadKey }).parse(input);
     await db.textMessage.updateMany({ where: { ourNumber: v.ourNumber, theirNumber: v.number, direction: "in", readAt: null }, data: { readAt: new Date() } });
     revalidatePath("/messages");
   });
@@ -101,9 +105,25 @@ async function attach(number: string, personId: string) {
 /** Delete a conversation from Messages (two-step in the UI). Contact timelines keep their copy. */
 export async function deleteThread(input: { ourNumber: string; number: string }) {
   return guarded("sendTexts", async (user) => {
-    const v = z.object({ ourNumber: z.string().trim().max(20), number: digits }).parse(input);
+    const v = z.object({ ourNumber: z.string().trim().max(20), number: threadKey }).parse(input);
     const r = await db.textMessage.deleteMany({ where: { ourNumber: v.ourNumber, theirNumber: v.number } });
-    await logActivity(user.id, "delete", "text", null, `Deleted the conversation with ${formatPhone(v.number)} (${r.count} messages)`);
+    await logActivity(user.id, "delete", "text", null, `Deleted the conversation with ${isGroupKey(v.number) ? "a group" : formatPhone(v.number)} (${r.count} messages)`);
     revalidatePath("/messages");
+  });
+}
+
+/** Reply in a group text (Messages). */
+export async function sendGroup(input: { sid: string; body: string }) {
+  return guarded("sendTexts", async (user) => {
+    const v = z.object({ sid: z.string().trim().refine(isGroupKey, "That isn't a group text."), body: z.string().trim().min(1, "Write a message.").max(MAX_TEXT) }).parse(input);
+    await sendGroupText(user, v);
+  });
+}
+
+/** + New message → Group text: two or more contacts' numbers and the first message. */
+export async function startGroup(input: { numbers: string[]; body: string }) {
+  return guarded("sendTexts", async (user) => {
+    const v = z.object({ numbers: z.array(digits).min(2, "Pick at least two people.").max(MAX_GROUP - 1, `Up to ${MAX_GROUP - 1} people plus you.`), body: z.string().trim().min(1, "Write a message.").max(MAX_TEXT) }).parse(input);
+    return startGroupText(user, v);
   });
 }

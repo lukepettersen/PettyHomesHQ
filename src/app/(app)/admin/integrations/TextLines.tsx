@@ -3,17 +3,18 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { formatPhone } from "@/lib/normalize";
-import { saveDailyCap, saveTextLine, setRecordCalls } from "./actions";
+import { saveDailyCap, saveTextLine, setGroupTexting, setRecordCalls } from "./actions";
 
 type Twilio = { number: string; name: string };
 type Line = { userId: string; name: string; number: string | null; forwardTo: string | null };
 
 /** Admin → Integrations → Texting: each team member's own number, call forwarding, and the daily limit. */
-export function TextLines({ lines, cap, numbers, record }: { lines: Line[]; cap: number; numbers: Twilio[] | null; record: boolean }) {
+export function TextLines({ lines, cap, numbers, record, groups }: { lines: Line[]; cap: number; numbers: Twilio[] | null; record: boolean; groups: boolean }) {
   return (
     <div className="flex flex-col gap-3">
       <h3 className="text-xs font-semibold uppercase tracking-wider muted">Numbers</h3>
       {lines.map((l) => <LineRow key={l.userId} line={l} numbers={numbers} taken={lines.filter((o) => o.userId !== l.userId && o.number)} />)}
+      <GroupRow on={groups} />
       <RecordRow on={record} />
       <CapRow cap={cap} />
     </div>
@@ -66,6 +67,23 @@ function LineRow({ line, numbers, taken }: { line: Line; numbers: Twilio[] | nul
         </div>
       )}
       {msg && <p role={msg.ok ? "status" : "alert"} className={`mt-1 text-sm ${msg.ok ? "text-accent" : "text-bad"}`}>{msg.text}</p>}
+    </div>
+  );
+}
+
+function GroupRow({ on }: { on: boolean }) {
+  const router = useRouter();
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pending, start] = useTransition();
+  return (
+    <div className="flex flex-wrap items-center gap-3 text-sm">
+      <button type="button" role="switch" aria-checked={on} aria-label="Group texts" disabled={pending}
+        onClick={() => start(async () => { setMsg(null); const r = await setGroupTexting(!on); setMsg(r.ok ? { ok: true, text: r.data!.message } : { ok: false, text: r.error }); if (r.ok) router.refresh(); })}
+        className={`relative h-6 w-11 flex-none rounded-full transition disabled:opacity-50 ${on ? "bg-accent" : "bg-rabbit"}`}>
+        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${on ? "left-[22px]" : "left-0.5"}`} />
+      </button>
+      <span>{pending ? "Setting up in Twilio…" : on ? "Group texts stay together as one conversation, and replies go to everyone." : "Group texts are off: each person in a group shows as their own conversation."}</span>
+      {msg && <span role={msg.ok ? "status" : "alert"} className={msg.ok ? "text-accent" : "text-bad"}>{msg.text}</span>}
     </div>
   );
 }

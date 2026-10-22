@@ -1,7 +1,9 @@
 import { requireUser } from "@/server/auth";
 import { db } from "@/server/db";
 import { isConnected } from "@/server/integrations";
-import { loadConversation, loadThreads, personForNumber, textComposerFor, isUnsubscribed } from "@/server/texting";
+import { groupNames, loadConversation, loadThreads, personForNumber, textComposerFor, isUnsubscribed } from "@/server/texting";
+import { groupTextingOn } from "@/server/groupText";
+import { isGroupKey } from "@/lib/groupText";
 import { normalizePhone } from "@/lib/normalize";
 import { MessagesApp } from "./MessagesApp";
 
@@ -26,14 +28,16 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
   // Your own number first; you can look at a teammate's conversations too.
   const line = lines.find((l) => l.userId === sp.line) ?? lines.find((l) => l.userId === user.id) ?? lines[0] ?? null;
   const threads = line ? await loadThreads(line.number) : [];
-  const open = sp.n ? normalizePhone(sp.n) : null;
+  const isGroup = isGroupKey(sp.n);
+  const open = sp.n ? (isGroup ? sp.n : normalizePhone(sp.n)) : null;
   const thread = open ? threads.find((t) => t.number === open) : undefined;
-  const person = thread?.personId ? { id: thread.personId, name: thread.name } : open ? await personForNumber(open) : null;
+  const group = isGroup && open ? (await groupNames([open])).get(open) ?? { title: "Group text", members: [] } : null;
+  const person = group ? null : thread?.personId ? { id: thread.personId, name: thread.name } : open ? await personForNumber(open) : null;
   const conversation = line && open ? await loadConversation(line.number, open) : [];
   const composer = await textComposerFor(user, person && (await isUnsubscribed(person.id)) ? person.name : null);
   const mine = line?.userId === user.id;
   return (
-    <MessagesApp lines={lines} line={line} threads={threads} open={open} person={person} conversation={conversation}
+    <MessagesApp lines={lines} line={line} threads={threads} open={open} person={person} conversation={conversation} group={group} groupsOn={await groupTextingOn()}
       composer={{ ...composer, blocked: composer.blocked ?? (mine ? null : `These are ${line?.name.split(" ")[0]}'s texts. Replies go from each person's own number, so switch to your number to text.`) }} />
   );
 }

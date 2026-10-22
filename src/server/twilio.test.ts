@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-import { connectNumber, listNumbers, sendSms } from "./twilio";
+import { connectNumber, createGroup, listNumbers, postGroupMessage, sendSms, setGroupAddress } from "./twilio";
 
 type Call = { url: string; body: string };
 let calls: Call[] = [];
@@ -35,6 +35,29 @@ describe("twilio", () => {
     expect(new URLSearchParams(upd.body).get("SmsUrl")).toBe("https://hq.example.com/api/twilio/sms");
     expect(new URLSearchParams(upd.body).get("VoiceUrl")).toBe("https://hq.example.com/api/twilio/voice");
     expect(calls.find((c) => c.url.endsWith("/Services/MG1"))!.body).toBe("UseInboundWebhookOnNumber=true");
+  });
+
+  it("turns group texting on and off for a number", async () => {
+    fakeTwilio([[/Configuration\/Addresses\?Type=sms/, { address_configurations: [] }], [/Configuration\/Addresses$/, { sid: "IG1" }]]);
+    expect(await setGroupAddress("+16124210399", true, "https://hq.example.com/api/twilio/conversation")).toEqual({ ok: true, message: "Group texting on." });
+    const made = calls.find((c) => c.url.endsWith("/v1/Configuration/Addresses"))!;
+    expect(made.url).toBe("https://conversations.twilio.com/v1/Configuration/Addresses");
+    const f = new URLSearchParams(made.body);
+    expect([f.get("Address"), f.get("AutoCreation.Enabled"), f.get("AutoCreation.Type"), f.get("AutoCreation.WebhookUrl"), f.getAll("AutoCreation.WebhookFilters")])
+      .toEqual(["+16124210399", "true", "webhook", "https://hq.example.com/api/twilio/conversation", ["onMessageAdded"]]);
+    calls = [];
+    fakeTwilio([[/Configuration\/Addresses\?Type=sms/, { address_configurations: [{ sid: "IG1", address: "+16124210399" }] }], [/Configuration\/Addresses\/IG1/, {}]]);
+    expect((await setGroupAddress("+16124210399", false, "x")).ok).toBe(true);
+    expect(calls.some((c) => c.url.endsWith("/Configuration/Addresses/IG1"))).toBe(true);
+  });
+
+  it("starts a group text and posts to it", async () => {
+    fakeTwilio([[/\/v1\/Conversations$/, { sid: "CH1" }], [/Participants$/, { sid: "MB1" }], [/Webhooks$/, { sid: "WH1" }], [/Messages$/, { sid: "IM1" }]]);
+    expect(await createGroup({ ourNumber: "+16124210399", numbers: ["+16125550101", "+16125550199"], name: "Sam, Pat", webhookUrl: "https://hq/api/twilio/conversation" })).toBe("CH1");
+    const parts = calls.filter((c) => c.url.endsWith("/Participants")).map((c) => Object.fromEntries(new URLSearchParams(c.body)));
+    expect(parts).toEqual([{ "MessagingBinding.Address": "+16125550101" }, { "MessagingBinding.Address": "+16125550199" }, { Identity: "hq:+16124210399", "MessagingBinding.ProjectedAddress": "+16124210399" }]);
+    expect(new URLSearchParams(calls.find((c) => c.url.endsWith("/Webhooks"))!.body).get("Configuration.Filters")).toBe("onMessageAdded");
+    expect(await postGroupMessage("CH1", "hq:+16124210399", "Hi all")).toEqual({ ok: true, sid: "IM1", status: "sent" });
   });
 
   it("lists the account's numbers", async () => {

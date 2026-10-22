@@ -576,6 +576,7 @@ model TextMessage {
   direction   String // in | out
   kind        String    @default("sms") // sms | missed_call
   body        String    @default("")
+  fromNumber  String? // group texts: who sent it (digits); theirNumber is then the group's Conversation SID (CH…)
   twilioSid   String?   @unique
   status      String    @default("") // queued | sent | delivered | failed | undelivered | received
   error       String?
@@ -619,4 +620,17 @@ model PhoneCall {
 
   @@index([personId])
   @@index([theirNumber])
+}
+
+/// A Twilio Conversation on a team number (group texting, owner request 2026-10-22): which line, and for a group
+/// text the other people in it. One-to-one conversations are kept too, so turning group texting off can close them.
+model TextThread {
+  sid       String   @id // Twilio Conversation SID, CH…
+  ourNumber String
+  group     Boolean  @default(false)
+  members   String[] // the other people's numbers, digits only
+  sender    String? // our projected-address identity in a group ("hq:+1…"), once added
+  createdAt DateTime @default(now())
+
+  @@index([ourNumber])
 }

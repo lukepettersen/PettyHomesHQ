@@ -157,7 +157,11 @@ Set up 2026-10-20: business profile approved, brand registered, campaign "Low Vo
 5. Porting the Follow Up Boss number later: ask FUB support for the port-out details, submit a port in
    Twilio (Phone Numbers → Port & Host) with a switch date, add the number to the Sender Pool when it arrives,
    then change your number in Admin → Integrations to it. Keep FUB until the switch day.
-6. **Call recording** is on by default (Admin → Integrations → Business texting → "Record answered calls").
+6. **Group texts:** Admin → Integrations → Business texting → turn on **Group texts** (after both numbers are
+   saved). HQ sets up Twilio Conversations on each team number (Twilio Console → Conversations → Manage →
+   Addresses shows them). Test: have someone reply in an existing group text with a client; it should show in
+   Messages as one GROUP thread. If texting misbehaves, turn the switch off; it removes the setup.
+7. **Call recording** is on by default (Admin → Integrations → Business texting → "Record answered calls").
    Answered calls show on the contact's timeline with a player. Recordings live in Twilio (Monitor → Call
    recordings), where they can be deleted. Turning the switch off stops new recordings and the notice.
 
