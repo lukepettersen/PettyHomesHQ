@@ -3,17 +3,18 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { formatPhone } from "@/lib/normalize";
-import { saveDailyCap, saveTextLine } from "./actions";
+import { saveDailyCap, saveTextLine, setRecordCalls } from "./actions";
 
 type Twilio = { number: string; name: string };
 type Line = { userId: string; name: string; number: string | null; forwardTo: string | null };
 
 /** Admin → Integrations → Texting: each team member's own number, call forwarding, and the daily limit. */
-export function TextLines({ lines, cap, numbers }: { lines: Line[]; cap: number; numbers: Twilio[] | null }) {
+export function TextLines({ lines, cap, numbers, record }: { lines: Line[]; cap: number; numbers: Twilio[] | null; record: boolean }) {
   return (
     <div className="flex flex-col gap-3">
       <h3 className="text-xs font-semibold uppercase tracking-wider muted">Numbers</h3>
       {lines.map((l) => <LineRow key={l.userId} line={l} numbers={numbers} taken={lines.filter((o) => o.userId !== l.userId && o.number)} />)}
+      <RecordRow on={record} />
       <CapRow cap={cap} />
     </div>
   );
@@ -65,6 +66,23 @@ function LineRow({ line, numbers, taken }: { line: Line; numbers: Twilio[] | nul
         </div>
       )}
       {msg && <p role={msg.ok ? "status" : "alert"} className={`mt-1 text-sm ${msg.ok ? "text-accent" : "text-bad"}`}>{msg.text}</p>}
+    </div>
+  );
+}
+
+function RecordRow({ on }: { on: boolean }) {
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [pending, start] = useTransition();
+  return (
+    <div className="flex flex-wrap items-center gap-3 text-sm">
+      <button type="button" role="switch" aria-checked={on} aria-label="Record answered calls" disabled={pending}
+        onClick={() => start(async () => { setError(""); const r = await setRecordCalls(!on); if (!r.ok) setError(r.error); else router.refresh(); })}
+        className={`relative h-6 w-11 flex-none rounded-full transition disabled:opacity-50 ${on ? "bg-accent" : "bg-rabbit"}`}>
+        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${on ? "left-[22px]" : "left-0.5"}`} />
+      </button>
+      <span>{on ? <>Answered calls are recorded. Callers first hear &ldquo;This call may be recorded.&rdquo; Play them on the contact&apos;s timeline.</> : "Calls aren't recorded."}</span>
+      {error && <span role="alert" className="text-bad">{error}</span>}
     </div>
   );
 }

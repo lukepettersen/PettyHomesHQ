@@ -1,5 +1,5 @@
 import { adminGate } from "../gate";
-import { integrationStatus, textingEnabled } from "@/server/integrations";
+import { integrationStatus, recordCalls, textingEnabled } from "@/server/integrations";
 import { TextingSwitch } from "./TextingSwitch";
 import { TextLines } from "./TextLines";
 import { db } from "@/server/db";
@@ -29,6 +29,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ g
   const cap = await dailyCap();
   const twilio = list.find((i) => i.id === "texting");
   const numbers = twilio?.connected ? await listNumbers() : null;
+  const record = await recordCalls();
   return (
     <>
       <h1 className="text-2xl font-extrabold">Integrations</h1>
@@ -46,7 +47,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ g
             </div>
             <p className="text-sm">{i.what}</p>
             {i.id === "texting" && <TextingSwitch connected={i.connected} on={texting} />}
-            {i.id === "texting" && <TextLines lines={lines} cap={cap} numbers={numbers} />}
+            {i.id === "texting" && <TextLines lines={lines} cap={cap} numbers={numbers} record={record} />}
             {i.id === "google" && <CalendarControls keysSet={i.connected} email={cal?.email ?? null} connected={!!cal} gmail={{ send: hasScope(cal, GMAIL_SEND_SCOPE), read: hasScope(cal, GMAIL_READ_SCOPE) }} />}
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider muted">{i.connected ? "Railway variables (all set)" : "Add in Railway → Variables"}</h3>

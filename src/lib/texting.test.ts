@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { centralDayStart, isStartWord, isStopWord, missedDial, sendProblem, toE164, voiceTwiml } from "./texting";
+import { callLength, centralDayStart, isStartWord, isStopWord, missedDial, sendProblem, toE164, voiceTwiml } from "./texting";
 import { twilioSignature, validTwilioRequest } from "./twilioSig";
 
 describe("texting", () => {
@@ -29,6 +29,11 @@ describe("texting", () => {
   it("forwards calls or says the missed-call message", () => {
     expect(voiceTwiml({ forwardTo: "+16125550101", callerId: "+19525550000", action: "https://x/done" })).toContain('<Dial timeout="20" answerOnBridge="true" callerId="+19525550000" action="https://x/done">+16125550101</Dial>');
     expect(voiceTwiml({})).toContain("<Say");
+    const rec = voiceTwiml({ forwardTo: "+16125550101", record: "https://x/rec", notice: true });
+    expect(rec).toMatch(/^.*<Say voice="Polly.Joanna">This call may be recorded.<\/Say><Dial /);
+    expect(rec).toContain('record="record-from-answer-dual" recordingStatusCallback="https://x/rec" recordingStatusCallbackEvent="completed"');
+    expect(voiceTwiml({ forwardTo: "+16125550101" })).not.toContain("record=");
+    expect([callLength(45), callLength(240), callLength(3900)]).toEqual(["45 sec", "4 min", "1 hr 5 min"]);
     expect(voiceTwiml({ say: "a & b" })).toContain("a &amp; b");
     expect(missedDial("no-answer")).toBe(true);
     expect(missedDial("completed")).toBe(false);

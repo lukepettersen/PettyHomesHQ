@@ -21,6 +21,16 @@ export async function setTexting(on: boolean) {
   });
 }
 
+/** Admin → Integrations → Texting: record answered calls (callers hear "This call may be recorded" first). */
+export async function setRecordCalls(on: boolean) {
+  return guarded("manageUsers", async (user) => {
+    const value = z.boolean().parse(on);
+    await db.appSetting.upsert({ where: { key: "calls.record" }, update: { value }, create: { key: "calls.record", value } });
+    await logActivity(user.id, "update", "setting", "calls.record", `Call recording turned ${value ? "on" : "off"}`);
+    revalidatePath("/admin/integrations");
+  });
+}
+
 const lineSchema = z.object({ userId: z.string().trim().min(1).max(40), number: z.string().trim().max(30), forwardTo: z.string().trim().max(30) });
 
 /**

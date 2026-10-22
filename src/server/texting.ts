@@ -8,7 +8,7 @@ import { hasPermission } from "@/server/permissions";
 import type { SessionUser } from "@/server/auth";
 import { sendSms } from "@/server/twilio";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
-import { centralDayStart, DEFAULT_DAILY_CAP, isStartWord, isStopWord, MAX_TEXT, toE164 } from "@/lib/texting";
+import { callLength, centralDayStart, DEFAULT_DAILY_CAP, isStartWord, isStopWord, MAX_TEXT, toE164 } from "@/lib/texting";
 
 // Business texting (SPEC.md §11). Each team member has their own Twilio number (owner, 2026-10-20). Texts and
 // missed calls are TextMessage rows; texts with a known contact also go on their timeline and count as a touch.
@@ -74,6 +74,30 @@ export async function recordMissedCall(o: { from: string; to: string; sid: strin
   await db.textMessage.create({ data: { ourNumber: o.to, theirNumber: theirs, personId: person?.id ?? null, direction: "in", kind: "missed_call", twilioSid: key, status: "received" } });
   if (person) await db.timelineEntry.create({ data: { personId: person.id, kind: "call", outcome: "Missed call", body: `Called ${owner ? `${owner.name.split(" ")[0]}'s` : "the"} business number (${formatPhone(o.to)}).` } });
   if (owner) await db.notification.create({ data: { toId: owner.id, personId: person?.id ?? null, alert: true, link: `/messages?n=${theirs}`, text: `Missed call from ${person?.name ?? formatPhone(theirs)}` } });
+}
+
+/** An answered (forwarded) call: its length goes on the contact's timeline and counts as contact. */
+export async function recordAnsweredCall(o: { from: string; to: string; sid: string; seconds: number; recordingSid?: string | null }) {
+  const theirs = normalizePhone(o.from);
+  const [owner, person] = await Promise.all([lineOwner(o.to), personForNumber(theirs)]);
+  const data = { ourNumber: o.to, theirNumber: theirs, personId: person?.id ?? null, seconds: Math.max(0, Math.round(o.seconds) || 0), ...(o.recordingSid ? { recordingSid: o.recordingSid } : {}) };
+  const call = await db.phoneCall.upsert({ where: { callSid: o.sid }, create: { callSid: o.sid, ...data }, update: data });
+  if (!person || call.entryId) return;
+  const entry = await db.timelineEntry.create({ data: { personId: person.id, kind: "call", outcome: "Answered", body: answeredBody(owner?.name ?? null, o.to, call.seconds), createdAt: call.createdAt } });
+  await db.$transaction([
+    db.phoneCall.update({ where: { id: call.id }, data: { entryId: entry.id } }),
+    db.person.update({ where: { id: person.id }, data: { lastContactAt: new Date() } }),
+  ]);
+  revalidatePath(`/people/${person.id}`);
+}
+export const answeredBody = (ownerName: string | null, ourNumber: string, seconds: number) =>
+  `Called ${ownerName ? `${ownerName.split(" ")[0]}'s` : "the"} business number (${formatPhone(ourNumber)}) · ${callLength(seconds)}`;
+
+/** Twilio finished a call's recording (may arrive before or after the call itself is logged). */
+export async function recordRecording(o: { callSid: string; recordingSid: string; seconds: number }) {
+  const data = { recordingSid: o.recordingSid, recordingSeconds: Math.max(0, Math.round(o.seconds) || 0) };
+  const call = await db.phoneCall.upsert({ where: { callSid: o.callSid }, create: { callSid: o.callSid, ...data }, update: data });
+  if (call.personId) revalidatePath(`/people/${call.personId}`);
 }
 
 export async function updateStatus(sid: string, status: string, errorCode?: string | null) {

@@ -41,6 +41,15 @@ export async function sendSms(o: { from: string; to: string; body: string }): Pr
   }
 }
 
+/** A call recording's audio from Twilio (passing the browser's Range along, so phones can play and seek it). */
+export async function fetchRecording(sid: string, range: string | null): Promise<Response> {
+  const { sid: account_, token } = creds();
+  return fetch(account(`/Recordings/${encodeURIComponent(sid)}.mp3`), {
+    headers: { Authorization: `Basic ${Buffer.from(`${account_}:${token}`).toString("base64")}`, ...(range ? { Range: range } : {}) },
+    signal: AbortSignal.timeout(30000), cache: "no-store",
+  });
+}
+
 /** The phone numbers in the Twilio account, for the Texting lines picker. Null when Twilio can't be reached. */
 export async function listNumbers(): Promise<{ number: string; name: string }[] | null> {
   try {

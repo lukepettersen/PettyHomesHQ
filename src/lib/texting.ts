@@ -17,14 +17,24 @@ export const isStartWord = (body: string) => START_WORDS.includes(word(body));
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 /** What Twilio does with a call: ring a cell (then `action` hears how it went), or say a message and hang up. */
-export function voiceTwiml(o: { forwardTo?: string | null; callerId?: string; action?: string; say?: string }): string {
+export function voiceTwiml(o: { forwardTo?: string | null; callerId?: string; action?: string; say?: string; record?: string; notice?: boolean }): string {
+  // record: where Twilio reports the finished recording (answered calls only); notice: say RECORD_SAY first.
+  const rec = o.record ? ` record="record-from-answer-dual" recordingStatusCallback="${esc(o.record)}" recordingStatusCallbackEvent="completed"` : "";
   const inner = o.forwardTo
-    ? `<Dial timeout="20" answerOnBridge="true"${o.callerId ? ` callerId="${esc(o.callerId)}"` : ""}${o.action ? ` action="${esc(o.action)}"` : ""}>${esc(o.forwardTo)}</Dial>`
+    ? `${o.notice ? `<Say voice="Polly.Joanna">${RECORD_SAY}</Say>` : ""}<Dial timeout="20" answerOnBridge="true"${o.callerId ? ` callerId="${esc(o.callerId)}"` : ""}${o.action ? ` action="${esc(o.action)}"` : ""}${rec}>${esc(o.forwardTo)}</Dial>`
     : `<Say voice="Polly.Joanna">${esc(o.say ?? MISSED_SAY)}</Say><Hangup/>`;
   return `<?xml version="1.0" encoding="UTF-8"?><Response>${inner}</Response>`;
 }
 export const EMPTY_TWIML = `<?xml version="1.0" encoding="UTF-8"?><Response/>`;
 export const MISSED_SAY = "Sorry we missed your call. Please send a text to this number and we'll get right back to you.";
+export const RECORD_SAY = "This call may be recorded.";
+/** A call's length for the timeline: "45 sec", "4 min", "1 hr 5 min". */
+export function callLength(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds));
+  if (s < 60) return `${s} sec`;
+  const m = Math.round(s / 60);
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} hr${m % 60 ? ` ${m % 60} min` : ""}`;
+}
 /** Dial outcomes that mean nobody picked up. */
 export const missedDial = (status: string | null | undefined) => ["no-answer", "busy", "failed", "canceled"].includes(status ?? "");
 

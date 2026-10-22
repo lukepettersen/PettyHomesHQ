@@ -82,3 +82,9 @@ export async function textingEnabled(): Promise<boolean> {
   const row = await db.appSetting.findUnique({ where: { key: "texting.enabled" } });
   return row?.value === true;
 }
+
+/** Record answered calls (Admin → Integrations → Texting; owner request 2026-10-22). On unless turned off. */
+export async function recordCalls(): Promise<boolean> {
+  const row = await db.appSetting.findUnique({ where: { key: "calls.record" } });
+  return row?.value !== false;
+}

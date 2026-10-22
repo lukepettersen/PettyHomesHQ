@@ -603,3 +603,20 @@ model EmailTrack {
   @@index([batch])
   @@index([personId])
 }
+
+/// Answered calls on a team member's Twilio number (owner request 2026-10-22): length, recording, timeline entry.
+model PhoneCall {
+  id               String   @id @default(cuid())
+  callSid          String   @unique
+  ourNumber        String   @default("") // the team member's Twilio number
+  theirNumber      String   @default("") // digits only (normalizePhone)
+  personId         String?
+  seconds          Int      @default(0)
+  recordingSid     String? // played through /api/calls/<id>/audio after a sign-in check; stored in Twilio
+  recordingSeconds Int?
+  entryId          String? // the timeline entry for this call
+  createdAt        DateTime @default(now())
+
+  @@index([personId])
+  @@index([theirNumber])
+}

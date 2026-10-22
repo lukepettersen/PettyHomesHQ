@@ -6,7 +6,7 @@ import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { mergeFor } from "@/server/merge";
-import { sendTextAs } from "@/server/texting";
+import { answeredBody, sendTextAs } from "@/server/texting";
 import { fill } from "@/lib/merge";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { MAX_TEXT } from "@/lib/texting";
@@ -80,6 +80,13 @@ export async function addPersonFromNumber(input: { number: string; name: string 
 
 /** Earlier texts and missed calls from the number go onto the contact (and their timeline, in order). */
 async function attach(number: string, personId: string) {
+  // Answered calls from the number, each with its own timeline entry (and recording, if any).
+  const calls = await db.phoneCall.findMany({ where: { theirNumber: number, personId: null } });
+  const owners = new Map((await db.user.findMany({ where: { textNumber: { in: calls.map((c) => c.ourNumber) } }, select: { textNumber: true, name: true } })).map((u) => [u.textNumber, u.name]));
+  for (const c of calls) {
+    const entry = await db.timelineEntry.create({ data: { personId, kind: "call", outcome: "Answered", body: answeredBody(owners.get(c.ourNumber) ?? null, c.ourNumber, c.seconds), createdAt: c.createdAt } });
+    await db.phoneCall.update({ where: { id: c.id }, data: { personId, entryId: entry.id } });
+  }
   const loose = await db.textMessage.findMany({ where: { theirNumber: number, personId: null }, orderBy: { createdAt: "asc" } });
   if (!loose.length) return;
   await db.$transaction([

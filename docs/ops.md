@@ -157,6 +157,9 @@ Set up 2026-10-20: business profile approved, brand registered, campaign "Low Vo
 5. Porting the Follow Up Boss number later: ask FUB support for the port-out details, submit a port in
    Twilio (Phone Numbers → Port & Host) with a switch date, add the number to the Sender Pool when it arrives,
    then change your number in Admin → Integrations to it. Keep FUB until the switch day.
+6. **Call recording** is on by default (Admin → Integrations → Business texting → "Record answered calls").
+   Answered calls show on the contact's timeline with a player. Recordings live in Twilio (Monitor → Call
+   recordings), where they can be deleted. Turning the switch off stops new recordings and the notice.
 
 ### Address lookup (Google Maps)
 1. Google Cloud (same project as sign-in) → APIs & Services → Library → **Places API (New)** → Enable.

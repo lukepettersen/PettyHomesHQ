@@ -7,7 +7,7 @@ import { mentionLabel, mentionQuery, splitMentions, type Member } from "@/lib/me
 import { EmailComposer } from "./EmailComposer";
 import { TextComposer } from "@/components/TextComposer";
 
-type Entry = { id: string; kind: string; body: string; outcome: string | null; author: string | null; at: string; opened?: string | null };
+type Entry = { id: string; kind: string; body: string; outcome: string | null; author: string | null; at: string; opened?: string | null; audio?: string };
 const TABS: [Kind, string, string, string][] = [
   ["note", "Note", "Add a note.", "Save note"],
   ["send", "Send text", "", ""],
@@ -120,7 +120,8 @@ export function Timeline({ personId, entries, team, email, text }: { personId: s
               <span className="text-xs font-bold uppercase tracking-wide muted">{KIND_LABEL[e.kind] ?? e.kind}</span>
               <div>
                 {e.kind === "email" ? <><EmailBody body={e.body} />{e.opened !== undefined && <span className={`text-xs font-semibold ${e.opened ? "text-accent" : "muted"}`}>{e.opened ? `Opened ${new Date(e.opened).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).replace(/ (AM|PM)$/, (m) => m.trim().toLowerCase())}` : "Not opened yet"}</span>}</> : <div className="whitespace-pre-wrap break-words">{e.outcome ? <b>{e.outcome}: </b> : null}{splitMentions(e.body, team).map((part, i) => part.mention ? <mark key={i} className="rounded bg-accent-soft px-0.5 font-semibold text-accent">{part.text}</mark> : part.text)}</div>}
-                <div className="text-xs muted">{new Date(e.at).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}{e.author ? ` · ${e.author}` : ""}</div>
+                {e.audio && <audio controls preload="none" src={e.audio} className="mt-1 w-full max-w-sm" aria-label="Call recording" />}
+                <div className="text-xs muted">{new Date(e.at).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).replace(/ (AM|PM)$/, (m) => m.trim().toLowerCase())}{e.author ? ` · ${e.author}` : ""}</div>
               </div>
             </li>
           ))}

@@ -507,6 +507,15 @@ Principles:
   caller's number (if the carrier refuses that, it rings again showing the business number); otherwise
   the caller hears "Sorry we missed your call, please text this number" (Alyssa). Unanswered calls are
   logged as missed calls in Messages and on the contact's timeline.
+- **Answered calls** *(owner request 2026-10-22)* go on the contact's timeline: "Answered: Called Luke's business
+  number (952-243-7646) · 4 min", and count as contact. Calls from a number not on a contact are kept and land on
+  the timeline when the number is linked or added from Messages.
+- **Call recording** *(owner request 2026-10-22)*: on by default, with an Admin → Integrations → Texting switch.
+  Callers first hear "This call may be recorded." (MN needs only one side's consent; the notice covers callers
+  from all-party states). Recording starts when the call is answered (missed calls aren't recorded); a **▶ player**
+  under the call on the timeline plays it for signed-in users only (HQ passes the audio through from Twilio, never
+  a public link). Recordings are stored in Twilio (about $0.0025 a minute; first 10,000 stored minutes free);
+  delete them in Twilio → Monitor → Call recordings if ever needed.
 - HQ only texts phones saved on the contact, or back to someone who texted that number. Texts sent and
   received go on the contact's timeline ("Sent:" / "Received:") and count as their touch.
 - Threads sorted like iMessage; unknown numbers can be added as a new person or linked to an
