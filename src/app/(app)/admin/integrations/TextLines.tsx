@@ -5,15 +5,15 @@ import { useState, useTransition } from "react";
 import { formatPhone } from "@/lib/normalize";
 import { saveDailyCap, saveTextLine, setGroupTexting, setRecordCalls } from "./actions";
 
-type Twilio = { number: string; name: string };
+type Twilio = { number: string; name: string; mms: boolean };
 type Line = { userId: string; name: string; number: string | null; forwardTo: string | null };
 
 /** Admin → Integrations → Texting: each team member's own number, call forwarding, and the daily limit. */
-export function TextLines({ lines, cap, numbers, record, groups }: { lines: Line[]; cap: number; numbers: Twilio[] | null; record: boolean; groups: boolean }) {
+export function TextLines({ lines, cap, numbers, record, groups, groupSetUp }: { lines: Line[]; cap: number; numbers: Twilio[] | null; record: boolean; groups: boolean; groupSetUp: string[] | null }) {
   return (
     <div className="flex flex-col gap-3">
       <h3 className="text-xs font-semibold uppercase tracking-wider muted">Numbers</h3>
-      {lines.map((l) => <LineRow key={l.userId} line={l} numbers={numbers} taken={lines.filter((o) => o.userId !== l.userId && o.number)} />)}
+      {lines.map((l) => <LineRow key={l.userId} line={l} numbers={numbers} groupSetUp={groupSetUp} taken={lines.filter((o) => o.userId !== l.userId && o.number)} />)}
       <GroupRow on={groups} />
       <RecordRow on={record} />
       <CapRow cap={cap} />
@@ -21,7 +21,8 @@ export function TextLines({ lines, cap, numbers, record, groups }: { lines: Line
   );
 }
 
-function LineRow({ line, numbers, taken }: { line: Line; numbers: Twilio[] | null; taken: Line[] }) {
+function LineRow({ line, numbers, taken, groupSetUp }: { line: Line; numbers: Twilio[] | null; taken: Line[]; groupSetUp: string[] | null }) {
+  const info = line.number ? numbers?.find((n) => n.number === line.number) : undefined;
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [number, setNumber] = useState(line.number ?? "");
@@ -41,7 +42,12 @@ function LineRow({ line, numbers, taken }: { line: Line; numbers: Twilio[] | nul
         {!editing && <button type="button" className="link text-sm" onClick={() => { setMsg(null); setEditing(true); }}>{line.number ? "Edit" : "Add number"}</button>}
       </div>
       {!editing ? (
+        <>
         <p className="text-sm muted">{line.number ? <>Texts from <b className="text-charcoal">{formatPhone(line.number)}</b> · {line.forwardTo ? <>calls ring {formatPhone(line.forwardTo)}</> : "calls go to missed calls"}</> : "No texting number yet."}</p>
+        {/* Group texts arrive as MMS; a number without it gets group messages as plain texts (owner 2026-10-22). */}
+        {info && !info.mms && <p className="text-sm text-bad">This number can&apos;t get picture or group texts (MMS is off in Twilio), so group texts arrive as separate texts. Ask Twilio support to turn on MMS for it.</p>}
+        {line.number && groupSetUp && !groupSetUp.includes(line.number) && <p className="text-sm text-bad">Group texting isn&apos;t set up on this number in Twilio. Turn Group texts off and on again.</p>}
+        </>
       ) : (
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {numbers ? (

@@ -51,11 +51,11 @@ export async function fetchRecording(sid: string, range: string | null): Promise
 }
 
 /** The phone numbers in the Twilio account, for the Texting lines picker. Null when Twilio can't be reached. */
-export async function listNumbers(): Promise<{ number: string; name: string }[] | null> {
+export async function listNumbers(): Promise<{ number: string; name: string; mms: boolean }[] | null> {
   try {
     const r = await call(`${account("/IncomingPhoneNumbers.json")}?PageSize=100`);
     if (!r.ok) return null;
-    return ((r.json.incoming_phone_numbers as Json[] | undefined) ?? []).map((n) => ({ number: String(n.phone_number), name: String(n.friendly_name ?? "") }));
+    return ((r.json.incoming_phone_numbers as Json[] | undefined) ?? []).map((n) => ({ number: String(n.phone_number), name: String(n.friendly_name ?? ""), mms: !!(n.capabilities as Json | undefined)?.mms }));
   } catch {
     return null;
   }
@@ -131,6 +131,16 @@ export async function setGroupAddress(number: string, on: boolean, webhookUrl: s
     return r.ok ? { ok: true, message: "Group texting on." } : { ok: false, message: problem(r, "Twilio didn't turn on group texting for this number.") };
   } catch {
     return { ok: false, message: "Couldn't reach Twilio. Try again." };
+  }
+}
+
+/** Team numbers that have group texting set up in Twilio (Address Configurations), or null if unreadable. */
+export async function groupAddresses(): Promise<string[] | null> {
+  try {
+    const r = await call(`${conv("/Configuration/Addresses")}?Type=sms&PageSize=50`);
+    return r.ok ? ((r.json.address_configurations as Json[] | undefined) ?? []).map((a) => String(a.address)) : null;
+  } catch {
+    return null;
   }
 }
 

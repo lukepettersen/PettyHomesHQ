@@ -61,8 +61,8 @@ describe("twilio", () => {
   });
 
   it("lists the account's numbers", async () => {
-    fakeTwilio([[/IncomingPhoneNumbers\.json\?PageSize=100/, { incoming_phone_numbers: [{ phone_number: "+19522437646", friendly_name: "(952) 243-7646" }] }]]);
-    expect(await listNumbers()).toEqual([{ number: "+19522437646", name: "(952) 243-7646" }]);
+    fakeTwilio([[/IncomingPhoneNumbers\.json\?PageSize=100/, { incoming_phone_numbers: [{ phone_number: "+19522437646", friendly_name: "(952) 243-7646", capabilities: { sms: true, mms: false } }] }]]);
+    expect(await listNumbers()).toEqual([{ number: "+19522437646", name: "(952) 243-7646", mms: false }]);
     fakeTwilio([[/IncomingPhoneNumbers/, { message: "no" }, 401]]);
     expect(await listNumbers()).toBeNull();
   });

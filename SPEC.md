@@ -538,6 +538,8 @@ Principles:
   **Send to N people** starts a group text. Group messages go on the timeline of every contact in the group
   ("Group text from Sam: …" / "Group text: …"). Unsubscribed people block sending to their group; the daily limit
   counts group texts. One-to-one texts keep working as before (they arrive through Conversations while it's on).
+  Admin → Integrations warns under a number when Twilio says it can't receive MMS (group texts then arrive as
+  separate texts) or when group texting isn't set up on it.
   If the same text also arrives as a plain one-to-one copy, only the group copy is kept. One-to-one Conversations
   are closed right after their text is saved (HQ texts one-to-one the plain way), so a person's number stays free
   for their group texts. Deleting a group thread in Messages also ends that group in Twilio.
