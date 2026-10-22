@@ -10,11 +10,11 @@ type Twilio = { number: string; name: string; mms: boolean };
 type Line = { userId: string; name: string; number: string | null; forwardTo: string | null };
 
 /** Admin → Integrations → Texting: each team member's own number, call forwarding, and the daily limit. */
-export function TextLines({ lines, cap, numbers, record, groups, groupSetUp, inbound }: { lines: Line[]; cap: number; numbers: Twilio[] | null; record: boolean; groups: boolean; groupSetUp: string[] | null; inbound: InboundNote[] }) {
+export function TextLines({ lines, cap, numbers, record, groups, inbound }: { lines: Line[]; cap: number; numbers: Twilio[] | null; record: boolean; groups: boolean; inbound: InboundNote[] }) {
   return (
     <div className="flex flex-col gap-3">
       <h3 className="text-xs font-semibold uppercase tracking-wider muted">Numbers</h3>
-      {lines.map((l) => <LineRow key={l.userId} line={l} numbers={numbers} groupSetUp={groupSetUp} taken={lines.filter((o) => o.userId !== l.userId && o.number)} />)}
+      {lines.map((l) => <LineRow key={l.userId} line={l} numbers={numbers} taken={lines.filter((o) => o.userId !== l.userId && o.number)} />)}
       <GroupRow on={groups} />
       {groups && inbound.length > 0 && (
         <details className="text-xs">
@@ -32,7 +32,7 @@ export function TextLines({ lines, cap, numbers, record, groups, groupSetUp, inb
   );
 }
 
-function LineRow({ line, numbers, taken, groupSetUp }: { line: Line; numbers: Twilio[] | null; taken: Line[]; groupSetUp: string[] | null }) {
+function LineRow({ line, numbers, taken }: { line: Line; numbers: Twilio[] | null; taken: Line[] }) {
   const info = line.number ? numbers?.find((n) => n.number === line.number) : undefined;
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -57,7 +57,6 @@ function LineRow({ line, numbers, taken, groupSetUp }: { line: Line; numbers: Tw
         <p className="text-sm muted">{line.number ? <>Texts from <b className="text-charcoal">{formatPhone(line.number)}</b> · {line.forwardTo ? <>calls ring {formatPhone(line.forwardTo)}</> : "calls go to missed calls"}</> : "No texting number yet."}</p>
         {/* Group texts arrive as MMS; a number without it gets group messages as plain texts (owner 2026-10-22). */}
         {info && !info.mms && <p className="text-sm text-bad">This number can&apos;t get picture or group texts (MMS is off in Twilio), so group texts arrive as separate texts. Ask Twilio support to turn on MMS for it.</p>}
-        {line.number && groupSetUp && !groupSetUp.includes(line.number) && <p className="text-sm text-bad">Group texting isn&apos;t set up on this number in Twilio. Turn Group texts off and on again.</p>}
         </>
       ) : (
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -99,7 +98,7 @@ function GroupRow({ on }: { on: boolean }) {
         className={`relative h-6 w-11 flex-none rounded-full transition disabled:opacity-50 ${on ? "bg-accent" : "bg-rabbit"}`}>
         <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${on ? "left-[22px]" : "left-0.5"}`} />
       </button>
-      <span>{pending ? "Setting up in Twilio…" : on ? "Group texts stay together as one conversation, and replies go to everyone." : "Group texts are off: each person in a group shows as their own conversation."}</span>
+      <span>{pending ? "Saving…" : on ? "Group texts stay together as one conversation, and replies go to everyone." : "Group texts are off: each person in a group shows as their own conversation."}</span>
       {msg && <span role={msg.ok ? "status" : "alert"} className={msg.ok ? "text-accent" : "text-bad"}>{msg.text}</span>}
     </div>
   );

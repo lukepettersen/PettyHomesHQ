@@ -1,8 +1,22 @@
 // Group texting rules (SPEC.md §11, owner request 2026-10-22), kept pure so they can be unit tested.
 import { normalizePhone } from "@/lib/normalize";
 
-/** Group texts are stored under their Twilio Conversation SID instead of a phone number. */
-export const isGroupKey = (s: string | null | undefined) => /^CH[0-9a-f]{32}$/i.test(s ?? "");
+/**
+ * Group texts are stored under a group key instead of a phone number: the Twilio Conversation SID (CH…) for a group
+ * started from HQ, or G + 32 hex for a group that texted in.
+ */
+export const isGroupKey = (s: string | null | undefined) => /^(CH|G)[0-9a-f]{32}$/i.test(s ?? "");
+
+/** Twilio's plain text webhook lists the rest of a group text's people as OtherRecipients0, OtherRecipients1, … */
+export function otherRecipients(f: Record<string, string>): string[] {
+  return Object.keys(f).filter((k) => /^OtherRecipients\d+$/.test(k)).sort((a, b) => Number(a.slice(15)) - Number(b.slice(15))).map((k) => f[k]).filter(Boolean);
+}
+
+/** The other people in a group text (digits), from who sent it and who else got it, without our own number. */
+export function groupMembers(from: string, others: string[], ourNumber: string): string[] {
+  const us = normalizePhone(ourNumber);
+  return [...new Set([from, ...others].map(normalizePhone))].filter((d) => d && d !== us).sort();
+}
 /** Twilio allows 10 people in a group text, us included. */
 export const MAX_GROUP = 10;
 

@@ -134,16 +134,6 @@ export async function setGroupAddress(number: string, on: boolean, webhookUrl: s
   }
 }
 
-/** Team numbers that have group texting set up in Twilio (Address Configurations), or null if unreadable. */
-export async function groupAddresses(): Promise<string[] | null> {
-  try {
-    const r = await call(`${conv("/Configuration/Addresses")}?Type=sms&PageSize=50`);
-    return r.ok ? ((r.json.address_configurations as Json[] | undefined) ?? []).map((a) => String(a.address)) : null;
-  } catch {
-    return null;
-  }
-}
-
 export async function conversationParticipants(sid: string) {
   const r = await call(`${conv(`/Conversations/${encodeURIComponent(sid)}/Participants`)}?PageSize=50`);
   if (!r.ok) throw new Error(`Twilio participants ${r.status}`);

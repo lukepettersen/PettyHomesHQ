@@ -4,7 +4,7 @@ import { TextingSwitch } from "./TextingSwitch";
 import { TextLines } from "./TextLines";
 import { db } from "@/server/db";
 import { dailyCap } from "@/server/texting";
-import { groupAddresses, listNumbers } from "@/server/twilio";
+import { listNumbers } from "@/server/twilio";
 import { groupTextingOn } from "@/server/groupText";
 import { recentInbound } from "@/server/textDebug";
 import { CalendarControls } from "./CalendarControls";
@@ -34,7 +34,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ g
   const record = await recordCalls();
   const groups = await groupTextingOn();
   const inbound = groups ? await recentInbound() : [];
-  const groupSetUp = groups && twilio?.connected ? await groupAddresses() : null;
   return (
     <>
       <h1 className="text-2xl font-extrabold">Integrations</h1>
@@ -52,7 +51,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ g
             </div>
             <p className="text-sm">{i.what}</p>
             {i.id === "texting" && <TextingSwitch connected={i.connected} on={texting} />}
-            {i.id === "texting" && <TextLines lines={lines} cap={cap} numbers={numbers} record={record} groups={groups} groupSetUp={groupSetUp} inbound={inbound} />}
+            {i.id === "texting" && <TextLines lines={lines} cap={cap} numbers={numbers} record={record} groups={groups} inbound={inbound} />}
             {i.id === "google" && <CalendarControls keysSet={i.connected} email={cal?.email ?? null} connected={!!cal} gmail={{ send: hasScope(cal, GMAIL_SEND_SCOPE), read: hasScope(cal, GMAIL_READ_SCOPE) }} />}
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider muted">{i.connected ? "Railway variables (all set)" : "Add in Railway → Variables"}</h3>

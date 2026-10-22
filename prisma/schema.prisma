@@ -625,11 +625,12 @@ model PhoneCall {
 /// A Twilio Conversation on a team number (group texting, owner request 2026-10-22): which line, and for a group
 /// text the other people in it. One-to-one conversations are kept too, so turning group texting off can close them.
 model TextThread {
-  sid       String   @id // Twilio Conversation SID, CH…
+  sid       String   @id // group key: a Twilio Conversation SID (CH…) or, for a group that texted in, G + 32 hex
   ourNumber String
   group     Boolean  @default(false)
   members   String[] // the other people's numbers, digits only
   sender    String? // our projected-address identity in a group ("hq:+1…"), once added
+  conversationSid String? @unique // the Twilio Conversation HQ sends this group's texts through (made on first reply)
   createdAt DateTime @default(now())
 
   @@index([ourNumber])

@@ -530,29 +530,22 @@ Principles:
   number is a **drop-down of the numbers in the Twilio account** *(owner request 2026-10-22)*; one already
   used by a teammate is greyed out with their name. If Twilio can't be reached it's a typed box. Saving points
   the number at HQ in Twilio. Steps in docs/ops.md.
-- **Group texts** *(owner request 2026-10-22; FUB had them)*: an Admin → Integrations → Texting switch ("Group
-  texts", off until turned on) sets up Twilio Conversations on every team number. Then a group text that includes
-  a team number (started by a client, or an existing FUB group someone replies in) shows in Messages as **one
-  thread** marked GROUP, each message labelled with who sent it, and **Send to group** replies to everyone from
-  that person's number. **+ New message** → pick two or more contacts' numbers (up to 9 plus you) → write →
-  **Send to N people** starts a group text. Group messages go on the timeline of every contact in the group
-  ("Group text from Sam: …" / "Group text: …"). Unsubscribed people block sending to their group; the daily limit
-  counts group texts. One-to-one texts keep working as before (they arrive through Conversations while it's on).
-  On a contact, **Send text** (group texting on) starts with the contact's other numbers and the owner's cell
-  already added (each removable); with more than one number it sends **one group text** (the same thread as
-  before if those people already have one). The **+ Add** search also lists the contact's own other numbers.
-  A contact with two numbers in a group shows once (name and timeline entry). While group texting is on, Admin →
-  Integrations has a **Recent incoming texts (troubleshooting)** list: time, plain or Conversation (group / 1:1),
-  last 4 digits of the numbers, never message text.
-  Admin → Integrations warns under a number when Twilio says it can't receive MMS (group texts then arrive as
-  separate texts) or when group texting isn't set up on it.
-  If the same text also arrives as a plain one-to-one copy, only the group copy is kept; a one-to-one text that
-  Twilio delivers twice (plainly and through Conversations, even at the same moment) is saved and alerted once. One-to-one Conversations
-  are closed right after their text is saved (HQ texts one-to-one the plain way), so a person's number stays free
-  for their group texts. Deleting a group thread in Messages also ends that group in Twilio.
-  Turning the switch off removes the setup and closes HQ's Conversations so texts go back to the plain way;
-  earlier split threads stay as they were. Twilio's Conversations fee: first 200 people a month free, then about
-  $0.05 per person a month.
+- **Group texts** *(owner request 2026-10-22; FUB had them)*: Admin → Integrations → Texting switch ("Group
+  texts", off until turned on). A group text that includes a team number reaches HQ as a plain text listing the
+  group's other people (Twilio's OtherRecipients); with the switch on HQ keeps it as **one thread** marked GROUP
+  (the same people = the same thread), each message labelled with who sent it. **Send to group** replies to
+  everyone from that person's number through a Twilio Conversation made for the group on the first reply (Twilio
+  allows 10 people, us included). **+ New message** → two or more contacts' numbers → **Send to N people** starts
+  one. On a contact, **Send text** starts with the contact's other numbers and the owner's cell already added (each
+  removable) and sends one group text. Group messages go on the timeline of every contact in the group, once per
+  contact even when a couple's two numbers are both in it. A text Twilio delivers twice (plainly and through the
+  group's Conversation, even at the same moment) is saved and alerted once. Unsubscribed people block sending to
+  their group; the daily limit counts group texts. Turning the switch off closes HQ's Conversations; earlier split
+  threads stay as they were. Deleting a group thread in Messages also ends its Conversation. Twilio's Conversations
+  fee: first 200 people a month free, then about $0.05 per person a month.
+  Admin → Integrations warns under a number when Twilio says it can't receive MMS, and (switch on) lists **Recent
+  incoming texts (troubleshooting)**: time, plain or Conversation, last 4 digits of the numbers, field names, never
+  message text.
 - **Admin → Integrations → Texting** on/off switch to pause sending anytime.
 - Safety when on: honor STOP/opt-out automatically (a STOP reply tags them **Unsubscribed**; START or
   YES removes it); never text people tagged Unsubscribed; quiet hours 8am–8pm Central apply to

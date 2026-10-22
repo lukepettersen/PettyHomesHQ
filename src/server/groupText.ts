@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { db } from "@/server/db";
 import { UserError } from "@/server/safe";
@@ -8,12 +9,13 @@ import { addGroupSender, closeConversation, conversationParticipants, createGrou
 import { COPY_WINDOW, dailyCap, isUnsubscribed, lineOwner, personForNumber, recordIncoming, saveOnce, setUnsubscribed } from "@/server/texting";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { centralDayStart, isStartWord, isStopWord, MAX_TEXT, toE164 } from "@/lib/texting";
-import { groupTitle, isGroupKey, MAX_GROUP, readParticipants } from "@/lib/groupText";
+import { groupMembers, groupTitle, isGroupKey, MAX_GROUP, otherRecipients, readParticipants } from "@/lib/groupText";
 import { noteInbound } from "@/server/textDebug";
 
-// Group texting (SPEC.md §11, owner request 2026-10-22). With it on, Twilio Conversations keeps each group text
-// together and posts every message to /api/twilio/conversation. One-to-one texts that arrive this way go through
-// the normal recordIncoming; sending one-to-one still uses plain Twilio texts. Message bodies are never logged.
+// Group texting (SPEC.md §11, owner request 2026-10-22). A group text that includes a team number arrives on the
+// plain text webhook with its other people listed (OtherRecipients0…); HQ keeps those as one group thread. Replies
+// (and new groups) go out through a Twilio Conversation made for that group, whose messages post to
+// /api/twilio/conversation. One-to-one texts stay plain. Message bodies are never logged.
 
 const KEY = "texting.groups";
 export const conversationHook = () => `${publicBase()}/api/twilio/conversation`;
@@ -25,24 +27,41 @@ export async function groupTextingOn(): Promise<boolean> {
 
 const teamNumbers = async () => (await db.user.findMany({ where: { textNumber: { not: null } }, select: { textNumber: true } })).map((u) => u.textNumber!);
 
-/** Admin switch: sets up (or removes) group texting on every team number. Off also closes HQ's Conversations. */
+/**
+ * Admin switch. Either way it removes Twilio's Conversations auto-setup on the team numbers (it delivered every
+ * text twice and isn't needed: group texts come in on the plain webhook). Off also closes HQ's Conversations.
+ */
 export async function applyGroupTexting(on: boolean): Promise<string[]> {
   const problems: string[] = [];
   for (const n of await teamNumbers()) {
-    const r = await setGroupAddress(n, on, conversationHook());
+    const r = await setGroupAddress(n, false, conversationHook());
     if (!r.ok) problems.push(`${formatPhone(n)}: ${r.message}`);
   }
-  if (!on) for (const t of await db.textThread.findMany({ select: { sid: true } })) await closeConversation(t.sid);
+  if (!on) {
+    for (const t of await db.textThread.findMany({ where: { conversationSid: { not: null } }, select: { conversationSid: true } })) await closeConversation(t.conversationSid!);
+    // A closed Conversation can't send; the next reply makes a fresh one.
+    await db.textThread.updateMany({ data: { conversationSid: null, sender: null } });
+  }
   return problems;
 }
 
-/** A Conversation's line and people, read from Twilio once and remembered. */
-async function threadInfo(sid: string) {
-  const known = await db.textThread.findUnique({ where: { sid } });
+const sameSet = (a: string[], b: string[]) => a.length === b.length && [...a].sort().join() === [...b].sort().join();
+/** The group thread on a line with exactly these people, if there is one. */
+async function groupWith(ourNumber: string, members: string[]) {
+  return (await db.textThread.findMany({ where: { ourNumber, group: true }, orderBy: { createdAt: "asc" } })).find((t) => sameSet(t.members, members)) ?? null;
+}
+
+/** A Conversation's group thread: known already, the same people's thread (linked to it now), or a new one. */
+async function threadForConversation(sid: string) {
+  const known = await db.textThread.findFirst({ where: { OR: [{ conversationSid: sid }, { sid }] } });
   if (known) return known;
   const r = readParticipants(await conversationParticipants(sid), await teamNumbers());
   if (!r.ourNumber) return null;
-  return db.textThread.upsert({ where: { sid }, update: {}, create: { sid, ourNumber: r.ourNumber, group: r.group, members: r.members, sender: r.sender } });
+  if (r.group) {
+    const same = await groupWith(r.ourNumber, r.members);
+    if (same) return db.textThread.update({ where: { sid: same.sid }, data: { conversationSid: sid, sender: same.sender ?? r.sender } });
+  }
+  return db.textThread.upsert({ where: { sid }, update: {}, create: { sid, conversationSid: sid, ourNumber: r.ourNumber, group: r.group, members: r.members, sender: r.sender } });
 }
 
 /** People in a group text, as contacts where we have them. */
@@ -53,13 +72,69 @@ async function membersOf(members: string[]) {
 const uniqueContacts = <T extends { person: { id: string } | null }>(people: T[]) => people.filter((m, i) => !m.person || people.findIndex((x) => x.person?.id === m.person!.id) === i);
 const nameOf = (m: { digits: string; person: { name: string } | null }) => m.person?.name ?? formatPhone(m.digits);
 
-/** Twilio's onMessageAdded webhook for a Conversation. */
+type Thread = { sid: string; ourNumber: string; members: string[] };
+/**
+ * Saves one incoming group message (from either webhook) on its thread: once, even if Twilio delivers it twice;
+ * on every contact's timeline in the group; with an alert for the line's owner.
+ */
+async function recordGroupMessage(t: Thread, o: { from: string; body: string; sid: string }) {
+  const from = normalizePhone(o.from);
+  const members = t.members.includes(from) ? t.members : [...t.members, from];
+  if (members !== t.members) await db.textThread.update({ where: { sid: t.sid }, data: { members } });
+  const people = await membersOf(members);
+  const sender = people.find((m) => m.digits === from)!;
+  const since = new Date(Date.now() - COPY_WINDOW);
+  const saved = await saveOnce(t.ourNumber, from, async (tx) => {
+    if (await tx.textMessage.findUnique({ where: { twilioSid: o.sid } })) return false;
+    // Already saved through the other webhook.
+    if (await tx.textMessage.findFirst({ where: { ourNumber: t.ourNumber, fromNumber: from, direction: "in", body: o.body, createdAt: { gte: since } } })) return false;
+    // A plain one-to-one copy saved first: drop it (and its timeline line and alert).
+    const dupes = await tx.textMessage.findMany({ where: { ourNumber: t.ourNumber, theirNumber: from, direction: "in", body: o.body, createdAt: { gte: since } }, select: { id: true, personId: true } });
+    if (dupes.length) {
+      await tx.textMessage.deleteMany({ where: { id: { in: dupes.map((d) => d.id) } } });
+      for (const d of dupes) if (d.personId) await tx.timelineEntry.deleteMany({ where: { personId: d.personId, kind: "text", outcome: "Received", body: o.body, createdAt: { gte: since } } });
+      await tx.notification.deleteMany({ where: { createdAt: { gte: since }, text: { startsWith: "Text from " }, link: `/messages?n=${from}` } });
+    }
+    await tx.textMessage.create({ data: { ourNumber: t.ourNumber, theirNumber: t.sid, fromNumber: from, personId: sender.person?.id ?? null, direction: "in", body: o.body, twilioSid: o.sid, status: "received" } });
+    return true;
+  });
+  if (!saved) return;
+  if (sender.person) {
+    if (isStopWord(o.body)) await setUnsubscribed(sender.person.id, true);
+    else if (isStartWord(o.body) && (await isUnsubscribed(sender.person.id))) await setUnsubscribed(sender.person.id, false);
+    await db.person.update({ where: { id: sender.person.id }, data: { lastTextAt: new Date(), lastContactAt: new Date() } });
+  }
+  // On every contact in the group (once each, even with two numbers in it), so each timeline shows the whole conversation.
+  for (const m of uniqueContacts(people)) if (m.person) {
+    await db.timelineEntry.create({ data: { personId: m.person.id, kind: "text", outcome: "Received", body: `Group text from ${nameOf(sender)}: ${o.body}` } });
+    revalidatePath(`/people/${m.person.id}`);
+  }
+  const owner = await lineOwner(t.ourNumber);
+  if (owner) await db.notification.create({ data: { toId: owner.id, personId: sender.person?.id ?? null, alert: true, link: `/messages?n=${t.sid}`, text: `Group text from ${nameOf(sender)}: "${o.body.length > 120 ? `${o.body.slice(0, 120)}…` : o.body}"` } });
+  revalidatePath("/messages");
+}
+
+/** Plain text webhook with OtherRecipients: a group text. Returns false when it should be saved as one-to-one. */
+export async function recordPlainGroup(f: Record<string, string>): Promise<boolean> {
+  const others = otherRecipients(f);
+  if (!others.length || !f.From || !f.To || !f.MessageSid || !(await groupTextingOn())) return false;
+  const members = groupMembers(f.From, others, f.To);
+  if (members.length < 2) return false;
+  const thread = (await groupWith(f.To, members))
+    ?? (await db.textThread.create({ data: { sid: `G${createHash("sha256").update(`${f.To}|${members.join(",")}`).digest("hex").slice(0, 32)}`, ourNumber: f.To, group: true, members } }));
+  let body = (f.Body ?? "").slice(0, 5000);
+  if (Number(f.NumMedia ?? 0) > 0) body = body ? `${body}\n[picture]` : "[picture]";
+  await recordGroupMessage(thread, { from: f.From, body, sid: f.MessageSid });
+  return true;
+}
+
+/** Twilio's onMessageAdded webhook for a Conversation (group texts HQ sends through, and any older ones). */
 export async function handleConversationMessage(f: Record<string, string>) {
   if (f.EventType && f.EventType !== "onMessageAdded") return;
   const sid = f.ConversationSid, msg = f.MessageSid, author = f.Author ?? "";
   if (!sid || !msg || !author.startsWith("+")) return; // our own messages have an "hq:" author
   if (await db.textMessage.findUnique({ where: { twilioSid: msg } })) return;
-  const info = await threadInfo(sid);
+  const info = await threadForConversation(sid);
   await noteInbound({ via: "conversation", from: author, to: info?.ourNumber ?? "", group: info?.group, people: info ? info.members.length : undefined, media: f.Media && f.Media !== "[]" ? 1 : 0 });
   if (!info) return;
   let body = (f.Body ?? "").slice(0, 5000);
@@ -69,40 +144,10 @@ export async function handleConversationMessage(f: Record<string, string>) {
     // HQ handles one-to-one texts the plain way, so close this Conversation: while it's open Twilio ties the
     // person's number to it and sends their later group texts here instead of to the group.
     await closeConversation(sid);
-    await db.textThread.delete({ where: { sid } }).catch(() => null);
+    await db.textThread.delete({ where: { sid: info.sid } }).catch(() => null);
     return;
   }
-
-  const from = normalizePhone(author);
-  if (!info.members.includes(from)) await db.textThread.update({ where: { sid }, data: { members: [...info.members, from] } });
-  const people = await membersOf([...new Set([...info.members, from])]);
-  const sender = people.find((m) => m.digits === from)!;
-  // The same text can also arrive as a plain one-to-one copy; keep only the group copy (same lock as recordIncoming).
-  const since = new Date(Date.now() - COPY_WINDOW);
-  const saved = await saveOnce(info.ourNumber, from, async (tx) => {
-    if (await tx.textMessage.findUnique({ where: { twilioSid: msg } })) return false;
-    const dupes = await tx.textMessage.findMany({ where: { ourNumber: info.ourNumber, theirNumber: from, direction: "in", body, createdAt: { gte: since } }, select: { id: true, personId: true } });
-    if (dupes.length) {
-      await tx.textMessage.deleteMany({ where: { id: { in: dupes.map((d) => d.id) } } });
-      for (const d of dupes) if (d.personId) await tx.timelineEntry.deleteMany({ where: { personId: d.personId, kind: "text", outcome: "Received", body, createdAt: { gte: since } } });
-      await tx.notification.deleteMany({ where: { createdAt: { gte: since }, text: { startsWith: "Text from " }, link: `/messages?n=${from}` } });
-    }
-    await tx.textMessage.create({ data: { ourNumber: info.ourNumber, theirNumber: sid, fromNumber: from, personId: sender.person?.id ?? null, direction: "in", body, twilioSid: msg, status: "received" } });
-    return true;
-  });
-  if (!saved) return;
-  if (sender.person) {
-    if (isStopWord(body)) await setUnsubscribed(sender.person.id, true);
-    else if (isStartWord(body) && (await isUnsubscribed(sender.person.id))) await setUnsubscribed(sender.person.id, false);
-    await db.person.update({ where: { id: sender.person.id }, data: { lastTextAt: new Date(), lastContactAt: new Date() } });
-  }
-  // On every contact in the group (once each, even with two numbers in it), so each timeline shows the whole conversation.
-  for (const m of uniqueContacts(people)) if (m.person) {
-    await db.timelineEntry.create({ data: { personId: m.person.id, kind: "text", outcome: "Received", body: `Group text from ${nameOf(sender)}: ${body}` } });
-    revalidatePath(`/people/${m.person.id}`);
-  }
-  const owner = await lineOwner(info.ourNumber);
-  if (owner) await db.notification.create({ data: { toId: owner.id, personId: sender.person?.id ?? null, alert: true, link: `/messages?n=${sid}`, text: `Group text from ${nameOf(sender)}: "${body.length > 120 ? `${body.slice(0, 120)}…` : body}"` } });
+  await recordGroupMessage(info, { from: author, body, sid: msg });
 }
 
 async function checkSend(user: { id: string }, body: string) {
@@ -118,21 +163,31 @@ async function checkSend(user: { id: string }, body: string) {
   return { ourNumber: me.textNumber, text };
 }
 
-/** Reply in a group text from HQ: everyone in the group gets it from the user's number. */
+/**
+ * Reply in a group text from HQ: everyone in the group gets it from the user's number, through the group's Twilio
+ * Conversation (made the first time HQ replies to a group that texted in).
+ */
 export async function sendGroupText(user: { id: string; name: string }, o: { sid: string; body: string }) {
   if (!isGroupKey(o.sid)) throw new UserError("That isn't a group text.");
   const { ourNumber, text } = await checkSend(user, o.body);
-  const info = await threadInfo(o.sid);
+  const info = await db.textThread.findUnique({ where: { sid: o.sid } });
   if (!info?.group) throw new UserError("That group text wasn't found.");
   if (info.ourNumber !== ourNumber) throw new UserError("This group text is on a teammate's number. Switch to your own number to text.");
   const people = await membersOf(info.members);
   for (const m of people) if (m.person && (await isUnsubscribed(m.person.id))) throw new UserError(`${m.person.name} is tagged Unsubscribed (they replied STOP), so HQ won't text this group.`);
-  let author = info.sender;
+  if (info.members.length > MAX_GROUP - 1) throw new UserError(`HQ can reply to groups of up to ${MAX_GROUP} people (Twilio's limit). Reply from your phone for this one.`);
+  let conv = info.conversationSid, author = info.sender;
+  if (!conv) {
+    conv = await createGroup({ ourNumber, numbers: info.members.map((d) => toE164(d) ?? `+${d}`), name: groupTitle([...new Set(people.map(nameOf))]), webhookUrl: conversationHook() })
+      .catch((e: Error) => { throw new UserError(e.message); });
+    author = `hq:${ourNumber}`;
+    await db.textThread.update({ where: { sid: o.sid }, data: { conversationSid: conv, sender: author } });
+  }
   if (!author) {
-    author = await addGroupSender(o.sid, ourNumber).catch((e: Error) => { throw new UserError(e.message); });
+    author = await addGroupSender(conv, ourNumber).catch((e: Error) => { throw new UserError(e.message); });
     await db.textThread.update({ where: { sid: o.sid }, data: { sender: author } });
   }
-  const r = await postGroupMessage(o.sid, author, text);
+  const r = await postGroupMessage(conv, author, text);
   if (!r.ok) throw new UserError(r.error);
   await db.textMessage.create({ data: { ourNumber, theirNumber: o.sid, direction: "out", body: text, twilioSid: r.sid, status: r.status, sentById: user.id, readAt: new Date() } });
   for (const m of uniqueContacts(people)) if (m.person) {
@@ -161,7 +216,7 @@ export async function startGroupText(user: { id: string; name: string }, o: { nu
   }
   const sid = await createGroup({ ourNumber, numbers: digits.map((d) => toE164(d)!), name: groupTitle([...new Set(people.map(nameOf))]), webhookUrl: conversationHook() })
     .catch((e: Error) => { throw new UserError(e.message); });
-  await db.textThread.create({ data: { sid, ourNumber, group: true, members: digits, sender: `hq:${ourNumber}` } });
+  await db.textThread.create({ data: { sid, conversationSid: sid, ourNumber, group: true, members: digits, sender: `hq:${ourNumber}` } });
   await sendGroupText(user, { sid, body: o.body });
   return { sid };
 }
@@ -170,7 +225,7 @@ export async function startGroupText(user: { id: string; name: string }, o: { nu
 export async function textNumbersAsGroup(user: { id: string; name: string }, o: { numbers: string[]; body: string }) {
   const me = await db.user.findUnique({ where: { id: user.id }, select: { textNumber: true } });
   const want = [...new Set(o.numbers.map(normalizePhone))].sort();
-  const same = me?.textNumber ? (await db.textThread.findMany({ where: { ourNumber: me.textNumber, group: true }, orderBy: { createdAt: "desc" } })).find((t) => [...t.members].sort().join() === want.join()) : undefined;
+  const same = me?.textNumber ? await groupWith(me.textNumber, want) : null;
   if (same) { await sendGroupText(user, { sid: same.sid, body: o.body }); return { sid: same.sid }; }
   return startGroupText(user, { numbers: want, body: o.body });
 }
