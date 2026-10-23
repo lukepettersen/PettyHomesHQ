@@ -402,6 +402,11 @@ Principles:
 - **One task list everywhere:** tasks typed on the Tasks page, a person's own tasks and
   checklist steps from their files are the same records. Checking one off anywhere checks it
   off everywhere.
+- **Assignment alerts** *(owner request 2026-10-23)*: when someone adds a task for a teammate (quick add with
+  @name, the Create task pop-up, or adding while viewing their tasks) or changes a task's assignee to a teammate,
+  that person gets a bell notification and, when Gmail is connected, an email to their pettyhomes.com address
+  ("New task from Luke: …", with the contact, due date and a link to the task). Tasks you give yourself and steps
+  created by task templates don't send alerts.
 - **Order stays put** *(owner 2026-10-23)*: tasks sort by due date, priority and time, then title and contact, so
   same-day tasks keep their places when the board refreshes after a check-off (a repeating task's next copy shows
   right next to the one just checked).

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
+import { notifyAssigned } from "@/server/notifications";
 import { loadDateTasks, loadTeam } from "@/server/tasks";
 import { isDueForTouch } from "@/lib/filters";
 import { applyTemplate, contractAnchors, factsOf, loadTemplates, moveFile } from "@/server/automation";
@@ -93,6 +94,7 @@ export async function quickAddTask(input: z.input<typeof quickSchema>) {
       data: { title, dueDate: dateFromIso(due), dueTime: p.time ?? null, repeat, priority: p.priority ?? 0, listId, personId, assigneeId, createdById: user.id },
     });
     await logActivity(user.id, "create", "task", t.id, `Added task "${title}"${personName ? ` for ${personName}` : ""}`);
+    if (assigneeId !== user.id) await notifyAssigned(user, t.id);
     refresh(personId);
 
     if (v.view === "recurring" && !p.repeat) notes.push("repeats weekly (change it in the task)");
@@ -118,6 +120,7 @@ export async function createTask(input: z.input<typeof createSchema>) {
     if (v.personId && !(await db.person.findFirst({ where: { id: v.personId, deletedAt: null } }))) throw new UserError("That person was deleted.");
     const t = await db.task.create({ data: { title: v.title, kind: v.kind, personId: v.personId, assigneeId: v.assigneeId, dueDate: dateFromIso(v.due), dueTime: v.time, createdById: user.id } });
     await logActivity(user.id, "create", "task", t.id, `Added task "${v.title}"`);
+    if (v.assigneeId && v.assigneeId !== user.id) await notifyAssigned(user, t.id);
     refresh(v.personId);
     return { id: t.id };
   });
@@ -238,6 +241,7 @@ export async function updateTask(input: z.input<typeof updateSchema>) {
     });
     const changed = [before.title !== t.title && "title", (before.dueDate?.getTime() ?? 0) !== (t.dueDate?.getTime() ?? 0) && "due date", before.assigneeId !== t.assigneeId && "assignee", before.listId !== t.listId && "list", before.repeat !== t.repeat && "repeat"].filter(Boolean);
     await logActivity(user.id, "update", "task", t.id, `Updated "${t.title}"${changed.length ? ` (${changed.join(", ")})` : ""}`);
+    if (t.assigneeId && before.assigneeId !== t.assigneeId && t.assigneeId !== user.id) await notifyAssigned(user, t.id);
     refresh(t.personId);
     return { id: t.id };
   });
