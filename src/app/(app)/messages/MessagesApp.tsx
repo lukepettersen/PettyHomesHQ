@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { TextComposer } from "@/components/TextComposer";
 import { EmojiButton } from "@/components/EmojiButton";
+import { TextPhotoButton, TextPhotoPreviews } from "@/components/TextPhotos";
+import { PHOTO_ONLY } from "@/lib/textMedia";
 import { formatPhone } from "@/lib/normalize";
 import { sendProblem } from "@/lib/texting";
 import type { Bubble, GroupInfo, Thread } from "@/server/texting";
@@ -118,7 +120,17 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
                     ) : (
                       <div className={`flex max-w-[80%] flex-col ${m.direction === "out" ? "items-end self-end" : "items-start self-start"}`}>
                         {m.from && <span className="px-1 text-[11px] font-semibold muted">{m.from}</span>}
-                        <p className={`whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${m.direction === "out" ? "bg-accent text-white" : "bg-sunken"}`}>{m.body}</p>
+                        {!!m.photos?.length && (
+                          <span className={`flex flex-wrap gap-1 ${m.direction === "out" ? "justify-end" : ""}`}>
+                            {m.photos.map((src) => (
+                              <a key={src} href={src} target="_blank" rel="noreferrer">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={src} alt="Photo" loading="lazy" className="max-h-60 max-w-[240px] rounded-2xl border border-misty object-cover" />
+                              </a>
+                            ))}
+                          </span>
+                        )}
+                        {!(m.photos?.length && m.body === PHOTO_ONLY) && <p className={`whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${m.direction === "out" ? "bg-accent text-white" : "bg-sunken"}`}>{m.body}</p>}
                         {!!m.reactions?.length && <span className="-mt-2 rounded-full border border-misty bg-white px-1.5 text-sm shadow-sm" aria-label={`Reactions: ${m.reactions.join(" ")}`}>{[...new Set(m.reactions)].join("")}{m.reactions.length > new Set(m.reactions).size ? ` ${m.reactions.length}` : ""}</span>}
                         <span className="px-1 text-[11px] muted">
                           {clock(m.at)}{m.direction === "out" ? ` · ${m.by ? `${m.by} · ` : ""}${STATUS[m.status] ?? m.status}` : ""}
@@ -203,24 +215,26 @@ function NewMessage({ onPick, groupsOn, blocked }: { onPick: (key: string) => vo
 /** Reply in a group text: everyone in the group gets it from your number. */
 function GroupComposer({ sid, blocked, from, onSent }: { sid: string; blocked: string | null; from: string | null; onSent: () => void }) {
   const [body, setBody] = useState("");
+  const [photos, setPhotos] = useState<string[]>([]);
   const box = useRef<HTMLTextAreaElement>(null);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   if (blocked) return <p className="rounded-md bg-sunken px-3 py-2 text-sm muted">{blocked}</p>;
   const send = () => start(async () => {
     setError("");
-    const r = await sendGroup({ sid, body });
+    const r = await sendGroup({ sid, body, media: photos });
     if (!r.ok) { setError(r.error); return; }
-    setBody(""); onSent();
+    setBody(""); setPhotos([]); onSent();
   });
   return (
     <div className="flex flex-col gap-2">
       <textarea ref={box} aria-label="Group text message" placeholder="Reply to the group" className="input min-h-20 font-normal" maxLength={1600} value={body}
-        onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && body.trim() && !pending) { e.preventDefault(); send(); } }} />
+        onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && (body.trim() || photos.length) && !pending) { e.preventDefault(); send(); } }} />
+      <TextPhotoPreviews photos={photos} onChange={setPhotos} />
       <span className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs muted">To everyone in the group, from your number {from ? formatPhone(from) : ""}</span>
-        <span className="flex gap-2"><EmojiButton box={box} value={body} onChange={setBody} />
-          <button type="button" className="btn btn-primary" disabled={pending || !body.trim()} onClick={send}>{pending ? "Sending…" : "Send to group"}</button></span>
+        <span className="flex gap-2"><TextPhotoButton photos={photos} onChange={setPhotos} disabled={pending} /><EmojiButton box={box} value={body} onChange={setBody} />
+          <button type="button" className="btn btn-primary" disabled={pending || (!body.trim() && !photos.length)} onClick={send}>{pending ? "Sending…" : "Send to group"}</button></span>
       </span>
       {error && <p role="alert" className="text-sm text-bad">{error}</p>}
     </div>

@@ -549,6 +549,11 @@ Principles:
   Admin → Integrations warns under a number when Twilio says it can't receive MMS, and (switch on) lists **Recent
   incoming texts (troubleshooting)**: time, plain or Conversation, last 4 digits of the numbers, field names, never
   message text.
+- **Photos** *(owner request 2026-10-23)*: photos texted to a business number (one-to-one or group) show in
+  Messages (HQ passes them through from Twilio to signed-in users only; a photo with no words says "📷 Photo" in
+  lists, alerts and timelines). **📷** on the text boxes (Send text, Messages, Send to group) attaches up to 5
+  JPG/PNG/GIF photos; they upload to the file storage and go as picture texts (MMS). In a group text each extra
+  photo is its own message. Needs File storage connected.
 - **Reactions** *(owner request 2026-10-22)*: an iPhone tapback sent to a business number arrives as a text like
   Loved “See you tomorrow!”; HQ shows it as a small icon (❤️ 👍 👎 😂 ‼️ ❓, or the emoji in "Reacted 🎉 to …") on
   the message it quotes in that thread, with no new bubble or alert ("Removed a heart from …" takes it off). If the

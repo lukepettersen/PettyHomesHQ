@@ -578,6 +578,7 @@ model TextMessage {
   body        String    @default("")
   fromNumber  String? // group texts: who sent it (digits); theirNumber is then the group's Conversation SID (CH…)
   reactions   Json      @default("[]") // iPhone tapbacks on this message: [{ emoji, by (digits) }] (owner 2026-10-22)
+  media       Json      @default("[]") // photos: [{ url | service+sid, type }] (src/lib/textMedia.ts; owner 2026-10-23)
   twilioSid   String?   @unique
   status      String    @default("") // queued | sent | delivered | failed | undelivered | received
   error       String?

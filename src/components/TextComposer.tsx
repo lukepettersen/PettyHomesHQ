@@ -8,6 +8,7 @@ import { MAX_TEXT } from "@/lib/texting";
 import { fillTextTemplate, sendText, sendTextGroup } from "@/app/(app)/messages/actions";
 import { AddRecipient, ExtraChips, type Extra } from "@/components/AddRecipient";
 import { EmojiButton } from "@/components/EmojiButton";
+import { TextPhotoButton, TextPhotoPreviews } from "@/components/TextPhotos";
 
 /**
  * Write and send a text from your own business number (SPEC.md §11): a template (optional, or "/name" in the
@@ -24,6 +25,7 @@ export function TextComposer({ personId, phones, templates, from, blocked, taskI
   const [extras, setExtras] = useState<Extra[]>(autoExtras);
   const [templateId, setTemplateId] = useState("");
   const [body, setBody] = useState(initial);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [missing, setMissing] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -53,26 +55,26 @@ export function TextComposer({ personId, phones, templates, from, blocked, taskI
   const send = () => start(async () => {
     setError(""); setNotice("");
     if (groupsOn && extras.length) {
-      const g = await sendTextGroup({ numbers: [to, ...extras.map((x) => x.value)], body, personId, taskId: taskId ?? null });
+      const g = await sendTextGroup({ numbers: [to, ...extras.map((x) => x.value)], body, personId, taskId: taskId ?? null, media: photos });
       if (!g.ok) { setError(g.error); return; }
       setNotice(`Sent as a group text to ${extras.length + 1} people.`);
-      setBody(""); setTemplateId(""); setMissing([]); router.refresh(); onSent?.("the group");
+      setBody(""); setPhotos([]); setTemplateId(""); setMissing([]); router.refresh(); onSent?.("the group");
       return;
     }
-    const r = await sendText({ personId, to, body, taskId: taskId ?? null });
+    const r = await sendText({ personId, to, body, taskId: taskId ?? null, media: photos });
     if (!r.ok) { setError(r.error); return; }
     const names = [r.data!.name], failed: string[] = [];
     for (const x of extras) {
-      const e = await sendText({ personId: x.personId, to: x.value, body, typed: !x.personId });
+      const e = await sendText({ personId: x.personId, to: x.value, body, typed: !x.personId, media: photos });
       if (e.ok) names.push(e.data!.name); else failed.push(`${x.label}: ${e.error}`);
     }
     setNotice(`Sent to ${names.join(", ")}.`); if (failed.length) setError(`Not sent to ${failed.join("; ")}`);
-    setBody(""); setTemplateId(""); setMissing([]); setExtras([]); router.refresh(); onSent?.(r.data!.name);
+    setBody(""); setPhotos([]); setTemplateId(""); setMissing([]); setExtras([]); router.refresh(); onSent?.(r.data!.name);
   });
   const onKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     slash.onKeyDown(e);
     // Ctrl/⌘ + Enter sends, like most chat apps; plain Enter makes a new line.
-    if (!e.defaultPrevented && e.key === "Enter" && (e.metaKey || e.ctrlKey) && body.trim() && !pending) { e.preventDefault(); send(); }
+    if (!e.defaultPrevented && e.key === "Enter" && (e.metaKey || e.ctrlKey) && (body.trim() || photos.length) && !pending) { e.preventDefault(); send(); }
   };
   return (
     <div className="mt-2 flex flex-col gap-2">
@@ -94,13 +96,15 @@ export function TextComposer({ personId, phones, templates, from, blocked, taskI
           onChange={(e) => { setBody(e.target.value); slash.track(); }} onKeyDown={onKey} onKeyUp={slash.track} onClick={slash.track} />
         {slash.menu}
       </div>
+      <TextPhotoPreviews photos={photos} onChange={setPhotos} />
       {missing.length > 0 && <p className="text-sm text-[#9a6400]">Not filled in (nothing on file): {missing.join(", ")}. Check the text before sending.</p>}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs muted">From your number {from ? formatPhone(from) : ""} · {body.length > 160 ? `${body.length} characters (${Math.ceil(body.length / 153)} texts)` : `${body.length}/160`}</span>
         <span className="flex gap-2">
+          <TextPhotoButton photos={photos} onChange={setPhotos} disabled={pending} />
           <EmojiButton box={box} value={body} onChange={setBody} />
           {body && <button type="button" className="btn" disabled={pending} onClick={() => { setBody(""); setTemplateId(""); setMissing([]); }}>Clear</button>}
-          <button type="button" className="btn btn-primary" disabled={pending || !body.trim() || !to} onClick={send}>{pending ? "Sending…" : "Send text"}</button>
+          <button type="button" className="btn btn-primary" disabled={pending || (!body.trim() && !photos.length) || !to} onClick={send}>{pending ? "Sending…" : "Send text"}</button>
         </span>
       </div>
       {error && <p role="alert" className="text-sm text-bad">{error}</p>}

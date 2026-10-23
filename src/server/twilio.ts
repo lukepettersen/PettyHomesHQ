@@ -5,7 +5,7 @@ import { sendProblem } from "@/lib/texting";
 // Railway variables and are never logged. TWILIO_API_BASE points tests at a fake server.
 
 const creds = () => ({ sid: process.env.TWILIO_ACCOUNT_SID?.trim() ?? "", token: process.env.TWILIO_AUTH_TOKEN?.trim() ?? "" });
-const host = (name: "api" | "messaging" | "conversations") => (process.env.TWILIO_API_BASE ? `${process.env.TWILIO_API_BASE.replace(/\/$/, "")}/${name}` : `https://${name}.twilio.com`);
+const host = (name: "api" | "messaging" | "conversations" | "mcs") => (process.env.TWILIO_API_BASE ? `${process.env.TWILIO_API_BASE.replace(/\/$/, "")}/${name}` : name === "mcs" ? "https://mcs.us1.twilio.com" : `https://${name}.twilio.com`);
 export const twilioToken = () => creds().token;
 /** HQ's public address, which Twilio calls back (the same one Google sign-in uses). */
 export const publicBase = () => (process.env.NEXTAUTH_URL ?? "").trim().replace(/\/$/, "");
@@ -28,9 +28,10 @@ const account = (path: string) => `${host("api")}/2010-04-01/Accounts/${encodeUR
 export type SendResult = { ok: true; sid: string; status: string } | { ok: false; error: string };
 
 /** Sends one text from a team member's number. Twilio reports delivery to /api/twilio/status. */
-export async function sendSms(o: { from: string; to: string; body: string }): Promise<SendResult> {
+export async function sendSms(o: { from: string; to: string; body: string; media?: string[] }): Promise<SendResult> {
   try {
-    const r = await call(account("/Messages.json"), { From: o.from, To: o.to, Body: o.body, StatusCallback: `${publicBase()}/api/twilio/status` });
+    // Photos go as MediaUrl (public addresses Twilio downloads); then it's a picture text (MMS).
+    const r = await callForm(account("/Messages.json"), formOf({ From: o.from, To: o.to, ...(o.body ? { Body: o.body } : {}), ...(o.media?.length ? { MediaUrl: o.media } : {}), StatusCallback: `${publicBase()}/api/twilio/status` }));
     if (!r.ok) {
       console.error("Twilio send failed", r.status, r.json.code ?? "");
       return { ok: false, error: sendProblem(r.json.code as number, r.status === 401 ? sendProblem(20003) : "") };
@@ -163,9 +164,9 @@ export async function createGroup(o: { ourNumber: string; numbers: string[]; nam
   return sid;
 }
 
-export async function postGroupMessage(sid: string, author: string, body: string): Promise<SendResult> {
+export async function postGroupMessage(sid: string, author: string, body: string, mediaSid?: string): Promise<SendResult> {
   try {
-    const r = await callForm(conv(`/Conversations/${encodeURIComponent(sid)}/Messages`), formOf({ Author: author, Body: body }));
+    const r = await callForm(conv(`/Conversations/${encodeURIComponent(sid)}/Messages`), formOf({ Author: author, ...(body ? { Body: body } : {}), ...(mediaSid ? { MediaSid: mediaSid } : {}) }));
     if (!r.ok) { console.error("Twilio group send failed", r.status, r.json.code ?? ""); return { ok: false, error: problem(r, "Twilio didn't send the group text.") }; }
     return { ok: true, sid: String(r.json.sid), status: "sent" };
   } catch {
@@ -176,4 +177,28 @@ export async function postGroupMessage(sid: string, author: string, body: string
 /** Closing a Conversation hands its numbers back to normal texting (used when group texting is turned off). */
 export async function closeConversation(sid: string) {
   await callForm(conv(`/Conversations/${encodeURIComponent(sid)}`), formOf({ State: "closed" })).catch(() => null);
+}
+
+/** A photo for a group text: uploaded to the Conversation's media store; returns its Media SID. */
+export async function uploadGroupPhoto(conversationSid: string, bytes: Uint8Array, type: string, filename: string): Promise<string> {
+  const c = await call(conv(`/Conversations/${encodeURIComponent(conversationSid)}`));
+  const service = c.ok ? String(c.json.chat_service_sid ?? "") : "";
+  if (!service) throw new Error(problem(c, "Twilio didn't find the group text to add the photo to."));
+  const { sid, token } = creds();
+  const res = await fetch(`${host("mcs")}/v1/Services/${service}/Media`, {
+    method: "POST", headers: { Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`, "Content-Type": type, "X-Twilio-Filename": filename },
+    body: Buffer.from(bytes), signal: AbortSignal.timeout(30000), cache: "no-store",
+  });
+  const json = (await res.json().catch(() => ({}))) as Json;
+  if (!res.ok || !json.sid) throw new Error(problem({ status: res.status, json }, "Twilio didn't take the photo."));
+  return String(json.sid);
+}
+
+/** A received photo's bytes from Twilio (plain texts' MediaUrl, or a Conversations media item). */
+export async function fetchTextMedia(m: { url?: string; service?: string; sid?: string }): Promise<Response | null> {
+  const { sid, token } = creds();
+  const url = m.url ?? (m.service && m.sid ? `${host("mcs")}/v1/Services/${m.service}/Media/${m.sid}/Content` : "");
+  // Only Twilio's own addresses get the account's keys.
+  if (!/^https:\/\/(api|mcs\.us1)\.twilio\.com\//.test(url) && !(process.env.TWILIO_API_BASE && url.startsWith(process.env.TWILIO_API_BASE))) return null;
+  return fetch(url, { headers: { Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}` }, signal: AbortSignal.timeout(30000), cache: "no-store" }).catch(() => null);
 }

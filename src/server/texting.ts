@@ -6,10 +6,11 @@ import { logActivity } from "@/server/activity";
 import { isConnected, textingEnabled } from "@/server/integrations";
 import { hasPermission } from "@/server/permissions";
 import type { SessionUser } from "@/server/auth";
-import { sendSms } from "@/server/twilio";
+import { publicBase, sendSms } from "@/server/twilio";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { groupTitle, isGroupKey } from "@/lib/groupText";
 import { applyReaction, parseReaction, reactsTo, type ReactionMark } from "@/lib/reactions";
+import { isOurImage, MAX_TEXT_PHOTOS, textWithPhotos, type TextMedia } from "@/lib/textMedia";
 import { callLength, centralDayStart, DEFAULT_DAILY_CAP, isStartWord, isStopWord, MAX_TEXT, toE164 } from "@/lib/texting";
 
 // Business texting (SPEC.md §11). Each team member has their own Twilio number (owner, 2026-10-20). Texts and
@@ -75,11 +76,12 @@ export async function recordReaction(o: { ourNumber: string; thread: string; by:
 }
 
 /** A text that came in (from Twilio's webhook). STOP tags them Unsubscribed; START/YES removes it. */
-export async function recordIncoming(o: { from: string; to: string; body: string; sid: string }) {
+export async function recordIncoming(o: { from: string; to: string; body: string; sid: string; media?: TextMedia[] }) {
   const theirs = normalizePhone(o.from);
-  if (await recordReaction({ ourNumber: o.to, thread: theirs, by: theirs, body: o.body })) return;
+  const media = o.media ?? [];
+  if (!media.length && (await recordReaction({ ourNumber: o.to, thread: theirs, by: theirs, body: o.body }))) return;
   const [owner, person] = await Promise.all([lineOwner(o.to), personForNumber(theirs)]);
-  const body = o.body.slice(0, 5000);
+  const body = textWithPhotos(o.body.slice(0, 5000), media);
   const saved = await saveOnce(o.to, theirs, async (tx) => {
     if (await tx.textMessage.findUnique({ where: { twilioSid: o.sid } })) return false; // Twilio retried
     const since = new Date(Date.now() - COPY_WINDOW);
@@ -87,7 +89,7 @@ export async function recordIncoming(o: { from: string; to: string; body: string
     // or as part of a group text. Keep the first copy only.
     const other = o.sid.startsWith("IM") ? "SM" : "IM";
     if (await tx.textMessage.findFirst({ where: { ourNumber: o.to, direction: "in", body, createdAt: { gte: since }, OR: [{ fromNumber: theirs }, { theirNumber: theirs, twilioSid: { startsWith: other } }] } })) return false;
-    await tx.textMessage.create({ data: { ourNumber: o.to, theirNumber: theirs, personId: person?.id ?? null, direction: "in", body, twilioSid: o.sid, status: "received" } });
+    await tx.textMessage.create({ data: { ourNumber: o.to, theirNumber: theirs, personId: person?.id ?? null, direction: "in", body, media, twilioSid: o.sid, status: "received" } });
     return true;
   });
   if (!saved) return;
@@ -151,12 +153,15 @@ export async function updateStatus(sid: string, status: string, errorCode?: stri
  * Sends a text from the user's own number, typed by them (so quiet hours don't apply; they hold only automatic
  * texts). To a phone saved on the contact, or back to a number that texted this line. Never to Unsubscribed.
  */
-export async function sendTextAs(user: { id: string; name: string }, o: { personId: string | null; to: string; body: string; typed?: boolean }) {
+export async function sendTextAs(user: { id: string; name: string }, o: { personId: string | null; to: string; body: string; typed?: boolean; media?: string[] }) {
   if (!(await textingEnabled())) throw new UserError("Texting is off. An Admin can turn it on in Admin → Integrations.");
   const me = await db.user.findUnique({ where: { id: user.id }, select: { textNumber: true } });
   if (!me?.textNumber) throw new UserError("You don't have a texting number yet. An Admin can add it in Admin → Integrations.");
+  const photos = o.media ?? [];
+  if (photos.length > MAX_TEXT_PHOTOS) throw new UserError(`Up to ${MAX_TEXT_PHOTOS} photos in one text.`);
+  if (photos.some((u) => !isOurImage(u, publicBase()))) throw new UserError("Attach photos with the 📷 button.");
   const body = o.body.trim();
-  if (!body) throw new UserError("Write a message.");
+  if (!body && !photos.length) throw new UserError("Write a message.");
   if (body.length > MAX_TEXT) throw new UserError(`Texts can be up to ${MAX_TEXT} characters.`);
   const theirs = normalizePhone(o.to);
   const to = toE164(theirs);
@@ -176,12 +181,13 @@ export async function sendTextAs(user: { id: string; name: string }, o: { person
   const sentToday = await db.textMessage.count({ where: { ourNumber: me.textNumber, direction: "out", createdAt: { gte: centralDayStart() } } });
   if (sentToday >= cap) throw new UserError(`You've reached today's limit of ${cap} texts from your number. It resets at midnight (Admin → Integrations to change it).`);
 
-  const r = await sendSms({ from: me.textNumber, to, body });
+  const r = await sendSms({ from: me.textNumber, to, body, media: photos });
   if (!r.ok) throw new UserError(r.error);
-  await db.textMessage.create({ data: { ourNumber: me.textNumber, theirNumber: theirs, personId: person?.id ?? null, direction: "out", body, twilioSid: r.sid, status: r.status, sentById: user.id, readAt: new Date() } });
+  const saved = textWithPhotos(body, photos);
+  await db.textMessage.create({ data: { ourNumber: me.textNumber, theirNumber: theirs, personId: person?.id ?? null, direction: "out", body: saved, media: photos.map((url) => ({ url, type: "image" })), twilioSid: r.sid, status: r.status, sentById: user.id, readAt: new Date() } });
   if (person) {
     await db.$transaction([
-      db.timelineEntry.create({ data: { personId: person.id, kind: "text", outcome: "Sent", body, authorId: user.id } }),
+      db.timelineEntry.create({ data: { personId: person.id, kind: "text", outcome: "Sent", body: body && photos.length ? `${body}\n📷 Photo` : saved, authorId: user.id } }),
       db.person.update({ where: { id: person.id }, data: { lastTextAt: new Date(), lastContactAt: new Date() } }),
     ]);
     revalidatePath(`/people/${person.id}`);
@@ -193,7 +199,7 @@ export async function sendTextAs(user: { id: string; name: string }, o: { person
 
 // ---------- Messages page ----------
 export type Thread = { number: string; personId: string | null; name: string; last: string; lastKind: string; lastDir: string; at: string; unread: number; group?: boolean };
-export type Bubble = { id: string; direction: string; kind: string; body: string; status: string; error: string | null; by: string | null; at: string; from?: string | null; reactions?: string[] };
+export type Bubble = { id: string; direction: string; kind: string; body: string; status: string; error: string | null; by: string | null; at: string; from?: string | null; reactions?: string[]; photos?: string[] };
 export type GroupInfo = { title: string; members: { name: string; personId: string | null; digits: string }[] };
 
 /** Group texts' names (the people in them, as contacts where we have them). */
@@ -226,7 +232,8 @@ export async function loadThreads(ourNumber: string): Promise<Thread[]> {
 export async function loadConversation(ourNumber: string, theirNumber: string): Promise<Bubble[]> {
   const rows = await db.textMessage.findMany({ where: { ourNumber, theirNumber }, orderBy: { createdAt: "asc" }, take: 500, include: { sentBy: { select: { name: true } }, person: { select: { name: true } } } });
   return rows.map((m) => ({ id: m.id, direction: m.direction, kind: m.kind, body: m.body, status: m.status, error: m.error, by: m.sentBy?.name.split(" ")[0] ?? null, at: m.createdAt.toISOString(),
-    from: m.fromNumber ? m.person?.name ?? formatPhone(m.fromNumber) : null, reactions: ((Array.isArray(m.reactions) ? m.reactions : []) as ReactionMark[]).map((x) => x.emoji) }));
+    from: m.fromNumber ? m.person?.name ?? formatPhone(m.fromNumber) : null, reactions: ((Array.isArray(m.reactions) ? m.reactions : []) as ReactionMark[]).map((x) => x.emoji),
+    photos: (Array.isArray(m.media) ? m.media : []).map((_, i) => `/api/texts/${m.id}/photo/${i}`) }));
 }
 
 /** Unread texts and missed calls on the user's number, for the Messages tab. */

@@ -5,11 +5,14 @@ import { db } from "@/server/db";
 import { UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { isConnected, textingEnabled } from "@/server/integrations";
-import { addGroupSender, closeConversation, conversationParticipants, createGroup, postGroupMessage, publicBase, setGroupAddress } from "@/server/twilio";
+import { addGroupSender, closeConversation, conversationParticipants, createGroup, postGroupMessage, publicBase, setGroupAddress, uploadGroupPhoto } from "@/server/twilio";
 import { COPY_WINDOW, dailyCap, isUnsubscribed, lineOwner, personForNumber, recordIncoming, recordReaction, saveOnce, setUnsubscribed } from "@/server/texting";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { centralDayStart, isStartWord, isStopWord, MAX_TEXT, toE164 } from "@/lib/texting";
 import { groupMembers, groupTitle, isGroupKey, MAX_GROUP, otherRecipients, readParticipants } from "@/lib/groupText";
+import { conversationMedia, isOurImage, MAX_TEXT_PHOTOS, plainMedia, textWithPhotos, type TextMedia } from "@/lib/textMedia";
+import { EMAIL_IMAGE_PREFIX } from "@/lib/emailImages";
+import { getFile } from "@/server/storage";
 import { noteInbound } from "@/server/textDebug";
 
 // Group texting (SPEC.md §11, owner request 2026-10-22). A group text that includes a team number arrives on the
@@ -77,9 +80,11 @@ type Thread = { sid: string; ourNumber: string; members: string[] };
  * Saves one incoming group message (from either webhook) on its thread: once, even if Twilio delivers it twice;
  * on every contact's timeline in the group; with an alert for the line's owner.
  */
-async function recordGroupMessage(t: Thread, o: { from: string; body: string; sid: string }) {
+async function recordGroupMessage(t: Thread, o: { from: string; body: string; sid: string; media?: TextMedia[] }) {
   const from = normalizePhone(o.from);
-  if (await recordReaction({ ourNumber: t.ourNumber, thread: t.sid, by: from, body: o.body })) return;
+  const media = o.media ?? [];
+  if (!media.length && (await recordReaction({ ourNumber: t.ourNumber, thread: t.sid, by: from, body: o.body }))) return;
+  o = { ...o, body: textWithPhotos(o.body, media) };
   const members = t.members.includes(from) ? t.members : [...t.members, from];
   if (members !== t.members) await db.textThread.update({ where: { sid: t.sid }, data: { members } });
   const people = await membersOf(members);
@@ -87,8 +92,9 @@ async function recordGroupMessage(t: Thread, o: { from: string; body: string; si
   const since = new Date(Date.now() - COPY_WINDOW);
   const saved = await saveOnce(t.ourNumber, from, async (tx) => {
     if (await tx.textMessage.findUnique({ where: { twilioSid: o.sid } })) return false;
-    // Already saved through the other webhook.
-    if (await tx.textMessage.findFirst({ where: { ourNumber: t.ourNumber, fromNumber: from, direction: "in", body: o.body, createdAt: { gte: since } } })) return false;
+    // Already saved through the other webhook (plain SM… vs Conversation IM…).
+    const other = o.sid.startsWith("IM") ? "SM" : "IM";
+    if (await tx.textMessage.findFirst({ where: { ourNumber: t.ourNumber, fromNumber: from, direction: "in", body: o.body, createdAt: { gte: since }, twilioSid: { startsWith: other } } })) return false;
     // A plain one-to-one copy saved first: drop it (and its timeline line and alert).
     const dupes = await tx.textMessage.findMany({ where: { ourNumber: t.ourNumber, theirNumber: from, direction: "in", body: o.body, createdAt: { gte: since } }, select: { id: true, personId: true } });
     if (dupes.length) {
@@ -96,7 +102,7 @@ async function recordGroupMessage(t: Thread, o: { from: string; body: string; si
       for (const d of dupes) if (d.personId) await tx.timelineEntry.deleteMany({ where: { personId: d.personId, kind: "text", outcome: "Received", body: o.body, createdAt: { gte: since } } });
       await tx.notification.deleteMany({ where: { createdAt: { gte: since }, text: { startsWith: "Text from " }, link: `/messages?n=${from}` } });
     }
-    await tx.textMessage.create({ data: { ourNumber: t.ourNumber, theirNumber: t.sid, fromNumber: from, personId: sender.person?.id ?? null, direction: "in", body: o.body, twilioSid: o.sid, status: "received" } });
+    await tx.textMessage.create({ data: { ourNumber: t.ourNumber, theirNumber: t.sid, fromNumber: from, personId: sender.person?.id ?? null, direction: "in", body: o.body, media, twilioSid: o.sid, status: "received" } });
     return true;
   });
   if (!saved) return;
@@ -123,9 +129,7 @@ export async function recordPlainGroup(f: Record<string, string>): Promise<boole
   if (members.length < 2) return false;
   const thread = (await groupWith(f.To, members))
     ?? (await db.textThread.create({ data: { sid: `G${createHash("sha256").update(`${f.To}|${members.join(",")}`).digest("hex").slice(0, 32)}`, ourNumber: f.To, group: true, members } }));
-  let body = (f.Body ?? "").slice(0, 5000);
-  if (Number(f.NumMedia ?? 0) > 0) body = body ? `${body}\n[picture]` : "[picture]";
-  await recordGroupMessage(thread, { from: f.From, body, sid: f.MessageSid });
+  await recordGroupMessage(thread, { from: f.From, body: (f.Body ?? "").slice(0, 5000), sid: f.MessageSid, media: plainMedia(f) });
   return true;
 }
 
@@ -138,26 +142,25 @@ export async function handleConversationMessage(f: Record<string, string>) {
   const info = await threadForConversation(sid);
   await noteInbound({ via: "conversation", from: author, to: info?.ourNumber ?? "", group: info?.group, people: info ? info.members.length : undefined, media: f.Media && f.Media !== "[]" ? 1 : 0 });
   if (!info) return;
-  let body = (f.Body ?? "").slice(0, 5000);
-  if (f.Media && f.Media !== "[]" && f.Media !== "null") body = body ? `${body}\n[picture]` : "[picture]";
+  const body = (f.Body ?? "").slice(0, 5000), media = conversationMedia(f);
   if (!info.group) {
-    await recordIncoming({ from: author, to: info.ourNumber, body, sid: msg });
+    await recordIncoming({ from: author, to: info.ourNumber, body, sid: msg, media });
     // HQ handles one-to-one texts the plain way, so close this Conversation: while it's open Twilio ties the
     // person's number to it and sends their later group texts here instead of to the group.
     await closeConversation(sid);
     await db.textThread.delete({ where: { sid: info.sid } }).catch(() => null);
     return;
   }
-  await recordGroupMessage(info, { from: author, body, sid: msg });
+  await recordGroupMessage(info, { from: author, body, sid: msg, media });
 }
 
-async function checkSend(user: { id: string }, body: string) {
+async function checkSend(user: { id: string }, body: string, photos = 0) {
   if (!(await textingEnabled())) throw new UserError("Texting is off. An Admin can turn it on in Admin → Integrations.");
   if (!(await groupTextingOn())) throw new UserError("Group texting is off. An Admin can turn it on in Admin → Integrations.");
   const me = await db.user.findUnique({ where: { id: user.id }, select: { textNumber: true } });
   if (!me?.textNumber) throw new UserError("You don't have a texting number yet. An Admin can add it in Admin → Integrations.");
   const text = body.trim();
-  if (!text) throw new UserError("Write a message.");
+  if (!text && !photos) throw new UserError("Write a message.");
   if (text.length > MAX_TEXT) throw new UserError(`Texts can be up to ${MAX_TEXT} characters.`);
   const cap = await dailyCap();
   if ((await db.textMessage.count({ where: { ourNumber: me.textNumber, direction: "out", createdAt: { gte: centralDayStart() } } })) >= cap) throw new UserError(`You've reached today's limit of ${cap} texts from your number. It resets at midnight.`);
@@ -168,9 +171,12 @@ async function checkSend(user: { id: string }, body: string) {
  * Reply in a group text from HQ: everyone in the group gets it from the user's number, through the group's Twilio
  * Conversation (made the first time HQ replies to a group that texted in).
  */
-export async function sendGroupText(user: { id: string; name: string }, o: { sid: string; body: string }) {
+export async function sendGroupText(user: { id: string; name: string }, o: { sid: string; body: string; media?: string[] }) {
   if (!isGroupKey(o.sid)) throw new UserError("That isn't a group text.");
-  const { ourNumber, text } = await checkSend(user, o.body);
+  const photos = o.media ?? [];
+  if (photos.length > MAX_TEXT_PHOTOS) throw new UserError(`Up to ${MAX_TEXT_PHOTOS} photos in one text.`);
+  if (photos.some((u) => !isOurImage(u, publicBase()))) throw new UserError("Attach photos with the 📷 button.");
+  const { ourNumber, text } = await checkSend(user, o.body, photos.length);
   const info = await db.textThread.findUnique({ where: { sid: o.sid } });
   if (!info?.group) throw new UserError("That group text wasn't found.");
   if (info.ourNumber !== ourNumber) throw new UserError("This group text is on a teammate's number. Switch to your own number to text.");
@@ -188,12 +194,24 @@ export async function sendGroupText(user: { id: string; name: string }, o: { sid
     author = await addGroupSender(conv, ourNumber).catch((e: Error) => { throw new UserError(e.message); });
     await db.textThread.update({ where: { sid: o.sid }, data: { sender: author } });
   }
-  const r = await postGroupMessage(conv, author, text);
-  if (!r.ok) throw new UserError(r.error);
-  await db.textMessage.create({ data: { ourNumber, theirNumber: o.sid, direction: "out", body: text, twilioSid: r.sid, status: r.status, sentById: user.id, readAt: new Date() } });
+  // A group message carries one photo, so the words go with the first and each other photo is its own message.
+  const parts: { body: string; photo?: string }[] = photos.length ? photos.map((p, i) => ({ body: i === 0 ? text : "", photo: p })) : [{ body: text }];
+  for (const part of parts) {
+    let mediaSid: string | undefined;
+    if (part.photo) {
+      const name = part.photo.split("/").pop()!;
+      const bytes = await getFile(`${EMAIL_IMAGE_PREFIX}${name}`).catch(() => null);
+      if (!bytes) throw new UserError("That photo couldn't be read from file storage. Attach it again.");
+      const type = name.endsWith(".png") ? "image/png" : name.endsWith(".gif") ? "image/gif" : "image/jpeg";
+      mediaSid = await uploadGroupPhoto(conv, bytes, type, name).catch((e: Error) => { throw new UserError(e.message); });
+    }
+    const r = await postGroupMessage(conv, author, part.body, mediaSid);
+    if (!r.ok) throw new UserError(r.error);
+    await db.textMessage.create({ data: { ourNumber, theirNumber: o.sid, direction: "out", body: textWithPhotos(part.body, part.photo ? [part.photo] : []), media: part.photo ? [{ url: part.photo, type: "image" }] : [], twilioSid: r.sid, status: r.status, sentById: user.id, readAt: new Date() } });
+  }
   for (const m of uniqueContacts(people)) if (m.person) {
     await db.$transaction([
-      db.timelineEntry.create({ data: { personId: m.person.id, kind: "text", outcome: "Sent", body: `Group text: ${text}`, authorId: user.id } }),
+      db.timelineEntry.create({ data: { personId: m.person.id, kind: "text", outcome: "Sent", body: `Group text: ${[text, photos.length ? "📷 Photo" : ""].filter(Boolean).join("\n")}`, authorId: user.id } }),
       db.person.update({ where: { id: m.person.id }, data: { lastTextAt: new Date(), lastContactAt: new Date() } }),
     ]);
     revalidatePath(`/people/${m.person.id}`);
@@ -203,8 +221,8 @@ export async function sendGroupText(user: { id: string; name: string }, o: { sid
 }
 
 /** + New message → group: up to 9 people (saved on contacts) and the user's number, then the first text. */
-export async function startGroupText(user: { id: string; name: string }, o: { numbers: string[]; body: string }) {
-  const { ourNumber } = await checkSend(user, o.body);
+export async function startGroupText(user: { id: string; name: string }, o: { numbers: string[]; body: string; media?: string[] }) {
+  const { ourNumber } = await checkSend(user, o.body, o.media?.length ?? 0);
   const digits = [...new Set(o.numbers.map(normalizePhone))];
   if (digits.length < 2) throw new UserError("Pick at least two people for a group text.");
   if (digits.length > MAX_GROUP - 1) throw new UserError(`A group text can have up to ${MAX_GROUP - 1} people plus you.`);
@@ -218,17 +236,17 @@ export async function startGroupText(user: { id: string; name: string }, o: { nu
   const sid = await createGroup({ ourNumber, numbers: digits.map((d) => toE164(d)!), name: groupTitle([...new Set(people.map(nameOf))]), webhookUrl: conversationHook() })
     .catch((e: Error) => { throw new UserError(e.message); });
   await db.textThread.create({ data: { sid, conversationSid: sid, ourNumber, group: true, members: digits, sender: `hq:${ourNumber}` } });
-  await sendGroupText(user, { sid, body: o.body });
+  await sendGroupText(user, { sid, body: o.body, media: o.media });
   return { sid };
 }
 
 /** Send text with more than one number (group texting on): one group text, the same thread as before if these people already have one. */
-export async function textNumbersAsGroup(user: { id: string; name: string }, o: { numbers: string[]; body: string }) {
+export async function textNumbersAsGroup(user: { id: string; name: string }, o: { numbers: string[]; body: string; media?: string[] }) {
   const me = await db.user.findUnique({ where: { id: user.id }, select: { textNumber: true } });
   const want = [...new Set(o.numbers.map(normalizePhone))].sort();
   const same = me?.textNumber ? await groupWith(me.textNumber, want) : null;
-  if (same) { await sendGroupText(user, { sid: same.sid, body: o.body }); return { sid: same.sid }; }
-  return startGroupText(user, { numbers: want, body: o.body });
+  if (same) { await sendGroupText(user, { sid: same.sid, body: o.body, media: o.media }); return { sid: same.sid }; }
+  return startGroupText(user, { numbers: want, body: o.body, media: o.media });
 }
 
 export const groupReady = async () => isConnected("texting") && (await groupTextingOn());
