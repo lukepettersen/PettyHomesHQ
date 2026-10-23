@@ -1,7 +1,6 @@
 import { db } from "@/server/db";
 import { forbidden, twilioForm, xml } from "@/server/twilioWebhook";
 import { recordAnsweredCall, recordMissedCall } from "@/server/texting";
-import { recordCalls } from "@/server/integrations";
 import { publicBase } from "@/server/twilio";
 import { EMPTY_TWIML, missedDial, toE164, voiceTwiml } from "@/lib/texting";
 import { noteInbound } from "@/server/textDebug";
@@ -28,8 +27,8 @@ export async function POST(req: Request) {
     console.error("Call forward failed; retrying with the business number as caller ID");
     const owner = await db.user.findFirst({ where: { textNumber: f.To }, select: { forwardTo: true } });
     const cell = owner?.forwardTo ? toE164(owner.forwardTo) : null;
-    // The caller already heard "This call may be recorded" the first time.
-    if (cell) return xml(voiceTwiml({ forwardTo: cell, action: `${publicBase()}/api/twilio/voice/done?retry=1`, record: (await recordCalls()) ? `${publicBase()}/api/twilio/recording` : undefined }));
+    // The second try skips recording, so a recording problem (Twilio error 13227) can't stop the call reaching the cell.
+    if (cell) return xml(voiceTwiml({ forwardTo: cell, action: `${publicBase()}/api/twilio/voice/done?retry=1` }));
   }
   if (f.CallSid && f.From && f.To) await recordMissedCall({ from: f.From, to: f.To, sid: f.CallSid });
   return xml(voiceTwiml({}));
