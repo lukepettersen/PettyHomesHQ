@@ -193,6 +193,10 @@ Principles:
   - **Timeline:** composer with Note, Send text, Log text, Log call (with outcome).
     Filters: All, Notes, Texts, Calls, **Tasks**, Emails, Deal activity. Newest first.
     Checking off a task for the person adds a "Task done" line (unchecking removes it).
+  - **Edit / Delete** *(owner request 2026-10-23)* under notes, logged calls and logged texts: Edit changes the
+    words (and a call's outcome) in place with Save / Cancel; Delete takes two clicks and hides the entry (kept
+    as deleted). Only the person who wrote it, or someone allowed to delete records, sees these. Texts and emails
+    HQ sent or received, answered or missed calls and task lines can't be changed.
   - **@mentions:** typing `@` in a note, logged call or logged text shows the team; picking
     one inserts "@Alyssa". On save, that person gets a bell notification and, when Gmail is
     connected, an email to their pettyhomes.com address. Mentions are highlighted in the

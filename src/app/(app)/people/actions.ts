@@ -8,6 +8,8 @@ import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { coupleName, dateFromIso, formatPhone, normalizeEmail, normalizePhone } from "@/lib/normalize";
 import { findMentions } from "@/lib/mentions";
+import { canEditEntry } from "@/lib/timeline";
+import { hasPermission, type Permission } from "@/server/permissions";
 import { cleanFieldValue } from "@/lib/customFields";
 
 const trimmed = (max = 200) => z.string().trim().max(max);
@@ -144,6 +146,37 @@ export async function addTimelineEntry(input: z.input<typeof entrySchema>) {
     await logActivity(user.id, "create", "timeline", v.personId, `Logged ${v.kind} for ${person.name}${mentioned.length ? ` (mentioned ${mentioned.map((m) => m.name).join(", ")})` : ""}`);
     revalidatePath(`/people/${v.personId}`);
     return { mentioned: mentioned.map((m) => m.name.split(" ")[0]) };
+  });
+}
+
+/** Edit a note, logged call or logged text: its author, or anyone allowed to delete records. */
+async function editableEntry(user: { id: string; permissions: string[] }, id: string) {
+  const e = await db.timelineEntry.findFirst({ where: { id, deletedAt: null, person: { deletedAt: null } } });
+  if (!e) throw new UserError("That entry was deleted.");
+  if (!canEditEntry(e)) throw new UserError("Only notes, logged calls and logged texts can be changed.");
+  if (e.authorId !== user.id && !hasPermission(user.permissions as Permission[], "deleteRecords")) throw new UserError("Only the person who wrote it can change it.");
+  return e;
+}
+
+const editEntrySchema = z.object({ id: z.string().max(40), body: trimmed(10000).min(1, "Type something first"), outcome: trimmed(40).optional() });
+
+export async function editTimelineEntry(input: z.input<typeof editEntrySchema>) {
+  return guarded(null, async (user) => {
+    const v = editEntrySchema.parse(input);
+    const e = await editableEntry(user, v.id);
+    await db.timelineEntry.update({ where: { id: e.id }, data: { body: v.body, ...(e.kind === "call" && v.outcome ? { outcome: v.outcome } : {}) } });
+    await logActivity(user.id, "update", "timeline", e.personId, `Edited a ${e.kind} (was: "${e.body.length > 80 ? `${e.body.slice(0, 80)}…` : e.body}")`);
+    revalidatePath(`/people/${e.personId}`);
+  });
+}
+
+/** Delete a note, logged call or logged text (two-step in the UI; kept as deleted, not erased). */
+export async function deleteTimelineEntry(id: string) {
+  return guarded(null, async (user) => {
+    const e = await editableEntry(user, z.string().max(40).parse(id));
+    await db.timelineEntry.update({ where: { id: e.id }, data: { deletedAt: new Date() } });
+    await logActivity(user.id, "delete", "timeline", e.personId, `Deleted a ${e.kind}`);
+    revalidatePath(`/people/${e.personId}`);
   });
 }
 

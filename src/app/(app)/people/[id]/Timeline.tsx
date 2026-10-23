@@ -2,12 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
-import { addTimelineEntry } from "../actions";
+import { addTimelineEntry, deleteTimelineEntry, editTimelineEntry } from "../actions";
 import { mentionLabel, mentionQuery, splitMentions, type Member } from "@/lib/mentions";
 import { EmailComposer } from "./EmailComposer";
 import { TextComposer } from "@/components/TextComposer";
 
-type Entry = { id: string; kind: string; body: string; outcome: string | null; author: string | null; at: string; opened?: string | null; audio?: string };
+type Entry = { id: string; kind: string; body: string; outcome: string | null; author: string | null; at: string; opened?: string | null; audio?: string; editable?: boolean };
 const TABS: [Kind, string, string, string][] = [
   ["note", "Note", "Add a note.", "Save note"],
   ["send", "Send text", "", ""],
@@ -26,6 +26,7 @@ export function Timeline({ personId, entries, team, email, text }: { personId: s
   const [body, setBody] = useState("");
   const [outcome, setOutcome] = useState("Talked");
   const [filter, setFilter] = useState("all");
+  const [editing, setEditing] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [pick, setPick] = useState<{ q: string; i: number } | null>(null);
@@ -119,15 +120,59 @@ export function Timeline({ personId, entries, team, email, text }: { personId: s
             <li key={e.id} className="grid grid-cols-[70px_minmax(0,1fr)] gap-3 border-t border-misty py-2.5 text-sm first:border-0">
               <span className="text-xs font-bold uppercase tracking-wide muted">{KIND_LABEL[e.kind] ?? e.kind}</span>
               <div>
-                {e.kind === "email" ? <><EmailBody body={e.body} />{e.opened !== undefined && <span className={`text-xs font-semibold ${e.opened ? "text-accent" : "muted"}`}>{e.opened ? `Opened ${new Date(e.opened).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).replace(/ (AM|PM)$/, (m) => m.trim().toLowerCase())}` : "Not opened yet"}</span>}</> : <div className="whitespace-pre-wrap break-words">{e.outcome ? <b>{e.outcome}: </b> : null}{splitMentions(e.body, team).map((part, i) => part.mention ? <mark key={i} className="rounded bg-accent-soft px-0.5 font-semibold text-accent">{part.text}</mark> : part.text)}</div>}
+                {editing === e.id ? <EditEntry entry={e} onDone={() => { setEditing(null); router.refresh(); }} /> : e.kind === "email" ? <><EmailBody body={e.body} />{e.opened !== undefined && <span className={`text-xs font-semibold ${e.opened ? "text-accent" : "muted"}`}>{e.opened ? `Opened ${new Date(e.opened).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).replace(/ (AM|PM)$/, (m) => m.trim().toLowerCase())}` : "Not opened yet"}</span>}</> : <div className="whitespace-pre-wrap break-words">{e.outcome ? <b>{e.outcome}: </b> : null}{splitMentions(e.body, team).map((part, i) => part.mention ? <mark key={i} className="rounded bg-accent-soft px-0.5 font-semibold text-accent">{part.text}</mark> : part.text)}</div>}
                 {e.audio && <audio controls preload="none" src={e.audio} className="mt-1 w-full max-w-sm" aria-label="Call recording" />}
-                <div className="text-xs muted">{new Date(e.at).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).replace(/ (AM|PM)$/, (m) => m.trim().toLowerCase())}{e.author ? ` · ${e.author}` : ""}</div>
+                <div className="flex flex-wrap items-center gap-x-3 text-xs muted">
+                  <span>{new Date(e.at).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).replace(/ (AM|PM)$/, (m) => m.trim().toLowerCase())}{e.author ? ` · ${e.author}` : ""}</span>
+                  {e.editable && editing !== e.id && <>
+                    <button type="button" className="font-semibold text-accent hover:underline" onClick={() => setEditing(e.id)}>Edit</button>
+                    <DeleteEntry id={e.id} onDone={() => router.refresh()} />
+                  </>}
+                </div>
               </div>
             </li>
           ))}
         </ol>
       ) : <p className="mt-3 text-sm muted">Nothing here yet.</p>}
     </div>
+  );
+}
+
+/** Edit a note, logged call or logged text in place: Save / Cancel (SPEC.md §5 save rule). */
+function EditEntry({ entry, onDone }: { entry: Entry; onDone: () => void }) {
+  const [body, setBody] = useState(entry.body);
+  const [outcome, setOutcome] = useState(entry.outcome ?? "Talked");
+  const [error, setError] = useState("");
+  const [pending, start] = useTransition();
+  return (
+    <div className="flex flex-col gap-2">
+      {entry.kind === "call" && (
+        <select className="input w-auto self-start" value={outcome} onChange={(e) => setOutcome(e.target.value)} aria-label="Call outcome">
+          {["Talked", "Left voicemail", "No answer"].map((o) => <option key={o}>{o}</option>)}
+        </select>
+      )}
+      <textarea autoFocus aria-label="Edit entry" className="input min-h-24 font-normal" value={body} onChange={(e) => setBody(e.target.value)} />
+      <span className="flex gap-2">
+        <button type="button" className="btn" onClick={onDone}>Cancel</button>
+        <button type="button" className="btn btn-primary" disabled={pending || !body.trim()} onClick={() => start(async () => {
+          const r = await editTimelineEntry({ id: entry.id, body, outcome: entry.kind === "call" ? outcome : undefined });
+          if (!r.ok) setError(r.error); else onDone();
+        })}>{pending ? "Saving…" : "Save"}</button>
+      </span>
+      {error && <p role="alert" className="text-sm text-bad">{error}</p>}
+    </div>
+  );
+}
+
+/** Delete with a second click to confirm. */
+function DeleteEntry({ id, onDone }: { id: string; onDone: () => void }) {
+  const [sure, setSure] = useState(false);
+  const [pending, start] = useTransition();
+  return (
+    <button type="button" className="font-semibold text-bad hover:underline" disabled={pending} onBlur={() => setSure(false)}
+      onClick={() => { if (!sure) { setSure(true); return; } start(async () => { const r = await deleteTimelineEntry(id); if (r.ok) onDone(); }); }}>
+      {sure ? "Click again to delete" : "Delete"}
+    </button>
   );
 }
 
