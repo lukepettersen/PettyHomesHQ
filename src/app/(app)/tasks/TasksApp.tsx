@@ -36,8 +36,10 @@ const EMPTY: Record<string, string> = {
   misc: "Nothing here. Tasks with no client land in Misc.",
   upcoming: "Nothing scheduled after today.",
 };
+// Same-day tasks fall back to title, then id, so nothing reshuffles when the list refreshes after a check-off.
 const sortTasks = (a: TaskRow, b: TaskRow) =>
-  (a.due ?? "9999").localeCompare(b.due ?? "9999") || b.priority - a.priority || (a.time ?? "99").localeCompare(b.time ?? "99");
+  (a.due ?? "9999").localeCompare(b.due ?? "9999") || b.priority - a.priority || (a.time ?? "99").localeCompare(b.time ?? "99")
+  || a.title.localeCompare(b.title) || (a.personName ?? "").localeCompare(b.personName ?? "") || a.id.localeCompare(b.id);
 
 export function TasksApp(p: Props) {
   const router = useRouter();

@@ -92,7 +92,7 @@ export async function loadTaskBoard() {
   const team = await loadTeam();
   const [lists, tasks, dateTasks, people] = await Promise.all([
     db.taskList.findMany({ orderBy: [{ position: "asc" }, { name: "asc" }] }),
-    db.task.findMany({ where: { completedAt: null, deletedAt: null, OR: [{ personId: null }, { person: { deletedAt: null } }], ...LIVE_STEPS }, include: taskInclude, orderBy: [{ dueDate: "asc" }, { priority: "desc" }, { dueTime: "asc" }] }),
+    db.task.findMany({ where: { completedAt: null, deletedAt: null, OR: [{ personId: null }, { person: { deletedAt: null } }], ...LIVE_STEPS }, include: taskInclude, orderBy: [{ dueDate: "asc" }, { priority: "desc" }, { dueTime: "asc" }, { title: "asc" }, { id: "asc" }] }),
     loadDateTasks(team, today),
     db.person.findMany({ where: { deletedAt: null, followUpDays: { gt: 0 } }, select: { id: true, name: true, followUpDays: true, lastTextAt: true, touchAfter: true, assignedToId: true } }),
   ]);
@@ -124,6 +124,6 @@ export async function loadPersonTasks(personId: string) {
     db.task.findMany({ where: { personId, completedAt: null, deletedAt: null, ...LIVE_STEPS }, include: taskInclude }),
     loadDateTasks(team, today, personId),
   ]);
-  const rows = [...tasks.map(toRow), ...dateTasks].sort((a, b) => (a.due ?? "9999").localeCompare(b.due ?? "9999") || (a.time ?? "99").localeCompare(b.time ?? "99"));
+  const rows = [...tasks.map(toRow), ...dateTasks].sort((a, b) => (a.due ?? "9999").localeCompare(b.due ?? "9999") || (a.time ?? "99").localeCompare(b.time ?? "99") || a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
   return { today, team, rows };
 }

@@ -402,6 +402,9 @@ Principles:
 - **One task list everywhere:** tasks typed on the Tasks page, a person's own tasks and
   checklist steps from their files are the same records. Checking one off anywhere checks it
   off everywhere.
+- **Order stays put** *(owner 2026-10-23)*: tasks sort by due date, priority and time, then title and contact, so
+  same-day tasks keep their places when the board refreshes after a check-off (a repeating task's next copy shows
+  right next to the one just checked).
 - **Today** view: a board of columns side by side for Clients, Due for a touch, Important
   dates, Recurring, Misc, plus any user lists set to show on Today. Overdue items marked in
   red. Opening a task slides details over the board; clicking anywhere outside it closes it, like the × (unsaved edits keep it open with a reminder; owner request 2026-10-21). On a laptop or bigger every Today column (up to 6) fits on one row with compact cards (title, contact, due date, initials) *(owner request 2026-10-21)*.
