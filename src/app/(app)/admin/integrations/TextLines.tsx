@@ -18,10 +18,10 @@ export function TextLines({ lines, cap, numbers, record, groups, inbound }: { li
       <GroupRow on={groups} />
       {groups && inbound.length > 0 && (
         <details className="text-xs">
-          <summary className="cursor-pointer font-semibold muted">Recent incoming texts (troubleshooting)</summary>
+          <summary className="cursor-pointer font-semibold muted">Recent incoming texts and calls (troubleshooting)</summary>
           <ul className="mt-1 flex flex-col gap-0.5 font-mono">
             {inbound.map((n, i) => (
-              <li key={i}>{new Date(n.at).toLocaleTimeString("en-US", { timeZone: "America/Chicago", hour: "numeric", minute: "2-digit", second: "2-digit" }).replace(" ", "").toLowerCase()} · {n.via === "plain" ? "PLAIN" : `CONVERSATION${n.group ? " GROUP" : " 1:1"}`} · from …{n.from} to …{n.to}{n.people !== undefined ? ` · ${n.people} other people` : ""}{n.media ? " · media" : ""}{n.fields ? ` · ${n.fields.join(",")}` : ""}</li>
+              <li key={i}>{new Date(n.at).toLocaleTimeString("en-US", { timeZone: "America/Chicago", hour: "numeric", minute: "2-digit", second: "2-digit" }).replace(" ", "").toLowerCase()} · {n.via === "call" ? `CALL · ${n.call ?? ""}` : n.via === "plain" ? "PLAIN" : `CONVERSATION${n.group ? " GROUP" : " 1:1"}`} · from …{n.from} to …{n.to}{n.people !== undefined ? ` · ${n.people} other people` : ""}{n.media ? " · media" : ""}{n.fields ? ` · ${n.fields.join(",")}` : ""}</li>
             ))}
           </ul>
         </details>

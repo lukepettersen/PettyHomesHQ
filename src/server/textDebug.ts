@@ -5,7 +5,7 @@ import { db } from "@/server/db";
 // (plain webhook or Conversations). Only the last 4 digits of numbers and the field names are kept, never bodies.
 
 const KEY = "texting.debug";
-export type InboundNote = { at: string; via: "plain" | "conversation"; from: string; to: string; group?: boolean; people?: number; fields?: string[]; media?: number };
+export type InboundNote = { at: string; via: "plain" | "conversation" | "call"; from: string; to: string; group?: boolean; people?: number; fields?: string[]; media?: number; call?: string };
 const last4 = (n: string | undefined) => (n ?? "").replace(/\D/g, "").slice(-4);
 
 export async function noteInbound(n: Omit<InboundNote, "at" | "from" | "to"> & { from?: string; to?: string }) {

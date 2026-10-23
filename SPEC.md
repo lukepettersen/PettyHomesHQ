@@ -552,8 +552,8 @@ Principles:
   threads stay as they were. Deleting a group thread in Messages also ends its Conversation. Twilio's Conversations
   fee: first 200 people a month free, then about $0.05 per person a month.
   Admin → Integrations warns under a number when Twilio says it can't receive MMS, and (switch on) lists **Recent
-  incoming texts (troubleshooting)**: time, plain or Conversation, last 4 digits of the numbers, field names, never
-  message text.
+  incoming texts and calls (troubleshooting)**: time, plain or Conversation, last 4 digits of the numbers, field
+  names, never message text; calls show whether HQ rang the cell and how that went (answered, no answer, failed + error code).
 - **Photos** *(owner request 2026-10-23)*: photos texted to a business number (one-to-one or group) show in
   Messages (HQ passes them through from Twilio to signed-in users only; a photo with no words says "📷 Photo" in
   lists, alerts and timelines). **📷** on the text boxes (Send text, Messages, Send to group) attaches up to 5

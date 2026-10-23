@@ -4,6 +4,7 @@ import { recordAnsweredCall, recordMissedCall } from "@/server/texting";
 import { recordCalls } from "@/server/integrations";
 import { publicBase } from "@/server/twilio";
 import { EMPTY_TWIML, missedDial, toE164, voiceTwiml } from "@/lib/texting";
+import { noteInbound } from "@/server/textDebug";
 
 export const dynamic = "force-dynamic";
 
@@ -15,13 +16,14 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const f = await twilioForm(req, "/api/twilio/voice/done");
   if (!f) return forbidden();
+  const retried = new URL(req.url).searchParams.get("retry") === "1";
+  await noteInbound({ via: "call", from: f.From, to: f.To, call: `cell ${f.DialCallStatus ?? "?"}${f.DialCallDuration ? ` after ${f.DialCallDuration}s` : ""}${retried ? " (second try)" : ""}${f.ErrorCode ? ` · error ${f.ErrorCode}` : ""}` });
   if (!missedDial(f.DialCallStatus)) {
     if (f.DialCallStatus === "completed" && f.CallSid && f.From && f.To) {
       await recordAnsweredCall({ from: f.From, to: f.To, sid: f.CallSid, seconds: Number(f.DialCallDuration ?? 0), recordingSid: f.RecordingSid || null });
     }
     return xml(EMPTY_TWIML);
   }
-  const retried = new URL(req.url).searchParams.get("retry") === "1";
   if (["failed", "busy"].includes(f.DialCallStatus ?? "") && !retried && f.To) {
     console.error("Call forward failed; retrying with the business number as caller ID");
     const owner = await db.user.findFirst({ where: { textNumber: f.To }, select: { forwardTo: true } });
