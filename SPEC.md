@@ -479,7 +479,9 @@ Principles:
 - Times are picked in 15-minute steps (also the PA inspection appointment, which starts
   at 12:00pm). Appointments can be edited; moving a booked call moves its steps.
 - Fields: date, start, end (call 30 min, others 60), location (phone number for calls,
-  property address for showings), invitees (client + team, tick to include).
+  property address for showings), invitees (client + team, tick to include). Each email on the contact is
+  its own choice (e.g. Megan and Jaylen), all ticked to start; untick anyone who shouldn't get the invite
+  *(owner request 2026-10-24)*.
 - The contact page Appointments card lists upcoming appointments, then "Past appointments
   (N)"; contract dates show as "From contract". Delete is two-step.
 - **Phone call** also starts every template triggered by "When a phone call is booked"

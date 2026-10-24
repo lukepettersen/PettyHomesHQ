@@ -24,12 +24,18 @@ export function apptEvent(a: Pick<ApptView, "title" | "date" | "start" | "end" |
   return ev;
 }
 
-/** Invitee names (as ticked when booking) → email addresses: the team's, and the client's first email. */
-export function inviteeEmails(invitees: string[], team: { name: string; email: string }[], client: { firstName: string; email: string | null }): { email: string; name: string }[] {
+/**
+ * Invitees as ticked when booking → email addresses: team members by name, and the contact's own emails by
+ * address (each email on the contact is its own choice, owner 2026-10-24). Older appointments saved the client's
+ * first name, meaning their first email. Addresses that aren't on the contact are ignored.
+ */
+export function inviteeEmails(invitees: string[], team: { name: string; email: string }[], client: { firstName: string; emails: { address: string; label: string }[] }): { email: string; name: string }[] {
   return invitees.flatMap((n) => {
     const member = team.find((t) => t.name === n);
     if (member) return [{ email: member.email, name: member.name }];
-    if (client.email && n === client.firstName) return [{ email: client.email, name: n }];
+    const own = client.emails.find((e) => e.address.toLowerCase() === n.toLowerCase());
+    if (own) return [{ email: own.address, name: own.label || client.firstName }];
+    if (client.emails[0] && n === client.firstName) return [{ email: client.emails[0].address, name: n }];
     return [];
   });
 }

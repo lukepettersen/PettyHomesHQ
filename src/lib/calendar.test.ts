@@ -12,8 +12,10 @@ describe("calendar events", () => {
   });
   it("maps invitee names to emails", () => {
     const team = [{ name: "Luke Pettersen", email: "luke@pettyhomes.com" }];
-    expect(inviteeEmails(["Bob", "Luke Pettersen", "Someone"], team, { firstName: "Bob", email: "bob@x.com" })).toEqual([{ email: "bob@x.com", name: "Bob" }, { email: "luke@pettyhomes.com", name: "Luke Pettersen" }]);
-    expect(inviteeEmails(["Bob"], team, { firstName: "Bob", email: null })).toEqual([]);
+    const emails = [{ address: "megan@x.com", label: "Megan" }, { address: "jaylen@x.com", label: "Jaylen" }];
+    expect(inviteeEmails(["Bob", "Luke Pettersen", "Someone"], team, { firstName: "Bob", emails: [{ address: "bob@x.com", label: "" }] })).toEqual([{ email: "bob@x.com", name: "Bob" }, { email: "luke@pettyhomes.com", name: "Luke Pettersen" }]);
+    expect(inviteeEmails(["Bob"], team, { firstName: "Bob", emails: [] })).toEqual([]);
+    expect(inviteeEmails(["megan@x.com", "Jaylen@x.com", "stranger@x.com"], team, { firstName: "Megan", emails })).toEqual([{ email: "megan@x.com", name: "Megan" }, { email: "jaylen@x.com", name: "Jaylen" }]);
   });
   it("keys contract events by contract and kind", () => {
     expect(contractKey("pa1", "inspection-deadline-at-pm")).toBe("pa:pa1:inspection-deadline-at-pm");

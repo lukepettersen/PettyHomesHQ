@@ -15,7 +15,7 @@ import { FileForm } from "../../pipeline/FileForm";
 import { splitCouple } from "@/lib/normalize";
 
 type Props = {
-  fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; appts: ApptView[]; today: string; phone: string; address: string; hasEmail: boolean; team: string[];
+  fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; appts: ApptView[]; today: string; phone: string; address: string; hasEmail: boolean; team: string[]; clientEmails: { address: string; label: string }[];
   callTemplates: { name: string; steps: number; trigger: string }[]; calendarConnected: boolean; activeKinds: string[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean;
 };
 
@@ -72,7 +72,7 @@ function Appt({ a, today, personName, onEdit, onDeleted }: { a: ApptView; today:
       <span className={`block text-xs ${n === 0 ? "font-semibold text-accent" : "muted"}`}>{time}{day}</span>
       {a.location && <span className="block text-xs muted">{a.location}</span>}
       <span className="mt-1 flex items-center justify-between gap-2">
-        <span className="flex gap-1">{a.invitees.map((x) => <span key={x} title={x} className="grid h-5 w-5 place-items-center rounded-full bg-accent-soft text-[9px] font-bold text-accent">{initials(x)}</span>)}</span>
+        <span className="flex gap-1">{a.invitees.map((x) => <span key={x} title={x} className="grid h-5 w-5 place-items-center rounded-full bg-accent-soft text-[9px] font-bold text-accent">{initials(x.includes("@") ? x.split("@")[0] : x)}</span>)}</span>
         {a.fromContract ? <span className="text-xs muted" title="Change it on the purchase agreement (Edit, or the date tiles)">From contract</span> : (
           <span className="flex gap-3">
           <button type="button" className="text-xs font-semibold text-accent hover:underline" aria-label={`Edit ${a.title}`} onClick={onEdit}>Edit</button>
@@ -86,12 +86,14 @@ function Appt({ a, today, personName, onEdit, onDeleted }: { a: ApptView; today:
   );
 }
 
-function BookModal({ type, personId, personName, today, phone, address, hasEmail, team, callTemplates, activeKinds, calendarConnected, onClose, onBooked, edit }: Props & { type: ApptType; edit?: ApptView; onClose: () => void; onBooked: (m: string, file?: { kind: "buyer" | "listing"; consult: string }) => void }) {
+function BookModal({ type, personId, personName, today, phone, address, hasEmail, team, clientEmails, callTemplates, activeKinds, calendarConnected, onClose, onBooked, edit }: Props & { type: ApptType; edit?: ApptView; onClose: () => void; onBooked: (m: string, file?: { kind: "buyer" | "listing"; consult: string }) => void }) {
   const [, label, mins] = APPT_TYPES.find(([k]) => k === type)!;
   const client = splitCouple(personName)[0].trim();
+  // One choice per email on the contact (a couple's two emails are both invited unless unticked).
+  const clientChoices = clientEmails.map((e) => ({ value: e.address, label: e.label || e.address }));
   const [f, setF] = useState(edit
     ? { title: edit.title, date: edit.date, start: edit.start ?? "", end: edit.end ?? "", location: edit.location, invitees: edit.invitees }
-    : { title: defaultTitle(personName, type), date: addDays(today, 1), start: "12:00", end: addMinutes("12:00", mins), location: type === "call" ? phone : type === "seller" ? address : "", invitees: [client, ...team] });
+    : { title: defaultTitle(personName, type), date: addDays(today, 1), start: "12:00", end: addMinutes("12:00", mins), location: type === "call" ? phone : type === "seller" ? address : "", invitees: [...clientChoices.map((c) => c.value), ...team] });
   const fileKind = type === "buyer" ? "buyer" : type === "seller" ? "listing" : null;
   const offerFile = !edit && !!fileKind && !activeKinds.includes(fileKind);
   const [thenFile, setThenFile] = useState(offerFile);
@@ -129,11 +131,15 @@ function BookModal({ type, personId, personName, today, phone, address, hasEmail
         </label>
         <fieldset className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
           <legend className="mb-1 text-xs font-semibold muted">Invite</legend>
-          {[client, ...team].map((n) => (
-            <label key={n} className="flex items-center gap-1.5">
-              <input type="checkbox" checked={f.invitees.includes(n)} onChange={(e) => setF({ ...f, invitees: e.target.checked ? [...f.invitees, n] : f.invitees.filter((x) => x !== n) })} /> {n}
-            </label>
-          ))}
+          {[...clientChoices, ...team.map((n) => ({ value: n, label: n }))].map((c) => {
+            // Appointments booked before each email had its own choice saved the client's first name.
+            const on = f.invitees.includes(c.value) || (c.value === clientChoices[0]?.value && f.invitees.includes(client));
+            return (
+              <label key={c.value} className="flex items-center gap-1.5" title={c.value}>
+                <input type="checkbox" checked={on} onChange={(e) => setF({ ...f, invitees: e.target.checked ? [...f.invitees.filter((x) => x !== client), c.value] : f.invitees.filter((x) => x !== c.value && !(c.value === clientChoices[0]?.value && x === client)) })} /> {c.label}
+              </label>
+            );
+          })}
         </fieldset>
         <p className="text-xs muted">{calendarConnected ? "Adds it to Google Calendar and sends the invites." : "Saved in HQ only. Connect Google Calendar in Admin → Integrations to add appointments to the calendar."}{calendarConnected && !hasEmail && ` There's no email on file for ${client}, so only the team gets the invite.`}</p>
         {type === "call" && !edit && <p className="text-xs muted">{starts.length ? `Starts ${starts.map((t) => `"${t.name}"`).join(" + ")}: ${steps} tasks timed from today and the call.` : "No template starts when a call is booked. Add one in Admin → Task templates."}</p>}
