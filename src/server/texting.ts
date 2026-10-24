@@ -75,7 +75,7 @@ export async function recordReaction(o: { ourNumber: string; thread: string; by:
   return true;
 }
 
-/** A text that came in (from Twilio's webhook). STOP tags them Replied STOP (blocks texts); START/YES removes it. */
+/** A text that came in (from Twilio's webhook). STOP tags them Text Unsubscribed (blocks texts); START/YES removes it. */
 export async function recordIncoming(o: { from: string; to: string; body: string; sid: string; media?: TextMedia[] }) {
   const theirs = normalizePhone(o.from);
   const media = o.media ?? [];
@@ -99,8 +99,8 @@ export async function recordIncoming(o: { from: string; to: string; body: string
   }
   if (person) {
     let extra = "";
-    if (isStopWord(body)) { await setTextStop(person.id, true); extra = " They replied STOP: tagged Replied STOP, and texts to them are blocked."; }
-    else if (isStartWord(body) && (await hasTextStop(person.id))) { await setTextStop(person.id, false); extra = " They opted back in: Replied STOP tag removed."; }
+    if (isStopWord(body)) { await setTextStop(person.id, true); extra = " They replied STOP: tagged Text Unsubscribed, and texts to them are blocked."; }
+    else if (isStartWord(body) && (await hasTextStop(person.id))) { await setTextStop(person.id, false); extra = " They opted back in: Text Unsubscribed tag removed."; }
     await db.$transaction([
       db.timelineEntry.create({ data: { personId: person.id, kind: "text", outcome: "Received", body } }),
       db.person.update({ where: { id: person.id }, data: { lastTextAt: new Date(), lastContactAt: new Date() } }),

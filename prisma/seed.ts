@@ -17,7 +17,7 @@ const TEAM = [
 const STAGES = ["Sphere", "Past Client", "Lead", "Industry Partners", "Passive Marketing", "Archive", "Trash"];
 const SOURCES = ["Sphere", "Sphere Referral", "Website", "Zillow Preferred", "Open House", "Sign Call"];
 const FOLLOW_UP = [7, 30, 60, 90, 180];
-const TAGS = ["Buyer", "Seller", "Past Client", "A Lead", "B Lead", "C Lead", "D Lead", "Email Newsletter", "Mailers", "Christmas Cards", "Petty Homes Event List", "Real Estate Health Check", "Investor", "Unsubscribed", "Bounced", "No Bday Needed"];
+const TAGS = ["Buyer", "Seller", "Past Client", "A Lead", "B Lead", "C Lead", "D Lead", "Email Newsletter", "Mailers", "Christmas Cards", "Petty Homes Event List", "Real Estate Health Check", "Investor", "Email Unsubscribed", "Text Unsubscribed", "Bounced", "No Bday Needed"];
 const REMINDERS = [
   { dateKind: "birthday", title: "Text Happy Birthday", days: 0, direction: "on", assignee: "Luke", kind: "text", appliesTo: "Everyone" },
   { dateKind: "birthday", title: "Send Birthday Card", days: 7, direction: "before", assignee: "Alyssa", kind: "task", appliesTo: "Past Client" },

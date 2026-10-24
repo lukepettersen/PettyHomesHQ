@@ -3,6 +3,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 /** Tags that mean "don't email": opted out of email, texted STOP, or the address bounced. */
+// "Unsubscribed" (from Follow Up Boss) was merged into "Email Unsubscribed" on 2026-10-24; still honored if re-added.
 export const NO_EMAIL_TAGS = ["Email Unsubscribed", "Unsubscribed", "Bounced"];
 export const EMAIL_UNSUB_TAG = "Email Unsubscribed";
 export const BULK_MAX = 1000; // Google Workspace allows about 2,000 a day; keep room for normal email

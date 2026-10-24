@@ -577,9 +577,10 @@ Principles:
   quoted message isn't found it shows as a normal text. Business numbers can't send tapbacks; a 😊 button on the
   text boxes adds common emoji to a reply instead.
 - **Admin → Integrations → Texting** on/off switch to pause sending anytime.
-- Safety when on: honor STOP/opt-out automatically (a STOP reply tags them **Replied STOP**; START or
-  YES removes it); never text people tagged Replied STOP. The **Unsubscribed** tag only stops emails *(owner
-  2026-10-24: nobody unsubscribes from texts that way; people who had texted STOP were given Replied STOP)*; quiet hours 8am–8pm Central apply to
+- Safety when on: honor STOP/opt-out automatically (a STOP reply tags them **Text Unsubscribed**; START or
+  YES removes it); never text people tagged Text Unsubscribed. **Email Unsubscribed** only stops emails *(owner
+  2026-10-24: two clearly named tags; Follow Up Boss's "Unsubscribed" merged into Email Unsubscribed, and smart
+  lists using the old names were updated)*; quiet hours 8am–8pm Central apply to
   **automatic** texts only — texts you type send right away *(owner decision 2026-10-20)*; daily limit of
   **200 texts per number** (Admin → Integrations). Webhooks from Twilio are checked with Twilio's signature.
 - Texts from Luke's personal phone can't be read by HQ; use "Log text".

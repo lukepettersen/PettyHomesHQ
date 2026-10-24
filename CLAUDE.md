@@ -47,7 +47,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 - Write an activity-log row for every create/update/delete (who, what, before/after summary).
 - Integrations are **off until configured**: if Twilio or Google env vars are missing, the
   feature shows "not connected" and never errors. Texting also has an Admin on/off switch.
-- Texting safety: honor STOP (the "Replied STOP" tag blocks texts; "Unsubscribed" is email-only, owner 2026-10-24), quiet hours 8am–8pm Central, daily cap.
+- Texting safety: honor STOP (the "Text Unsubscribed" tag blocks texts; "Email Unsubscribed" is email-only, owner 2026-10-24), quiet hours 8am–8pm Central, daily cap.
 - No SSNs, bank or wiring details stored anywhere.
 
 ## Data model notes
