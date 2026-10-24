@@ -565,6 +565,11 @@ Principles:
   lists, alerts and timelines). **📷** on the text boxes (Send text, Messages, Send to group) attaches up to 5
   JPG/PNG/GIF photos; they upload to the file storage and go as picture texts (MMS). In a group text each extra
   photo is its own message. Needs File storage connected.
+- **Text commands** *(owner request 2026-10-24)*: a text from a team member's own cell (the "calls ring" cell in
+  Admin → Integrations) to their own HQ number that starts with **task** adds a task with the same wording as the
+  Tasks box quick add ("task call lender re Ortiz Fri 9am", tomorrow, next week, every month, #list, @alyssa), and
+  HQ texts back what it added ("Added "call lender" to Clients, due Fri Oct 30."). **help** texts back the list.
+  Commands don't alert or go on a timeline; other texts (and "task" texts from anyone else) are normal texts.
 - **Reactions** *(owner request 2026-10-22)*: an iPhone tapback sent to a business number arrives as a text like
   Loved “See you tomorrow!”; HQ shows it as a small icon (❤️ 👍 👎 😂 ‼️ ❓, or the emoji in "Reacted 🎉 to …") on
   the message it quotes in that thread, with no new bubble or alert ("Removed a heart from …" takes it off). If the

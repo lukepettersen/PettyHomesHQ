@@ -7,6 +7,7 @@ import { isConnected, textingEnabled } from "@/server/integrations";
 import { hasPermission } from "@/server/permissions";
 import type { SessionUser } from "@/server/auth";
 import { publicBase, sendSms } from "@/server/twilio";
+import { runTextCommand } from "@/server/textCommands";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { groupTitle, isGroupKey } from "@/lib/groupText";
 import { applyReaction, parseReaction, reactsTo, type ReactionMark } from "@/lib/reactions";
@@ -93,6 +94,11 @@ export async function recordIncoming(o: { from: string; to: string; body: string
     return true;
   });
   if (!saved) return;
+  // "task …" from your own cell to your own HQ number: done and answered, no alert or timeline line.
+  if (!media.length && (await runTextCommand({ from: theirs, to: o.to, body }))) {
+    await db.textMessage.updateMany({ where: { twilioSid: o.sid }, data: { readAt: new Date() } });
+    return;
+  }
   if (person) {
     let extra = "";
     if (isStopWord(body)) { await setUnsubscribed(person.id, true); extra = " They replied STOP: tagged Unsubscribed, and texts to them are blocked."; }
