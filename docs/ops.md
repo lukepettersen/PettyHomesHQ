@@ -161,7 +161,10 @@ Set up 2026-10-20: business profile approved, brand registered, campaign "Low Vo
    team number arrive as plain texts listing the group's people (OtherRecipients); HQ groups them. Replies go out
    through a Twilio Conversation per group (Twilio Console → Conversations shows them). The "Recent incoming texts
    (troubleshooting)" list under the switch shows how each text arrived.
-7. **Call recording** is on by default (Admin → Integrations → Business texting → "Record answered calls").
+7. **Text commands:** from your own cell (the "calls ring" cell on your row), text your own HQ number
+   "task …" (e.g. "task call lender re Ortiz Fri 9am") to add a task; HQ texts back what it added. "help" lists
+   commands. Your cell must match the one saved on your row in Admin → Integrations.
+8. **Call recording** is on by default (Admin → Integrations → Business texting → "Record answered calls").
    Answered calls show on the contact's timeline with a player. Recordings live in Twilio (Monitor → Call
    recordings), where they can be deleted. Turning the switch off stops new recordings and the notice.
 
