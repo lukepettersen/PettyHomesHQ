@@ -11,13 +11,13 @@ import { TaskDetail } from "./TaskDetail";
 import { PersonLink, TaskLine, Toast } from "./parts";
 import { saveTrail } from "@/components/TaskTrail";
 
-type Props = { today: string; team: TeamMember[]; lists: ListRow[]; tasks: TaskRow[]; touches: TouchRow[]; waiting: number; meId: string; initialView: string; initialWho: string; initialTask: string | null };
+type Props = { today: string; team: TeamMember[]; lists: ListRow[]; tasks: TaskRow[]; touches: TouchRow[]; waiting: number; spreadable: number; weekend: boolean; meId: string; initialView: string; initialWho: string; initialTask: string | null };
 type Done = { row: TaskRow; realId: string; nextId: string | null };
 
 const keyOf = (l: ListRow) => l.builtin ?? `list:${l.id}`;
 const SUBTITLE: Record<string, string> = {
   clients: "Grouped by client · click a name to open their page",
-  touch: "People past their follow-up frequency · Spread out shows only a few a day",
+  touch: "People past their follow-up frequency, Monday to Friday · Spread out shows only a few a weekday",
   recurring: "Each one shows up in Today when it's due, then schedules the next",
   dates: "Birthday and homeiversary cards and texts for the next 60 days · rules in Admin → Date reminders",
   misc: "Tasks that aren't linked to a client",
@@ -209,7 +209,7 @@ export function TasksApp(p: Props) {
             if (k === "touch") return (
               <section key={k} className="flex flex-col">
                 <h3 className="mb-1.5 flex gap-2 text-xs font-semibold tracking-wider muted">{head}<span className="font-medium">{touches.length || ""}</span></h3>
-                {box(touches.length ? touches.map(touchLine) : <div className="px-3 py-3 text-sm muted">No one due</div>)}
+                {box(touches.length ? touches.map(touchLine) : <div className="px-3 py-3 text-sm muted">{p.weekend ? "Back on Monday" : "No one due"}</div>)}
               </section>
             );
             const items = due.filter((t) => t.cat === k);
@@ -225,7 +225,7 @@ export function TasksApp(p: Props) {
       );
     }
     if (view === "touch" && !touchVisible) return empty(`Due for a touch is ${p.team.find((m) => m.isOwner)?.name.split(" ")[0] ?? "the owner"}'s list. Switch to Everyone to see it.`);
-    if (view === "touch") return touches.length ? box(touches.map(touchLine)) : empty("Everyone is up to date. Set a follow-up frequency on a person and they'll show up here when they're due.");
+    if (view === "touch") return touches.length ? box(touches.map(touchLine)) : p.weekend ? empty("It's the weekend. Due for a touch shows Monday to Friday.") : empty("Everyone is up to date. Set a follow-up frequency on a person and they'll show up here when they're due.");
     const list = visible(view);
     if (!list.length) return empty(EMPTY[view] ?? "No tasks in this list yet. Type one above, or use #listname in quick add.");
     if (view === "clients") {
@@ -341,7 +341,7 @@ export function TasksApp(p: Props) {
               </label>
             </span>
           )}
-          {view === "touch" && (touches.length > 1 || p.waiting > 0) && (
+          {view === "touch" && (p.spreadable > 1 || p.waiting > 0) && (
             <span className="flex flex-wrap items-center gap-2 text-sm">
               {p.waiting > 0 && (
                 <button type="button" className="btn" disabled={pending} onBlur={() => setConfirmUnspread(false)} onClick={() => {
@@ -365,7 +365,7 @@ export function TasksApp(p: Props) {
                   if (!r.ok) { setToast(r.error); return; }
                   setToast(`Spread out ${r.data!.people} people: ${perDay} a day through ${longIso(r.data!.lastDay)}.`); refresh();
                 });
-              }}>{confirmSpread ? `Click again to spread ${touches.length} over ${Math.ceil(touches.length / Math.max(1, +perDay || 1))} days` : "Spread out"}</button>
+              }}>{confirmSpread ? `Click again to spread ${p.spreadable} over ${Math.ceil(p.spreadable / Math.max(1, +perDay || 1))} weekdays` : "Spread out"}</button>
             </span>
           )}
         </div>

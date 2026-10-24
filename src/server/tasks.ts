@@ -3,7 +3,7 @@ import { db } from "@/server/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { isDueForTouch } from "@/lib/filters";
 import { initials, isoFromDate, todayCentral } from "@/lib/normalize";
-import { categoryOf, importantDateTasks, parseSubtasks, type Subtask } from "@/lib/tasks";
+import { categoryOf, importantDateTasks, isWeekend, parseSubtasks, type Subtask } from "@/lib/tasks";
 import { CONTRACT_ANCHORS, timingLabel, type Anchor } from "@/lib/templates";
 
 export type TaskRow = {
@@ -96,14 +96,18 @@ export async function loadTaskBoard() {
     loadDateTasks(team, today),
     db.person.findMany({ where: { deletedAt: null, followUpDays: { gt: 0 } }, select: { id: true, name: true, followUpDays: true, lastTextAt: true, touchAfter: true, assignedToId: true } }),
   ]);
+  // Due for a touch shows Monday to Friday only (owner 2026-10-24); weekends start empty.
+  const weekend = isWeekend(todayCentral());
   const touches: TouchRow[] = people
-    .filter((p) => isDueForTouch(p))
+    .filter((p) => !weekend && isDueForTouch(p))
     .map((p) => ({ personId: p.id, name: p.name, followUpDays: p.followUpDays!, lastContact: p.lastTextAt ? p.lastTextAt.toISOString() : null, assigneeId: p.assignedToId }))
     .sort((a, b) => (a.lastContact ?? "").localeCompare(b.lastContact ?? ""));
   // People held back by Spread out who would otherwise be due now ("Show all now" puts them back).
   const waiting = people.filter((p) => p.touchAfter && !isDueForTouch(p) && isDueForTouch({ ...p, touchAfter: null })).length;
+  // Everyone Spread out would (re)spread: due now or held back by an earlier spread, any day of the week.
+  const spreadable = people.filter((p) => isDueForTouch({ ...p, touchAfter: null })).length;
   return {
-    today, team, touches, waiting,
+    today, team, touches, waiting, spreadable, weekend,
     lists: lists.map((l): ListRow => ({ id: l.id, name: l.name, builtin: l.builtin, showOnToday: l.showOnToday })),
     tasks: [...tasks.map(toRow), ...dateTasks],
   };

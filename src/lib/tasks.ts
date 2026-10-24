@@ -182,3 +182,14 @@ export function parseSubtasks(v: unknown): Subtask[] {
 
 /** Cookie remembering the Tasks page Everyone / Me / teammate filter on this device. */
 export const WHO_COOKIE = "hq-tasks-who";
+
+// ---------- Due for a touch: weekdays only (owner 2026-10-24) ----------
+const DAY_MS = 86400000;
+/** Saturday or Sunday (a date at midnight UTC, as todayCentral returns). */
+export const isWeekend = (d: Date) => d.getUTCDay() === 0 || d.getUTCDay() === 6;
+/** The next `n` weekdays starting with `from` (if it's a weekday) — the days Spread out puts people on. */
+export function workdays(from: Date, n: number): Date[] {
+  const out: Date[] = [];
+  for (let d = new Date(from); out.length < n; d = new Date(d.getTime() + DAY_MS)) if (!isWeekend(d)) out.push(d);
+  return out;
+}

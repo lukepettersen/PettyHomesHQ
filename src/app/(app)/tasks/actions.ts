@@ -11,7 +11,7 @@ import { loadDateTasks, loadTeam } from "@/server/tasks";
 import { isDueForTouch } from "@/lib/filters";
 import { applyTemplate, contractAnchors, factsOf, loadTemplates, moveFile } from "@/server/automation";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
-import { categoryOf, longIso, nextDue, parseQuickAdd, parseTime, stripPersonWord, type Repeat } from "@/lib/tasks";
+import { categoryOf, longIso, nextDue, parseQuickAdd, parseTime, stripPersonWord, workdays, type Repeat } from "@/lib/tasks";
 
 const id = z.string().trim().min(1).max(200);
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date");
@@ -210,24 +210,27 @@ export async function logTouch(personId: string) {
 // ---------- Spread out Due for a touch ----------
 const spreadSchema = z.object({ perDay: z.coerce.number().int().min(1, "At least 1 a day").max(100) });
 
-/** Everyone due now gets a day to show up: the first few today, the next few tomorrow, and so on. No fake texts. */
+/** Everyone due gets a weekday to show up: the first few today (or Monday), the next few the next weekday, and so on. No fake texts. */
 export async function spreadTouches(input: z.input<typeof spreadSchema>) {
   return guarded(null, async (user) => {
     const { perDay } = spreadSchema.parse(input);
     const people = await db.person.findMany({ where: { deletedAt: null, followUpDays: { gt: 0 } }, select: { id: true, followUpDays: true, lastTextAt: true, touchAfter: true } });
+    // Everyone due, including people an earlier Spread out is holding back, so it can be re-spread in one go.
     // Same order as the list: never texted first, then the longest since the last text.
-    const due = people.filter((p) => isDueForTouch(p)).sort((a, b) => (a.lastTextAt?.getTime() ?? 0) - (b.lastTextAt?.getTime() ?? 0));
+    const due = people.filter((p) => isDueForTouch({ ...p, touchAfter: null })).sort((a, b) => (a.lastTextAt?.getTime() ?? 0) - (b.lastTextAt?.getTime() ?? 0));
     if (!due.length) throw new UserError("No one is due for a touch right now.");
     const today = todayCentral();
-    const days = Math.ceil(due.length / perDay);
-    await db.$transaction(Array.from({ length: days }, (_, d) => db.person.updateMany({
+    // Weekdays only: on a weekend the first batch waits for Monday.
+    const dates = workdays(today, Math.ceil(due.length / perDay));
+    const days = dates.length;
+    await db.$transaction(dates.map((day, d) => db.person.updateMany({
       where: { id: { in: due.slice(d * perDay, (d + 1) * perDay).map((p) => p.id) } },
-      data: { touchAfter: d === 0 ? null : new Date(today.getTime() + d * 86400000) },
+      data: { touchAfter: day.getTime() === today.getTime() ? null : day },
     })));
     await logActivity(user.id, "update", "person", "touches", `Spread out Due for a touch: ${due.length} people, ${perDay} a day over ${days} days`);
     refresh();
     revalidatePath("/people");
-    return { people: due.length, days, lastDay: isoFromDate(new Date(today.getTime() + (days - 1) * 86400000)) };
+    return { people: due.length, days, lastDay: isoFromDate(dates[days - 1]) };
   });
 }
 
