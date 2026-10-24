@@ -8,10 +8,13 @@ export function toE164(raw: string): string | null {
 }
 
 // Twilio's standard opt-out / opt-in words. Twilio stops texts on its side too; HQ mirrors it with the
-// Unsubscribed tag so nobody on the team texts them by mistake.
+// "Replied STOP" tag so nobody on the team texts them by mistake. (The "Unsubscribed" tag is for email only,
+// owner 2026-10-24.)
 const STOP_WORDS = ["STOP", "STOPALL", "STOP ALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT", "OPTOUT", "OPT OUT", "REVOKE"];
 const START_WORDS = ["START", "UNSTOP", "YES"];
 const word = (body: string) => body.trim().replace(/[.!]+$/, "").replace(/\s+/g, " ").toUpperCase();
+/** Tag for people who texted STOP; only this one blocks texts. */
+export const TEXT_STOP_TAG = "Replied STOP";
 export const isStopWord = (body: string) => STOP_WORDS.includes(word(body));
 export const isStartWord = (body: string) => START_WORDS.includes(word(body));
 

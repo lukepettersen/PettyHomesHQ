@@ -553,7 +553,7 @@ Principles:
   one. On a contact, **Send text** starts with the contact's other numbers and the owner's cell already added (each
   removable) and sends one group text. Group messages go on the timeline of every contact in the group, once per
   contact even when a couple's two numbers are both in it. A text Twilio delivers twice (plainly and through the
-  group's Conversation, even at the same moment) is saved and alerted once. Unsubscribed people block sending to
+  group's Conversation, even at the same moment) is saved and alerted once. People who replied STOP block sending to
   their group; the daily limit counts group texts. Turning the switch off closes HQ's Conversations; earlier split
   threads stay as they were. Deleting a group thread in Messages also ends its Conversation. Twilio's Conversations
   fee: first 200 people a month free, then about $0.05 per person a month.
@@ -576,8 +576,9 @@ Principles:
   quoted message isn't found it shows as a normal text. Business numbers can't send tapbacks; a 😊 button on the
   text boxes adds common emoji to a reply instead.
 - **Admin → Integrations → Texting** on/off switch to pause sending anytime.
-- Safety when on: honor STOP/opt-out automatically (a STOP reply tags them **Unsubscribed**; START or
-  YES removes it); never text people tagged Unsubscribed; quiet hours 8am–8pm Central apply to
+- Safety when on: honor STOP/opt-out automatically (a STOP reply tags them **Replied STOP**; START or
+  YES removes it); never text people tagged Replied STOP. The **Unsubscribed** tag only stops emails *(owner
+  2026-10-24: nobody unsubscribes from texts that way; people who had texted STOP were given Replied STOP)*; quiet hours 8am–8pm Central apply to
   **automatic** texts only — texts you type send right away *(owner decision 2026-10-20)*; daily limit of
   **200 texts per number** (Admin → Integrations). Webhooks from Twilio are checked with Twilio's signature.
 - Texts from Luke's personal phone can't be read by HQ; use "Log text".

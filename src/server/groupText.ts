@@ -6,7 +6,7 @@ import { UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { isConnected, textingEnabled } from "@/server/integrations";
 import { addGroupSender, closeConversation, conversationParticipants, createGroup, postGroupMessage, publicBase, setGroupAddress, uploadGroupPhoto } from "@/server/twilio";
-import { COPY_WINDOW, dailyCap, isUnsubscribed, lineOwner, personForNumber, recordIncoming, recordReaction, saveOnce, setUnsubscribed } from "@/server/texting";
+import { COPY_WINDOW, dailyCap, hasTextStop, lineOwner, personForNumber, recordIncoming, recordReaction, saveOnce, setTextStop } from "@/server/texting";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { centralDayStart, isStartWord, isStopWord, MAX_TEXT, toE164 } from "@/lib/texting";
 import { groupMembers, groupTitle, isGroupKey, MAX_GROUP, otherRecipients, readParticipants } from "@/lib/groupText";
@@ -107,8 +107,8 @@ async function recordGroupMessage(t: Thread, o: { from: string; body: string; si
   });
   if (!saved) return;
   if (sender.person) {
-    if (isStopWord(o.body)) await setUnsubscribed(sender.person.id, true);
-    else if (isStartWord(o.body) && (await isUnsubscribed(sender.person.id))) await setUnsubscribed(sender.person.id, false);
+    if (isStopWord(o.body)) await setTextStop(sender.person.id, true);
+    else if (isStartWord(o.body) && (await hasTextStop(sender.person.id))) await setTextStop(sender.person.id, false);
     await db.person.update({ where: { id: sender.person.id }, data: { lastTextAt: new Date(), lastContactAt: new Date() } });
   }
   // On every contact in the group (once each, even with two numbers in it), so each timeline shows the whole conversation.
@@ -181,7 +181,7 @@ export async function sendGroupText(user: { id: string; name: string }, o: { sid
   if (!info?.group) throw new UserError("That group text wasn't found.");
   if (info.ourNumber !== ourNumber) throw new UserError("This group text is on a teammate's number. Switch to your own number to text.");
   const people = await membersOf(info.members);
-  for (const m of people) if (m.person && (await isUnsubscribed(m.person.id))) throw new UserError(`${m.person.name} is tagged Unsubscribed (they replied STOP), so HQ won't text this group.`);
+  for (const m of people) if (m.person && (await hasTextStop(m.person.id))) throw new UserError(`${m.person.name} replied STOP to your texts, so HQ won't text this group.`);
   if (info.members.length > MAX_GROUP - 1) throw new UserError(`HQ can reply to groups of up to ${MAX_GROUP} people (Twilio's limit). Reply from your phone for this one.`);
   let conv = info.conversationSid, author = info.sender;
   if (!conv) {
@@ -231,7 +231,7 @@ export async function startGroupText(user: { id: string; name: string }, o: { nu
   for (const m of people) {
     if (!toE164(m.digits)) throw new UserError(`${formatPhone(m.digits)} isn't a US phone number.`);
     if (!m.person && !teamCells.includes(m.digits)) throw new UserError(`HQ only texts saved contacts. Add ${formatPhone(m.digits)} to a contact first.`);
-    if (m.person && (await isUnsubscribed(m.person.id))) throw new UserError(`${m.person.name} is tagged Unsubscribed, so HQ won't text them.`);
+    if (m.person && (await hasTextStop(m.person.id))) throw new UserError(`${m.person.name} replied STOP to your texts, so HQ won't text them.`);
   }
   const sid = await createGroup({ ourNumber, numbers: digits.map((d) => toE164(d)!), name: groupTitle([...new Set(people.map(nameOf))]), webhookUrl: conversationHook() })
     .catch((e: Error) => { throw new UserError(e.message); });

@@ -8,6 +8,7 @@ import { fill } from "@/lib/merge";
 import { mergeFor } from "@/server/merge";
 import { emailConnection } from "@/server/google";
 import { textComposerFor } from "@/server/texting";
+import { TEXT_STOP_TAG } from "@/lib/texting";
 import type { Phase } from "@/lib/templates";
 
 const obj = (v: unknown) => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, string>) : {});
@@ -45,7 +46,7 @@ export async function getDraft(input: { taskId: string; templateId?: string | nu
       personId: p?.id ?? null,
       sendsFrom: kind === "email" ? (await emailConnection())?.email ?? null : null,
       // Draft text sends from the user's own number when texting is set up (SPEC.md §11).
-      textBlocked: kind === "text" ? (await textComposerFor(user, p && (await db.personTag.count({ where: { personId: p.id, tag: { name: "Unsubscribed" } } })) ? p.name : null)).blocked : null,
+      textBlocked: kind === "text" ? (await textComposerFor(user, p && (await db.personTag.count({ where: { personId: p.id, tag: { name: TEXT_STOP_TAG } } })) ? p.name : null)).blocked : null,
       subject: subject.text, body: body.text, missing: [...new Set([...subject.missing, ...body.missing])].map(label),
     };
   });

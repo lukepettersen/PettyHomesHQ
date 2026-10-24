@@ -12,13 +12,12 @@ import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { groupTitle, isGroupKey } from "@/lib/groupText";
 import { applyReaction, parseReaction, reactsTo, type ReactionMark } from "@/lib/reactions";
 import { isOurImage, MAX_TEXT_PHOTOS, textWithPhotos, type TextMedia } from "@/lib/textMedia";
-import { callLength, centralDayStart, DEFAULT_DAILY_CAP, isStartWord, isStopWord, MAX_TEXT, toE164 } from "@/lib/texting";
+import { callLength, centralDayStart, DEFAULT_DAILY_CAP, TEXT_STOP_TAG, isStartWord, isStopWord, MAX_TEXT, toE164 } from "@/lib/texting";
 
 // Business texting (SPEC.md §11). Each team member has their own Twilio number (owner, 2026-10-20). Texts and
 // missed calls are TextMessage rows; texts with a known contact also go on their timeline and count as a touch.
 // Message bodies are never written to logs.
 
-const UNSUB = "Unsubscribed";
 const snippet = (s: string) => (s.length > 120 ? `${s.slice(0, 120)}…` : s);
 
 export async function dailyCap(): Promise<number> {
@@ -36,13 +35,13 @@ export async function personForNumber(digits: string) {
 
 export const lineOwner = (ourNumber: string) => db.user.findFirst({ where: { textNumber: ourNumber, status: { not: "DISABLED" } }, select: { id: true, name: true, forwardTo: true } });
 
-export async function setUnsubscribed(personId: string, on: boolean) {
-  const tag = await db.tag.upsert({ where: { name: UNSUB }, create: { name: UNSUB }, update: {} });
+export async function setTextStop(personId: string, on: boolean) {
+  const tag = await db.tag.upsert({ where: { name: TEXT_STOP_TAG }, create: { name: TEXT_STOP_TAG }, update: {} });
   if (on) await db.personTag.upsert({ where: { personId_tagId: { personId, tagId: tag.id } }, create: { personId, tagId: tag.id }, update: {} });
   else await db.personTag.deleteMany({ where: { personId, tagId: tag.id } });
 }
-export async function isUnsubscribed(personId: string) {
-  return (await db.personTag.count({ where: { personId, tag: { name: UNSUB } } })) > 0;
+export async function hasTextStop(personId: string) {
+  return (await db.personTag.count({ where: { personId, tag: { name: TEXT_STOP_TAG } } })) > 0;
 }
 
 /** How far apart two deliveries of the same text can arrive. */
@@ -76,7 +75,7 @@ export async function recordReaction(o: { ourNumber: string; thread: string; by:
   return true;
 }
 
-/** A text that came in (from Twilio's webhook). STOP tags them Unsubscribed; START/YES removes it. */
+/** A text that came in (from Twilio's webhook). STOP tags them Replied STOP (blocks texts); START/YES removes it. */
 export async function recordIncoming(o: { from: string; to: string; body: string; sid: string; media?: TextMedia[] }) {
   const theirs = normalizePhone(o.from);
   const media = o.media ?? [];
@@ -101,8 +100,8 @@ export async function recordIncoming(o: { from: string; to: string; body: string
   }
   if (person) {
     let extra = "";
-    if (isStopWord(body)) { await setUnsubscribed(person.id, true); extra = " They replied STOP: tagged Unsubscribed, and texts to them are blocked."; }
-    else if (isStartWord(body) && (await isUnsubscribed(person.id))) { await setUnsubscribed(person.id, false); extra = " They opted back in: Unsubscribed tag removed."; }
+    if (isStopWord(body)) { await setTextStop(person.id, true); extra = " They replied STOP: tagged Replied STOP, and texts to them are blocked."; }
+    else if (isStartWord(body) && (await hasTextStop(person.id))) { await setTextStop(person.id, false); extra = " They opted back in: Replied STOP tag removed."; }
     await db.$transaction([
       db.timelineEntry.create({ data: { personId: person.id, kind: "text", outcome: "Received", body } }),
       db.person.update({ where: { id: person.id }, data: { lastTextAt: new Date(), lastContactAt: new Date() } }),
@@ -157,7 +156,7 @@ export async function updateStatus(sid: string, status: string, errorCode?: stri
 
 /**
  * Sends a text from the user's own number, typed by them (so quiet hours don't apply; they hold only automatic
- * texts). To a phone saved on the contact, or back to a number that texted this line. Never to Unsubscribed.
+ * texts). To a phone saved on the contact, or back to a number that texted this line. Never to someone who replied STOP.
  */
 export async function sendTextAs(user: { id: string; name: string }, o: { personId: string | null; to: string; body: string; typed?: boolean; media?: string[] }) {
   if (!(await textingEnabled())) throw new UserError("Texting is off. An Admin can turn it on in Admin → Integrations.");
@@ -182,7 +181,7 @@ export async function sendTextAs(user: { id: string; name: string }, o: { person
     const p = await personForNumber(theirs);
     person = p ? { ...p, phones: [] } : null;
   }
-  if (person && (await isUnsubscribed(person.id))) throw new UserError(`${person.name} is tagged Unsubscribed, so HQ won't text them.`);
+  if (person && (await hasTextStop(person.id))) throw new UserError(`${person.name} replied STOP to your texts, so HQ won't text them (they can text START to opt back in).`);
   const cap = await dailyCap();
   const sentToday = await db.textMessage.count({ where: { ourNumber: me.textNumber, direction: "out", createdAt: { gte: centralDayStart() } } });
   if (sentToday >= cap) throw new UserError(`You've reached today's limit of ${cap} texts from your number. It resets at midnight (Admin → Integrations to change it).`);
@@ -258,7 +257,7 @@ export async function textComposerFor(user: SessionUser, unsubscribedName?: stri
     : !enabled ? "Texting is paused (Admin → Integrations). Use Log text for texts sent from your own phone."
     : !hasPermission(user.permissions, "sendTexts") ? "You don't have permission to send texts."
     : !me?.textNumber ? "You don't have a texting number yet. An Admin can add it in Admin → Integrations."
-    : unsubscribedName ? `${unsubscribedName} is tagged Unsubscribed (they replied STOP), so HQ won't text them.` : null;
+    : unsubscribedName ? `${unsubscribedName} replied STOP to your texts, so HQ won't text them (they can text START to opt back in).` : null;
   // Group texting on: Send text also goes to the owner's cell (Luke's, so he's on every client thread; owner 2026-10-22).
   const groups = (await db.appSetting.findUnique({ where: { key: "texting.groups" } }))?.value === true;
   const owner = groups ? await db.user.findFirst({ where: { isOwner: true, forwardTo: { not: null } }, select: { id: true, name: true, forwardTo: true } }) : null;

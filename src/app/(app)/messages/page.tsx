@@ -1,7 +1,7 @@
 import { requireUser } from "@/server/auth";
 import { db } from "@/server/db";
 import { isConnected } from "@/server/integrations";
-import { groupNames, loadConversation, loadThreads, personForNumber, textComposerFor, isUnsubscribed } from "@/server/texting";
+import { groupNames, loadConversation, loadThreads, personForNumber, textComposerFor, hasTextStop } from "@/server/texting";
 import { groupTextingOn } from "@/server/groupText";
 import { isGroupKey } from "@/lib/groupText";
 import { normalizePhone } from "@/lib/normalize";
@@ -34,7 +34,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
   const group = isGroup && open ? (await groupNames([open])).get(open) ?? { title: "Group text", members: [] } : null;
   const person = group ? null : thread?.personId ? { id: thread.personId, name: thread.name } : open ? await personForNumber(open) : null;
   const conversation = line && open ? await loadConversation(line.number, open) : [];
-  const composer = await textComposerFor(user, person && (await isUnsubscribed(person.id)) ? person.name : null);
+  const composer = await textComposerFor(user, person && (await hasTextStop(person.id)) ? person.name : null);
   const mine = line?.userId === user.id;
   return (
     <MessagesApp lines={lines} line={line} threads={threads} open={open} person={person} conversation={conversation} group={group} groupsOn={await groupTextingOn()}

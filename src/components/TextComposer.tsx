@@ -12,7 +12,7 @@ import { TextPhotoButton, TextPhotoPreviews } from "@/components/TextPhotos";
 
 /**
  * Write and send a text from your own business number (SPEC.md §11): a template (optional, or "/name" in the
- * message), then Send. `blocked` explains why texting isn't available (not connected, no number, Unsubscribed…).
+ * message), then Send. `blocked` explains why texting isn't available (not connected, no number, they replied STOP…).
  */
 export function TextComposer({ personId, phones, templates, from, blocked, taskId, initial = "", compact, onSent, groupsOn, autoExtras = [] }: {
   personId: string | null; phones: string[]; templates: { id: string; name: string }[]; from: string | null; blocked: string | null;
