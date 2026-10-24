@@ -552,8 +552,9 @@ Principles:
   allows 10 people, us included). **+ New message** → two or more contacts' numbers → **Send to N people** starts
   one. On a contact, **Send text** starts with the contact's other numbers and the owner's cell already added (each
   removable) and sends one group text. Group messages go on the timeline of every contact in the group, once per
-  contact even when a couple's two numbers are both in it. A text Twilio delivers twice (plainly and through the
-  group's Conversation, even at the same moment) is saved and alerted once. People who replied STOP block sending to
+  contact even when a couple's two numbers are both in it. A text Twilio delivers twice (plainly, SM… or MM… for picture/group texts, and through the group's
+  Conversation, IM…, even at the same moment) is saved and alerted once; doubles saved before 2026-10-24 were
+  removed once. People who replied STOP block sending to
   their group; the daily limit counts group texts. Turning the switch off closes HQ's Conversations; earlier split
   threads stay as they were. Deleting a group thread in Messages also ends its Conversation. Twilio's Conversations
   fee: first 200 people a month free, then about $0.05 per person a month.

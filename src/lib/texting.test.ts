@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { callLength, centralDayStart, isStartWord, isStopWord, missedDial, sendProblem, toE164, voiceTwiml } from "./texting";
+import { callLength, centralDayStart, otherRoute, isStartWord, isStopWord, missedDial, sendProblem, toE164, voiceTwiml } from "./texting";
 import { twilioSignature, validTwilioRequest } from "./twilioSig";
 
 describe("texting", () => {
@@ -46,5 +46,10 @@ describe("texting", () => {
   it("finds the start of the Central day", () => {
     expect(centralDayStart(new Date("2026-10-20T16:00:00Z")).toISOString()).toBe("2026-10-20T05:00:00.000Z"); // CDT
     expect(centralDayStart(new Date("2026-12-20T03:00:00Z")).toISOString()).toBe("2026-12-19T06:00:00.000Z"); // CST, still the 19th in Chicago
+  });
+  it("matches the other delivery of the same text", () => {
+    expect(otherRoute("IM123")).toEqual({ not: { startsWith: "IM" } });
+    expect(otherRoute("MM123")).toEqual({ startsWith: "IM" });
+    expect(otherRoute("SM123")).toEqual({ startsWith: "IM" });
   });
 });

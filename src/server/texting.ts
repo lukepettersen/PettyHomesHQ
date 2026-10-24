@@ -12,7 +12,7 @@ import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { groupTitle, isGroupKey } from "@/lib/groupText";
 import { applyReaction, parseReaction, reactsTo, type ReactionMark } from "@/lib/reactions";
 import { isOurImage, MAX_TEXT_PHOTOS, textWithPhotos, type TextMedia } from "@/lib/textMedia";
-import { callLength, centralDayStart, DEFAULT_DAILY_CAP, TEXT_STOP_TAG, isStartWord, isStopWord, MAX_TEXT, toE164 } from "@/lib/texting";
+import { callLength, centralDayStart, DEFAULT_DAILY_CAP, otherRoute, TEXT_STOP_TAG, isStartWord, isStopWord, MAX_TEXT, toE164 } from "@/lib/texting";
 
 // Business texting (SPEC.md §11). Each team member has their own Twilio number (owner, 2026-10-20). Texts and
 // missed calls are TextMessage rows; texts with a known contact also go on their timeline and count as a touch.
@@ -87,8 +87,7 @@ export async function recordIncoming(o: { from: string; to: string; body: string
     const since = new Date(Date.now() - COPY_WINDOW);
     // With group texting on, Twilio can deliver one text twice: plainly (SM…) and through Conversations (IM…),
     // or as part of a group text. Keep the first copy only.
-    const other = o.sid.startsWith("IM") ? "SM" : "IM";
-    if (await tx.textMessage.findFirst({ where: { ourNumber: o.to, direction: "in", body, createdAt: { gte: since }, OR: [{ fromNumber: theirs }, { theirNumber: theirs, twilioSid: { startsWith: other } }] } })) return false;
+    if (await tx.textMessage.findFirst({ where: { ourNumber: o.to, direction: "in", body, createdAt: { gte: since }, OR: [{ fromNumber: theirs }, { theirNumber: theirs, twilioSid: otherRoute(o.sid) }] } })) return false;
     await tx.textMessage.create({ data: { ourNumber: o.to, theirNumber: theirs, personId: person?.id ?? null, direction: "in", body, media, twilioSid: o.sid, status: "received" } });
     return true;
   });

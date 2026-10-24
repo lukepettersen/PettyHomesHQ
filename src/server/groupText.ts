@@ -8,7 +8,7 @@ import { isConnected, textingEnabled } from "@/server/integrations";
 import { addGroupSender, closeConversation, conversationParticipants, createGroup, postGroupMessage, publicBase, setGroupAddress, uploadGroupPhoto } from "@/server/twilio";
 import { COPY_WINDOW, dailyCap, hasTextStop, lineOwner, personForNumber, recordIncoming, recordReaction, saveOnce, setTextStop } from "@/server/texting";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
-import { centralDayStart, isStartWord, isStopWord, MAX_TEXT, toE164 } from "@/lib/texting";
+import { centralDayStart, isStartWord, isStopWord, MAX_TEXT, otherRoute, toE164 } from "@/lib/texting";
 import { groupMembers, groupTitle, isGroupKey, MAX_GROUP, otherRecipients, readParticipants } from "@/lib/groupText";
 import { conversationMedia, isOurImage, MAX_TEXT_PHOTOS, plainMedia, textWithPhotos, type TextMedia } from "@/lib/textMedia";
 import { EMAIL_IMAGE_PREFIX } from "@/lib/emailImages";
@@ -93,8 +93,7 @@ async function recordGroupMessage(t: Thread, o: { from: string; body: string; si
   const saved = await saveOnce(t.ourNumber, from, async (tx) => {
     if (await tx.textMessage.findUnique({ where: { twilioSid: o.sid } })) return false;
     // Already saved through the other webhook (plain SM… vs Conversation IM…).
-    const other = o.sid.startsWith("IM") ? "SM" : "IM";
-    if (await tx.textMessage.findFirst({ where: { ourNumber: t.ourNumber, fromNumber: from, direction: "in", body: o.body, createdAt: { gte: since }, twilioSid: { startsWith: other } } })) return false;
+    if (await tx.textMessage.findFirst({ where: { ourNumber: t.ourNumber, fromNumber: from, direction: "in", body: o.body, createdAt: { gte: since }, twilioSid: otherRoute(o.sid) } })) return false;
     // A plain one-to-one copy saved first: drop it (and its timeline line and alert).
     const dupes = await tx.textMessage.findMany({ where: { ourNumber: t.ourNumber, theirNumber: from, direction: "in", body: o.body, createdAt: { gte: since } }, select: { id: true, personId: true } });
     if (dupes.length) {

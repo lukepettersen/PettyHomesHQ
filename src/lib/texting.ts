@@ -13,6 +13,11 @@ export function toE164(raw: string): string | null {
 const STOP_WORDS = ["STOP", "STOPALL", "STOP ALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT", "OPTOUT", "OPT OUT", "REVOKE"];
 const START_WORDS = ["START", "UNSTOP", "YES"];
 const word = (body: string) => body.trim().replace(/[.!]+$/, "").replace(/\s+/g, " ").toUpperCase();
+/**
+ * Twilio can deliver one text twice: plainly (SM… for texts, MM… for picture and group texts) and through
+ * Conversations (IM…). This matches the other delivery's IDs, so the second copy is recognised.
+ */
+export const otherRoute = (sid: string) => (sid.startsWith("IM") ? { not: { startsWith: "IM" } } : { startsWith: "IM" });
 /** Tag for people who texted STOP; only this one blocks texts. */
 export const TEXT_STOP_TAG = "Replied STOP";
 export const isStopWord = (body: string) => STOP_WORDS.includes(word(body));
