@@ -14,12 +14,13 @@ import type { PaSection, PaView, Side } from "@/lib/pa";
 import type { TaskRow, TeamMember } from "@/server/tasks";
 import { Checklist } from "./Checklist";
 import { EmailComposer } from "./EmailComposer";
+import { TextComposer } from "@/components/TextComposer";
 import { OfferModal } from "./OfferModal";
 import { DealNotes } from "./DealNotes";
 
 type EmailProps = { emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null };
 export type OfferRow = { id: string; fileId: string; createdAt: string; address: string; price: number | null; summary: string; prefill: Record<string, string> };
-type Props = { offers: OfferRow[]; email: EmailProps; fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean; canDelete: boolean; timeline: React.ReactNode;
+type Props = { offers: OfferRow[]; email: EmailProps; text: Omit<React.ComponentProps<typeof TextComposer>, "personId">; fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean; canDelete: boolean; timeline: React.ReactNode;
   contracts: PaView[]; forms: Record<Side, PaSection[]>; today: string; checklists: TaskRow[]; team: TeamMember[] };
 
 /** Middle column: a tab per active buyer/listing file, then Timeline (SPEC.md §6.3). */
@@ -57,11 +58,12 @@ export function SideChip({ kind }: { kind: string }) {
   return <span className={`rounded px-1.5 text-[11px] font-bold uppercase tracking-wide ${kind === "buyer" ? "bg-accent-soft text-accent" : "bg-[#f6e3d9] text-[#9a4f2e]"}`}>{kind === "buyer" ? "Buyer" : kind === "listing" ? "Seller" : kind}</span>;
 }
 
-function FilePane({ offers, email, fileForms, file, personId, personName, statuses, canSeeCommission, canDelete, onDeleted, contracts, forms, today, checklists, team }: Props & { file: FileView; onDeleted: () => void }) {
+function FilePane({ offers, email, text, fileForms, file, personId, personName, statuses, canSeeCommission, canDelete, onDeleted, contracts, forms, today, checklists, team }: Props & { file: FileView; onDeleted: () => void }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [addingPa, setAddingPa] = useState(false);
   const [emailing, setEmailing] = useState(false);
+  const [texting, setTexting] = useState(false);
   const [offering, setOffering] = useState(false);
   const [viewOffer, setViewOffer] = useState<string | null>(null);
   const myOffers = offers.filter((o) => o.fileId === file.id);
@@ -90,7 +92,8 @@ function FilePane({ offers, email, fileForms, file, personId, personName, status
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {file.kind === "buyer" && <button type="button" className="btn" onClick={() => setOffering(true)}>Submit offer</button>}
-          <button type="button" className="btn" aria-expanded={emailing} onClick={() => setEmailing((x) => !x)}>Send email</button>
+          <button type="button" className="btn" aria-expanded={texting} onClick={() => { setTexting((x) => !x); setEmailing(false); }}>Send text</button>
+          <button type="button" className="btn" aria-expanded={emailing} onClick={() => { setEmailing((x) => !x); setTexting(false); }}>Send email</button>
           <button type="button" className="btn" onClick={() => setEditing(true)}>Edit</button>
           {canDelete && <button type="button" className="btn btn-danger" disabled={pending} onBlur={() => setConfirm(false)}
             onClick={() => confirm ? run(() => deleteFile(file.id), onDeleted) : setConfirm(true)}>{confirm ? "Click again to delete" : "Delete"}</button>}
@@ -109,6 +112,13 @@ function FilePane({ offers, email, fileForms, file, personId, personName, status
           <div className="flex items-center justify-between"><b className="text-sm">Email {personName}</b>
             <button type="button" className="text-xs font-semibold text-accent hover:underline" onClick={() => setEmailing(false)}>Close</button></div>
           <EmailComposer personId={personId} emails={email.emails} templates={email.templates} sendsFrom={email.sendsFrom} onSent={() => setEmailing(false)} />
+        </div>
+      )}
+      {texting && (
+        <div className="mt-3 rounded-lg border border-misty bg-paper p-3">
+          <div className="flex items-center justify-between"><b className="text-sm">Text {personName}</b>
+            <button type="button" className="text-xs font-semibold text-accent hover:underline" onClick={() => setTexting(false)}>Close</button></div>
+          <TextComposer personId={personId} {...text} onSent={(name) => { setTexting(false); setMsg(`Text sent to ${name}.`); }} />
         </div>
       )}
       <DealNotes key={file.id + file.notes} fileId={file.id} notes={file.notes} notesAt={file.notesAt} notesBy={file.notesBy} />

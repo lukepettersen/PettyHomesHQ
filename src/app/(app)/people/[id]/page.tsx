@@ -145,7 +145,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
         </div>
 
         <section className="order-3 min-w-0 lg:order-2">
-          <FileTabs offers={offers} email={emailProps} fileForms={fileForms} personId={p.id} personName={p.name} files={files} statuses={fileStatuses} canSeeCommission={canSeeCommission}
+          <FileTabs offers={offers} email={emailProps} text={textProps} fileForms={fileForms} personId={p.id} personName={p.name} files={files} statuses={fileStatuses} canSeeCommission={canSeeCommission}
             canDelete={hasPermission(user.permissions, "deleteRecords")} contracts={contracts} forms={{ buyer: buyerForm, seller: sellerForm }} today={tasks.today} checklists={checklists} team={tasks.team} timeline={<Timeline personId={p.id} team={tasks.team.map((m) => ({ id: m.id, name: m.name }))} entries={p.timeline.map((e) => ({ id: e.id, kind: e.kind, body: e.body, outcome: e.outcome, author: e.author?.name ?? null, at: e.createdAt.toISOString(), opened: opens.get(e.id), audio: recordings.get(e.id), editable: canEditEntry(e) && (e.authorId === user.id || hasPermission(user.permissions, "deleteRecords")) }))}
             email={emailProps} text={textProps} />} />
         </section>

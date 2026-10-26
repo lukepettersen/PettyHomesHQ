@@ -249,7 +249,8 @@ Principles:
     list price, listing signed/expires, commission, BAC offered, photos, active date, and
     property details.
 - **On the deal** *(owner request 2026-10-19)*: a **Send email** button opens the email composer
-  (templates, merge fields, Gmail) right on the deal; open Email/Text checklist steps have **Draft
+  (templates, merge fields, Gmail) right on the deal, and **Send text** *(owner request 2026-10-26)*
+  opens the same text composer as the timeline (templates, group with their other numbers); open Email/Text checklist steps have **Draft
   email / Draft text** to send that step's template. Checklist sections show **newest first**.
 - **Deal notes** *(owner request 2026-10-15)*: each buyer/seller deal has a free-text notes box
   at the top of the deal ("+ Add deal notes"; click to edit; Save / Cancel), showing when and by
