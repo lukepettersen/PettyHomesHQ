@@ -39,6 +39,12 @@ export function fillFromPartner(s: PaSection, p: Partner): Record<string, string
   return Object.fromEntries(s.fields.map((f) => [f.key, value[slotOf(f.label)] ?? ""]));
 }
 
+/** "+ Add new": the typed name goes in the section's name question (or company, if it only asks for a company). */
+export function newPartnerFill(s: PaSection, name: string): Record<string, string> {
+  const f = s.fields.find((x) => slotOf(x.label) === "name") ?? s.fields.find((x) => slotOf(x.label) === "company");
+  return f ? { [f.key]: name.trim() } : {};
+}
+
 /** A new partner typed into a people section, read back from its answers (for "Save as contact"). */
 export function partnerFromAnswers(s: PaSection, a: Record<string, string>): Omit<Partner, "id"> {
   const out = { name: "", company: "", email: "", phone: "" };

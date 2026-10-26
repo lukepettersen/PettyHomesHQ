@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_FORMS } from "./pa";
-import { fillFromPartner, partnerFromAnswers, sectionPartnerType } from "./partners";
+import { fillFromPartner, newPartnerFill, partnerFromAnswers, sectionPartnerType } from "./partners";
 
 const sec = (id: string) => DEFAULT_FORMS.buyer.concat(DEFAULT_FORMS.seller).find((s) => s.id === id)!;
 const pat = { id: "p1", name: "Pat Lee", company: "Bell Bank Mortgage", email: "pat@bell.com", phone: "6125550100" };
@@ -23,5 +23,14 @@ describe("industry partners", () => {
     expect(partnerFromAnswers(sec("buyerTitle"), { titleCompany: "Edina Title", titleContact: "Kim Olson", titleContactInfo: "kim@edinatitle.com · 952-555-0101" }))
       .toEqual({ name: "Kim Olson", company: "Edina Title", email: "kim@edinatitle.com", phone: "952-555-0101" });
     expect(partnerFromAnswers(sec("sellerTitle"), { sTitleCompany: "Edina Title" })).toMatchObject({ name: "Edina Title", company: "Edina Title" });
+  });
+});
+
+describe("add a new partner from the picker (owner request 2026-10-26)", () => {
+  it("puts the typed name in the name question, or the company when that's all it asks", () => {
+    const lender = { id: "lender", name: "Buyer's lender", fields: [{ key: "lenderName", label: "Name", type: "text" as const }, { key: "lenderCompany", label: "Company", type: "text" as const }] };
+    expect(newPartnerFill(lender, " Bryan ")).toEqual({ lenderName: "Bryan" });
+    const title = { id: "sellerTitle", name: "Seller's title", fields: [{ key: "sTitleCompany", label: "Company", type: "text" as const }] };
+    expect(newPartnerFill(title, "Edina Title")).toEqual({ sTitleCompany: "Edina Title" });
   });
 });

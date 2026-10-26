@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { partnerLabel, type Partner } from "@/lib/partners";
 
 /** "Choose a lender from your contacts": search-as-you-type over partner contacts of one type (SPEC.md §6.4). */
-export function PartnerPicker({ type, picked, onPick, onClear }: { type: string | null; picked: { id: string; name: string } | null; onPick: (p: Partner) => void; onClear: () => void }) {
+export function PartnerPicker({ type, picked, onPick, onClear, onNew }: { type: string | null; picked: { id: string; name: string } | null; onPick: (p: Partner) => void; onClear: () => void; onNew?: (name: string) => void }) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState<Partner[]>([]);
@@ -32,13 +32,14 @@ export function PartnerPicker({ type, picked, onPick, onClear }: { type: string 
     </div>
   );
   const choose = (p: Partner) => { onPick(p); setQ(""); setOpen(false); };
+  const addNew = () => { onNew?.(q); setQ(""); setOpen(false); };
   return (
     <div className="relative col-span-full">
       <input className="input" role="combobox" aria-expanded={open && results.length > 0} aria-controls={`pp-${type}`} aria-label={`Choose a ${noun} from your contacts`}
         placeholder={`Choose a ${noun} from your contacts…`} value={q} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)}
         onChange={(e) => { setQ(e.target.value); setOpen(true); }}
         onKeyDown={(e) => {
-          if (!results.length) return;
+          if (!results.length) { if (e.key === "Enter" && q.trim() && onNew) { e.preventDefault(); addNew(); } return; }
           if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); setI((x) => (x + (e.key === "ArrowDown" ? 1 : results.length - 1)) % results.length); }
           else if (e.key === "Enter") { e.preventDefault(); choose(results[i]); }
           else if (e.key === "Escape") setOpen(false);
@@ -52,7 +53,10 @@ export function PartnerPicker({ type, picked, onPick, onClear }: { type: string 
               </button>
             </li>
           ))}
-          {!results.length && <li className="px-2.5 py-1.5 text-sm muted">No {noun}s in your contacts{q ? ` matching "${q}"` : " yet"}. Type their info below and tick Save as contact.</li>}
+          {!results.length && <li className="px-2.5 py-1.5 text-sm muted">No {noun}s in your contacts{q ? ` matching "${q}"` : " yet"}.</li>}
+          {onNew && q.trim() && (
+            <li><button type="button" onMouseDown={(e) => { e.preventDefault(); addNew(); }} className="w-full rounded-md px-2.5 py-1.5 text-left text-sm font-semibold text-accent hover:bg-sunken">+ Add &ldquo;{q.trim()}&rdquo; as a new {noun}</button></li>
+          )}
         </ul>
       )}
     </div>

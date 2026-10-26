@@ -6,7 +6,7 @@ import { Modal } from "@/components/Modal";
 import { clientFirstNames, COMMISSION_KEYS, visibleSections, type Answers, type PaField, type PaSection, type PaView, type Side } from "@/lib/pa";
 import { addPurchaseAgreement, updatePurchaseAgreement } from "./paActions";
 import { DateTimeInput } from "@/components/TimeSelect";
-import { fillFromPartner, sectionPartnerType } from "@/lib/partners";
+import { fillFromPartner, newPartnerFill, sectionPartnerType } from "@/lib/partners";
 import { PartnerPicker } from "./PartnerPicker";
 import { moneyTyped, pctShown } from "@/lib/files";
 
@@ -71,7 +71,8 @@ export function PaWizard({ fileId, fileKind, personName, fileLine, prefill, pa, 
               {s.people && (
                 <PartnerPicker type={sectionPartnerType(s)} picked={picked[s.id] ?? null}
                   onPick={(p) => { setV((o) => ({ ...o, ...fillFromPartner(s, p) })); setPicked((x) => ({ ...x, [s.id]: { id: p.id, name: p.name } })); }}
-                  onClear={() => setPicked((x) => { const n = { ...x }; delete n[s.id]; return n; })} />
+                  onClear={() => setPicked((x) => { const n = { ...x }; delete n[s.id]; return n; })}
+                  onNew={(name) => { setV((o) => ({ ...o, ...newPartnerFill(s, name) })); setSaveAs((x) => (x.includes(s.id) ? x : [...x, s.id])); }} />
               )}
               {s.fields.map((f) => <PaInput key={f.key} f={f} v={v} names={names} set={(k, x) => setV((o) => ({ ...o, [k]: x }))} />)}
               {s.people && !picked[s.id] && s.fields.some((f) => (v[f.key] ?? "").trim()) && (

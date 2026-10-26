@@ -229,7 +229,10 @@ Principles:
   partners of that type, most-used first; picking one fills name, company, email and phone
   and links the contact. Someone typed in by hand can be ticked **Save as contact** (stage
   Industry Partners, type from the section; an existing contact with that email is linked
-  instead).
+  instead) **+ Add "name" as a new lender/title/realtor** *(owner request
+  2026-10-26)* at the bottom of the search puts the typed name in and ticks Save as contact.
+- Money boxes on purchase agreements and buyer/listing forms show dollars as you type ("10000",
+  "10k" → "$10,000"); percent boxes show "2.7%" when you leave them *(owner request 2026-10-26)*.
 - A partner's contact page shows **Deals**: every contract they were picked for (client,
   address, role, state).
 - Partners are **never** invited to contract calendar events (only the team and the client).
