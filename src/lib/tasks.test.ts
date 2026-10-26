@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categoryOf, dueLabel, formatTime, importantDateTasks, nextDue, parseQuickAdd, parseTime, stripPersonWord, titleCase } from "./tasks";
+import { checklistOrder, categoryOf, dueLabel, formatTime, importantDateTasks, nextDue, parseQuickAdd, parseTime, stripPersonWord, titleCase } from "./tasks";
 
 const TODAY = "2026-10-13"; // a Tuesday
 
@@ -106,5 +106,17 @@ describe("weekday touches", () => {
     expect(isWeekend(new Date("2026-10-26T00:00:00Z"))).toBe(false);
     expect(workdays(sat, 3).map((d) => d.toISOString().slice(0, 10))).toEqual(["2026-10-26", "2026-10-27", "2026-10-28"]);
     expect(workdays(new Date("2026-10-29T00:00:00Z"), 3).map((d) => d.toISOString().slice(0, 10))).toEqual(["2026-10-29", "2026-10-30", "2026-11-02"]);
+  });
+});
+
+describe("deal checklist order (owner request 2026-10-26)", () => {
+  it("puts the section due soonest first and finished sections last", () => {
+    const t = (phase: string, due: string | null, done = false) => ({ phase, due, done });
+    const out = checklistOrder([
+      t("Closing", "2026-11-13"), t("Closing", "2026-11-25"), t("Done one", "2026-10-01", true),
+      t("Inspection", "2026-11-03"), t("Inspection", "2026-10-26"), t("Inspection", "2026-10-20", true), t("Later", null),
+    ]);
+    expect(out.map((s) => s.phase)).toEqual(["Inspection", "Closing", "Later", "Done one"]);
+    expect(out[0].items.map((x) => x.due)).toEqual(["2026-10-26", "2026-11-03", "2026-10-20"]);
   });
 });

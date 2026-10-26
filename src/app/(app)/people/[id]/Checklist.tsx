@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { TaskRow, TeamMember } from "@/server/tasks";
-import { diffDays, dueLabel } from "@/lib/tasks";
+import { checklistOrder, diffDays, dueLabel } from "@/lib/tasks";
 import { completeTask, reopenTask } from "../../tasks/actions";
 import { Avatar, CheckButton, KindIcon } from "../../tasks/parts";
 import { DraftModal } from "../../tasks/DraftModal";
@@ -17,8 +17,8 @@ export function Checklist({ title, tasks, today, team, personId }: { title: stri
   const [, start] = useTransition();
   if (!tasks.length) return <p className="mt-3 text-sm muted">No checklist for this yet. Templates for it can be added in Admin → Task templates.</p>;
   const done = tasks.filter((t) => t.done).length;
-  // Newest section first: sections come in the order their steps were added, so flip it (owner request 2026-10-19).
-  const phases = [...new Set(tasks.map((t) => t.step?.phase ?? "Steps"))].reverse();
+  // Soonest due first, finished sections at the bottom (owner request 2026-10-26).
+  const sections = checklistOrder(tasks.map((t) => ({ ...t, phase: t.step?.phase ?? "Steps" })));
   const toggle = (t: TaskRow) => start(async () => {
     setError("");
     const r = t.done ? await reopenTask({ id: t.id }) : await completeTask(t.id);
@@ -28,8 +28,7 @@ export function Checklist({ title, tasks, today, team, personId }: { title: stri
     <div className="mt-3">
       <h4 className="text-xs font-semibold uppercase tracking-wider muted">{title} · {done} of {tasks.length} done</h4>
       <div className="mt-1 flex flex-col rounded-lg border border-misty bg-white">
-        {phases.map((ph) => {
-          const items = tasks.filter((t) => (t.step?.phase ?? "Steps") === ph);
+        {sections.map(({ phase: ph, items }) => {
           const left = items.filter((t) => !t.done).length;
           const late = items.some((t) => !t.done && t.due && diffDays(t.due, today) < 0);
           return (

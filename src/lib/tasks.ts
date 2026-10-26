@@ -193,3 +193,18 @@ export function workdays(from: Date, n: number): Date[] {
   for (let d = new Date(from); out.length < n; d = new Date(d.getTime() + DAY_MS)) if (!isWeekend(d)) out.push(d);
   return out;
 }
+
+/**
+ * Deal checklist order (owner request 2026-10-26): sections by their soonest open step, finished sections last;
+ * inside a section, open steps soonest first, then done ones. Steps waiting for a date go after dated ones.
+ */
+export function checklistOrder<T extends { done: boolean; due: string | null; phase: string }>(tasks: T[]): { phase: string; items: T[] }[] {
+  const byDue = (a: T, b: T) => (a.due ?? "9999") < (b.due ?? "9999") ? -1 : (a.due ?? "9999") > (b.due ?? "9999") ? 1 : 0;
+  const phases = [...new Set(tasks.map((t) => t.phase))].map((phase, i) => {
+    const all = tasks.filter((t) => t.phase === phase);
+    const open = all.filter((t) => !t.done).sort(byDue);
+    return { phase, i, next: open.length ? open[0].due ?? "9999" : null, items: [...open, ...all.filter((t) => t.done)] };
+  });
+  return phases.sort((a, b) => (a.next === null) !== (b.next === null) ? (a.next === null ? 1 : -1) : a.next !== b.next ? (a.next! < b.next! ? -1 : 1) : a.i - b.i)
+    .map(({ phase, items }) => ({ phase, items }));
+}

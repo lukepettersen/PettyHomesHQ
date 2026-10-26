@@ -254,7 +254,7 @@ Principles:
 - **On the deal** *(owner request 2026-10-19)*: a **Send email** button opens the email composer
   (templates, merge fields, Gmail) right on the deal, and **Send text** *(owner request 2026-10-26)*
   opens the same text composer as the timeline (templates, group with their other numbers); open Email/Text checklist steps have **Draft
-  email / Draft text** to send that step's template. Checklist sections show **newest first**.
+  email / Draft text** to send that step's template. Checklist sections show the one **due soonest first**, finished sections at the bottom; inside a section, open steps soonest first, then done ones *(owner request 2026-10-26; was newest first)*.
 - **Deal notes** *(owner request 2026-10-15)*: each buyer/seller deal has a free-text notes box
   at the top of the deal ("+ Add deal notes"; click to edit; Save / Cancel), showing when and by
   whom it was last changed. Kept at every status and on closed deals. The first line shows on
