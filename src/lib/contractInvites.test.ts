@@ -18,7 +18,7 @@ describe("contract invites", () => {
       { id: "b", on: true, date: "closing", title: "{last_name} closing", time: "09:00", side: "seller", team: true, client: true },
       { id: "c", on: false, date: "inspection", title: "off", time: "", side: "both", team: true, client: true },
     ];
-    expect(contractEvents(rules, ctx)).toEqual([{ ruleId: "a", title: "1 Main St - Sewer Scope (Bob)", date: "2026-10-18", start: "13:30", team: true, client: false }]);
+    expect(contractEvents(rules, ctx)).toEqual([{ ruleId: "a", title: "1 Main St - Sewer Scope (Bob)", date: "2026-10-18", start: "13:30", end: "14:30", team: true, client: false }]);
     expect(contractEvents(rules, { ...ctx, side: "seller" }).map((e) => [e.title, e.start])).toEqual([["Baker closing", "09:00"]]);
   });
   it("fills couple names", () => {
@@ -28,5 +28,14 @@ describe("contract invites", () => {
     expect(cleanRules([{ id: "x", date: "inspection", title: " Deadline ", time: "form", side: "nope" }], options)[0]).toEqual({ id: "x", on: true, date: "inspection", title: "Deadline", time: "", side: "both", team: true, client: false });
     expect(() => cleanRules([{ id: "x", date: "zzz", title: "T" }], options)).toThrow(/pick which date/);
     expect(() => cleanRules([{ id: "x", date: "closing", title: "" }], options)).toThrow(/title/);
+  });
+});
+
+describe("invite length (owner request 2026-10-26)", () => {
+  it("makes inspection appointments 3 hours, saved rules without a length included", () => {
+    const saved = DEFAULT_RULES.map((r) => ({ ...r, hours: undefined }));
+    const insp = contractEvents(saved, ctx).find((e) => e.ruleId === "inspection")!;
+    expect([insp.start, insp.end]).toEqual(["10:00", "13:00"]);
+    expect(contractEvents([{ ...saved[0], hours: 2 }], ctx)[0].end).toBe("12:00");
   });
 });

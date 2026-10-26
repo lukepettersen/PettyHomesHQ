@@ -605,7 +605,8 @@ Principles:
   {first_name}, {client_name}, {address}, {street}; example shown), **which date** (any Date or
   Date-and-time question on the purchase agreement forms, so adding a question like "Sewer
   scope" makes it available), **time** (all day, the time entered on the form, or a set time in
-  15-minute steps, 1 hour long), **deals** (buyer, seller or both) and **invite** (team and/or
+  15-minute steps), **length** for timed ones (1–8 hours; the inspection appointment is 3 hours, others 1,
+  owner request 2026-10-26), **deals** (buyer, seller or both) and **invite** (team and/or
   client; partners never). The starting four match what HQ did before (Inspection at the
   appointment time, Inspection Deadline at 11:59pm, Written Statement Deadline, Close Date HOLD)
   and keep the events already made. Contact Appointments cards follow the same settings. New and

@@ -1,7 +1,7 @@
 // Contract calendar invites (SPEC.md §12): which purchase agreement dates go on Google Calendar, how each
 // event is titled, all day or at a time, and who's invited. Edited in Admin → Calendar invites.
 // Pure, unit tested in contractInvites.test.ts.
-import { apptName } from "@/lib/appointments";
+import { addMinutes, apptName } from "@/lib/appointments";
 import { splitCouple } from "@/lib/normalize";
 
 export type InviteRule = {
@@ -13,11 +13,15 @@ export type InviteRule = {
   side: "both" | "buyer" | "seller";
   team: boolean; // invite Luke and Alyssa (everyone on the team)
   client: boolean; // invite the client's email addresses
+  hours?: number; // length of a timed event; unset = 3 for the inspection appointment, else 1 (owner request 2026-10-26)
 };
+
+/** How long a timed invite lasts: inspections take about 3 hours, everything else 1. */
+export const ruleHours = (r: Pick<InviteRule, "hours" | "date">) => r.hours ?? (r.date === "inspAppt" ? 3 : 1);
 
 /** Today's four invites. Their ids match the calendar links already made, so existing events are kept. */
 export const DEFAULT_RULES: InviteRule[] = [
-  { id: "inspection", on: true, date: "inspAppt", title: "{last_name} - Inspection", time: "form", side: "both", team: true, client: true },
+  { id: "inspection", on: true, date: "inspAppt", title: "{last_name} - Inspection", time: "form", side: "both", team: true, client: true, hours: 3 },
   { id: "inspection-deadline-at-pm", on: true, date: "inspection", title: "{last_name} - Inspection Deadline at 11:59pm", time: "", side: "both", team: true, client: true },
   { id: "written-statement-deadline", on: true, date: "writtenStatement", title: "{last_name} - Written Statement Deadline", time: "", side: "both", team: true, client: true },
   { id: "close-date-hold", on: true, date: "closing", title: "{last_name} - Close Date HOLD", time: "", side: "both", team: true, client: true },
@@ -27,7 +31,7 @@ export const TITLE_FIELDS: [string, string][] = [["last_name", "Last name(s)"], 
 
 export type DateOption = { key: string; label: string; withTime: boolean };
 export type InviteContext = { personName: string; address: string; side: "buyer" | "seller"; dates: Record<string, string | null | undefined> };
-export type ContractEvent = { ruleId: string; title: string; date: string; start: string | null; team: boolean; client: boolean };
+export type ContractEvent = { ruleId: string; title: string; date: string; start: string | null; end: string | null; team: boolean; client: boolean };
 
 /** Fills {last_name} etc. Unknown fields are left as typed so a mistake is visible. */
 export function fillTitle(pattern: string, ctx: Pick<InviteContext, "personName" | "address">): string {
@@ -45,7 +49,7 @@ export function contractEvents(rules: InviteRule[], ctx: InviteContext): Contrac
     if (!v || !/^\d{4}-\d{2}-\d{2}/.test(v)) continue;
     const formTime = /T\d{2}:\d{2}/.test(v) ? v.slice(11, 16) : null;
     const start = r.time === "form" ? formTime : /^\d{2}:\d{2}$/.test(r.time) ? r.time : null;
-    out.push({ ruleId: r.id, title: fillTitle(r.title, ctx), date: v.slice(0, 10), start, team: r.team, client: r.client });
+    out.push({ ruleId: r.id, title: fillTitle(r.title, ctx), date: v.slice(0, 10), start, end: start ? addMinutes(start, ruleHours(r) * 60) : null, team: r.team, client: r.client });
   }
   return out;
 }
@@ -69,6 +73,7 @@ export function cleanRules(raw: unknown, options: DateOption[]): InviteRule[] {
     const t = typeof r.time === "string" ? r.time : "";
     const time = t === "form" && opt.withTime ? "form" : /^([01]\d|2[0-3]):[0-5]\d$/.test(t) ? t : "";
     const side = r.side === "buyer" || r.side === "seller" ? r.side : "both";
-    return { id, on: r.on !== false, date, title, time, side, team: r.team !== false, client: r.client === true };
+    const hours = typeof r.hours === "number" && Number.isInteger(r.hours) && r.hours >= 1 && r.hours <= 8 ? r.hours : undefined;
+    return { id, on: r.on !== false, date, title, time, side, team: r.team !== false, client: r.client === true, ...(hours ? { hours } : {}) };
   });
 }

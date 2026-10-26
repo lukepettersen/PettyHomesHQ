@@ -130,7 +130,7 @@ export function syncContract(paId: string) {
       const clientEmails = pa.file.person.emails.map((e) => ({ email: e.address, name: pa.file.person.name }));
       for (const e of contractEvents(await loadInviteRules(), inviteContext(pa, pa.file.person.name))) {
         const guests = [...(e.team ? teamEmails : []), ...(e.client ? clientEmails : [])];
-        wanted.set(contractKey(paId, e.ruleId), apptEvent({ title: e.title, date: e.date, start: e.start, end: null, location: pa.address }, guests, `${pa.address} · from the purchase agreement in Petty Homes HQ.`));
+        wanted.set(contractKey(paId, e.ruleId), apptEvent({ title: e.title, date: e.date, start: e.start, end: e.end, location: pa.address }, guests, `${pa.address} · from the purchase agreement in Petty Homes HQ.`));
       }
     }
     for (const [key, ev] of wanted) await upsertEvent(key, ev);

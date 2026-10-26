@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { SaveBar } from "@/components/SaveBar";
 import { TimeSelect } from "@/components/TimeSelect";
-import { fillTitle, type DateOption, type InviteRule } from "@/lib/contractInvites";
+import { fillTitle, ruleHours, type DateOption, type InviteRule } from "@/lib/contractInvites";
 import { saveInviteRules } from "./actions";
 import { refreshCalendar } from "../integrations/actions";
 
@@ -36,7 +36,7 @@ export function CalendarInvitesClient({ rules: initial, options, fields, connect
     setRules((rs) => [...rs, { id, on: true, date: options[0]?.key ?? "closing", title: "{last_name} - ", time: "", side: "both", team: true, client: true }]);
     requestAnimationFrame(() => titles.current[id]?.focus());
   };
-  const when = (r: InviteRule) => (r.time === "form" ? "at the time entered on the form" : r.time ? `at ${clock(r.time)} (1 hour)` : "all day");
+  const when = (r: InviteRule) => { const h = ruleHours(r); const len = `${h} hour${h === 1 ? "" : "s"}`; return r.time === "form" ? `at the time entered on the form (${len})` : r.time ? `at ${clock(r.time)} (${len})` : "all day"; };
 
   return (
     <div className="flex flex-col gap-3 pb-20">
@@ -76,6 +76,13 @@ export function CalendarInvitesClient({ rules: initial, options, fields, connect
                 </select>
                 {r.time && r.time !== "form" && <TimeSelect label="Event time" value={r.time} onChange={(v) => patch(r.id, { time: v })} className="input w-auto" />}
               </label>
+              {r.time && (
+                <label className="flex items-center gap-2">Length
+                  <select className="input w-auto" value={ruleHours(r)} onChange={(e) => patch(r.id, { hours: Number(e.target.value) })}>
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((h) => <option key={h} value={h}>{h} hour{h === 1 ? "" : "s"}</option>)}
+                  </select>
+                </label>
+              )}
               <label className="flex items-center gap-2">Deals
                 <select className="input w-auto" value={r.side} onChange={(e) => patch(r.id, { side: e.target.value as InviteRule["side"] })}>
                   <option value="both">Buyer and seller</option><option value="buyer">Buyer side only</option><option value="seller">Seller side only</option>
