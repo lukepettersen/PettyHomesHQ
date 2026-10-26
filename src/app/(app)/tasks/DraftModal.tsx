@@ -24,7 +24,8 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
   const [confirm, setConfirm] = useState(false);
   const [signature, setSignature] = useState(true);
   const [extras, setExtras] = useState<Extra[]>([]); // the deal's lender/title/agents or anyone in HQ (owner request 2026-10-26)
-  const toAll = [...(d?.to ?? []), ...extras.map((x) => x.value)];
+  const [skip, setSkip] = useState<string[]>([]); // the contact's own emails unticked, e.g. a note just to title (owner request 2026-10-26)
+  const toAll = [...(d?.to ?? []).filter((e) => !skip.includes(e)), ...extras.map((x) => x.value)];
   const box = useRef<HTMLTextAreaElement>(null);
   const slash = useSlashTemplates({ box, value: body, templates: d?.templates ?? [], onChoose: (id, from, to) => start(async () => {
     const r = await getDraft({ taskId, templateId: id });
@@ -35,7 +36,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
   }) });
   const slashProps = { onKeyDown: slash.onKeyDown, onKeyUp: slash.track, onClick: slash.track };
   const router = useRouter();
-  const canSend = !!(d && d.kind === "email" && d.sendsFrom && d.personId && toAll.length);
+  const canSend = !!(d && d.kind === "email" && d.sendsFrom && d.personId);
   const canText = !!(d && d.kind === "text" && !d.textBlocked && d.personId && d.to.length);
   const [toPhone, setToPhone] = useState("");
   const text = () => start(async () => {
@@ -75,7 +76,11 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
           {d.stepMessage && !d.templateId && <p className="text-sm text-[#9a6400]">This step expects &quot;{d.stepMessage}&quot;, which hasn&apos;t been created yet. Add it in Admin → Text &amp; email templates, or pick another one.</p>}
           {d.kind === "email" ? (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-              <b>To:</b> {d.to.length ? d.to.join(", ") : <span className="text-bad">No email address on file</span>}
+              <b>To:</b>
+              {d.to.map((e) => (
+                <label key={e} className="flex items-center gap-1"><input type="checkbox" checked={!skip.includes(e)} onChange={(x) => { setConfirm(false); setSkip(x.target.checked ? skip.filter((y) => y !== e) : [...skip, e]); }} /> {e}</label>
+              ))}
+              {!d.to.length && <span className="text-bad">No email address on file</span>}
               <ExtraChips extras={extras} onRemove={(v) => { setConfirm(false); setExtras(extras.filter((x) => x.value !== v)); }} />
               <AddRecipient mode="email" exclude={toAll.map((x) => x.toLowerCase())} onAdd={(x) => { setConfirm(false); setExtras([...extras, x]); }} />
               <SuggestChips suggest={d.suggest ?? []} exclude={toAll.map((x) => x.toLowerCase())} onAdd={(x) => { setConfirm(false); setExtras([...extras, x]); }} />
@@ -98,7 +103,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
             <button type="button" className="btn" onClick={onClose}>Close</button>
             <button type="button" className="btn" disabled={!body} onClick={copy}>{copied ? "Copied" : "Copy"}</button>
             {d.kind === "email" && <a className={`btn ${canSend ? "" : "btn-primary"} ${body ? "" : "pointer-events-none opacity-50"}`} href={mailto}>Open in email</a>}
-            {canSend && <button type="button" className="btn btn-primary" disabled={pending || !subject.trim() || !body.trim()} onClick={send} onBlur={() => setConfirm(false)}>
+            {canSend && <button type="button" className="btn btn-primary" disabled={pending || !toAll.length || !subject.trim() || !body.trim()} onClick={send} onBlur={() => setConfirm(false)}>
               {pending ? "Sending…" : confirm ? `Click again to send to ${toAll.length === 1 ? toAll[0] : `${toAll.length} addresses`}` : "Send email"}</button>}
             {canText && d.to.length > 1 && <select aria-label="Text to" className="input w-auto" value={toPhone || d.to[0]} onChange={(e) => setToPhone(e.target.value)}>{d.to.map((p) => <option key={p}>{p}</option>)}</select>}
             {canText && <button type="button" className="btn btn-primary" disabled={pending || !body.trim()} onClick={text}>{pending ? "Sending…" : "Send text"}</button>}
