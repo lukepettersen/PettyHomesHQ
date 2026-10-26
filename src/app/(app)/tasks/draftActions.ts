@@ -10,6 +10,9 @@ import { emailConnection } from "@/server/google";
 import { textComposerFor } from "@/server/texting";
 import { TEXT_STOP_TAG } from "@/lib/texting";
 import type { Phase } from "@/lib/templates";
+import { dealEmails } from "@/lib/partners";
+import { loadForm } from "@/server/pa";
+import type { Side } from "@/lib/pa";
 
 const obj = (v: unknown) => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, string>) : {});
 
@@ -36,6 +39,15 @@ export async function getDraft(input: { taskId: string; templateId?: string | nu
     }
 
     const p = task.person;
+    // The deal's lender, title and agents, offered as one-click recipients (owner request 2026-10-26).
+    const pa = kind === "email" && (task.paId || task.fileId) ? await db.purchaseAgreement.findFirst({
+      where: task.paId ? { id: task.paId } : { fileId: task.fileId!, state: "active", deletedAt: null }, orderBy: { createdAt: "desc" },
+      include: { partners: { include: { person: { select: { id: true, name: true } } } } },
+    }) : null;
+    const suggest = pa ? dealEmails(await loadForm(pa.side as Side), {
+      answers: (pa.answers ?? {}) as Record<string, string>,
+      partners: Object.fromEntries(pa.partners.map((x) => [x.sectionId, { id: x.person.id, name: x.person.name }])),
+    }) : [];
     const { values, label } = await mergeFor(user, p?.id ?? null, { paId: task.paId, fileId: task.fileId });
     const subject = chosen ? fill(chosen.subject, values) : { text: "", missing: [] };
     const body = chosen ? fill(chosen.body, values) : { text: "", missing: [] };
@@ -43,7 +55,7 @@ export async function getDraft(input: { taskId: string; templateId?: string | nu
       kind, templateId: chosen?.id ?? null, stepMessage,
       templates: templates.map((t) => ({ id: t.id, name: t.folder ? `${t.folder} · ${t.name}` : t.name })),
       to: kind === "email" ? (p?.emails.map((e) => e.address) ?? []) : (p?.phones.map((x) => x.number) ?? []),
-      personId: p?.id ?? null,
+      personId: p?.id ?? null, suggest,
       sendsFrom: kind === "email" ? (await emailConnection())?.email ?? null : null,
       // Draft text sends from the user's own number when texting is set up (SPEC.md §11).
       textBlocked: kind === "text" ? (await textComposerFor(user, p && (await db.personTag.count({ where: { personId: p.id, tag: { name: TEXT_STOP_TAG } } })) ? p.name : null)).blocked : null,

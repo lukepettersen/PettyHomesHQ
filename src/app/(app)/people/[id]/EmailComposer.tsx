@@ -5,11 +5,11 @@ import { useRef, useState, useTransition } from "react";
 import { FormatBar } from "@/components/FormatBar";
 import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
 import { fillEmailTemplate, sendEmail } from "../emailActions";
-import { AddRecipient, ExtraChips, type Extra } from "@/components/AddRecipient";
+import { AddRecipient, ExtraChips, SuggestChips, type Extra } from "@/components/AddRecipient";
 import { AttachFiles, type Attached } from "@/components/AttachFiles";
 
 /** Timeline → Email: pick a template (optional), check it over, send from the connected Gmail (SPEC.md §12). */
-export function EmailComposer({ personId, emails, templates, sendsFrom, onSent }: { personId: string; emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; onSent?: () => void }) {
+export function EmailComposer({ personId, emails, templates, sendsFrom, onSent, suggest = [] }: { personId: string; emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; onSent?: () => void; suggest?: Extra[] }) {
   const router = useRouter();
   const [to, setTo] = useState<string[]>(emails);
   const [extras, setExtras] = useState<Extra[]>([]); // other contacts or typed addresses (owner request 2026-10-20)
@@ -72,6 +72,7 @@ export function EmailComposer({ personId, emails, templates, sendsFrom, onSent }
         {!emails.length && <span className="muted">No email on file for them.</span>}
         <ExtraChips extras={extras} onRemove={(v) => { setConfirm(false); setExtras(extras.filter((x) => x.value !== v)); }} />
         <AddRecipient mode="email" exclude={all.map((x) => x.toLowerCase())} onAdd={(x) => { setConfirm(false); setExtras([...extras, x]); }} />
+        <SuggestChips suggest={suggest} exclude={all.map((x) => x.toLowerCase())} onAdd={(x) => { setConfirm(false); setExtras([...extras, x]); }} />
       </fieldset>
       <label className="label">Template
         <TemplateSearch templates={templates} value={templateId} disabled={pending} onPick={pick} noneLabel="No email templates yet" />

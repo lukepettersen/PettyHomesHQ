@@ -50,3 +50,17 @@ export function ExtraChips({ extras, onRemove }: { extras: Extra[]; onRemove: (v
     </span>
   ))}</>;
 }
+
+/** One-click recipients from the deal: "+ Buyer's Lender: Todd Kocon". */
+export function SuggestChips({ suggest, exclude, onAdd }: { suggest: Extra[]; exclude: string[]; onAdd: (x: Extra) => void }) {
+  const left = suggest.filter((x) => !exclude.includes(x.value.toLowerCase()));
+  if (!left.length) return null;
+  return (
+    <span className="flex w-full flex-wrap items-center gap-1.5 text-sm">
+      <span className="text-xs muted">In this deal:</span>
+      {left.map((x) => (
+        <button key={x.value} type="button" title={x.value} className="rounded-full border border-misty bg-white px-2 py-0.5 text-xs font-semibold hover:border-accent" onClick={() => onAdd(x)}>+ {x.label}</button>
+      ))}
+    </span>
+  );
+}

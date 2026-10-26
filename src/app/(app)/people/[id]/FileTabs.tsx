@@ -11,6 +11,7 @@ import { deleteFile, setFileStatus } from "../../pipeline/actions";
 import { PaWizard } from "../../pipeline/PaWizard";
 import { PaBox } from "./PaBox";
 import type { PaSection, PaView, Side } from "@/lib/pa";
+import { dealEmails } from "@/lib/partners";
 import type { TaskRow, TeamMember } from "@/server/tasks";
 import { Checklist } from "./Checklist";
 import { EmailComposer } from "./EmailComposer";
@@ -111,7 +112,7 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
         <div className="mt-3 rounded-lg border border-misty bg-paper p-3">
           <div className="flex items-center justify-between"><b className="text-sm">Email {personName}</b>
             <button type="button" className="text-xs font-semibold text-accent hover:underline" onClick={() => setEmailing(false)}>Close</button></div>
-          <EmailComposer personId={personId} emails={email.emails} templates={email.templates} sendsFrom={email.sendsFrom} onSent={() => setEmailing(false)} />
+          <EmailComposer personId={personId} emails={email.emails} templates={email.templates} sendsFrom={email.sendsFrom} onSent={() => setEmailing(false)} suggest={activePa ? dealEmails(forms[activePa.side], activePa) : []} />
         </div>
       )}
       {texting && (

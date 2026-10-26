@@ -9,8 +9,9 @@ import { getDraft } from "./draftActions";
 import { sendEmail } from "../people/emailActions";
 import { sendText } from "../messages/actions";
 import { toPlain } from "@/lib/email";
+import { AddRecipient, ExtraChips, SuggestChips, type Extra } from "@/components/AddRecipient";
 
-type Draft = { kind: "email" | "text"; templateId: string | null; stepMessage: string | null; templates: { id: string; name: string }[]; to: string[]; subject: string; body: string; missing: string[]; personId: string | null; sendsFrom: string | null; textBlocked: string | null };
+type Draft = { kind: "email" | "text"; templateId: string | null; stepMessage: string | null; templates: { id: string; name: string }[]; to: string[]; subject: string; body: string; missing: string[]; personId: string | null; sendsFrom: string | null; textBlocked: string | null; suggest: Extra[] };
 
 /** Draft email / Draft text: the filled-in template to review, then copy or open in the email app. */
 export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () => void }) {
@@ -22,6 +23,8 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
   const [pending, start] = useTransition();
   const [confirm, setConfirm] = useState(false);
   const [signature, setSignature] = useState(true);
+  const [extras, setExtras] = useState<Extra[]>([]); // the deal's lender/title/agents or anyone in HQ (owner request 2026-10-26)
+  const toAll = [...(d?.to ?? []), ...extras.map((x) => x.value)];
   const box = useRef<HTMLTextAreaElement>(null);
   const slash = useSlashTemplates({ box, value: body, templates: d?.templates ?? [], onChoose: (id, from, to) => start(async () => {
     const r = await getDraft({ taskId, templateId: id });
@@ -32,7 +35,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
   }) });
   const slashProps = { onKeyDown: slash.onKeyDown, onKeyUp: slash.track, onClick: slash.track };
   const router = useRouter();
-  const canSend = !!(d && d.kind === "email" && d.sendsFrom && d.personId && d.to.length);
+  const canSend = !!(d && d.kind === "email" && d.sendsFrom && d.personId && toAll.length);
   const canText = !!(d && d.kind === "text" && !d.textBlocked && d.personId && d.to.length);
   const [toPhone, setToPhone] = useState("");
   const text = () => start(async () => {
@@ -45,7 +48,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
     if (!confirm) { setConfirm(true); return; }
     setConfirm(false); setError("");
     start(async () => {
-      const r = await sendEmail({ personId: d!.personId!, taskId, to: d!.to, subject, body, signature });
+      const r = await sendEmail({ personId: d!.personId!, taskId, to: toAll, subject, body, signature });
       if (!r.ok) { setError(r.error); return; }
       router.refresh(); onClose();
     });
@@ -60,7 +63,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
     try { await navigator.clipboard.writeText(d?.kind === "email" ? `Subject: ${subject}\n\n${toPlain(body)}` : body); setCopied(true); setTimeout(() => setCopied(false), 2000); }
     catch { setError("Couldn't copy. Select the text and copy it instead."); }
   };
-  const mailto = d && d.kind === "email" ? `mailto:${d.to.join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(toPlain(body))}` : "";
+  const mailto = d && d.kind === "email" ? `mailto:${toAll.join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(toPlain(body))}` : "";
   return (
     <Modal title={d?.kind === "text" ? "Draft text" : "Draft email"} onClose={onClose} wide>
       {!d && !error && <p className="text-sm muted">Filling in the template…</p>}
@@ -70,7 +73,14 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
             <TemplateSearch templates={d.templates} value={d.templateId ?? ""} disabled={pending} onPick={(id) => load(id || null)} emptyLabel="Pick a template" noneLabel={`No ${d.kind} templates yet`} />
           </label>
           {d.stepMessage && !d.templateId && <p className="text-sm text-[#9a6400]">This step expects &quot;{d.stepMessage}&quot;, which hasn&apos;t been created yet. Add it in Admin → Text &amp; email templates, or pick another one.</p>}
-          <p className="text-sm"><b>To:</b> {d.to.length ? d.to.join(", ") : <span className="text-bad">No {d.kind === "email" ? "email address" : "phone number"} on file</span>}</p>
+          {d.kind === "email" ? (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              <b>To:</b> {d.to.length ? d.to.join(", ") : <span className="text-bad">No email address on file</span>}
+              <ExtraChips extras={extras} onRemove={(v) => { setConfirm(false); setExtras(extras.filter((x) => x.value !== v)); }} />
+              <AddRecipient mode="email" exclude={toAll.map((x) => x.toLowerCase())} onAdd={(x) => { setConfirm(false); setExtras([...extras, x]); }} />
+              <SuggestChips suggest={d.suggest ?? []} exclude={toAll.map((x) => x.toLowerCase())} onAdd={(x) => { setConfirm(false); setExtras([...extras, x]); }} />
+            </div>
+          ) : <p className="text-sm"><b>To:</b> {d.to.length ? d.to.join(", ") : <span className="text-bad">No phone number on file</span>}</p>}
           {d.kind === "email" && <label className="label">Subject<input className="input" value={subject} onChange={(e) => setSubject(e.target.value)} /></label>}
           {canSend ? (
             <div className="label">Message
@@ -89,7 +99,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
             <button type="button" className="btn" disabled={!body} onClick={copy}>{copied ? "Copied" : "Copy"}</button>
             {d.kind === "email" && <a className={`btn ${canSend ? "" : "btn-primary"} ${body ? "" : "pointer-events-none opacity-50"}`} href={mailto}>Open in email</a>}
             {canSend && <button type="button" className="btn btn-primary" disabled={pending || !subject.trim() || !body.trim()} onClick={send} onBlur={() => setConfirm(false)}>
-              {pending ? "Sending…" : confirm ? `Click again to send to ${d.to.length === 1 ? d.to[0] : `${d.to.length} addresses`}` : "Send email"}</button>}
+              {pending ? "Sending…" : confirm ? `Click again to send to ${toAll.length === 1 ? toAll[0] : `${toAll.length} addresses`}` : "Send email"}</button>}
             {canText && d.to.length > 1 && <select aria-label="Text to" className="input w-auto" value={toPhone || d.to[0]} onChange={(e) => setToPhone(e.target.value)}>{d.to.map((p) => <option key={p}>{p}</option>)}</select>}
             {canText && <button type="button" className="btn btn-primary" disabled={pending || !body.trim()} onClick={text}>{pending ? "Sending…" : "Send text"}</button>}
           </div>
