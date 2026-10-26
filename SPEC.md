@@ -112,7 +112,8 @@ Principles:
   cards; the Tasks sidebar becomes a row of chips and task details open full screen.
 
 - **Home-screen app** *(2026-10-14)*: "Add to Home Screen" gives the white house mark on moss,
-  the name "HQ", and opens full screen (web app manifest + Apple touch icon).
+  the name "HQ", and opens full screen (web app manifest + Apple touch icon). The icon opens the page you were on
+  when you added it, e.g. Tasks (owner request 2026-10-26).
 
 ## 6. People
 
