@@ -9,6 +9,7 @@ import { DateTimeInput } from "@/components/TimeSelect";
 import { fillFromPartner, newPartnerFill, sectionPartnerType } from "@/lib/partners";
 import { PartnerPicker } from "./PartnerPicker";
 import { moneyTyped, pctShown } from "@/lib/files";
+import { MoneyOrPctInput } from "@/components/MoneyOrPctInput";
 
 type Props = {
   fileId: string; fileKind: "buyer" | "listing"; personName: string; fileLine: string; prefill?: Answers; pa?: PaView;
@@ -133,6 +134,7 @@ function PaInput({ f, v, names, set }: { f: PaField; v: Answers; names: string[]
       </div>
     );
   }
+  if (f.type === "moneypct") return <div className="label">{label}<MoneyOrPctInput label={f.label} value={value} onChange={(x) => set(f.key, x)} /></div>;
   if (f.type === "datetime") return <div className="label">{label}<DateTimeInput label={f.label} value={value} onChange={(x) => set(f.key, x)} /></div>;
   if (f.key === "address") return <div className="label">{label}<AddressInput label={f.label} value={value} onChange={(x) => set(f.key, x)} placeholder={f.hint ?? "Street, city"} /></div>;
   const type = f.type === "date" ? "date" : "text";

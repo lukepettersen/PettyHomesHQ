@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { applicableDates, commissionLine, effectiveStatus, KEY_DATES, visibleSections, type DateKey, type PaSection, type PaView, type Side } from "@/lib/pa";
-import { money, shortDay } from "@/lib/files";
+import { money, moneyOrPctShown, shortDay } from "@/lib/files";
 import { fellThrough, markClosed, setKeyDate } from "../../pipeline/paActions";
 import { PaWizard } from "../../pipeline/PaWizard";
 
@@ -26,7 +26,7 @@ export function PaBox({ pa, personName, fileKind, fileLine, forms, today, canSee
   const a = pa.answers;
   const form = forms[pa.side];
   const facts: [string, string][] = [
-    ["Price", money(pa.price)], ["Earnest money", a.em ? money(+a.em) : ""], ["Seller contributions", a.sc ? money(+a.sc) : ""],
+    ["Price", money(pa.price)], ["Earnest money", a.em ? money(+a.em) : ""], ["Seller contributions", a.sc ? moneyOrPctShown(a.sc) : ""],
     ["Commission", pa.commission ? commissionLine(pa.commission, pa.price) : ""], ["BAC", pa.bac ? money(+pa.bac) : ""], ["Financing", a.fin ?? ""],
     ["Property", [a.ptype, a.year && `built ${a.year}`, a.hoa === "Yes" && "HOA", a.newc === "Yes" && "New construction"].filter(Boolean).join(" · ")],
   ];

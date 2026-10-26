@@ -104,7 +104,8 @@ export function formValues(sections: PaSection[], a: Record<string, string>): Re
     const v = (a[q.key] ?? "").trim(), k = mergeKey(q.key);
     if (q.type === "date-na" && a[`${q.key}_na`] === "yes") { out[k] = "N/A"; continue; }
     if (!v) { out[k] ??= ""; continue; }
-    out[k] = q.type === "money" && num(v) ? `$${num(v).toLocaleString("en-US")}`
+    out[k] = q.type === "moneypct" && v.endsWith("%") ? v
+      : (q.type === "money" || q.type === "moneypct") && num(v) ? `$${num(v).toLocaleString("en-US")}`
       : q.type === "pct" && !v.includes("%") ? `${v}%`
       : (q.type === "date" || q.type === "date-na") && /^\d{4}-\d{2}-\d{2}/.test(v) ? longDate(v)
       : q.type === "datetime" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v) ? `${longDate(v)} at ${clock(v.slice(11, 16))}`

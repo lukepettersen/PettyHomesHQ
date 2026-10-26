@@ -2,7 +2,7 @@
 // answers, and what the contact page and Pipeline show. Pure, unit tested in files.test.ts.
 
 export type FileKind = "buyer" | "listing";
-import { isShown, type FieldType, type PaField, type PaSection } from "./pa";
+import { cleanMoneyOrPct, isShown, type FieldType, type PaField, type PaSection } from "./pa";
 
 /** A section of the buyer or listing form; `statuses` lists the status ids it shows at (none = every status). */
 export type FileSection = PaSection & { statuses?: string[] };
@@ -73,6 +73,7 @@ export function cleanFileAnswers(form: FileSection[], statusId: string | null, r
       if (!Number.isFinite(n) || n < 0) throw new Error(`${f.label}: use a number.`);
       v = String(Math.round(n));
     }
+    if (f.type === "moneypct") v = cleanMoneyOrPct(v, f.label);
     if (f.type === "pct") { const n = Number(v.replace(/[%\s]/g, "")); if (!Number.isFinite(n) || n < 0 || n > 100) throw new Error(`${f.label}: use a percent, like 2.7.`); v = String(n); }
     if ((f.type === "date" || f.type === "date-na") && !/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new Error(`${f.label}: pick a date.`);
     if (f.type === "datetime" && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) throw new Error(`${f.label}: pick a date and time.`);
@@ -94,6 +95,8 @@ export const shortDay = (iso: string) => `${MON[+iso.slice(5, 7) - 1]} ${+iso.sl
 export const clock = (t: string) => { const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")}${h < 12 ? "am" : "pm"}`; };
 export const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 /** Money boxes show dollars as you type, however it's entered: "10000", "0010000.50", "$10,000" and "10k" → "$10,000". */
+/** A "Money or %" answer for reading: "3%" or "$5,000". */
+export const moneyOrPctShown = (v: string) => (v.trim().endsWith("%") ? v.trim() : moneyTyped(v));
 /** Percent boxes show "2.7%" once you leave them: "2.7", "2.70 %" → "2.7%". */
 export function pctShown(raw: string): string {
   const n = raw.replace(/[^\d.]/g, "");
@@ -144,7 +147,7 @@ export function factRows(form: FileSection[], f: FileView): [string, string][] {
     const raw = fld.key === "price" ? (f.price ? String(f.price) : "") : fld.key === "commission" ? f.commission ?? "" : fld.key === "bac" ? f.bac ?? "" : f.info[fld.key] ?? "";
     if (!raw) continue;
     const label = fld.key === "price" && f.kind === "listing" ? (f.info.active || f.status === "Active" ? "List price" : fld.label) : fld.label;
-    const value = fld.type === "money" ? money(Number(raw)) : fld.type === "date" ? shortDay(raw) : fld.type === "datetime" ? `${shortDay(raw.slice(0, 10))} ${clock(raw.slice(11, 16))}` : fld.type === "pct" ? `${raw}%` : raw;
+    const value = fld.type === "money" ? money(Number(raw)) : fld.type === "moneypct" ? moneyOrPctShown(raw) : fld.type === "date" ? shortDay(raw) : fld.type === "datetime" ? `${shortDay(raw.slice(0, 10))} ${clock(raw.slice(11, 16))}` : fld.type === "pct" ? `${raw}%` : raw;
     out.push([label, value]);
   }
   return out;

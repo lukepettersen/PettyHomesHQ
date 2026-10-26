@@ -3,6 +3,7 @@
 import { AddressInput } from "@/components/AddressInput";
 import { useState, useTransition } from "react";
 import { Modal } from "@/components/Modal";
+import { MoneyOrPctInput } from "@/components/MoneyOrPctInput";
 import { moneyTyped, pctShown, sectionsAt, type Answers, type FileKind, type FileSection } from "@/lib/files";
 import type { PaField } from "@/lib/pa";
 import { DateTimeInput } from "@/components/TimeSelect";
@@ -97,6 +98,7 @@ function Field({ q, v, set }: { q: PaField; v: Answers; set: (k: string, x: stri
     );
   }
   if (q.key === "address") return <div className="label">{label}<AddressInput label={q.label} value={value} onChange={(x) => set(q.key, x)} placeholder={q.hint ?? "Street, city"} /></div>;
+  if (q.type === "moneypct") return <div className="label">{label}<MoneyOrPctInput label={q.label} value={value} onChange={(x) => set(q.key, x)} /></div>;
   if (q.type === "datetime") return <div className="label">{label}<DateTimeInput label={q.label} value={value} onChange={(x) => set(q.key, x)} /></div>;
   return (
     <label className="label">{label}

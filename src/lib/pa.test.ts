@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applicableDates, cleanPaAnswers, clientFirstNames, commissionLine, DEFAULT_FORMS, effectiveStatus, formProblem, ucColumn, upgradeNotesAnswers, upgradeNotesForm, visibleSections, type PaSection } from "./pa";
+import { applicableDates, cleanMoneyOrPct, cleanPaAnswers, clientFirstNames, commissionLine, DEFAULT_FORMS, effectiveStatus, formProblem, ucColumn, upgradeNotesAnswers, upgradeNotesForm, visibleSections, type PaSection } from "./pa";
 
 const buyer = DEFAULT_FORMS.buyer;
 const TODAY = "2026-10-13";
@@ -109,5 +109,14 @@ describe("notes upgrade (owner request 2026-10-26)", () => {
   it("lists client first names", () => {
     expect(clientFirstNames("Emma Sharpe & Vy Nguyen")).toEqual(["Emma", "Vy"]);
     expect(clientFirstNames("Sam Ortiz")).toEqual(["Sam"]);
+  });
+});
+
+describe("Money or % (owner request 2026-10-26)", () => {
+  it("keeps a percent as a percent and anything else as dollars", () => {
+    expect(cleanMoneyOrPct("3%", "Seller contributions")).toBe("3%");
+    expect(cleanMoneyOrPct("2.5 %", "Seller contributions")).toBe("2.5%");
+    expect(cleanMoneyOrPct("$5,000", "Seller contributions")).toBe("5000");
+    expect(() => cleanMoneyOrPct("150%", "Seller contributions")).toThrow();
   });
 });

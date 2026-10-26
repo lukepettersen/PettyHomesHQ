@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanFileAnswers, defaultFileForm, factRows, fileLine, health, kMoney, moneyTyped, pctShown, sectionsAt, toFileView } from "./files";
+import { cleanFileAnswers, defaultFileForm, factRows, fileLine, health, kMoney, moneyOrPctShown, moneyTyped, pctShown, sectionsAt, toFileView } from "./files";
 
 const B = [{ id: "b1" }, { id: "b2" }, { id: "b3" }, { id: "b4" }, { id: "b5" }];
 const L = [{ id: "l1" }, { id: "l2" }, { id: "l3" }, { id: "l4" }, { id: "l5" }];
@@ -77,5 +77,12 @@ describe("money and percent boxes (owner request 2026-10-26)", () => {
   it("shows percents with a % sign", () => {
     expect(["2.7", "2.70 %", "3%"].map(pctShown)).toEqual(["2.7%", "2.7%", "3%"]);
     expect(pctShown("")).toBe("");
+  });
+});
+
+describe("Money or % display", () => {
+  it("reads naturally", () => {
+    expect(moneyOrPctShown("3%")).toBe("3%");
+    expect(moneyOrPctShown("5000")).toBe("$5,000");
   });
 });

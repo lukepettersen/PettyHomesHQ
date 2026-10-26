@@ -193,7 +193,7 @@ export async function saveStages(input: z.input<typeof stagesSchema>) {
 // ---------- Admin → Buyer and seller forms ----------
 const fileFieldSchema = z.object({
   key: z.string().regex(/^[A-Za-z][\w]{0,40}$/), label: z.string().trim().max(80),
-  type: z.enum(["text", "money", "number", "pct", "date", "date-na", "datetime", "yesno", "choice"]),
+  type: z.enum(["text", "money", "number", "pct", "date", "date-na", "datetime", "yesno", "choice", "moneypct"]),
   hint: z.string().trim().max(120).optional(), required: z.boolean().optional(), options: z.array(z.string().trim().min(1).max(60)).max(30).optional(), showIf: z.string().max(120).optional(),
 });
 const fileSectionSchema = z.object({

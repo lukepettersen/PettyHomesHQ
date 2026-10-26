@@ -233,6 +233,9 @@ Principles:
   2026-10-26)* at the bottom of the search puts the typed name in and ticks Save as contact.
 - Money boxes on purchase agreements and buyer/listing forms show dollars as you type ("10000",
   "10k" → "$10,000"); percent boxes show "2.7%" when you leave them *(owner request 2026-10-26)*.
+- Question type **Money or %** *(owner request 2026-10-26)*: a $ / % switch beside the box, for seller
+  contributions that are sometimes dollars and sometimes a percent (the default for Seller contributions); it reads
+  "$5,000" or "3%" everywhere.
 - A partner's contact page shows **Deals**: every contract they were picked for (client,
   address, role, state).
 - Partners are **never** invited to contract calendar events (only the team and the client).

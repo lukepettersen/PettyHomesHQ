@@ -2,11 +2,11 @@
 // key dates and the Under Contract column. Pure, unit tested in pa.test.ts.
 
 export type Side = "buyer" | "seller";
-export type FieldType = "text" | "money" | "number" | "pct" | "date" | "date-na" | "datetime" | "yesno" | "choice" | "client";
+export type FieldType = "text" | "money" | "number" | "pct" | "date" | "date-na" | "datetime" | "yesno" | "choice" | "client" | "moneypct";
 export type PaField = { key: string; label: string; type: FieldType; hint?: string; required?: boolean; options?: string[]; showIf?: string };
 export type PaSection = { id: string; name: string; showIf?: string; people?: boolean; fields: PaField[] };
 
-export const FIELD_TYPES: [FieldType, string][] = [["text", "Text"], ["money", "Money"], ["number", "Number"], ["pct", "Percent"], ["date", "Date"], ["date-na", "Date or N/A"], ["datetime", "Date and time"], ["yesno", "Yes/No"], ["choice", "Dropdown"]];
+export const FIELD_TYPES: [FieldType, string][] = [["text", "Text"], ["money", "Money"], ["number", "Number"], ["pct", "Percent"], ["date", "Date"], ["date-na", "Date or N/A"], ["datetime", "Date and time"], ["yesno", "Yes/No"], ["choice", "Dropdown"], ["moneypct", "Money or %"]];
 /** Purchase agreement forms also offer a dropdown of the client's first names (e.g. Earnest money to). */
 export const PA_FIELD_TYPES: [FieldType, string][] = [...FIELD_TYPES, ["client", "Client name"]];
 
@@ -94,7 +94,7 @@ export const DEFAULT_FORMS: Record<Side, PaSection[]> = {
   buyer: [
     PROPERTY,
     { id: "contract", name: "The contract", fields: [
-      f("price", "Purchase price", "money", { required: true }), f("em", "Earnest money", "money"), f("sc", "Seller contributions", "money"),
+      f("price", "Purchase price", "money", { required: true }), f("em", "Earnest money", "money"), f("sc", "Seller contributions", "moneypct"),
       f("commission", "Commission %", "pct"), f("bac", "BAC ($)", "money"),
     ] },
     { id: "newc", name: "Buyer New Construction", showIf: "newc=Yes", fields: [
@@ -109,7 +109,7 @@ export const DEFAULT_FORMS: Record<Side, PaSection[]> = {
   seller: [
     PROPERTY,
     { id: "contract", name: "The contract", fields: [
-      f("price", "Purchase price", "money", { required: true }), f("em", "Earnest money", "money"), f("sc", "Seller contributions", "money"),
+      f("price", "Purchase price", "money", { required: true }), f("em", "Earnest money", "money"), f("sc", "Seller contributions", "moneypct"),
       f("fin", "Buyer's financing", "choice", { options: ["Conventional", "FHA", "VA", "Cash", "Other"] }), f("commission", "Commission %", "pct"), f("bac", "BAC ($)", "money"),
     ] },
     DATES, NOTES,
@@ -119,6 +119,18 @@ export const DEFAULT_FORMS: Record<Side, PaSection[]> = {
 };
 
 export type Answers = Record<string, string>;
+
+/** "Money or %" answers (owner request 2026-10-26: seller paids are sometimes $, sometimes %): "3%" stays a percent, anything else is dollars. */
+export function cleanMoneyOrPct(v: string, label: string): string {
+  if (/%\s*$/.test(v)) {
+    const n = Number(v.replace(/[%\s]/g, ""));
+    if (!Number.isFinite(n) || n < 0 || n > 100) throw new Error(`${label}: use a percent, like 3.`);
+    return `${n}%`;
+  }
+  const n = Number(v.replace(/[$,\s]/g, ""));
+  if (!Number.isFinite(n) || n < 0) throw new Error(`${label}: use a dollar amount or a percent.`);
+  return String(Math.round(n));
+}
 
 /** "newc=Yes" → shown only when that answer is Yes. */
 export function isShown(rule: string | undefined, a: Answers): boolean {
@@ -150,6 +162,7 @@ export function cleanPaAnswers(form: PaSection[], raw: Answers, opts: { skipComm
       if (!Number.isFinite(n) || n < 0) throw new Error(`${fld.label}: use a number.`);
       v = String(Math.round(n));
     }
+    if (fld.type === "moneypct") v = cleanMoneyOrPct(v, fld.label);
     if (fld.type === "pct") {
       const n = Number(v.replace(/[%\s]/g, ""));
       if (!Number.isFinite(n) || n < 0 || n > 100) throw new Error(`${fld.label}: use a percent, like 2.7.`);
