@@ -3,7 +3,7 @@
 import { AddressInput } from "@/components/AddressInput";
 import { useState, useTransition } from "react";
 import { Modal } from "@/components/Modal";
-import { sectionsAt, type Answers, type FileKind, type FileSection } from "@/lib/files";
+import { moneyTyped, pctShown, sectionsAt, type Answers, type FileKind, type FileSection } from "@/lib/files";
 import type { PaField } from "@/lib/pa";
 import { DateTimeInput } from "@/components/TimeSelect";
 import type { StatusRow } from "@/server/files";
@@ -71,6 +71,7 @@ export function FileForm({ kind, personId, personName, fileId, statuses, statusI
 }
 
 function Field({ q, v, set }: { q: PaField; v: Answers; set: (k: string, x: string) => void }) {
+  const [focus, setFocus] = useState(false);
   const label = `${q.label}${q.required ? " *" : ""}`;
   const value = v[q.key] ?? "";
   if (q.type === "choice" || q.type === "yesno") {
@@ -99,7 +100,7 @@ function Field({ q, v, set }: { q: PaField; v: Answers; set: (k: string, x: stri
   if (q.type === "datetime") return <div className="label">{label}<DateTimeInput label={q.label} value={value} onChange={(x) => set(q.key, x)} /></div>;
   return (
     <label className="label">{label}
-      <input className="input" value={value} onChange={(e) => set(q.key, e.target.value)} placeholder={q.hint ?? (q.type === "money" ? "$" : q.type === "pct" ? "e.g. 2.7" : "")}
+      <input className="input" value={q.type === "money" ? moneyTyped(value) : q.type === "pct" && !focus ? pctShown(value) : value} onFocus={() => setFocus(true)} onBlur={() => setFocus(false)} onChange={(e) => set(q.key, q.type === "money" ? moneyTyped(e.target.value) : e.target.value)} placeholder={q.hint ?? (q.type === "money" ? "$" : q.type === "pct" ? "e.g. 2.7" : "")}
         type={q.type === "date" ? "date" : "text"} inputMode={["money", "number", "pct"].includes(q.type) ? "decimal" : undefined} />
     </label>
   );

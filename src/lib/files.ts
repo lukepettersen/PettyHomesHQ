@@ -93,6 +93,18 @@ export const shortDay = (iso: string) => `${MON[+iso.slice(5, 7) - 1]} ${+iso.sl
 /** "20:00" → "8:00pm". Times always show on a 12-hour clock, Central time. */
 export const clock = (t: string) => { const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")}${h < 12 ? "am" : "pm"}`; };
 export const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
+/** Money boxes show dollars as you type, however it's entered: "10000", "0010000.50", "$10,000" and "10k" → "$10,000". */
+/** Percent boxes show "2.7%" once you leave them: "2.7", "2.70 %" → "2.7%". */
+export function pctShown(raw: string): string {
+  const n = raw.replace(/[^\d.]/g, "");
+  return n && Number.isFinite(Number(n)) ? `${Number(n)}%` : raw;
+}
+export function moneyTyped(raw: string): string {
+  const short = raw.replace(/[$,\s]/g, "").match(/^(\d+(?:\.\d+)?)([km])$/i);
+  if (short) return money(Number(short[1]) * (short[2].toLowerCase() === "k" ? 1e3 : 1e6));
+  const whole = raw.split(".")[0].replace(/\D/g, "");
+  return whole ? money(Number(whole)) : "";
+}
 export const kMoney = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(n % 1e6 ? 2 : 0).replace(/\.?0+$/, "")}M` : n >= 1000 ? `$${Math.round(n / 1000)}k` : money(n));
 
 /** What a viewer may see of a file. Commission and BAC are null unless allowed ("See commissions"). */

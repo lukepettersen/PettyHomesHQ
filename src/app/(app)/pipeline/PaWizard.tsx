@@ -8,6 +8,7 @@ import { addPurchaseAgreement, updatePurchaseAgreement } from "./paActions";
 import { DateTimeInput } from "@/components/TimeSelect";
 import { fillFromPartner, sectionPartnerType } from "@/lib/partners";
 import { PartnerPicker } from "./PartnerPicker";
+import { moneyTyped, pctShown } from "@/lib/files";
 
 type Props = {
   fileId: string; fileKind: "buyer" | "listing"; personName: string; fileLine: string; prefill?: Answers; pa?: PaView;
@@ -105,6 +106,7 @@ function fromPa(pa: PaView): Answers {
 }
 
 function PaInput({ f, v, names, set }: { f: PaField; v: Answers; names: string[]; set: (k: string, x: string) => void }) {
+  const [focus, setFocus] = useState(false);
   const label = `${f.label}${f.required ? " *" : ""}`;
   const value = v[f.key] ?? "";
   if (f.type === "yesno" || f.type === "choice" || f.type === "client") {
@@ -136,7 +138,9 @@ function PaInput({ f, v, names, set }: { f: PaField; v: Answers; names: string[]
   const ph = f.hint ?? (f.type === "money" ? "$" : f.type === "pct" ? "e.g. 2.7" : "");
   return (
     <label className="label">{label}
-      <input className="input" type={type} value={value} placeholder={ph} inputMode={["money", "number", "pct"].includes(f.type) ? "decimal" : undefined} onChange={(e) => set(f.key, e.target.value)} />
+      <input className="input" type={type} value={f.type === "money" ? moneyTyped(value) : f.type === "pct" && !focus ? pctShown(value) : value} placeholder={ph}
+        onFocus={() => setFocus(true)} onBlur={() => setFocus(false)} inputMode={["money", "number", "pct"].includes(f.type) ? "decimal" : undefined}
+        onChange={(e) => set(f.key, f.type === "money" ? moneyTyped(e.target.value) : e.target.value)} />
     </label>
   );
 }
