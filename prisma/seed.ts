@@ -4,7 +4,7 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { DEFAULT_ROLES } from "../src/server/permissions";
-import { DEFAULT_FORMS } from "../src/lib/pa";
+import { DEFAULT_FORMS, upgradeNotesAnswers, upgradeNotesForm, type Answers, type PaSection } from "../src/lib/pa";
 import { STARTER_TEMPLATES } from "./starterTemplates";
 import { defaultFileForm } from "../src/lib/files";
 
@@ -69,6 +69,20 @@ async function main() {
   }
   for (const side of ["buyer", "seller"] as const) {
     if (!(await db.paForm.findUnique({ where: { side } }))) await db.paForm.create({ data: { side, sections: DEFAULT_FORMS[side] } });
+  }
+  // One-time upgrade (owner request 2026-10-26): Referral fee / Material defect become Yes/No with follow-ups,
+  // Earnest money to becomes a client-name dropdown. Earlier answers move to the new questions.
+  if (!(await db.appSetting.findUnique({ where: { key: "pa.notesUpgrade" } }))) {
+    for (const row of await db.paForm.findMany()) {
+      const up = Array.isArray(row.sections) ? upgradeNotesForm(row.sections as unknown as PaSection[]) : null;
+      if (!up) continue;
+      await db.paForm.update({ where: { side: row.side }, data: { sections: up.form } });
+      for (const pa of await db.purchaseAgreement.findMany({ where: { side: row.side }, select: { id: true, answers: true } })) {
+        const a = upgradeNotesAnswers((pa.answers ?? {}) as Answers, up);
+        if (a) await db.purchaseAgreement.update({ where: { id: pa.id }, data: { answers: a } });
+      }
+    }
+    await db.appSetting.create({ data: { key: "pa.notesUpgrade", value: true } });
   }
   // Buyer and listing forms, once, shown at the same statuses as before they were editable.
   for (const kind of ["buyer", "listing"] as const) {

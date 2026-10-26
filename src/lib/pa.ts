@@ -2,11 +2,13 @@
 // key dates and the Under Contract column. Pure, unit tested in pa.test.ts.
 
 export type Side = "buyer" | "seller";
-export type FieldType = "text" | "money" | "number" | "pct" | "date" | "date-na" | "datetime" | "yesno" | "choice";
+export type FieldType = "text" | "money" | "number" | "pct" | "date" | "date-na" | "datetime" | "yesno" | "choice" | "client";
 export type PaField = { key: string; label: string; type: FieldType; hint?: string; required?: boolean; options?: string[]; showIf?: string };
 export type PaSection = { id: string; name: string; showIf?: string; people?: boolean; fields: PaField[] };
 
 export const FIELD_TYPES: [FieldType, string][] = [["text", "Text"], ["money", "Money"], ["number", "Number"], ["pct", "Percent"], ["date", "Date"], ["date-na", "Date or N/A"], ["datetime", "Date and time"], ["yesno", "Yes/No"], ["choice", "Dropdown"]];
+/** Purchase agreement forms also offer a dropdown of the client's first names (e.g. Earnest money to). */
+export const PA_FIELD_TYPES: [FieldType, string][] = [...FIELD_TYPES, ["client", "Client name"]];
 
 /** Keys the app reads (Pipeline, calendar, templates). Address and price can't be removed. */
 export const AUTOMATION_KEYS = ["address", "price", "ptype", "year", "hoa", "newc", "defect", "fin", "commission", "bac", "em", "sc", "closing", "finalAcceptance", "inspection", "writtenStatement", "hoaRescission", "inspAppt"];
@@ -30,8 +32,59 @@ const DATES: PaSection = { id: "dates", name: "Key dates", fields: [
   f("writtenStatement", "Written Statement", "date-na"), f("hoaRescission", "HOA doc rescission", "date", { showIf: "hoa=Yes" }),
 ] };
 const NOTES: PaSection = { id: "notes", name: "Notes", fields: [
-  f("inspAppt", "Inspection appointment", "datetime"), f("referral", "Referral fee", "text"), f("emTo", "Earnest money to", "text"), f("defect", "Material defect clause?", "yesno"),
+  f("inspAppt", "Inspection appointment", "datetime"),
+  f("referral", "Referral fee", "yesno"), f("referralPct", "Referral %", "pct", { showIf: "referral=Yes" }), f("referralTo", "Referral to", "text", { showIf: "referral=Yes" }),
+  f("emTo", "Earnest money to", "client"),
+  f("defect", "Material defect clause?", "yesno"), f("defectAmount", "Material defect amount", "money", { showIf: "defect=Yes" }),
 ] };
+
+/** Client first names for "Client name" questions: "Emma Sharpe & Vy Nguyen" → ["Emma", "Vy"]. */
+export const clientFirstNames = (personName: string) =>
+  personName.split(/\s*&\s*|\s+and\s+|\s*\+\s*/i).map((x) => x.trim().split(/\s+/)[0]).filter(Boolean);
+
+/**
+ * One-time upgrade of a saved form (owner request 2026-10-26): Referral fee and Material defect become Yes/No with
+ * follow-ups (referral % and who; defect amount), Earnest money to becomes a client-name dropdown.
+ * Finds each by key or by its name. Returns null when there's nothing to change.
+ */
+export function upgradeNotesForm(form: PaSection[]): { form: PaSection[]; referral?: string; defect?: string } | null {
+  const keys = new Set(form.flatMap((s) => s.fields.map((x) => x.key)));
+  const find = (key: string, label: RegExp) => form.flatMap((s) => s.fields).find((x) => x.key === key || label.test(x.label));
+  const referral = find("referral", /referral fee/i), defect = find("defect", /material defect/i), emTo = find("emTo", /earnest money to/i);
+  let changed = false;
+  const out = form.map((s) => ({ ...s, fields: s.fields.flatMap((x): PaField[] => {
+    if (x === referral && !keys.has("referralPct")) {
+      changed = true;
+      return [{ ...x, type: "yesno", options: undefined }, f("referralPct", "Referral %", "pct", { showIf: `${x.key}=Yes` }), f("referralTo", "Referral to", "text", { showIf: `${x.key}=Yes` })];
+    }
+    if (x === defect && !keys.has("defectAmount")) {
+      changed = true;
+      return [{ ...x, type: "yesno", options: undefined }, f("defectAmount", "Material defect amount", "money", { showIf: `${x.key}=Yes` })];
+    }
+    if (x === emTo && x.type === "text") { changed = true; return [{ ...x, type: "client" }]; }
+    return [x];
+  }) }));
+  return changed ? { form: out, referral: referral?.key, defect: defect?.key } : null;
+}
+
+/** Answers typed before the upgrade: "25% to Jim" keeps as Referral to with Yes; a defect amount moves to its own question. */
+export function upgradeNotesAnswers(a: Answers, keys: { referral?: string; defect?: string }): Answers | null {
+  const n = { ...a };
+  const r = keys.referral && (a[keys.referral] ?? "").trim();
+  if (keys.referral && r && r !== "Yes" && r !== "No") {
+    n[keys.referral] = "Yes";
+    const pct = r.match(/(\d+(?:\.\d+)?)\s*%/);
+    if (pct && !n.referralPct) n.referralPct = pct[1];
+    if (!n.referralTo) n.referralTo = r;
+  }
+  const d = keys.defect && (a[keys.defect] ?? "").trim();
+  if (keys.defect && d && d !== "Yes" && d !== "No") {
+    n[keys.defect] = /^(no|none|n\/a)$/i.test(d) ? "No" : "Yes";
+    const amt = d.replace(/[$,\s]/g, "");
+    if (n[keys.defect] === "Yes" && !n.defectAmount) n.defectAmount = /^\d+(\.\d+)?$/.test(amt) ? String(Math.round(Number(amt))) : d;
+  }
+  return JSON.stringify(n) === JSON.stringify(a) ? null : n;
+}
 const people = (id: string, name: string, fields: [string, string][]): PaSection => ({ id, name, people: true, fields: fields.map(([k, l]) => f(k, l, "text")) });
 const LENDER = people("lender", "Buyer's lender", [["lenderName", "Name"], ["lenderEmail", "Email"], ["lenderCompany", "Company"]]);
 const B_TITLE = people("buyerTitle", "Buyer's title", [["titleCompany", "Company"], ["titleContact", "Contact"], ["titleContactInfo", "Email/phone"]]);

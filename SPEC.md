@@ -307,8 +307,11 @@ Principles:
     Upgrades/notes
   - Key dates: Close date, Final Acceptance, Inspection deadline, Written Statement (or
     N/A), HOA doc rescission (only if HOA = Yes)
-  - Notes: Inspection appointment (date + time), Referral fee, Earnest money to, Material
-    defect clause?
+  - Notes: Inspection appointment (date + time), Referral fee (Yes/No; Yes asks Referral % and
+    Referral to), Earnest money to (a dropdown of the client's first names, e.g. "Emma" or "Vy"),
+    Material defect clause? (Yes/No; Yes asks the amount) *(owner request 2026-10-26; saved forms
+    were upgraded once, and earlier typed answers moved to the new questions)*. Admin → forms
+    offers the **Client name** question type for any other question like it.
   - Buyer's lender (name, email, company), Buyer's title (company, contact, email/phone),
     Seller's agent (name, email), Seller's TC (name, email/phone), Seller's title (company,
     contact)

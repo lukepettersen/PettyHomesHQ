@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applicableDates, cleanPaAnswers, commissionLine, DEFAULT_FORMS, effectiveStatus, formProblem, ucColumn, visibleSections } from "./pa";
+import { applicableDates, cleanPaAnswers, clientFirstNames, commissionLine, DEFAULT_FORMS, effectiveStatus, formProblem, ucColumn, upgradeNotesAnswers, upgradeNotesForm, visibleSections, type PaSection } from "./pa";
 
 const buyer = DEFAULT_FORMS.buyer;
 const TODAY = "2026-10-13";
@@ -78,5 +78,36 @@ describe("commission is withheld without permission", () => {
     expect([no.commission, no.bac]).toEqual([null, null]);
     expect(JSON.stringify(no)).not.toMatch(/2\.7|8000/);
     expect(no.dates.closing).toBe("2026-11-20");
+  });
+});
+
+describe("notes upgrade (owner request 2026-10-26)", () => {
+  const saved: PaSection[] = [
+    { id: "property", name: "The property", fields: [{ key: "address", label: "Address", type: "text" }] },
+    { id: "notes", name: "Notes", fields: [
+      { key: "referral", label: "Referral fee", type: "text" }, { key: "emTo", label: "Earnest Money To", type: "text" },
+      { key: "qMaterialDefect1a2b", label: "Material Defect Clause", type: "text" },
+    ] },
+  ];
+  it("turns referral and defect into Yes/No with follow-ups and earnest money into a client dropdown", () => {
+    const up = upgradeNotesForm(saved)!;
+    const notes = up.form[1].fields;
+    expect(notes.map((x) => [x.key, x.type, x.showIf ?? ""])).toEqual([
+      ["referral", "yesno", ""], ["referralPct", "pct", "referral=Yes"], ["referralTo", "text", "referral=Yes"],
+      ["emTo", "client", ""], ["qMaterialDefect1a2b", "yesno", ""], ["defectAmount", "money", "qMaterialDefect1a2b=Yes"],
+    ]);
+    expect(up.defect).toBe("qMaterialDefect1a2b");
+    expect(upgradeNotesForm(up.form)).toBeNull();
+    expect(upgradeNotesForm(DEFAULT_FORMS.buyer)).toBeNull();
+  });
+  it("moves earlier answers to the new questions", () => {
+    const keys = { referral: "referral", defect: "qMaterialDefect1a2b" };
+    expect(upgradeNotesAnswers({ referral: "25% to Jim", qMaterialDefect1a2b: "$5,000" }, keys)).toEqual({ referral: "Yes", referralPct: "25", referralTo: "25% to Jim", qMaterialDefect1a2b: "Yes", defectAmount: "5000" });
+    expect(upgradeNotesAnswers({ referral: "No", qMaterialDefect1a2b: "none" }, keys)).toEqual({ referral: "No", qMaterialDefect1a2b: "No" });
+    expect(upgradeNotesAnswers({ referral: "Yes" }, keys)).toBeNull();
+  });
+  it("lists client first names", () => {
+    expect(clientFirstNames("Emma Sharpe & Vy Nguyen")).toEqual(["Emma", "Vy"]);
+    expect(clientFirstNames("Sam Ortiz")).toEqual(["Sam"]);
   });
 });

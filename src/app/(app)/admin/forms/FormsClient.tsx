@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { SaveBar } from "@/components/SaveBar";
-import { AUTOMATION_KEYS, FIELD_TYPES, LOCKED_KEYS, showIfChoices, type FieldType, type PaField, type PaSection, type Side } from "@/lib/pa";
+import { AUTOMATION_KEYS, FIELD_TYPES, LOCKED_KEYS, PA_FIELD_TYPES, showIfChoices, type FieldType, type PaField, type PaSection, type Side } from "@/lib/pa";
 import { saveForm } from "../../pipeline/paActions";
 
 const newKey = (label: string) => `q${label.replace(/[^A-Za-z0-9]/g, "").slice(0, 16)}${Math.random().toString(36).slice(2, 6)}`;
@@ -19,7 +19,7 @@ export function FormsClient({ forms }: { forms: Record<Side, PaSection[]> }) {
             className={`-mb-px border-b-[3px] px-3 py-2 ${side === s ? "border-coral font-semibold" : "border-transparent muted"}`}>{s === "buyer" ? "Buyer side" : "Seller side"}</button>
         ))}
       </div>
-      <FormEditor key={side} initial={forms[side]} locked={LOCKED_KEYS} automation={AUTOMATION_KEYS} stepLabels
+      <FormEditor key={side} initial={forms[side]} locked={LOCKED_KEYS} automation={AUTOMATION_KEYS} stepLabels types={PA_FIELD_TYPES}
         onSave={(sections) => saveForm({ side, sections })} />
     </>
   );
@@ -28,9 +28,9 @@ export function FormsClient({ forms }: { forms: Record<Side, PaSection[]> }) {
 type Section = PaSection & { statuses?: string[] };
 
 /** Shared by the purchase agreement and buyer/listing forms. With `statuses`, each section picks the statuses it shows at. */
-export function FormEditor({ initial, onSave, locked, automation, statuses, stepLabels }: {
+export function FormEditor({ initial, onSave, locked, automation, statuses, stepLabels, types = FIELD_TYPES }: {
   initial: Section[]; onSave: (sections: Section[]) => Promise<{ ok: true } | { ok: false; error: string }>;
-  locked: string[]; automation: string[]; statuses?: { id: string; name: string }[]; stepLabels?: boolean;
+  locked: string[]; automation: string[]; statuses?: { id: string; name: string }[]; stepLabels?: boolean; types?: [FieldType, string][];
 }) {
   const LOCKED_KEYS = locked, AUTOMATION_KEYS = automation;
   const router = useRouter();
@@ -70,7 +70,7 @@ export function FormEditor({ initial, onSave, locked, automation, statuses, step
                 <li key={f.key} className="flex flex-wrap items-center gap-2 border-b border-misty/60 px-4 py-2 last:border-0">
                   <input aria-label="Question" className="input min-w-[160px] flex-1" value={f.label} onChange={(e) => patchField(i, fi, { label: e.target.value })} />
                   <select aria-label={`Type of ${f.label}`} className="input w-auto" value={f.type} disabled={locked} onChange={(e) => patchField(i, fi, { type: e.target.value as FieldType, options: e.target.value === "choice" ? f.options ?? ["Option 1", "Option 2"] : undefined })}>
-                    {FIELD_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                    {types.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
                   </select>
                   {f.type === "choice" && (
                     <input aria-label={`Choices for ${f.label}`} className="input min-w-[160px] flex-1" defaultValue={(f.options ?? []).join(", ")} placeholder="Choices, separated by commas"

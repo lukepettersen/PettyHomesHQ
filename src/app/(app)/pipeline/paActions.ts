@@ -180,7 +180,7 @@ export async function fellThrough(paId: string) {
 // ---------- Admin → Purchase agreement forms ----------
 const fieldSchema = z.object({
   key: z.string().regex(/^[A-Za-z][\w]{0,40}$/), label: z.string().trim().max(80),
-  type: z.enum(["text", "money", "number", "pct", "date", "date-na", "datetime", "yesno", "choice"]),
+  type: z.enum(["text", "money", "number", "pct", "date", "date-na", "datetime", "yesno", "choice", "client"]),
   hint: z.string().trim().max(120).optional(), required: z.boolean().optional(), options: z.array(z.string().trim().min(1).max(60)).max(30).optional(), showIf: z.string().max(120).optional(),
 });
 const sectionSchema = z.object({ id: z.string().regex(/^[\w-]{1,40}$/), name: z.string().trim().max(80), showIf: z.string().max(120).optional(), people: z.boolean().optional(), fields: z.array(fieldSchema).max(60) });

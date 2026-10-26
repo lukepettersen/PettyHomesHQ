@@ -3,7 +3,7 @@
 import { AddressInput } from "@/components/AddressInput";
 import { useState, useTransition } from "react";
 import { Modal } from "@/components/Modal";
-import { COMMISSION_KEYS, visibleSections, type Answers, type PaField, type PaSection, type PaView, type Side } from "@/lib/pa";
+import { clientFirstNames, COMMISSION_KEYS, visibleSections, type Answers, type PaField, type PaSection, type PaView, type Side } from "@/lib/pa";
 import { addPurchaseAgreement, updatePurchaseAgreement } from "./paActions";
 import { DateTimeInput } from "@/components/TimeSelect";
 import { fillFromPartner, sectionPartnerType } from "@/lib/partners";
@@ -19,7 +19,7 @@ export function PaWizard({ fileId, fileKind, personName, fileLine, prefill, pa, 
   const editing = !!pa;
   const [side, setSide] = useState<Side>(pa?.side ?? (fileKind === "buyer" ? "buyer" : "seller"));
   const [step, setStep] = useState(editing ? 0 : 1);
-  const [v, setV] = useState<Answers>(() => pa ? fromPa(pa) : { hoa: "No", newc: "No", ptype: "Single family", fin: "Conventional", ...prefill });
+  const [v, setV] = useState<Answers>(() => pa ? fromPa(pa) : { hoa: "No", newc: "No", ptype: "Single family", fin: "Conventional", referral: "No", defect: "No", ...prefill });
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   // People sections: the partner contact picked for each, and typed-in ones to save as new contacts.
@@ -27,6 +27,7 @@ export function PaWizard({ fileId, fileKind, personName, fileLine, prefill, pa, 
   const [saveAs, setSaveAs] = useState<string[]>([]);
   const form = forms[side].map((s) => ({ ...s, fields: s.fields.filter((f) => canSeeCommission || !COMMISSION_KEYS.includes(f.key)) }));
   const sections = visibleSections(form, v);
+  const names = clientFirstNames(personName);
   const onPage = step === 2 ? sections.slice(0, 1) : step === 3 ? sections.slice(1) : step === 0 ? sections : [];
 
   const missing = (secs: PaSection[]) => secs.flatMap((s) => s.fields).filter((f) => f.required && !(v[f.key] ?? "").trim());
@@ -71,7 +72,7 @@ export function PaWizard({ fileId, fileKind, personName, fileLine, prefill, pa, 
                   onPick={(p) => { setV((o) => ({ ...o, ...fillFromPartner(s, p) })); setPicked((x) => ({ ...x, [s.id]: { id: p.id, name: p.name } })); }}
                   onClear={() => setPicked((x) => { const n = { ...x }; delete n[s.id]; return n; })} />
               )}
-              {s.fields.map((f) => <PaInput key={f.key} f={f} v={v} set={(k, x) => setV((o) => ({ ...o, [k]: x }))} />)}
+              {s.fields.map((f) => <PaInput key={f.key} f={f} v={v} names={names} set={(k, x) => setV((o) => ({ ...o, [k]: x }))} />)}
               {s.people && !picked[s.id] && s.fields.some((f) => (v[f.key] ?? "").trim()) && (
                 <label className="col-span-full flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={saveAs.includes(s.id)} onChange={(e) => setSaveAs((x) => (e.target.checked ? [...x, s.id] : x.filter((y) => y !== s.id)))} />
@@ -103,11 +104,12 @@ function fromPa(pa: PaView): Answers {
   return a;
 }
 
-function PaInput({ f, v, set }: { f: PaField; v: Answers; set: (k: string, x: string) => void }) {
+function PaInput({ f, v, names, set }: { f: PaField; v: Answers; names: string[]; set: (k: string, x: string) => void }) {
   const label = `${f.label}${f.required ? " *" : ""}`;
   const value = v[f.key] ?? "";
-  if (f.type === "yesno" || f.type === "choice") {
-    const opts = f.type === "yesno" ? ["No", "Yes"] : f.options ?? [];
+  if (f.type === "yesno" || f.type === "choice" || f.type === "client") {
+    // Client name: the client's first names; an answer typed before it was a dropdown stays a choice.
+    const opts = f.type === "yesno" ? ["No", "Yes"] : f.type === "client" ? (value && !names.includes(value) ? [...names, value] : names) : f.options ?? [];
     return (
       <label className="label">{label}
         <select className="input" value={value} onChange={(e) => set(f.key, e.target.value)}>
