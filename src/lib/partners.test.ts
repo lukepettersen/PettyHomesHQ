@@ -39,9 +39,11 @@ describe("deal emails (owner request 2026-10-26)", () => {
   it("offers the lender, title and agents typed on the contract", () => {
     const form = DEFAULT_FORMS.buyer;
     const out = dealEmails(form, { answers: { lenderName: "Todd Kocon", lenderEmail: "Todd.Kocon@oldnational.com", titleCompany: "Flex Title", titleContactInfo: "teammichelle@myflextitle.com · 612-555-0100", sAgentName: "Stacy Sullivan", sAgentEmail: "not an email" }, partners: { lender: { id: "p9", name: "Todd Kocon" } } });
-    expect(out).toEqual([
+    expect(out.slice(0, 3)).toEqual([
       { value: "todd.kocon@oldnational.com", label: "Buyer's lender: Todd Kocon", personId: "p9" },
       { value: "teammichelle@myflextitle.com", label: "Buyer's title: Flex Title", personId: null },
+      { value: "", label: "Seller's agent: Stacy Sullivan", personId: null },
     ]);
+    expect(out.map((x) => x.label)).toContain("Seller's TC");
   });
 });

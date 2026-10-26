@@ -9,7 +9,7 @@ import { getDraft } from "./draftActions";
 import { sendEmail } from "../people/emailActions";
 import { sendText } from "../messages/actions";
 import { toPlain } from "@/lib/email";
-import { AddRecipient, ExtraChips, SuggestChips, type Extra } from "@/components/AddRecipient";
+import { AddRecipient, ExtraChips, PartyChecks, type Extra } from "@/components/AddRecipient";
 
 type Draft = { kind: "email" | "text"; templateId: string | null; stepMessage: string | null; templates: { id: string; name: string }[]; to: string[]; subject: string; body: string; missing: string[]; personId: string | null; sendsFrom: string | null; textBlocked: string | null; suggest: Extra[] };
 
@@ -81,9 +81,9 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
                 <label key={e} className="flex items-center gap-1"><input type="checkbox" checked={!skip.includes(e)} onChange={(x) => { setConfirm(false); setSkip(x.target.checked ? skip.filter((y) => y !== e) : [...skip, e]); }} /> {e}</label>
               ))}
               {!d.to.length && <span className="text-bad">No email address on file</span>}
-              <ExtraChips extras={extras} onRemove={(v) => { setConfirm(false); setExtras(extras.filter((x) => x.value !== v)); }} />
+              <ExtraChips extras={extras.filter((x) => !(d.suggest ?? []).some((p) => p.value === x.value))} onRemove={(v) => { setConfirm(false); setExtras(extras.filter((x) => x.value !== v)); }} />
               <AddRecipient mode="email" exclude={toAll.map((x) => x.toLowerCase())} onAdd={(x) => { setConfirm(false); setExtras([...extras, x]); }} />
-              <SuggestChips suggest={d.suggest ?? []} exclude={toAll.map((x) => x.toLowerCase())} onAdd={(x) => { setConfirm(false); setExtras([...extras, x]); }} />
+              <PartyChecks parties={d.suggest ?? []} chosen={extras.map((x) => x.value)} onToggle={(x, on) => { setConfirm(false); setExtras(on ? [...extras, x] : extras.filter((y) => y.value !== x.value)); }} />
             </div>
           ) : <p className="text-sm"><b>To:</b> {d.to.length ? d.to.join(", ") : <span className="text-bad">No phone number on file</span>}</p>}
           {d.kind === "email" && <label className="label">Subject<input className="input" value={subject} onChange={(e) => setSubject(e.target.value)} /></label>}

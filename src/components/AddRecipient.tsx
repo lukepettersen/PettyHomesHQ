@@ -51,16 +51,19 @@ export function ExtraChips({ extras, onRemove }: { extras: Extra[]; onRemove: (v
   ))}</>;
 }
 
-/** One-click recipients from the deal: "+ Buyer's Lender: Todd Kocon". */
-export function SuggestChips({ suggest, exclude, onAdd }: { suggest: Extra[]; exclude: string[]; onAdd: (x: Extra) => void }) {
-  const left = suggest.filter((x) => !exclude.includes(x.value.toLowerCase()));
-  if (!left.length) return null;
+/** Quick add from the deal: a checkbox per role (title, lender, agents…); greyed out when the contract has no email for it. */
+export function PartyChecks({ parties, chosen, onToggle }: { parties: Extra[]; chosen: string[]; onToggle: (x: Extra, on: boolean) => void }) {
+  if (!parties.length) return null;
   return (
-    <span className="flex w-full flex-wrap items-center gap-1.5 text-sm">
-      <span className="text-xs muted">In this deal:</span>
-      {left.map((x) => (
-        <button key={x.value} type="button" title={x.value} className="rounded-full border border-misty bg-white px-2 py-0.5 text-xs font-semibold hover:border-accent" onClick={() => onAdd(x)}>+ {x.label}</button>
+    <fieldset className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+      <legend className="sr-only">Also send to</legend>
+      <span className="text-xs font-semibold muted">Also send to:</span>
+      {parties.map((x, i) => (
+        <label key={x.value || `none${i}`} title={x.value || "No email for them on the purchase agreement"} className={`flex items-center gap-1 ${x.value ? "" : "muted"}`}>
+          <input type="checkbox" disabled={!x.value} checked={!!x.value && chosen.includes(x.value)} onChange={(e) => onToggle(x, e.target.checked)} />
+          {x.label}{x.value ? "" : " (no email)"}
+        </label>
       ))}
-    </span>
+    </fieldset>
   );
 }

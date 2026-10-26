@@ -614,8 +614,9 @@ Principles:
   task. Mail goes from the connected account, lands in its Sent folder and shows on the
   timeline (filter: Emails). **+ Add** puts another contact's email or a typed address on it too *(owner
   request 2026-10-20)*; other contacts it went to get it on their timeline as well.
-  On a deal (Send email and checklist **Draft email**), **In this deal:** buttons add the contract's
-  lender, title and agents in one click, and Draft email has **+ Add** too *(owner request 2026-10-26)*. The contact's own emails are
+  On a deal (Send email and checklist **Draft email**), **Also send to:** has a checkbox per role on the
+  purchase agreement (Buyer's lender, Buyer's title, Seller's agent, Seller's TC, Seller's title…) to add them in one
+  click; a role with no email on the contract shows greyed out "(no email)", and Draft email has **+ Add** too *(owner request 2026-10-26)*. The contact's own emails are
   checkboxes, so an email can go only to title (or the lender) without the client; it still goes on the client's timeline.
 - **Images in emails** *(owner request 2026-10-22; FUB had them)*: **Image** on the formatting bar (templates,
   timeline Email, mass email, Draft email) uploads a PNG/JPG/GIF/WebP (up to 5 MB) to the file storage and adds

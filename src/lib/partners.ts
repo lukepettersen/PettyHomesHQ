@@ -63,14 +63,18 @@ export function partnerFromAnswers(s: PaSection, a: Record<string, string>): Omi
   return out;
 }
 
-/** Email addresses of the deal's people (lender, title, agents…) for one-click "To" buttons (owner request 2026-10-26). */
+/**
+ * The deal's people (lender, title, agents…) as quick-add checkboxes on emails (owner request 2026-10-26).
+ * Every people section is listed; one with no email on the contract has value "" (shown greyed out).
+ */
 export function dealEmails(form: PaSection[], pa: { answers: Record<string, string>; partners: Record<string, { id: string; name: string }> }): { value: string; label: string; personId: string | null }[] {
   const out: { value: string; label: string; personId: string | null }[] = [];
   for (const s of form.filter((x) => x.people)) {
     const p = partnerFromAnswers(s, pa.answers);
     const email = p.email.toLowerCase();
-    if (!/^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/.test(email) || out.some((x) => x.value === email)) continue;
-    out.push({ value: email, label: `${s.name}: ${p.name || p.company || pa.partners[s.id]?.name || email}`, personId: pa.partners[s.id]?.id ?? null });
+    const ok = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/.test(email) && !out.some((x) => x.value === email);
+    const who = p.name || p.company || pa.partners[s.id]?.name || "";
+    out.push({ value: ok ? email : "", label: who ? `${s.name}: ${who}` : s.name, personId: pa.partners[s.id]?.id ?? null });
   }
   return out;
 }
