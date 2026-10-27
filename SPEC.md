@@ -632,7 +632,8 @@ Principles:
 - **Sending email** *(built 2026-10-16)*: one Google connection (Admin → Integrations) covers
   Calendar and Gmail send. Timeline has an **Email** tab (To: the person's addresses as
   checkboxes, optional template with merge fields, Subject, Message, **Send email**, one click;
-  owner request 2026-10-27, only mass emails ask twice). Task **Draft email** has **Send email** too, which also checks off the
+  owner request 2026-10-27, only mass emails ask twice). **Preview** under the message (email box and Draft email) shows it as
+  it will look: images, clickable images and links, bold, lists *(owner request 2026-10-27)*. Task **Draft email** has **Send email** too, which also checks off the
   task. Mail goes from the connected account, lands in its Sent folder and shows on the
   timeline (filter: Emails). **+ Add** puts another contact's email or a typed address on it too *(owner
   request 2026-10-20)*; other contacts it went to get it on their timeline as well.

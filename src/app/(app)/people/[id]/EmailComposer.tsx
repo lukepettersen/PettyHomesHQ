@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { FormatBar } from "@/components/FormatBar";
+import { EmailPreview } from "@/components/EmailPreview";
 import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
 import { fillEmailTemplate, sendEmail } from "../emailActions";
 import { AddRecipient, ExtraChips, PartyChecks, type Extra } from "@/components/AddRecipient";
@@ -84,6 +85,7 @@ export function EmailComposer({ personId, emails, templates, sendsFrom, onSent, 
           <textarea ref={box} aria-label="Message" placeholder="Write here, or type / and a template name" className="input min-h-40 rounded-t-none font-normal" value={body}
             onChange={(e) => { setConfirm(false); setBody(e.target.value); slash.track(); }} onKeyDown={slash.onKeyDown} onKeyUp={slash.track} onClick={slash.track} />
           {slash.menu}
+          <EmailPreview body={body} />
         </div>
       </div>
       <AttachFiles files={files} onChange={setFiles} />

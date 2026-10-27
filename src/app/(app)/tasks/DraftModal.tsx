@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { FormatBar } from "@/components/FormatBar";
+import { EmailPreview } from "@/components/EmailPreview";
 import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
 import { Modal } from "@/components/Modal";
 import { useRouter } from "next/navigation";
@@ -93,6 +94,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
                 <FormatBar box={box} value={body} onChange={setBody} />
                 <textarea ref={box} aria-label="Message" className="input min-h-56 rounded-t-none font-normal" value={body} onChange={(e) => { setBody(e.target.value); slash.track(); }} {...slashProps} />
                 {slash.menu}
+                <EmailPreview body={body} />
               </div>
             </div>
           ) : <div className="label">Message<textarea ref={box} aria-label="Message" className="input min-h-56 font-normal" value={body} onChange={(e) => { setBody(e.target.value); slash.track(); }} {...slashProps} />{slash.menu}</div>}
