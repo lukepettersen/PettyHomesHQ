@@ -35,8 +35,11 @@ export function CallCenter() {
 
   useEffect(() => {
     let stopped = false;
+    const report = (state: "ready" | "error", message?: string) =>
+      fetch("/api/voice/status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state, message: message?.slice(0, 200) }) }).catch(() => null);
     const token = async () => {
-      const r = await fetch("/api/voice/token", { cache: "no-store" }).then((x) => x.json()).catch(() => null) as { token?: string } | null;
+      const r = await fetch("/api/voice/token", { cache: "no-store" }).then((x) => x.json()).catch(() => null) as { token?: string; error?: string } | null;
+      if (r?.error) setNote(r.error);
       return r?.token ?? null;
     };
     (async () => {
@@ -53,7 +56,13 @@ export function CallCenter() {
         const name = hit?.results?.[0]?.name;
         if (name) setLive((l) => (l?.call === call ? { ...l, who: name } : l));
       });
-      d.on("error", (e: { message?: string }) => console.error("HQ calling:", e?.message));
+      // Problems show here and in Admin → Integrations → troubleshooting, so a call that never rings HQ can be explained.
+      let told = false;
+      d.on("registered", () => { if (!told) { told = true; report("ready"); } });
+      d.on("error", (e: { message?: string; code?: number }) => {
+        const msg = `${e?.message ?? "unknown"}${e?.code ? ` (${e.code})` : ""}`;
+        console.error("HQ calling:", msg); report("error", msg); setNote(`HQ phone problem: ${msg}`);
+      });
       await d.register().catch(() => null);
       window.hqCall = async (number: string, name?: string) => {
         const to = normalizePhone(number);

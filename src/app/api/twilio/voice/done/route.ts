@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   const f = await twilioForm(req, "/api/twilio/voice/done");
   if (!f) return forbidden();
   const retried = new URL(req.url).searchParams.get("retry") === "1";
-  await noteInbound({ via: "call", from: f.From, to: f.To, call: `cell ${f.DialCallStatus ?? "?"}${f.DialCallDuration ? ` after ${f.DialCallDuration}s` : ""}${retried ? " (second try)" : ""}${f.ErrorCode ? ` · error ${f.ErrorCode}` : ""}` });
+  await noteInbound({ via: "call", from: f.From, to: f.To, call: `answer (cell or HQ): ${f.DialCallStatus ?? "?"}${f.DialCallDuration ? ` after ${f.DialCallDuration}s` : ""}${retried ? " (second try)" : ""}${f.ErrorCode ? ` · error ${f.ErrorCode}` : ""}` });
   if (!missedDial(f.DialCallStatus)) {
     if (f.DialCallStatus === "completed" && f.CallSid && f.From && f.To) {
       await recordAnsweredCall({ from: f.From, to: f.To, sid: f.CallSid, seconds: Number(f.DialCallDuration ?? 0), recordingSid: f.RecordingSid || null });
