@@ -9,6 +9,10 @@ import type { BellItem } from "@/server/notifications";
 
 type Bell = { unread: number; items: BellItem[] };
 
+// Alerts already shown on this device.
+const seen = () => { try { return new Set<string>(JSON.parse(localStorage.getItem("hq-alerts-seen") ?? "[]")); } catch { return new Set<string>(); } };
+const markSeen = (ids: string[]) => { try { localStorage.setItem("hq-alerts-seen", JSON.stringify([...seen(), ...ids].slice(-200))); } catch { /* private window */ } };
+
 /** @mentions for the signed-in user: unread count, Mark all read, click to open the person. */
 export function Bell({ initial }: { initial: Bell }) {
   const [data, setData] = useState(initial);
@@ -23,11 +27,13 @@ export function Bell({ initial }: { initial: Bell }) {
   // Alerts (like a submitted offer) pop up over the page with a chime, once per device, until opened or dismissed.
   const [popup, setPopup] = useState<BellItem[]>([]);
   const audio = useRef<AudioContext | null>(null);
-  const seen = () => { try { return new Set<string>(JSON.parse(localStorage.getItem("hq-alerts-seen") ?? "[]")); } catch { return new Set<string>(); } };
-  const markSeen = (ids: string[]) => { try { localStorage.setItem("hq-alerts-seen", JSON.stringify([...seen(), ...ids].slice(-200))); } catch { /* private window */ } };
   useEffect(() => {
     const s = seen();
-    const fresh = data.items.filter((n) => n.alert && !n.read && !s.has(n.id));
+    // Nothing pops up for the conversation already open on screen; those count as seen (owner request 2026-10-27).
+    const here = `${window.location.pathname}${window.location.search}`;
+    const onScreen = data.items.filter((n) => n.alert && !n.read && !s.has(n.id) && n.link && here.startsWith(n.link));
+    if (onScreen.length) markSeen(onScreen.map((n) => n.id));
+    const fresh = data.items.filter((n) => n.alert && !n.read && !s.has(n.id) && !onScreen.includes(n));
     const t = setTimeout(() => setPopup((cur) => (fresh.length && fresh.map((x) => x.id).join() !== cur.map((x) => x.id).join() ? fresh : cur)), 0);
     return () => clearTimeout(t);
   }, [data]);
@@ -52,6 +58,11 @@ export function Bell({ initial }: { initial: Bell }) {
     const t = setInterval(chime, 4000);
     return () => clearInterval(t);
   }, [popup]);
+  const groups = Object.values(popup.reduce<Record<string, { key: string; items: BellItem[] }>>((acc, n) => {
+    const key = n.link ?? n.personId ?? n.id;
+    (acc[key] ??= { key, items: [] }).items.push(n);
+    return acc;
+  }, {}));
   const dismiss = () => { markSeen(popup.map((n) => n.id)); setPopup([]); };
 
   useEffect(() => {
@@ -78,15 +89,20 @@ export function Bell({ initial }: { initial: Bell }) {
       {popup.length > 0 && createPortal(
         <div className="fixed inset-0 z-[60] grid place-items-center bg-black/40 p-4">
           <div role="alertdialog" aria-modal="true" aria-labelledby="alert-h" className="w-full max-w-md overflow-hidden rounded-2xl bg-white text-charcoal shadow-2xl">
-            <h2 id="alert-h" className="bg-moss px-5 py-3 text-lg font-extrabold text-white">{popup.length === 1 ? heading(popup[0]) : `${popup.length} new alerts`}</h2>
+            <h2 id="alert-h" className="bg-moss px-5 py-3 text-lg font-extrabold text-white">{groups.length === 1 && groups[0].items.length === 1 ? heading(popup[0]) : `${popup.length} new from ${groups.length} conversation${groups.length === 1 ? "" : "s"}`}</h2>
+            {/* One row per conversation (newest message shown), at most 4, so a busy group text isn't a wall of alerts. */}
             <ul className="divide-y divide-misty">
-              {popup.map((n) => (
-                <li key={n.id} className="flex flex-col gap-2 px-5 py-3">
-                  <span className="text-sm">{n.text}</span>
-                  {(n.link || n.personId) && <button type="button" className="btn btn-primary self-start" onClick={() => { markSeen([n.id]); setPopup((p) => p.filter((x) => x.id !== n.id)); void openItem(n); }}>{n.link ? "Open conversation" : "Open contact"}</button>}
-                </li>
-              ))}
+              {groups.slice(0, 4).map(({ key, items }) => {
+                const n = items[0];
+                return (
+                  <li key={key} className="flex items-center gap-3 px-5 py-3">
+                    <span className="min-w-0 flex-1 text-sm"><span className="line-clamp-2">{n.text}</span>{items.length > 1 && <span className="text-xs muted"> +{items.length - 1} more</span>}</span>
+                    {(n.link || n.personId) && <button type="button" className="btn btn-primary flex-none" onClick={() => { markSeen(items.map((x) => x.id)); setPopup((p) => p.filter((x) => !items.includes(x))); void openItem(n); }}>Open</button>}
+                  </li>
+                );
+              })}
             </ul>
+            {groups.length > 4 && <p className="px-5 pb-2 text-xs muted">And {groups.length - 4} more in the bell.</p>}
             <div className="flex justify-end border-t border-misty px-5 py-3"><button type="button" className="btn" onClick={dismiss}>Dismiss</button></div>
           </div>
         </div>, document.body)}
