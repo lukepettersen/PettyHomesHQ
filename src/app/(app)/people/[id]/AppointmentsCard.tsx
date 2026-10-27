@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Modal } from "@/components/Modal";
 import { useDropdown } from "@/components/useDropdown";
-import { addMinutes, APPT_TYPES, defaultTitle, type ApptType, type ApptView } from "@/lib/appointments";
+import { addMinutes, BUILTIN_TYPES, defaultTitle, type ApptType, type ApptTypeDef, type ApptView } from "@/lib/appointments";
 import { addDays, diffDays, formatTime, longIso } from "@/lib/tasks";
 import { initials } from "@/lib/normalize";
 import type { StatusRow } from "@/server/files";
@@ -16,7 +16,7 @@ import { splitCouple } from "@/lib/normalize";
 
 type Props = {
   fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; appts: ApptView[]; today: string; phone: string; address: string; hasEmail: boolean; team: string[]; clientEmails: { address: string; label: string }[];
-  callTemplates: { name: string; steps: number; trigger: string }[]; calendarConnected: boolean; activeKinds: string[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean;
+  types?: ApptTypeDef[]; callTemplates: { name: string; steps: number; trigger: string }[]; calendarConnected: boolean; activeKinds: string[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean;
 };
 
 /** Contact page → Appointments: upcoming, then "Past appointments (N)"; + to book (SPEC.md §10). */
@@ -36,7 +36,7 @@ export function AppointmentsCard(p: Props) {
         <button type="button" className="link text-sm" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>+ Book</button>
         {menuOpen && (
           <div className="absolute right-0 top-full z-20 mt-1 flex w-60 flex-col rounded-lg border border-misty bg-white p-1.5 shadow-xl">
-            {APPT_TYPES.map(([k, l]) => (
+            {(p.types ?? BUILTIN_TYPES).map(({ key: k, label: l }) => (
               <button key={k} type="button" className="rounded-md px-2.5 py-2 text-left text-sm hover:bg-sunken" onClick={() => { setMenuOpen(false); setBooking(k); }}>
                 {k === "other" ? "+ Other appointment" : `Book ${l.toLowerCase()}`}
               </button>
@@ -86,14 +86,14 @@ function Appt({ a, today, personName, onEdit, onDeleted }: { a: ApptView; today:
   );
 }
 
-function BookModal({ type, personId, personName, today, phone, address, hasEmail, team, clientEmails, callTemplates, activeKinds, calendarConnected, onClose, onBooked, edit }: Props & { type: ApptType; edit?: ApptView; onClose: () => void; onBooked: (m: string, file?: { kind: "buyer" | "listing"; consult: string }) => void }) {
-  const [, label, mins] = APPT_TYPES.find(([k]) => k === type)!;
+function BookModal({ type, types = BUILTIN_TYPES, personId, personName, today, phone, address, hasEmail, team, clientEmails, callTemplates, activeKinds, calendarConnected, onClose, onBooked, edit }: Props & { type: ApptType; edit?: ApptView; onClose: () => void; onBooked: (m: string, file?: { kind: "buyer" | "listing"; consult: string }) => void }) {
+  const { label, mins } = types.find((x) => x.key === type) ?? types.find((x) => x.key === "other") ?? BUILTIN_TYPES[4];
   const client = splitCouple(personName)[0].trim();
   // One choice per email on the contact (a couple's two emails are both invited unless unticked).
   const clientChoices = clientEmails.map((e) => ({ value: e.address, label: e.label || e.address }));
   const [f, setF] = useState(edit
     ? { title: edit.title, date: edit.date, start: edit.start ?? "", end: edit.end ?? "", location: edit.location, invitees: edit.invitees }
-    : { title: defaultTitle(personName, type), date: addDays(today, 1), start: "12:00", end: addMinutes("12:00", mins), location: type === "call" ? phone : type === "seller" ? address : "", invitees: [...clientChoices.map((c) => c.value), ...team] });
+    : { title: defaultTitle(personName, type, types), date: addDays(today, 1), start: "12:00", end: addMinutes("12:00", mins), location: type === "call" ? phone : type === "seller" ? address : "", invitees: [...clientChoices.map((c) => c.value), ...team] });
   const fileKind = type === "buyer" ? "buyer" : type === "seller" ? "listing" : null;
   const offerFile = !edit && !!fileKind && !activeKinds.includes(fileKind);
   const [thenFile, setThenFile] = useState(offerFile);

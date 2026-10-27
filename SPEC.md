@@ -497,6 +497,10 @@ Principles:
 
 - Contact page **+** menu: **Book phone call, Book Buyer Consult, Book Seller
   Consult, Book showing, Other appointment**.
+- **Admin → Appointment types** *(owner request 2026-10-27)*: the five built-ins (Phone Call 30 min, Buyer Consult,
+  Seller Consult, Showing, Appointment 60 min) can be renamed and given a different starting length, not removed
+  (the call and consults start task templates); add your own (e.g. Listing Appointment, Final Walkthrough) with a
+  name and length. Your own show in + Book before "Other appointment" and book like it.
 - Title fills in as **"Last Name - Appointment"**, or "Last/Last" for a couple with
   different last names (e.g. "Ortiz/Brooks - Phone Call"). Editable; Other requires a name.
 - Times are picked in 15-minute steps (also the PA inspection appointment, which starts

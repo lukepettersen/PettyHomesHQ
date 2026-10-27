@@ -12,7 +12,7 @@ const SECTIONS: [string, [string, string | null][]][] = [
   ["People", [["Stages, sources & follow-up", "/admin/lists"], ["Tags", "/admin/tags"], ["Date reminders", "/admin/reminders"], ["Custom fields", "/admin/fields"]]],
   ["Deals", [["Client statuses", "/admin/statuses"], ["Buyer and seller forms", "/admin/file-forms"], ["Purchase agreement forms", "/admin/forms"], ["Task templates", "/admin/templates"]]],
   ["Messaging", [["Text & email templates", "/admin/messages"]]],
-  ["Connections", [["Tools menu", "/admin/tools"], ["Calendar invites", "/admin/calendar"], ["Integrations", "/admin/integrations"]]],
+  ["Connections", [["Tools menu", "/admin/tools"], ["Appointment types", "/admin/appointments"], ["Calendar invites", "/admin/calendar"], ["Integrations", "/admin/integrations"]]],
 ];
 
 export function AdminNav({ can }: { can: Can }) {

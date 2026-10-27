@@ -7,6 +7,7 @@ import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { redateConsult, runTrigger } from "@/server/automation";
 import { syncAppointment } from "@/server/google";
+import { loadApptTypes } from "@/server/appointments";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
 import { formatTime, longIso } from "@/lib/tasks";
 import { timeBefore } from "@/lib/templates";
@@ -14,7 +15,7 @@ import { timeBefore } from "@/lib/templates";
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Pick a time").nullable();
 const bookSchema = z.object({
   personId: z.string().min(1).max(40),
-  type: z.enum(["call", "buyer", "seller", "showing", "other"]),
+  type: z.string().regex(/^(call|buyer|seller|showing|other|c_[a-z0-9]{4,12})$/, "Pick a type"),
   title: z.string().trim().min(1, "Give the appointment a name").max(160).refine((t) => !/-\s*$/.test(t), "Give the appointment a name"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date"),
   start: time, end: time,
@@ -27,6 +28,7 @@ export async function bookAppointment(input: z.input<typeof bookSchema>) {
   return guarded(null, async (user) => {
     const v = bookSchema.parse(input);
     if (v.start && v.end && v.end <= v.start) throw new UserError("The end time is before the start.");
+    if (!(await loadApptTypes()).some((t) => t.key === v.type)) throw new UserError("That appointment type was removed. Pick another.");
     const person = await db.person.findFirst({ where: { id: v.personId, deletedAt: null }, select: { id: true, name: true } });
     if (!person) throw new UserError("That person was deleted.");
     const when = `${longIso(v.date)}${v.start ? ` ${formatTime(v.start)}` : ""}`;

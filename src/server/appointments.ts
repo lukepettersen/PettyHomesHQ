@@ -1,11 +1,16 @@
 import "server-only";
 import { db } from "@/server/db";
 import { isoFromDate } from "@/lib/normalize";
-import { sortAppts, type ApptView } from "@/lib/appointments";
+import { APPT_TYPES_KEY, apptTypes, sortAppts, type ApptTypeDef, type ApptView } from "@/lib/appointments";
 import { contractEvents } from "@/lib/contractInvites";
 import { inviteContext, loadInviteRules } from "@/server/contractInvites";
 
 /** A person's appointments plus the dates from their active contracts (SPEC.md §10). */
+/** Appointment types to book: the built-ins plus your own (Admin → Appointment types). */
+export async function loadApptTypes(): Promise<ApptTypeDef[]> {
+  return apptTypes((await db.appSetting.findUnique({ where: { key: APPT_TYPES_KEY } }))?.value);
+}
+
 export async function loadPersonAppointments(personId: string, personName: string): Promise<ApptView[]> {
   const [rows, pas, rules] = await Promise.all([
     db.appointment.findMany({ where: { personId, deletedAt: null } }),
