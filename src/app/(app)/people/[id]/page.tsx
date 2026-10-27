@@ -62,7 +62,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
       where: { id, deletedAt: null },
       include: {
         stage: true, source: true, assignedTo: { select: { id: true, name: true } },
-        phones: { orderBy: { position: "asc" } }, emails: { orderBy: { position: "asc" } },
+        phones: { orderBy: { position: "asc" } }, emails: { orderBy: { position: "asc" } }, addresses: { orderBy: { position: "asc" } },
         tags: { include: { tag: true } }, dates: true, customValues: true,
         timeline: { where: { deletedAt: null }, orderBy: { createdAt: "desc" }, include: { author: { select: { name: true } } } },
       },
@@ -127,7 +127,8 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
         {/* On a phone: contact info, then Tasks, then Timeline, then the other cards (SPEC.md §17). */}
         <div className="contents lg:sticky lg:top-3 lg:flex lg:min-w-0 lg:flex-col lg:gap-3">
           <div className="order-1 min-w-0">
-            <InfoCard id={p.id} name={p.name} address={p.address ?? ""} lastContactDays={daysAgo(p.lastContactAt)}
+            <InfoCard id={p.id} name={p.name} lastContactDays={daysAgo(p.lastContactAt)}
+              addresses={p.addresses.length ? p.addresses.map((x) => ({ label: x.label, value: x.value, mailing: x.mailing })) : p.address ? [{ label: "", value: p.address, mailing: false }] : []}
               phones={p.phones.map((x) => ({ label: x.label, value: x.number }))} emails={p.emails.map((x) => ({ label: x.label, value: x.address }))} />
           </div>
           <div className="order-4 flex min-w-0 flex-col gap-3">

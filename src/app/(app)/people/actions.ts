@@ -3,6 +3,7 @@
 import { isPartnerType } from "@/lib/partners";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { cleanAddresses } from "@/lib/addresses";
 import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
@@ -57,16 +58,20 @@ export async function createPerson(input: z.input<typeof createSchema>) {
 }
 
 // ---------- Contact info card ----------
-const infoSchema = z.object({ id: z.string(), name: trimmed(160).min(1, "Name can't be empty"), address: trimmed(300).default(""), phones: z.array(contactRow).max(10), emails: z.array(contactRow).max(10) });
+const addressRow = z.object({ label: trimmed(40).default(""), value: trimmed(300), mailing: z.boolean().default(false) });
+const infoSchema = z.object({ id: z.string(), name: trimmed(160).min(1, "Name can't be empty"), addresses: z.array(addressRow).max(10).default([]), phones: z.array(contactRow).max(10), emails: z.array(contactRow).max(10) });
 
 export async function updateContactInfo(input: z.input<typeof infoSchema>) {
   return guarded(null, async (user) => {
     const v = infoSchema.parse(input);
     const phones = cleanPhones(v.phones), emails = cleanEmails(v.emails);
+    // Several labelled addresses; the mailing one (or the only one) is also kept on the person for mailers and merge fields.
+    const addr = cleanAddresses(v.addresses);
     await db.$transaction([
       db.phone.deleteMany({ where: { personId: v.id } }),
       db.email.deleteMany({ where: { personId: v.id } }),
-      db.person.update({ where: { id: v.id, deletedAt: null }, data: { name: v.name, address: v.address || null, phones: { create: phones }, emails: { create: emails } } }),
+      db.address.deleteMany({ where: { personId: v.id } }),
+      db.person.update({ where: { id: v.id, deletedAt: null }, data: { name: v.name, address: addr.primary, phones: { create: phones }, emails: { create: emails }, addresses: { create: addr.rows } } }),
     ]);
     await logActivity(user.id, "update", "person", v.id, `Updated contact info for ${v.name}`);
     revalidatePath(`/people/${v.id}`);

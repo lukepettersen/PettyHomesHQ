@@ -52,7 +52,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 
 ## Data model notes
 
-- `Person` with child tables `Phone`, `Email`, `ImportantDate`, `PersonTag`.
+- `Person` with child tables `Phone`, `Email`, `Address` (labelled; `mailing` flag, mirrored into `Person.address`; `src/lib/addresses.ts`), `ImportantDate`, `PersonTag`.
 - `ClientFile` (kind: buyer | listing, status, info JSON) → `PurchaseAgreement` (side, form
   answers JSON validated against the form definition, key dates as typed columns:
   finalAcceptance, inspection, writtenStatement, hoaRescission, closing; per-date status:

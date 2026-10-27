@@ -159,6 +159,7 @@ model Person {
   deletedAt     DateTime?
   phones        Phone[]
   emails        Email[]
+  addresses     Address[]
   dates         ImportantDate[]
   tags          PersonTag[]
   timeline      TimelineEntry[]
@@ -197,6 +198,20 @@ model Email {
   position   Int    @default(0)
 
   @@index([normalized])
+}
+
+// A contact's addresses (owner request 2026-10-27): labelled, one marked mailing when there are two or more.
+// Person.address keeps the mailing (or only) address so mailers, merge fields and calendar events keep working.
+model Address {
+  id       String  @id @default(cuid())
+  personId String
+  person   Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+  label    String  @default("")
+  value    String
+  mailing  Boolean @default(false)
+  position Int     @default(0)
+
+  @@index([personId])
 }
 
 model ImportantDate {

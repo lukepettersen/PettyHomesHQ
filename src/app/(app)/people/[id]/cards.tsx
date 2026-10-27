@@ -2,6 +2,7 @@
 
 import { CallLink } from "@/components/CallCenter";
 import { AddressInput } from "@/components/AddressInput";
+import type { AddressRow } from "@/lib/addresses";
 import { PARTNER_TYPES, partnerLabel } from "@/lib/partners";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -63,6 +64,32 @@ function RowsEditor({ rows, setRows, kind, labelPh, valuePh }: { rows: Row[]; se
   );
 }
 
+/** Addresses with a label each (Home, Lake cabin…); with two or more, pick which is the mailing address. */
+function AddressesEditor({ rows, setRows }: { rows: AddressRow[]; setRows: (r: AddressRow[]) => void }) {
+  const patch = (i: number, x: Partial<AddressRow>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...x } : r)));
+  const many = rows.filter((r) => r.value.trim()).length > 1;
+  const mailing = Math.max(0, rows.findIndex((r) => r.mailing));
+  return (
+    <div className="flex flex-col gap-2">
+      {rows.map((r, i) => (
+        <div key={i} className="flex flex-col gap-1 rounded-md border border-misty p-2">
+          <span className="flex gap-2">
+            <input className="input w-36" aria-label="Address label" placeholder="Label (Home…)" value={r.label} onChange={(x) => patch(i, { label: x.target.value })} />
+            <button type="button" className="ml-auto text-sm muted hover:text-bad" aria-label="Remove address" onClick={() => setRows(rows.filter((_, j) => j !== i))}>×</button>
+          </span>
+          <AddressInput label={`Address ${i + 1}`} value={r.value} onChange={(v) => patch(i, { value: v })} />
+          {many && (
+            <label className="flex items-center gap-1.5 text-sm font-normal">
+              <input type="radio" name="mailing-address" checked={i === mailing} onChange={() => setRows(rows.map((x, j) => ({ ...x, mailing: j === i })))} /> Mailing address
+            </label>
+          )}
+        </div>
+      ))}
+      <button type="button" className="self-start text-sm font-semibold text-accent hover:underline" onClick={() => setRows([...rows, { label: "", value: "", mailing: false }])}>+ Add address</button>
+    </div>
+  );
+}
+
 /** Copy: name, phones and emails as plain lines, ready to paste into a text or email. */
 function CopyContact({ name, phones, emails }: { name: string; phones: Row[]; emails: Row[] }) {
   const [msg, setMsg] = useState("");
@@ -75,19 +102,19 @@ function CopyContact({ name, phones, emails }: { name: string; phones: Row[]; em
   return <button type="button" className="text-sm font-semibold text-accent hover:underline" onClick={copy} aria-live="polite">{msg || "Copy"}</button>;
 }
 
-export function InfoCard(p: { id: string; name: string; address: string; phones: Row[]; emails: Row[]; lastContactDays: number | null }) {
+export function InfoCard(p: { id: string; name: string; addresses: AddressRow[]; phones: Row[]; emails: Row[]; lastContactDays: number | null }) {
   const e = useEdit();
-  const [name, setName] = useState(p.name), [address, setAddress] = useState(p.address);
+  const [name, setName] = useState(p.name), [addresses, setAddresses] = useState(p.addresses);
   const [phones, setPhones] = useState(p.phones), [emails, setEmails] = useState(p.emails);
-  const reset = () => { setName(p.name); setAddress(p.address); setPhones(p.phones); setEmails(p.emails); e.setError(""); e.setEditing(false); };
+  const reset = () => { setName(p.name); setAddresses(p.addresses); setPhones(p.phones); setEmails(p.emails); e.setError(""); e.setEditing(false); };
   if (e.editing) return (
-    <form className="card p-4" onSubmit={(ev) => { ev.preventDefault(); e.save(() => updateContactInfo({ id: p.id, name, address, phones, emails })); }}>
+    <form className="card p-4" onSubmit={(ev) => { ev.preventDefault(); e.save(() => updateContactInfo({ id: p.id, name, addresses, phones, emails })); }}>
       <CardHead title="Contact info" editing onEdit={() => {}} />
       <div className="flex flex-col gap-3">
         <label className="label">Name<input className="input" value={name} onChange={(x) => setName(x.target.value)} /></label>
         <div className="label">Phones<RowsEditor rows={phones} setRows={setPhones} kind="phone" labelPh="Label" valuePh="Phone" /></div>
         <div className="label">Emails<RowsEditor rows={emails} setRows={setEmails} kind="email" labelPh="Label" valuePh="Email" /></div>
-        <div className="label">Address<AddressInput label="Address" value={address} onChange={setAddress} /></div>
+        <div className="label">Addresses<AddressesEditor rows={addresses} setRows={setAddresses} /></div>
       </div>
       <SaveRow pending={e.pending} error={e.error} onCancel={reset} />
     </form>
@@ -111,7 +138,10 @@ export function InfoCard(p: { id: string; name: string; address: string; phones:
       <ul className="mt-3 flex flex-col gap-1.5 text-sm">
         {p.phones.map((x, i) => <li key={`p${i}`}><CallLink className="link" number={x.value} name={p.name}>{x.value}</CallLink> <span className="muted">({x.label})</span></li>)}
         {p.emails.map((x, i) => <li key={`e${i}`} className="break-all"><a className="link" href={`mailto:${x.value}`}>{x.value}</a>{x.label && <span className="muted"> ({x.label})</span>}</li>)}
-        {p.address ? <li>{p.address}</li> : <li><button type="button" className="text-sm muted hover:underline" onClick={() => e.setEditing(true)}>Add address</button></li>}
+        {p.addresses.map((x, i) => (
+          <li key={`a${i}`}>{x.value}{(x.label || x.mailing) && <span className="muted"> ({[x.label, x.mailing && "Mailing"].filter(Boolean).join(" · ")})</span>}</li>
+        ))}
+        {!p.addresses.length && <li><button type="button" className="text-sm muted hover:underline" onClick={() => e.setEditing(true)}>Add address</button></li>}
       </ul>
     </div>
   );

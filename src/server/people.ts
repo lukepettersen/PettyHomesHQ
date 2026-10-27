@@ -31,6 +31,7 @@ export async function loadPeopleRows(): Promise<PersonRow[]> {
       assignedTo: { select: { name: true } },
       tags: { include: { tag: true } },
       phones: { orderBy: { position: "asc" } },
+      addresses: { select: { value: true } },
       emails: { orderBy: { position: "asc" } },
       dates: { select: { kind: true, date: true } },
       _count: { select: { tasks: { where: { completedAt: null, deletedAt: null, dueDate: { gte: today } } } } },
@@ -58,7 +59,7 @@ export async function loadPeopleRows(): Promise<PersonRow[]> {
     };
     return {
       ...facts, id: p.id, name: p.name, company: p.company, address: p.address, mailingName: p.mailingName, kids: p.kids, phone: p.phones[0]?.number ?? null, email: p.emails[0]?.address ?? null, dueForTouch: isDueForTouch(facts),
-      contactText: [...p.phones.map((x) => x.normalized), ...p.emails.map((x) => x.normalized), p.address ?? "", p.mailingName ?? "", p.kids ?? ""].join(" ").toLowerCase(),
+      contactText: [...p.phones.map((x) => x.normalized), ...p.emails.map((x) => x.normalized), p.address ?? "", ...p.addresses.map((a) => a.value), p.mailingName ?? "", p.kids ?? ""].join(" ").toLowerCase(),
     };
   });
 }
