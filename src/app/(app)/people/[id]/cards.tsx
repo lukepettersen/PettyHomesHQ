@@ -1,5 +1,6 @@
 "use client";
 
+import { CallLink } from "@/components/CallCenter";
 import { AddressInput } from "@/components/AddressInput";
 import { PARTNER_TYPES, partnerLabel } from "@/lib/partners";
 import { useRouter } from "next/navigation";
@@ -108,7 +109,7 @@ export function InfoCard(p: { id: string; name: string; address: string; phones:
         </div>
       </div>
       <ul className="mt-3 flex flex-col gap-1.5 text-sm">
-        {p.phones.map((x, i) => <li key={`p${i}`}><a className="link" href={`tel:${x.value}`}>{x.value}</a> <span className="muted">({x.label})</span></li>)}
+        {p.phones.map((x, i) => <li key={`p${i}`}><CallLink className="link" number={x.value} name={p.name}>{x.value}</CallLink> <span className="muted">({x.label})</span></li>)}
         {p.emails.map((x, i) => <li key={`e${i}`} className="break-all"><a className="link" href={`mailto:${x.value}`}>{x.value}</a>{x.label && <span className="muted"> ({x.label})</span>}</li>)}
         {p.address ? <li>{p.address}</li> : <li><button type="button" className="text-sm muted hover:underline" onClick={() => e.setEditing(true)}>Add address</button></li>}
       </ul>

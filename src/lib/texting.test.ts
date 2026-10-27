@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { callLength, centralDayStart, otherRoute, isStartWord, isStopWord, missedDial, sendProblem, toE164, voiceTwiml } from "./texting";
+import { callLength, centralDayStart, otherRoute, isStartWord, isStopWord, missedDial, outboundTwiml, sendProblem, toE164, voiceTwiml } from "./texting";
 import { twilioSignature, validTwilioRequest } from "./twilioSig";
 
 describe("texting", () => {
@@ -51,5 +51,17 @@ describe("texting", () => {
     expect(otherRoute("IM123")).toEqual({ not: { startsWith: "IM" } });
     expect(otherRoute("MM123")).toEqual({ startsWith: "IM" });
     expect(otherRoute("SM123")).toEqual({ startsWith: "IM" });
+  });
+});
+
+describe("calling in HQ (owner request 2026-10-27)", () => {
+  it("dials out showing the HQ number, with the recording notice to the person called", () => {
+    expect(outboundTwiml({ to: "+16125550101", callerId: "+19525550000", action: "https://hq/done", record: "https://hq/rec", whisper: "https://hq/w" }))
+      .toBe('<?xml version="1.0" encoding="UTF-8"?><Response><Dial timeout="40" answerOnBridge="true" callerId="+19525550000" action="https://hq/done" record="record-from-answer-dual" recordingStatusCallback="https://hq/rec" recordingStatusCallbackEvent="completed"><Number url="https://hq/w">+16125550101</Number></Dial></Response>');
+    expect(outboundTwiml({ to: null, callerId: "", action: "" })).toContain("can't be called");
+  });
+  it("rings HQ in the browser on incoming calls, with or without a cell", () => {
+    expect(voiceTwiml({ client: "hq_u1", action: "https://hq/done" })).toContain('<Dial timeout="20" answerOnBridge="true" action="https://hq/done"><Client>hq_u1</Client></Dial>');
+    expect(voiceTwiml({ forwardTo: "+16125550188", client: "hq_u1" })).toContain("<Number>+16125550188</Number><Client>hq_u1</Client>");
   });
 });

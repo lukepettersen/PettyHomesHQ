@@ -529,10 +529,17 @@ Principles:
   delivered with the reason; refreshes every 15 seconds. **Send text** on a contact's timeline and in
   **Draft text** on checklist steps (template, "/name" in the message; the task is checked off).
 - Incoming texts and missed calls **pop up with a chime** for the number's owner (Open conversation).
-- **Calls** to a number ring that person's cell if one is set in Admin → Integrations (Luke), showing the
-  caller's number (if the carrier refuses that, it rings again showing the business number); otherwise
-  the caller hears "Sorry we missed your call, please text this number" (Alyssa). Unanswered calls are
-  logged as missed calls in Messages and on the contact's timeline.
+- **Calls** to a number ring HQ in that person's browser while HQ is open (Answer / Decline pop-up), and their cell
+  too if one is set in Admin → Integrations (Luke), showing the caller's number (if the carrier refuses that, it
+  rings again showing the business number); whoever answers first takes it. Not answered in 20 seconds → the caller
+  hears "Sorry we missed your call, please text this number". Unanswered calls are logged as missed calls in
+  Messages and on the contact's timeline.
+- **Calling from HQ** *(owner request 2026-10-27, like FUB)*: **Call** in Messages and a phone number on a contact
+  call from the person's HQ number through the computer's (or phone browser's) microphone and speakers; no cell is
+  involved. A call bar shows the timer with Mute, Keypad and Hang up. With recording on, the person called hears
+  "This call may be recorded" as they pick up. The call goes on the contact's timeline ("Alyssa called from HQ
+  (952-…) · 4 min", or No answer). HQ creates its own Twilio API key and calling app the first time (secret stored
+  encrypted), so there's nothing to set up. Without an HQ number, Call falls back to the device's dialer.
 - **Answered calls** *(owner request 2026-10-22)* go on the contact's timeline: "Answered: Called Luke's business
   number (952-243-7646) · 4 min", and count as contact. Calls from a number not on a contact are kept and land on
   the timeline when the number is linked or added from Messages.

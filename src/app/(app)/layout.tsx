@@ -5,6 +5,7 @@ import { loadBell } from "@/server/notifications";
 import { unreadCount } from "@/server/texting";
 import { TopBar } from "@/components/TopBar";
 import { AlarmCenter } from "@/components/AlarmCenter";
+import { CallCenter } from "@/components/CallCenter";
 import { GmailSync } from "@/components/GmailSync";
 import { isConnected } from "@/server/integrations";
 
@@ -18,6 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <TopBar name={user.name} tools={tools.map((t) => ({ name: t.name, url: t.url }))} canEditTools={hasPermission(user.permissions, "manageUsers")} bell={bell} texts={texts} claude={isConnected("claude")} />
       {children}
       <AlarmCenter />
+      <CallCenter />
       <GmailSync />
     </>
   );

@@ -25,13 +25,24 @@ export const isStartWord = (body: string) => START_WORDS.includes(word(body));
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 /** What Twilio does with a call: ring a cell (then `action` hears how it went), or say a message and hang up. */
-export function voiceTwiml(o: { forwardTo?: string | null; callerId?: string; action?: string; say?: string; record?: string; notice?: boolean }): string {
+export function voiceTwiml(o: { forwardTo?: string | null; client?: string | null; callerId?: string; action?: string; say?: string; record?: string; notice?: boolean }): string {
   // record: where Twilio reports the finished recording (answered calls only); notice: say RECORD_SAY first.
+  // client: also ring HQ in the browser (owner request 2026-10-27); whoever answers first takes the call.
   const rec = o.record ? ` record="record-from-answer-dual" recordingStatusCallback="${esc(o.record)}" recordingStatusCallbackEvent="completed"` : "";
-  const inner = o.forwardTo
-    ? `${o.notice ? `<Say voice="Polly.Joanna">${RECORD_SAY}</Say>` : ""}<Dial timeout="20" answerOnBridge="true"${o.callerId ? ` callerId="${esc(o.callerId)}"` : ""}${o.action ? ` action="${esc(o.action)}"` : ""}${rec}>${esc(o.forwardTo)}</Dial>`
+  const target = o.client ? `${o.forwardTo ? `<Number>${esc(o.forwardTo)}</Number>` : ""}<Client>${esc(o.client)}</Client>` : esc(o.forwardTo ?? "");
+  const inner = o.forwardTo || o.client
+    ? `${o.notice ? `<Say voice="Polly.Joanna">${RECORD_SAY}</Say>` : ""}<Dial timeout="20" answerOnBridge="true"${o.callerId ? ` callerId="${esc(o.callerId)}"` : ""}${o.action ? ` action="${esc(o.action)}"` : ""}${rec}>${target}</Dial>`
     : `<Say voice="Polly.Joanna">${esc(o.say ?? MISSED_SAY)}</Say><Hangup/>`;
   return `<?xml version="1.0" encoding="UTF-8"?><Response>${inner}</Response>`;
+}
+/**
+ * A call placed from HQ in the browser: dial the number showing the team member's HQ number. whisper: an address
+ * whose TwiML the person called hears when they pick up ("This call may be recorded").
+ */
+export function outboundTwiml(o: { to: string | null; callerId: string; action: string; record?: string; whisper?: string }): string {
+  if (!o.to) return `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Joanna">That number can't be called from HQ.</Say><Hangup/></Response>`;
+  const rec = o.record ? ` record="record-from-answer-dual" recordingStatusCallback="${esc(o.record)}" recordingStatusCallbackEvent="completed"` : "";
+  return `<?xml version="1.0" encoding="UTF-8"?><Response><Dial timeout="40" answerOnBridge="true" callerId="${esc(o.callerId)}" action="${esc(o.action)}"${rec}><Number${o.whisper ? ` url="${esc(o.whisper)}"` : ""}>${esc(o.to)}</Number></Dial></Response>`;
 }
 export const EMPTY_TWIML = `<?xml version="1.0" encoding="UTF-8"?><Response/>`;
 export const MISSED_SAY = "Sorry we missed your call. Please send a text to this number and we'll get right back to you.";

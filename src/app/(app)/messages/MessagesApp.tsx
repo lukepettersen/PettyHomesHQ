@@ -1,5 +1,6 @@
 "use client";
 
+import { CallLink } from "@/components/CallCenter";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -104,7 +105,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
                 {person && <span className="text-xs muted">{formatPhone(open)}</span>}
               </div>
               <span className="flex flex-wrap gap-2">
-                {!group && <a className="btn" href={`tel:+1${open}`}>Call</a>}
+                {!group && <CallLink className="btn" number={`+1${open}`} name={person?.name}>Call</CallLink>}
                 <DeleteThread ourNumber={line.number} number={open} onDone={() => router.push(href(null))} />
               </span>
             </header>

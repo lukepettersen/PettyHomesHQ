@@ -142,6 +142,24 @@ export async function recordAnsweredCall(o: { from: string; to: string; sid: str
 export const answeredBody = (ownerName: string | null, ourNumber: string, seconds: number) =>
   `Called ${ownerName ? `${ownerName.split(" ")[0]}'s` : "the"} business number (${formatPhone(ourNumber)}) · ${callLength(seconds)}`;
 
+/** A call placed from HQ in the browser (owner request 2026-10-27): logged on the contact's timeline. */
+export async function recordOutboundCall(o: { userId: string; to: string; sid: string; seconds: number; answered: boolean; recordingSid?: string | null }) {
+  const user = await db.user.findUnique({ where: { id: o.userId }, select: { name: true, textNumber: true } });
+  if (!user?.textNumber) return;
+  const theirs = normalizePhone(o.to);
+  const person = await personForNumber(theirs);
+  const data = { ourNumber: user.textNumber, theirNumber: theirs, personId: person?.id ?? null, seconds: o.answered ? Math.max(0, Math.round(o.seconds) || 0) : 0, ...(o.recordingSid ? { recordingSid: o.recordingSid } : {}) };
+  const call = await db.phoneCall.upsert({ where: { callSid: o.sid }, create: { callSid: o.sid, ...data }, update: data });
+  if (!person || call.entryId) return;
+  const body = `${user.name.split(" ")[0]} called from HQ (${formatPhone(user.textNumber)})${o.answered ? ` · ${callLength(call.seconds)}` : ""}`;
+  const entry = await db.timelineEntry.create({ data: { personId: person.id, kind: "call", outcome: o.answered ? "Answered" : "No answer", body, authorId: o.userId, createdAt: call.createdAt } });
+  await db.$transaction([
+    db.phoneCall.update({ where: { id: call.id }, data: { entryId: entry.id } }),
+    ...(o.answered ? [db.person.update({ where: { id: person.id }, data: { lastContactAt: new Date() } })] : []),
+  ]);
+  revalidatePath(`/people/${person.id}`);
+}
+
 /** Twilio finished a call's recording (may arrive before or after the call itself is logged). */
 export async function recordRecording(o: { callSid: string; recordingSid: string; seconds: number }) {
   const data = { recordingSid: o.recordingSid, recordingSeconds: Math.max(0, Math.round(o.seconds) || 0) };

@@ -202,3 +202,16 @@ export async function fetchTextMedia(m: { url?: string; service?: string; sid?: 
   if (!/^https:\/\/(api|mcs\.us1)\.twilio\.com\//.test(url) && !(process.env.TWILIO_API_BASE && url.startsWith(process.env.TWILIO_API_BASE))) return null;
   return fetch(url, { headers: { Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}` }, signal: AbortSignal.timeout(30000), cache: "no-store" }).catch(() => null);
 }
+
+/** Calling from the browser: an API key (its secret is shown once) and a TwiML App whose voice address is HQ's. */
+export async function createApiKey(name: string): Promise<{ sid: string; secret: string }> {
+  const r = await callForm(account("/Keys.json"), formOf({ FriendlyName: name }));
+  if (!r.ok || !r.json.sid || !r.json.secret) throw new Error(problem(r, "Couldn't set up calling"));
+  return { sid: String(r.json.sid), secret: String(r.json.secret) };
+}
+export async function saveVoiceApp(appSid: string | null, voiceUrl: string): Promise<string> {
+  const r = await callForm(account(appSid ? `/Applications/${encodeURIComponent(appSid)}.json` : "/Applications.json"), formOf({ FriendlyName: "Petty Homes HQ calling", VoiceUrl: voiceUrl, VoiceMethod: "POST" }));
+  if (!r.ok || !r.json.sid) throw new Error(problem(r, "Couldn't set up calling"));
+  return String(r.json.sid);
+}
+export const twilioAccountSid = () => creds().sid;
