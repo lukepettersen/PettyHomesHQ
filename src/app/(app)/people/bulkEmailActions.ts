@@ -68,10 +68,15 @@ export async function sendBulkEmailBatch(input: z.input<typeof sendSchema>) {
     const secret = process.env.NEXTAUTH_SECRET ?? "";
     if (!secret || !publicBase()) throw new UserError("HQ's address isn't set up for unsubscribe links (NEXTAUTH_URL / NEXTAUTH_SECRET).");
     await db.appSetting.upsert({ where: { key: ADDRESS_KEY }, update: { value: v.address }, create: { key: ADDRESS_KEY, value: v.address } });
-    const { send } = await loadPeople(v.personIds);
+    const { send: all } = await loadPeople(v.personIds);
+    // Anyone who already got this mass email (same subject, last 24 hours) is skipped, so sending it again after a stop
+    // only reaches the rest. Other emails don't count (owner 2026-10-27).
+    const had = new Set((await db.emailTrack.findMany({ where: { personId: { in: all.map((r) => r.personId) }, subject: v.subject, sentAt: { gte: new Date(Date.now() - 86400000) } }, select: { personId: true } })).map((t) => t.personId));
+    const send = all.filter((r) => !had.has(r.personId));
     const files = await loadAttachments(v.attachments);
     const sent: string[] = [], failed: { name: string; error: string }[] = [];
-    for (const r of send) {
+    let retry: string[] = []; // Gmail said slow down: these go again after a pause
+    for (const [i, r] of send.entries()) {
       const { values } = await mergeFor(user, r.personId);
       const subject = fill(v.subject, values).text;
       const url = `${publicBase()}/unsubscribe?p=${r.personId}&t=${unsubToken(r.personId, secret)}`;
@@ -81,8 +86,9 @@ export async function sendBulkEmailBatch(input: z.input<typeof sendSchema>) {
       const res = await sendGmail({ to: [r.email], subject, body, signature: v.signature, pixelUrl: `${publicBase()}/api/e/${track.id}.gif`, attachments: files, asUserId: user.id });
       if (!res.ok) {
         await db.emailTrack.delete({ where: { id: track.id } });
+        if (/quota|rate ?limit|too many|429/i.test(res.error)) { retry = send.slice(i).map((x) => x.personId); break; }
         failed.push({ name: r.name, error: res.error });
-        if (/isn't connected|didn't let HQ in|limit|quota/i.test(res.error)) break; // Gmail itself stopped: no point trying the rest
+        if (/isn't connected|didn't let HQ in|limit/i.test(res.error)) break; // Gmail itself stopped: no point trying the rest
         continue;
       }
       sent.push(r.name);
@@ -94,6 +100,6 @@ export async function sendBulkEmailBatch(input: z.input<typeof sendSchema>) {
     }
     if (sent.length) await logActivity(user.id, "create", "email", null, `Mass email "${v.subject}" sent to ${sent.length} ${sent.length === 1 ? "person" : "people"}`);
     revalidatePath("/people");
-    return { sent: sent.length, failed };
+    return { sent: sent.length, failed, skipped: had.size, retry };
   });
 }

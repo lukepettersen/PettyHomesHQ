@@ -28,7 +28,7 @@ export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: ()
   const [files, setFiles] = useState<Attached[]>([]);
   const [preview, setPreview] = useState<{ name: string; subject: string; body: string; missing: string[] } | null>(null);
   const [confirm, setConfirm] = useState(false);
-  const [progress, setProgress] = useState<{ done: number; sent: number; failed: { name: string; error: string }[]; finished: boolean } | null>(null);
+  const [progress, setProgress] = useState<{ done: number; sent: number; skipped: number; waiting: boolean; failed: { name: string; error: string }[]; finished: boolean } | null>(null);
   const [error, setError] = useState("");
   const stop = useRef(false);
   const box = useRef<HTMLTextAreaElement>(null);
@@ -53,15 +53,28 @@ export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: ()
     setConfirm(false); setError(""); stop.current = false;
     const list = prep!.recipients.map((r) => r.personId);
     const batch = crypto.randomUUID();
-    let state = { done: 0, sent: 0, failed: [] as { name: string; error: string }[], finished: false };
+    let state = { done: 0, sent: 0, skipped: 0, waiting: false, failed: [] as { name: string; error: string }[], finished: false };
     setProgress(state);
-    for (let i = 0; i < list.length && !stop.current; i += BATCH) {
-      const r = await sendBulkEmailBatch({ personIds: list.slice(i, i + BATCH), subject, body, address, signature, batch, attachments: files });
+    const queue = [...list];
+    let pauses = 0;
+    while (queue.length && !stop.current) {
+      const chunk = queue.splice(0, BATCH);
+      const r = await sendBulkEmailBatch({ personIds: chunk, subject, body, address, signature, batch, attachments: files });
       if (!r.ok) { setError(r.error); break; }
-      state = { ...state, done: Math.min(i + BATCH, list.length), sent: state.sent + r.data!.sent, failed: [...state.failed, ...r.data!.failed] };
+      const retry = r.data!.retry ?? [];
+      state = { ...state, done: list.length - queue.length - retry.length, sent: state.sent + r.data!.sent, skipped: state.skipped + (r.data!.skipped ?? 0), failed: [...state.failed, ...r.data!.failed] };
       setProgress(state);
-      if (r.data!.failed.some((f) => /isn't connected|didn't let HQ in|limit|quota/i.test(f.error))) break;
-      await new Promise((ok) => setTimeout(ok, 800)); // a steady pace looks less like spam to Gmail
+      if (r.data!.failed.some((f) => /isn't connected|didn't let HQ in/i.test(f.error))) break;
+      if (retry.length) {
+        // Gmail's per-minute limit: wait a minute and carry on with the rest (owner 2026-10-27).
+        if (++pauses > 6) { state = { ...state, failed: [...state.failed, { name: `${retry.length + queue.length} people`, error: "Gmail kept saying slow down. Send it again later; anyone who already got it is skipped." }] }; break; }
+        queue.unshift(...retry);
+        setProgress({ ...state, waiting: true });
+        await new Promise((ok) => setTimeout(ok, 65000));
+        setProgress((p) => (p ? { ...p, waiting: false } : p));
+        continue;
+      }
+      await new Promise((ok) => setTimeout(ok, 6000)); // about 50 a minute, under Gmail's per-minute limit
     }
     setProgress({ ...state, finished: true });
     router.refresh();
@@ -117,7 +130,8 @@ export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: ()
           <div className="h-3 overflow-hidden rounded-full bg-sunken" role="progressbar" aria-valuemin={0} aria-valuemax={n} aria-valuenow={progress.done}>
             <div className="h-full bg-accent transition-all" style={{ width: `${n ? (progress.done / n) * 100 : 0}%` }} />
           </div>
-          <p className="text-sm" aria-live="polite">{progress.finished ? `Done. Sent ${progress.sent.toLocaleString()} of ${n.toLocaleString()}.` : `Sending… ${progress.done.toLocaleString()} of ${n.toLocaleString()}. Keep this page open.`}</p>
+          <p className="text-sm" aria-live="polite">{progress.finished ? `Done. Sent ${progress.sent.toLocaleString()} of ${n.toLocaleString()}.` : progress.waiting ? `Gmail asked HQ to slow down. Waiting a minute, then sending the rest… (${progress.done.toLocaleString()} of ${n.toLocaleString()}). Keep this page open.` : `Sending… ${progress.done.toLocaleString()} of ${n.toLocaleString()}. Keep this page open.`}
+            {progress.skipped > 0 && ` ${progress.skipped.toLocaleString()} already got this mass email in the last 24 hours, so they were skipped.`}</p>
           {progress.failed.length > 0 && (
             <details className="text-sm"><summary className="cursor-pointer text-bad">{progress.failed.length} didn&apos;t send</summary>
               <ul className="mt-1 list-disc pl-5">{progress.failed.map((f, i) => <li key={i}>{f.name}: {f.error}</li>)}</ul>

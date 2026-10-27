@@ -170,7 +170,10 @@ Principles:
   Delete, **Email** *(owner request 2026-10-20)*.
 - **Mass email (Email):** up to 1,000 people at a time. Pick a template or write it (merge fields fill in
   for each person), preview as the first person gets it, then **Send to N** (two-step). Each person gets
-  their own email from the connected Gmail (never CC/BCC), a few at a time with a progress bar and Stop;
+  their own email from the connected Gmail (never CC/BCC), a few at a time with a progress bar and Stop
+  (about 50 a minute; when Gmail says slow down, HQ waits a minute and carries on; sending the same mass email
+  again within 24 hours skips everyone who already got it, so a stopped send can simply be re-sent; owner request
+  2026-10-27);
   it goes on their timeline. Skipped: no email address, or tagged Email Unsubscribed, Unsubscribed or
   Bounced. Every email ends with the business mailing address (asked once, remembered) and an
   **Unsubscribe** link: a public page with an Unsubscribe button (so link scanners can't trigger it) that
