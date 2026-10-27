@@ -91,3 +91,12 @@ describe("email images", () => {
     expect(toHtml("![a](http://insecure.com/a.png)")).not.toContain("<img");
   });
 });
+
+describe("clickable images (owner request 2026-10-27)", () => {
+  it("wraps the image in its link and shows the link in plain text", () => {
+    const body = "[![Pie day](https://hq.example.com/api/img/a.jpg)](https://pettyhomes.com/pie)\nSee you there";
+    expect(toHtml(body)).toContain('<a href="https://pettyhomes.com/pie"><img src="https://hq.example.com/api/img/a.jpg" alt="Pie day"');
+    expect(toHtml(body)).not.toContain("[");
+    expect(toPlain(body)).toBe("https://pettyhomes.com/pie\nSee you there");
+  });
+});

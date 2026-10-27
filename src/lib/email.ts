@@ -11,10 +11,13 @@ export const isEmail = (s: string) => /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const LINK = /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g;
 const IMAGE = /!\[([^\]\n]*)\]\((https:\/\/[^\s)]+)\)/g;
+// An image that opens a web page when clicked (owner request 2026-10-27): [![alt](https://image)](https://page)
+const LINKED_IMAGE = /\[!\[([^\]\n]*)\]\((https:\/\/[^\s)]+)\)\]\((https?:\/\/[^\s)]+)\)/g;
 const img = (alt: string, url: string) => `<img src="${url}" alt="${alt}" style="display:block;max-width:600px;width:100%;height:auto;border:0">`;
 function inline(line: string): string {
   // Escape first, then add only the tags HQ makes, so nothing typed can become HTML.
   let s = esc(line);
+  s = s.replace(LINKED_IMAGE, (_, a: string, u: string, to: string) => `<a href="${to}">${img(a, u)}</a>`);
   s = s.replace(IMAGE, (_, a: string, u: string) => img(a, u));
   s = s.replace(/(?<!src=")\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, t: string, u: string) => `<a href="${u}">${t}</a>`);
   s = s.replace(/(^|[\s(])(?<!src=")(https?:\/\/[^\s<)"]+)/g, (_, pre: string, u: string) => `${pre}<a href="${u}">${u}</a>`);
@@ -31,14 +34,14 @@ export function toHtml(text: string): string {
     if (m) { list.push(inline(m[1])); continue; }
     flush();
     // An image on its own line (a banner or logo) needs no line break after it.
-    if (/^\s*!\[[^\]\n]*\]\(https:\/\/[^\s)]+\)\s*$/.test(line)) { out.push(inline(line.trim())); continue; }
+    if (/^\s*(\[)?!\[[^\]\n]*\]\(https:\/\/[^\s)]+\)(?:\]\(https?:\/\/[^\s)]+\))?\s*$/.test(line)) { out.push(inline(line.trim())); continue; }
     out.push(line.trim() ? `${inline(line)}<br>` : "<br>");
   }
   flush();
   return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.45">${out.join("\n")}</div>`;
 }
 /** The same message for mail apps that only show plain text. */
-export const toPlain = (text: string) => text.replace(/^\s*!\[[^\]\n]*\]\(https:\/\/[^\s)]+\)\s*\n?/gm, "").replace(IMAGE, "").replace(LINK, "$1 ($2)").replace(/\*\*([^*\n]+)\*\*/g, "$1");
+export const toPlain = (text: string) => text.replace(LINKED_IMAGE, "$3").replace(/^\s*!\[[^\]\n]*\]\(https:\/\/[^\s)]+\)\s*\n?/gm, "").replace(IMAGE, "").replace(LINK, "$1 ($2)").replace(/\*\*([^*\n]+)\*\*/g, "$1");
 
 /** HTML (a Gmail signature) → readable plain text. */
 export function htmlToText(html: string): string {

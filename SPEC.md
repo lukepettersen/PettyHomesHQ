@@ -645,6 +645,8 @@ Principles:
   it to the message, e.g. a branded banner at the top of a market update. Emails show it full width (up to 600px);
   the plain-text copy leaves it out. Recipients load it from HQ's public /api/img address (long random names; only
   email images, never client files). The mass email preview shows the images. Needs File storage connected.
+  **Clickable images** *(owner request 2026-10-27)*: after uploading, HQ asks for an optional web address the image
+  opens; or put the cursor on an image and click **Link**. Stored as [![alt](image)](page); plain-text copies show the page address.
 - **Finding templates** *(owner request 2026-10-15)*: the Template box is searchable (type
   any words of the name or folder; arrows + Enter). In the message, type **/** and a template
   name to drop it in where you're typing (fills the subject too if it's empty). **Clear**
