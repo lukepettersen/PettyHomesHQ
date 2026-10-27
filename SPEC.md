@@ -582,6 +582,10 @@ Principles:
   Admin → Integrations) to their own HQ number that starts with **task** adds a task with the same wording as the
   Tasks box quick add ("task call lender re Ortiz Fri 9am", tomorrow, next week, every month, #list, @alyssa), and
   HQ texts back what it added ("Added "call lender" to Clients, due Fri Oct 30."). **help** texts back the list.
+  **contact** (or "new contact" / "add contact") then a name, number and email in any order adds a person assigned
+  to the sender ("contact Jane Smith 612-555-1234 jane@gmail.com"; all-lowercase names get capitals) and texts
+  back a link to them; if that number or email is already in HQ it links the existing person instead
+  *(owner request 2026-10-27)*.
   Commands don't alert or go on a timeline; other texts (and "task" texts from anyone else) are normal texts.
 - **Reactions** *(owner request 2026-10-22)*: an iPhone tapback sent to a business number arrives as a text like
   Loved “See you tomorrow!”; HQ shows it as a small icon (❤️ 👍 👎 😂 ‼️ ❓, or the emoji in "Reacted 🎉 to …") on

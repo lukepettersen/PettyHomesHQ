@@ -4,8 +4,10 @@ import { UserError } from "@/server/safe";
 import { sendSms } from "@/server/twilio";
 import { quickAdd } from "@/server/quickAdd";
 import { textingEnabled } from "@/server/integrations";
-import { normalizePhone } from "@/lib/normalize";
-import { COMMAND_HELP, parseTextCommand } from "@/lib/textCommands";
+import { formatPhone, normalizePhone } from "@/lib/normalize";
+import { logActivity } from "@/server/activity";
+import { publicBase } from "@/server/twilio";
+import { COMMAND_HELP, parseTextCommand, type NewContact } from "@/lib/textCommands";
 
 /**
  * A text from a team member's own cell (the "calls ring" cell in Admin) to their own HQ number that starts with
@@ -26,10 +28,30 @@ export async function runTextCommand(o: { from: string; to: string; body: string
       catch (e) { reply = e instanceof UserError ? e.message : "That task didn't save. Try again, or add it in HQ."; }
     }
   }
+  if (cmd.kind === "contact") {
+    try { reply = await addContact(user, cmd.contact); }
+    catch { reply = "That contact didn't save. Try again, or add them in HQ."; }
+  }
   // The reply is a courtesy: if it can't be sent or saved, the command still counts.
   if (await textingEnabled()) {
     const r = await sendSms({ from: o.to, to: user.forwardTo!, body: reply });
     if (r.ok) await db.textMessage.create({ data: { ourNumber: o.to, theirNumber: normalizePhone(o.from), direction: "out", body: reply, twilioSid: r.sid, status: r.status, readAt: new Date() } }).catch(() => null);
   }
   return true;
+}
+
+/** "contact Jane Smith 612-555-1234 jane@gmail.com" → a new person, unless that number or email is already in HQ. */
+async function addContact(user: { id: string }, c: NewContact): Promise<string> {
+  if (!c.name) return 'Add a name after "contact", e.g. contact Jane Smith 612-555-1234 jane@gmail.com.';
+  const existing = (c.phone || c.email) ? await db.person.findFirst({ where: { deletedAt: null, OR: [
+    ...(c.phone ? [{ phones: { some: { normalized: c.phone } } }] : []), ...(c.email ? [{ emails: { some: { normalized: c.email } } }] : []),
+  ] }, select: { id: true, name: true } }) : null;
+  if (existing) return `${existing.name} is already in HQ with that ${c.phone ? "number" : "email"}: ${publicBase()}/people/${existing.id}`;
+  const p = await db.person.create({ data: {
+    name: c.name, mailingName: c.name, createdById: user.id, assignedToId: user.id,
+    phones: c.phone ? { create: [{ label: "Mobile", number: formatPhone(c.phone), normalized: c.phone, position: 0 }] } : undefined,
+    emails: c.email ? { create: [{ label: "", address: c.email, normalized: c.email, position: 0 }] } : undefined,
+  } });
+  await logActivity(user.id, "create", "person", p.id, `Added ${c.name} by text`);
+  return `Added ${c.name}${c.phone ? ` · ${formatPhone(c.phone)}` : ""}${c.email ? ` · ${c.email}` : ""}: ${publicBase()}/people/${p.id}`;
 }

@@ -13,3 +13,12 @@ describe("text commands", () => {
     expect(parseTextCommand("Can you help?")).toBeNull();
   });
 });
+
+describe("contact command (owner request 2026-10-27)", () => {
+  it("reads a name, number and email in any order", () => {
+    expect(parseTextCommand("contact Jane Smith 612-555-1234 Jane@Gmail.com")).toEqual({ kind: "contact", contact: { name: "Jane Smith", phone: "6125551234", email: "jane@gmail.com" } });
+    expect(parseTextCommand("New contact: bob & sue o'neil, (952) 555-0101")).toEqual({ kind: "contact", contact: { name: "Bob & Sue O'Neil", phone: "9525550101", email: "" } });
+    expect(parseTextCommand("Add contact sam@x.com Sam Ortiz +1 612 555 0199")).toEqual({ kind: "contact", contact: { name: "Sam Ortiz", phone: "6125550199", email: "sam@x.com" } });
+    expect(parseTextCommand("contacts are great")).toBeNull();
+  });
+});
