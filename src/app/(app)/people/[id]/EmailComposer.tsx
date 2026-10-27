@@ -53,7 +53,7 @@ export function EmailComposer({ personId, emails, templates, sendsFrom, onSent, 
     });
   };
   const send = () => {
-    if (!confirm) { setConfirm(true); return; }
+    // One click sends (owner request 2026-10-27); only mass emails ask twice.
     setConfirm(false); setError("");
     start(async () => {
       const r = await sendEmail({ personId, to: all, subject, body, signature, attachments: files });
@@ -94,7 +94,7 @@ export function EmailComposer({ personId, emails, templates, sendsFrom, onSent, 
         <span className="flex gap-2">
         {(subject || body || templateId) && <button type="button" className="btn" disabled={pending} onClick={clear} onBlur={() => setConfirmClear(false)}>{confirmClear ? "Click again to clear" : "Clear"}</button>}
         <button type="button" className="btn btn-primary" disabled={pending || !all.length || !subject.trim() || !body.trim()} onClick={send} onBlur={() => setConfirm(false)}>
-          {pending ? "Sending…" : confirm ? `Click again to send to ${all.length === 1 ? all[0] : `${all.length} addresses`}` : "Send email"}
+          {pending ? "Sending…" : "Send email"}
         </button>
         </span>
       </div>

@@ -46,7 +46,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
     router.refresh(); onClose();
   });
   const send = () => {
-    if (!confirm) { setConfirm(true); return; }
+    // One click sends (owner request 2026-10-27); only mass emails ask twice.
     setConfirm(false); setError("");
     start(async () => {
       const r = await sendEmail({ personId: d!.personId!, taskId, to: toAll, subject, body, signature });
@@ -104,7 +104,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
             <button type="button" className="btn" disabled={!body} onClick={copy}>{copied ? "Copied" : "Copy"}</button>
             {d.kind === "email" && <a className={`btn ${canSend ? "" : "btn-primary"} ${body ? "" : "pointer-events-none opacity-50"}`} href={mailto}>Open in email</a>}
             {canSend && <button type="button" className="btn btn-primary" disabled={pending || !toAll.length || !subject.trim() || !body.trim()} onClick={send} onBlur={() => setConfirm(false)}>
-              {pending ? "Sending…" : confirm ? `Click again to send to ${toAll.length === 1 ? toAll[0] : `${toAll.length} addresses`}` : "Send email"}</button>}
+              {pending ? "Sending…" : "Send email"}</button>}
             {canText && d.to.length > 1 && <select aria-label="Text to" className="input w-auto" value={toPhone || d.to[0]} onChange={(e) => setToPhone(e.target.value)}>{d.to.map((p) => <option key={p}>{p}</option>)}</select>}
             {canText && <button type="button" className="btn btn-primary" disabled={pending || !body.trim()} onClick={text}>{pending ? "Sending…" : "Send text"}</button>}
           </div>
