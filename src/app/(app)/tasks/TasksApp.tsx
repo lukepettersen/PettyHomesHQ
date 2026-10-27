@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { ListRow, TaskRow, TeamMember, TouchRow } from "@/server/tasks";
-import { diffDays, formatTime, longIso, parseQuickAdd, PRIORITIES, repeatLabel, WHO_COOKIE } from "@/lib/tasks";
+import { diffDays, formatTime, longIso, parseQuickAdd, PRIORITIES, repeatLabel, VIEW_COOKIE, WHO_COOKIE } from "@/lib/tasks";
 import { completeDateTask, completeTask, createList, deleteList, logTouch, quickAddTask, spreadTouches, unspreadTouches, renameList, reopenTask, setListOnToday } from "./actions";
 import { ArrangeLists } from "./ArrangeLists";
 import { TaskDetail } from "./TaskDetail";
@@ -68,7 +68,11 @@ export function TasksApp(p: Props) {
     window.history.replaceState(null, "", `/tasks?${q}`);
   }, [view, who, selId]);
   // Remember the Everyone / Me / teammate choice on this device for a year.
-  useEffect(() => { document.cookie = `${WHO_COOKIE}=${encodeURIComponent(who)}; path=/; max-age=31536000; samesite=lax`; }, [who]);
+  // The view too, so the phone's home-screen icon opens exactly as the page was left (owner request 2026-10-27).
+  useEffect(() => {
+    document.cookie = `${WHO_COOKIE}=${encodeURIComponent(who)}; path=/; max-age=31536000; samesite=lax`;
+    document.cookie = `${VIEW_COOKIE}=${encodeURIComponent(view)}; path=/; max-age=31536000; samesite=lax`;
+  }, [who, view]);
 
   const listByKey = useMemo(() => new Map(p.lists.map((l) => [keyOf(l), l])), [p.lists]);
   // Checked-off tasks stay visible (struck through) until you switch lists, so a mis-click is easy to undo.

@@ -182,6 +182,8 @@ export function parseSubtasks(v: unknown): Subtask[] {
 
 /** Cookie remembering the Tasks page Everyone / Me / teammate filter on this device. */
 export const WHO_COOKIE = "hq-tasks-who";
+/** The last Tasks view (Today, Upcoming, a list) on this device, so the home-screen icon reopens it (owner request 2026-10-27). */
+export const VIEW_COOKIE = "hq-tasks-view";
 
 // ---------- Due for a touch: weekdays only (owner 2026-10-24) ----------
 const DAY_MS = 86400000;

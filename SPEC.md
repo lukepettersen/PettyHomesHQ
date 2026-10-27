@@ -113,7 +113,8 @@ Principles:
 
 - **Home-screen app** *(2026-10-14)*: "Add to Home Screen" gives the white house mark on moss,
   the name "HQ", and opens full screen (web app manifest + Apple touch icon). The icon opens the page you were on
-  when you added it, e.g. Tasks (owner request 2026-10-26).
+  when you added it, e.g. Tasks (owner request 2026-10-26). Tasks remembers its view (Today, Upcoming, a list) and
+  Everyone / Me / teammate on each device, so it reopens exactly as it was left (owner request 2026-10-27).
 
 ## 6. People
 
