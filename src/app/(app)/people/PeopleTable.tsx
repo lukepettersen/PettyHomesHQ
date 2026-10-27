@@ -95,10 +95,13 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
     start(async () => {
       const r = await bulkUpdate({ ids, action, value });
       if (!r.ok) { setMsg(r.error); return; }
-      setMsg(`Updated ${ids.length} ${ids.length === 1 ? "person" : "people"}.`); setAction(null); setValue(""); router.refresh();
+      setMsg((r.data as { message?: string } | undefined)?.message ?? `Updated ${ids.length} ${ids.length === 1 ? "person" : "people"}.`); setAction(null); setValue(""); router.refresh();
     });
   }
-  const valueInput = action === "addTag" || action === "removeTag" ? (
+  // Remove tag picks from the real tags, so a typo can't quietly remove nothing (owner 2026-10-27).
+  const valueInput = action === "removeTag" ? (
+    <select className="input w-auto" value={value} onChange={(e) => setValue(e.target.value)} aria-label="Tag to remove" autoFocus><option value="">Pick a tag…</option>{options.tags.map((t) => <option key={t} value={t}>{t}</option>)}</select>
+  ) : action === "addTag" ? (
     <><input className="input w-40" list="bulk-tags" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Tag" aria-label="Tag" autoFocus /><datalist id="bulk-tags">{options.tags.map((t) => <option key={t} value={t} />)}</datalist></>
   ) : action === "stage" ? (
     <select className="input w-auto" value={value} onChange={(e) => setValue(e.target.value)} aria-label="Stage"><option value="">No stage</option>{options.stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
@@ -136,7 +139,7 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
               {confirm ? `Click again to delete ${ids.length}` : "Delete"}</button>}
             <button type="button" className="ml-auto rounded-md px-2.5 py-1 hover:bg-white/15" onClick={() => { setSel(new Set()); setConfirm(false); }}>Clear</button>
           </>}
-          {action && <span className="flex flex-wrap items-center gap-1.5 text-charcoal">{valueInput}<button type="button" className="btn btn-primary" disabled={pending} onClick={apply}>Apply</button><button type="button" className="btn" onClick={() => setAction(null)}>Cancel</button></span>}
+          {action && <span className="flex flex-wrap items-center gap-1.5 text-charcoal">{valueInput}<button type="button" className="btn btn-primary" disabled={pending || ((action === "addTag" || action === "removeTag") && !value.trim())} onClick={apply}>{pending ? "Working…" : "Apply"}</button><button type="button" className="btn" onClick={() => setAction(null)}>Cancel</button></span>}
           {msg && <span className="ml-2">{msg}</span>}
         </div>
       )}

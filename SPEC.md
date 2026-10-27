@@ -165,7 +165,8 @@ Principles:
   - Default collections seeded once: Clear Daily, Sphere, Leads, Mailing Lists, Partners.
 - Table: name, stage, last contact, follow-up, deal, tags, source; sort by name / stage /
   last contact; search box.
-- Bulk actions on selected rows: Add tag, Change stage, Set follow-up, Assign, Export,
+- Bulk actions on selected rows (Add tag; **Remove tag** picks from the existing tags, and both say how many people
+  changed, owner request 2026-10-27): Add tag, Change stage, Set follow-up, Assign, Export,
   Delete, **Email** *(owner request 2026-10-20)*.
 - **Mass email (Email):** up to 1,000 people at a time. Pick a template or write it (merge fields fill in
   for each person), preview as the first person gets it, then **Send to N** (two-step). Each person gets

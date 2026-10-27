@@ -234,8 +234,18 @@ export async function bulkUpdate(input: z.input<typeof bulkSchema>) {
       const name = v.value;
       if (!name) throw new UserError("Pick a tag");
       const tag = (await db.tag.findFirst({ where: { name: { equals: name, mode: "insensitive" } } })) ?? (v.action === "addTag" ? await db.tag.create({ data: { name } }) : null);
-      if (tag && v.action === "addTag") await db.personTag.createMany({ data: v.ids.map((personId) => ({ personId, tagId: tag.id })), skipDuplicates: true });
-      if (tag && v.action === "removeTag") await db.personTag.deleteMany({ where: { tagId: tag.id, personId: { in: v.ids } } });
+      if (!tag) throw new UserError(`There's no tag called "${name}". Pick one from the list.`);
+      if (v.action === "addTag") {
+        const r = await db.personTag.createMany({ data: v.ids.map((personId) => ({ personId, tagId: tag.id })), skipDuplicates: true });
+        await logActivity(user.id, "update", "person", null, `Added tag "${tag.name}" to ${r.count} people`);
+        revalidatePath("/people");
+        return { message: `Added "${tag.name}" to ${r.count} ${r.count === 1 ? "person" : "people"}${r.count < v.ids.length ? ` (${v.ids.length - r.count} already had it)` : ""}.` };
+      }
+      // Say how many it came off, so a tag nobody selected had shows as 0 rather than "Updated" (owner 2026-10-27).
+      const r = await db.personTag.deleteMany({ where: { tagId: tag.id, personId: { in: v.ids } } });
+      await logActivity(user.id, "update", "person", null, `Removed tag "${tag.name}" from ${r.count} people`);
+      revalidatePath("/people");
+      return { message: r.count ? `Removed "${tag.name}" from ${r.count} ${r.count === 1 ? "person" : "people"}.` : `None of the selected people had "${tag.name}".` };
     } else if (v.action === "stage") {
       await db.person.updateMany({ where, data: { stageId: v.value || null } });
     } else if (v.action === "contacted") {
