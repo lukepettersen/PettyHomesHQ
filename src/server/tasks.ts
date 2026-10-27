@@ -28,13 +28,15 @@ export type TaskRow = {
   paId: string | null;
   /** Checklist step details: "Buyer checklist", its phase and timing; due date locked when timed from a contract date. */
   step: { source: string; phase: string | null; timing: string | null; locked: boolean } | null;
+  /** Important dates (birthdays, homeiversaries): who to address the card to, without opening their page (owner 2026-10-27). */
+  mailTo?: { name: string; address: string | null } | null;
 };
 
 export type ListRow = { id: string; name: string; builtin: string | null; showOnToday: boolean };
 export type TouchRow = { personId: string; name: string; followUpDays: number; lastContact: string | null; assigneeId: string | null };
 export type TeamMember = { id: string; name: string; initials: string; isOwner: boolean };
 
-const taskInclude = { person: { select: { name: true } }, file: { select: { kind: true } }, pa: { select: { side: true } } } as const;
+const taskInclude = { person: { select: { name: true, mailingName: true, address: true } }, file: { select: { kind: true } }, pa: { select: { side: true } } } as const;
 type DbTask = Prisma.TaskGetPayload<{ include: typeof taskInclude }>;
 
 /** Steps from a closed or deleted file, or an ended contract, no longer show as open tasks. */
@@ -52,6 +54,7 @@ export function toRow(t: DbTask): TaskRow {
     subtasks: parseSubtasks(t.subtasks), listId: t.listId, personId: t.personId, personName: t.person?.name ?? null,
     assigneeId: t.assigneeId, sourceKey: t.sourceKey, cat: categoryOf(t), done: !!t.completedAt,
     fileId: t.fileId, paId: t.paId, step: stepOf(t),
+    mailTo: categoryOf(t) === "dates" && t.person ? { name: t.person.mailingName || t.person.name, address: t.person.address } : null,
   };
 }
 
@@ -72,7 +75,7 @@ export async function loadTeam(): Promise<TeamMember[]> {
 /** Important dates tasks for everyone not in Trash, minus the ones already saved (checked off, edited or deleted). */
 export async function loadDateTasks(team: TeamMember[], today: string, personId?: string): Promise<TaskRow[]> {
   const [dates, reminders] = await Promise.all([
-    db.importantDate.findMany({ where: { person: { deletedAt: null, ...(personId ? { id: personId } : {}) } }, include: { person: { select: { name: true, assignedToId: true, stage: { select: { name: true } } } } } }),
+    db.importantDate.findMany({ where: { person: { deletedAt: null, ...(personId ? { id: personId } : {}) } }, include: { person: { select: { name: true, mailingName: true, address: true, assignedToId: true, stage: { select: { name: true } } } } } }),
     db.dateReminder.findMany({ orderBy: { position: "asc" } }),
   ]);
   const computed = importantDateTasks(
@@ -80,10 +83,12 @@ export async function loadDateTasks(team: TeamMember[], today: string, personId?
     reminders, team, today,
   );
   if (!computed.length) return [];
+  const mailOf = new Map(dates.map((d) => [d.personId, { name: d.person.mailingName || d.person.name, address: d.person.address }]));
   const saved = new Set((await db.task.findMany({ where: { sourceKey: { in: computed.map((c) => c.key) } }, select: { sourceKey: true } })).map((t) => t.sourceKey));
   return computed.filter((c) => !saved.has(c.key)).map((c) => ({
     id: c.key, virtual: true, title: c.title, notes: "", kind: c.kind, due: c.due, time: null, repeat: null, priority: 0, subtasks: [],
     listId: null, personId: c.personId, personName: c.personName, assigneeId: c.assigneeId, sourceKey: c.key, cat: "dates", done: false, fileId: null, paId: null, step: null,
+    mailTo: mailOf.get(c.personId) ?? null,
   }));
 }
 

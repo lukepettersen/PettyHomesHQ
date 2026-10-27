@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { TaskRow, TeamMember } from "@/server/tasks";
 import { diffDays, dueLabel, repeatLabel } from "@/lib/tasks";
 
@@ -43,6 +43,7 @@ export function TaskLine({ task, today, team, selected, showPerson = true, compa
           {task.repeat && <span>↻</span>}
           {subs > 0 && <span>☐ {task.subtasks.filter((s) => s.done).length}/{subs}</span>}
         </span>
+        {task.mailTo && <MailTo to={task.mailTo} />}
       </div>
       <Avatar member={team.find((m) => m.id === task.assigneeId)} />
     </div>
@@ -61,12 +62,30 @@ export function TaskLine({ task, today, team, selected, showPerson = true, compa
           {task.cat === "dates" && <span className="rounded bg-sunken px-1.5">From Important Dates</span>}
           {task.step && <span className="rounded bg-sunken px-1.5">{task.step.source}</span>}
         </span>
+        {task.mailTo && <MailTo to={task.mailTo} />}
       </div>
       <span className="col-start-2 flex items-center gap-2 sm:col-start-3">
         <span className={`whitespace-nowrap text-[12.5px] ${late ? "font-medium text-bad" : "muted"}`}>{dueLabel(task.due, task.time, today)}</span>
         <Avatar member={team.find((m) => m.id === task.assigneeId)} />
       </span>
     </div>
+  );
+}
+
+/** Birthday / homeiversary card: the mailing name and address right on the task, with Copy (owner request 2026-10-27). */
+function MailTo({ to }: { to: { name: string; address: string | null } }) {
+  const [copied, setCopied] = useState(false);
+  if (!to.address) return <span className="text-xs muted">No mailing address yet</span>;
+  const [street, ...rest] = to.address.split(",");
+  const copy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try { await navigator.clipboard.writeText(`${to.name}\n${street.trim()}\n${rest.join(",").trim()}`); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* clipboard blocked */ }
+  };
+  return (
+    <span className="flex flex-wrap items-center gap-x-2 text-xs text-charcoal">
+      <span>✉ {to.name} · {to.address}</span>
+      <button type="button" className="font-semibold text-accent hover:underline" onClick={copy}>{copied ? "Copied" : "Copy"}</button>
+    </span>
   );
 }
 
