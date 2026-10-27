@@ -74,7 +74,8 @@ export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: ()
         setProgress((p) => (p ? { ...p, waiting: false } : p));
         continue;
       }
-      await new Promise((ok) => setTimeout(ok, 6000)); // about 50 a minute, under Gmail's per-minute limit
+      // About 50 a minute, under Gmail's per-minute limit; no pause when everyone in the group was skipped.
+      if (r.data!.sent || r.data!.failed.length) await new Promise((ok) => setTimeout(ok, 6000));
     }
     setProgress({ ...state, finished: true });
     router.refresh();
