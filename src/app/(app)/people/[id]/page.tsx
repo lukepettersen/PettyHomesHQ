@@ -101,7 +101,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
     ...(composer.ownerCell && !textPhones.some((x) => x.normalized === composer.ownerCell!.value) ? [composer.ownerCell] : []),
   ] : [];
   const textProps = { ...composer, phones: textPhones.map((x) => x.normalized), autoExtras };
-  const emailProps = { emails: p.emails.map((e) => e.address), sendsFrom: gmail?.email ?? null, ownGmail: !!gmail?.id.startsWith("gmail:"), canConnect: googleKeysSet(), templates: emailTemplates.map((t) => ({ id: t.id, name: t.folder ? `${t.folder} · ${t.name}` : t.name })) };
+  const emailProps = { emails: p.emails.map((e) => e.address), sendsFrom: gmail?.email ?? null, ownGmail: !!gmail && (gmail.id.startsWith("gmail:") || gmail.userId === user.id || gmail.email.toLowerCase() === user.email?.toLowerCase()), canConnect: googleKeysSet(), templates: emailTemplates.map((t) => ({ id: t.id, name: t.folder ? `${t.folder} · ${t.name}` : t.name })) };
   // A partner (lender, title, other agent) sees the deals they were picked for.
   const partnerDeals = await db.paPartner.findMany({ where: { personId: p.id, pa: { deletedAt: null, file: { deletedAt: null } } }, include: { pa: { include: { file: { include: { person: { select: { id: true, name: true } } } } } } }, orderBy: { pa: { createdAt: "desc" } } });
   const docs = await db.document.findMany({ where: { personId: id, deletedAt: null }, orderBy: { createdAt: "desc" } });
