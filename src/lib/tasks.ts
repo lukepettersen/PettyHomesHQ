@@ -174,6 +174,19 @@ export function importantDateTasks(dates: DateInput[], reminders: ReminderInput[
   return out;
 }
 
+/**
+ * Who a birthday card goes to: just the birthday person, with their last name (owner request 2026-10-27).
+ * "Sam & Lena Ortiz" + "Lena" → "Lena Ortiz"; "Sam Ortiz & Lena Brooks" + "Lena" → "Lena Brooks"; a child "Mia" → "Mia Ortiz".
+ */
+export function birthdayName(personName: string, whose: string): string {
+  const parts = splitCouple(personName).map((p) => p.trim().split(/\s+/)).filter((p) => p[0]);
+  const w = whose.trim();
+  const last = parts.find((p) => p.length > 1)?.at(-1) ?? "";
+  const mine = w ? parts.find((p) => p[0].toLowerCase() === w.toLowerCase()) : parts[0];
+  if (mine) return mine.length > 1 ? mine.join(" ") : [mine[0], last].filter(Boolean).join(" ");
+  return [w, last].filter(Boolean).join(" ");
+}
+
 export type Subtask = { title: string; done: boolean };
 export function parseSubtasks(v: unknown): Subtask[] {
   if (!Array.isArray(v)) return [];

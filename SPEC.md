@@ -449,7 +449,8 @@ Principles:
   in the list you came from, in the order shown *(owner request 2026-10-20)*.
   - Built-in: **Clients** (grouped by client, click name to open), **Due for a touch**
     (people past their follow-up frequency **since their last text**; texts are the touch, owner decision 2026-10-14 — calls and emails don't restart it; the card shows "Last text …"; **Log text** records a text on their timeline and restarts the clock, as do logging a text on the timeline, checking off a text task (incl. "Text Happy Birthday"; it's logged on the timeline as a text, not "Task done"), the bulk action **Mark texted**, and the last text date pulled from Follow Up Boss; **Spread out** *(owner request 2026-10-15)*: "Show 5 a day" gives everyone due right now a day to appear — the first 5 today, the next 5 the next weekday, and so on — without faking texts, so timelines and "Last text" stay true; anyone not texted stays on the list; **Undo spread out (N waiting)** puts everyone back right away; **weekdays only** *(owner request 2026-10-24)*: the list shows Monday to Friday and is empty on Saturday and Sunday; spreading skips weekends (started on a weekend, the first batch is Monday), and clicking Spread out again re-spreads everyone due, including people already waiting), **Important dates** (each birthday/homeiversary task shows the
-    mailing name and mailing address with **Copy**, for writing the card without opening their page; owner request 2026-10-27), **Recurring**,
+    name and mailing address with **Copy**, for writing the card without opening their page; a birthday is addressed to just the
+    birthday person with their last name ("Lena Ortiz"), a homeiversary to the mailing name; owner request 2026-10-27), **Recurring**,
     **Misc** (any task with no client).
   - User lists: create, rename, delete (tasks are kept).
   - **Edit columns / Edit:** reorder every list, untick "On Today" to hide one from Today,

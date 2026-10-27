@@ -3,7 +3,7 @@ import { db } from "@/server/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { isDueForTouch } from "@/lib/filters";
 import { initials, isoFromDate, todayCentral } from "@/lib/normalize";
-import { categoryOf, importantDateTasks, isWeekend, parseSubtasks, type Subtask } from "@/lib/tasks";
+import { birthdayName, categoryOf, importantDateTasks, isWeekend, parseSubtasks, type Subtask } from "@/lib/tasks";
 import { CONTRACT_ANCHORS, timingLabel, type Anchor } from "@/lib/templates";
 
 export type TaskRow = {
@@ -36,7 +36,7 @@ export type ListRow = { id: string; name: string; builtin: string | null; showOn
 export type TouchRow = { personId: string; name: string; followUpDays: number; lastContact: string | null; assigneeId: string | null };
 export type TeamMember = { id: string; name: string; initials: string; isOwner: boolean };
 
-const taskInclude = { person: { select: { name: true, mailingName: true, address: true } }, file: { select: { kind: true } }, pa: { select: { side: true } } } as const;
+const taskInclude = { person: { select: { name: true } }, file: { select: { kind: true } }, pa: { select: { side: true } } } as const;
 type DbTask = Prisma.TaskGetPayload<{ include: typeof taskInclude }>;
 
 /** Steps from a closed or deleted file, or an ended contract, no longer show as open tasks. */
@@ -54,7 +54,6 @@ export function toRow(t: DbTask): TaskRow {
     subtasks: parseSubtasks(t.subtasks), listId: t.listId, personId: t.personId, personName: t.person?.name ?? null,
     assigneeId: t.assigneeId, sourceKey: t.sourceKey, cat: categoryOf(t), done: !!t.completedAt,
     fileId: t.fileId, paId: t.paId, step: stepOf(t),
-    mailTo: categoryOf(t) === "dates" && t.person ? { name: t.person.mailingName || t.person.name, address: t.person.address } : null,
   };
 }
 
@@ -75,7 +74,7 @@ export async function loadTeam(): Promise<TeamMember[]> {
 /** Important dates tasks for everyone not in Trash, minus the ones already saved (checked off, edited or deleted). */
 export async function loadDateTasks(team: TeamMember[], today: string, personId?: string): Promise<TaskRow[]> {
   const [dates, reminders] = await Promise.all([
-    db.importantDate.findMany({ where: { person: { deletedAt: null, ...(personId ? { id: personId } : {}) } }, include: { person: { select: { name: true, mailingName: true, address: true, assignedToId: true, stage: { select: { name: true } } } } } }),
+    db.importantDate.findMany({ where: { person: { deletedAt: null, ...(personId ? { id: personId } : {}) } }, include: { person: { select: { name: true, assignedToId: true, stage: { select: { name: true } } } } } }),
     db.dateReminder.findMany({ orderBy: { position: "asc" } }),
   ]);
   const computed = importantDateTasks(
@@ -83,13 +82,32 @@ export async function loadDateTasks(team: TeamMember[], today: string, personId?
     reminders, team, today,
   );
   if (!computed.length) return [];
-  const mailOf = new Map(dates.map((d) => [d.personId, { name: d.person.mailingName || d.person.name, address: d.person.address }]));
   const saved = new Set((await db.task.findMany({ where: { sourceKey: { in: computed.map((c) => c.key) } }, select: { sourceKey: true } })).map((t) => t.sourceKey));
   return computed.filter((c) => !saved.has(c.key)).map((c) => ({
     id: c.key, virtual: true, title: c.title, notes: "", kind: c.kind, due: c.due, time: null, repeat: null, priority: 0, subtasks: [],
     listId: null, personId: c.personId, personName: c.personName, assigneeId: c.assigneeId, sourceKey: c.key, cat: "dates", done: false, fileId: null, paId: null, step: null,
-    mailTo: mailOf.get(c.personId) ?? null,
   }));
+}
+
+/**
+ * Important dates tasks get who to address the card to (owner request 2026-10-27): a birthday goes to just the
+ * birthday person; a homeiversary to the household's mailing name. Both use the mailing address.
+ */
+async function withMailTo(rows: TaskRow[]): Promise<TaskRow[]> {
+  const dated = rows.filter((r) => r.cat === "dates" && r.personId);
+  if (!dated.length) return rows;
+  const dateId = (r: TaskRow) => /^date:([^:]+):/.exec(r.sourceKey ?? "")?.[1] ?? null;
+  const [people, dates] = await Promise.all([
+    db.person.findMany({ where: { id: { in: [...new Set(dated.map((r) => r.personId!))] } }, select: { id: true, name: true, mailingName: true, address: true } }),
+    db.importantDate.findMany({ where: { id: { in: dated.map(dateId).filter((x): x is string => !!x) } }, select: { id: true, kind: true, whose: true } }),
+  ]);
+  const person = new Map(people.map((p) => [p.id, p])), date = new Map(dates.map((d) => [d.id, d]));
+  return rows.map((r) => {
+    const p = r.cat === "dates" && r.personId ? person.get(r.personId) : undefined;
+    if (!p) return r;
+    const d = date.get(dateId(r) ?? "");
+    return { ...r, mailTo: { name: d?.kind === "birthday" ? birthdayName(p.name, d.whose) : p.mailingName || p.name, address: p.address } };
+  });
 }
 
 export async function loadTaskBoard() {
@@ -114,7 +132,7 @@ export async function loadTaskBoard() {
   return {
     today, team, touches, waiting, spreadable, weekend,
     lists: lists.map((l): ListRow => ({ id: l.id, name: l.name, builtin: l.builtin, showOnToday: l.showOnToday })),
-    tasks: [...tasks.map(toRow), ...dateTasks],
+    tasks: await withMailTo([...tasks.map(toRow), ...dateTasks]),
   };
 }
 
@@ -133,6 +151,6 @@ export async function loadPersonTasks(personId: string) {
     db.task.findMany({ where: { personId, completedAt: null, deletedAt: null, ...LIVE_STEPS }, include: taskInclude }),
     loadDateTasks(team, today, personId),
   ]);
-  const rows = [...tasks.map(toRow), ...dateTasks].sort((a, b) => (a.due ?? "9999").localeCompare(b.due ?? "9999") || (a.time ?? "99").localeCompare(b.time ?? "99") || a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
+  const rows = (await withMailTo([...tasks.map(toRow), ...dateTasks])).sort((a, b) => (a.due ?? "9999").localeCompare(b.due ?? "9999") || (a.time ?? "99").localeCompare(b.time ?? "99") || a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
   return { today, team, rows };
 }

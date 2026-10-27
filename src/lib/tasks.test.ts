@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checklistOrder, categoryOf, dueLabel, formatTime, importantDateTasks, nextDue, parseQuickAdd, parseTime, stripPersonWord, titleCase } from "./tasks";
+import { birthdayName, checklistOrder, categoryOf, dueLabel, formatTime, importantDateTasks, nextDue, parseQuickAdd, parseTime, stripPersonWord, titleCase } from "./tasks";
 
 const TODAY = "2026-10-13"; // a Tuesday
 
@@ -118,5 +118,15 @@ describe("deal checklist order (owner request 2026-10-26)", () => {
     ]);
     expect(out.map((s) => s.phase)).toEqual(["Inspection", "Closing", "Later", "Done one"]);
     expect(out[0].items.map((x) => x.due)).toEqual(["2026-10-26", "2026-11-03", "2026-10-20"]);
+  });
+});
+
+describe("birthday card name (owner request 2026-10-27)", () => {
+  it("addresses just the birthday person with their last name", () => {
+    expect(birthdayName("Sam & Lena Ortiz", "Lena")).toBe("Lena Ortiz");
+    expect(birthdayName("Sam Ortiz & Lena Brooks", "Lena")).toBe("Lena Brooks");
+    expect(birthdayName("Sam & Lena Ortiz", "Mia")).toBe("Mia Ortiz");
+    expect(birthdayName("Caitlin & Luke Pettersen", "")).toBe("Caitlin Pettersen");
+    expect(birthdayName("Jane Smith", "Jane")).toBe("Jane Smith");
   });
 });
