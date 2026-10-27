@@ -35,6 +35,7 @@ export function CallCenter() {
 
   useEffect(() => {
     let stopped = false;
+    const cleanup: (() => void)[] = [];
     const report = (state: "ready" | "error", message?: string) =>
       fetch("/api/voice/status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state, message: message?.slice(0, 200) }) }).catch(() => null);
     const token = async () => {
@@ -59,13 +60,27 @@ export function CallCenter() {
       // Problems show here and in Admin → Integrations → troubleshooting, so a call that never rings HQ can be explained.
       let told = false;
       d.on("registered", () => { if (!told) { told = true; report("ready"); } });
+      // Reconnect on its own after a drop (laptop asleep, Wi-Fi blip, error 31005), when the internet comes back and
+      // when HQ is looked at again, so calls keep ringing here (owner 2026-10-27).
+      const revive = () => {
+        if (stopped || d.isBusy || d.state === "registered" || d.state === "registering") return;
+        told = false;
+        void d.register().catch(() => null);
+      };
+      d.on("unregistered", () => setTimeout(revive, 5000));
+      const onVisible = () => { if (document.visibilityState === "visible") revive(); };
+      window.addEventListener("online", revive);
+      document.addEventListener("visibilitychange", onVisible);
+      const every = setInterval(revive, 60000);
+      cleanup.push(() => { window.removeEventListener("online", revive); document.removeEventListener("visibilitychange", onVisible); clearInterval(every); });
       // Twilio retries on its own, so the same problem can repeat: report each kind once per page load.
       const seen = new Set<string>();
       d.on("error", (e: { message?: string; code?: number }) => {
         const msg = `${e?.message ?? "unknown"}${e?.code ? ` (${e.code})` : ""}`;
         console.error("HQ calling:", msg);
+        setTimeout(revive, 5000);
         if (seen.has(msg)) return;
-        seen.add(msg); report("error", msg); setNote(`HQ phone problem: ${msg}`);
+        seen.add(msg); report("error", msg); setNote(`HQ phone problem: ${msg}. Reconnecting…`);
       });
       await d.register().catch(() => null);
       window.hqCall = async (number: string, name?: string) => {
@@ -76,7 +91,7 @@ export function CallCenter() {
         catch { setNote("Couldn't start the call. Check that HQ may use your microphone."); }
       };
     })();
-    return () => { stopped = true; delete window.hqCall; device.current?.destroy(); device.current = null; };
+    return () => { stopped = true; cleanup.forEach((f) => f()); delete window.hqCall; device.current?.destroy(); device.current = null; };
   }, [watch]);
 
   useEffect(() => { if (live?.state !== "live") return; const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, [live?.state]);

@@ -2,6 +2,7 @@ import { forbidden, twilioForm, xml } from "@/server/twilioWebhook";
 import { recordOutboundCall } from "@/server/texting";
 import { EMPTY_TWIML } from "@/lib/texting";
 import { userFromIdentity } from "@/lib/voiceToken";
+import { noteInbound } from "@/server/textDebug";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export async function POST(req: Request) {
   const f = await twilioForm(req, "/api/twilio/outbound/done");
   if (!f) return forbidden();
   const id = userFromIdentity(f.From);
+  await noteInbound({ via: "call", from: f.To, call: `call from HQ: ${f.DialCallStatus ?? "?"}${f.DialCallDuration ? ` after ${f.DialCallDuration}s` : ""}${f.ErrorCode ? ` · error ${f.ErrorCode}` : ""}` });
   if (id && f.CallSid && f.To) {
     await recordOutboundCall({ userId: id, to: f.To, sid: f.CallSid, seconds: Number(f.DialCallDuration ?? 0), answered: f.DialCallStatus === "completed", recordingSid: f.RecordingSid || null });
   }
