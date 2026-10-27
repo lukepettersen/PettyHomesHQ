@@ -41,7 +41,7 @@ describe("expanding a template", () => {
 
 describe("labels and checks", () => {
   it("labels timing and triggers", () => {
-    expect(timingLabel({ anchor: "inspection", days: 2, dir: "before" })).toBe("Inspection − 2 days");
+    expect(timingLabel({ anchor: "inspection", days: 2, dir: "before" })).toBe("Inspection deadline − 2 days");
     expect(timingLabel({ anchor: "closing", days: 0, dir: "on" })).toBe("Closing day of");
     expect(triggerLabel("status:s1", [{ id: "s1", kind: "buyer", name: "Rep signed" }])).toBe("When a buyer moves to Rep signed");
     expect(triggerLabel(null, [])).toBe("Apply by hand");
@@ -67,5 +67,13 @@ describe("minutes before", () => {
     const step = { id: "x", name: "Reminder", assignee: "", type: "task" as const, days: 0, dir: "minutesBefore" as const, minutes: 15, anchor: "closing" as const, cond: "always" as const };
     expect(templateProblem({ id: "t", name: "T", trigger: null, phases: [{ id: "p", name: "P", steps: [step] }] })).toMatch(/Phone call or Consult/);
     expect(templateProblem({ id: "t", name: "T", trigger: null, phases: [{ id: "p", name: "P", steps: [{ ...step, anchor: "phoneCall" }] }] })).toBeNull();
+  });
+});
+
+describe("inspection appointment anchor (owner request 2026-10-27)", () => {
+  it("dates a step 3 days before the appointment, not the deadline", () => {
+    const step = { days: 3, dir: "before" as const, anchor: "inspAppt" as const };
+    expect(dueFor(step, { inspAppt: "2026-10-30", inspection: "2026-11-06" })).toBe("2026-10-27");
+    expect(dueFor(step, { inspection: "2026-11-06" })).toBeNull();
   });
 });

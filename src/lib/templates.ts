@@ -1,7 +1,7 @@
 // Task templates and automations (SPEC.md §8). Pure, unit tested in templates.test.ts.
 
 export type StepType = "task" | "call" | "text" | "email" | "tags" | "stage";
-export type Anchor = "start" | "phoneCall" | "consult" | "finalAcceptance" | "inspection" | "writtenStatement" | "hoaRescission" | "closing";
+export type Anchor = "start" | "phoneCall" | "consult" | "finalAcceptance" | "inspAppt" | "inspection" | "writtenStatement" | "hoaRescission" | "closing";
 export type Cond = "always" | "hoa" | "pre1978" | "newc" | "ws" | "defect" | "nodefect" | "fhava" | "condo";
 export type Step = {
   id: string; name: string; assignee: string; // team member first name; "" = the person's assignee
@@ -16,10 +16,11 @@ export type Step = {
 export type Phase = { id: string; name: string; steps: Step[] };
 export type Template = { id: string; name: string; trigger: string | null; folder?: string; phases: Phase[] };
 
-export const ANCHORS: [Anchor, string][] = [["start", "Start date"], ["phoneCall", "Phone call"], ["consult", "Consult"], ["finalAcceptance", "Final Acceptance"], ["inspection", "Inspection"], ["writtenStatement", "Written Statement"], ["hoaRescission", "HOA Rescission"], ["closing", "Closing"]];
+export const ANCHORS: [Anchor, string][] = [["start", "Start date"], ["phoneCall", "Phone call"], ["consult", "Consult"], ["finalAcceptance", "Final Acceptance"], ["inspAppt", "Inspection appointment"], ["inspection", "Inspection deadline"], ["writtenStatement", "Written Statement"], ["hoaRescission", "HOA Rescission"], ["closing", "Closing"]];
 export const CONDS: [Cond, string][] = [["always", "Always"], ["hoa", "HOA property"], ["pre1978", "Built before 1978"], ["newc", "New construction"], ["ws", "Written statement included"], ["defect", "YES material defect clause"], ["nodefect", "NO material defect clause"], ["fhava", "FHA / VA loan"], ["condo", "Condo / townhome"]];
 export const STEP_TYPES: [StepType, string][] = [["task", "Task"], ["call", "Call"], ["email", "Email"], ["text", "Text"], ["tags", "Add/remove tags"], ["stage", "Change stage"]];
-export const CONTRACT_ANCHORS: Anchor[] = ["finalAcceptance", "inspection", "writtenStatement", "hoaRescission", "closing"];
+// inspAppt: the purchase agreement's "Inspection appointment" date (owner request 2026-10-27); inspection is the deadline.
+export const CONTRACT_ANCHORS: Anchor[] = ["finalAcceptance", "inspAppt", "inspection", "writtenStatement", "hoaRescission", "closing"];
 export const anchorLabel = (a: string) => ANCHORS.find(([k]) => k === a)?.[1] ?? a;
 
 /** Triggers: "status:<id>", "pa:buyer", "pa:seller", "closed:buyer", "closed:seller", "phonecall", "buyerconsult", "sellerconsult", "anyconsult" (either), or none. */

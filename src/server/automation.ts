@@ -89,7 +89,7 @@ export async function redateContract(tx: Tx, paId: string) {
   const open = await tx.task.findMany({ where: { paId, completedAt: null, deletedAt: null, anchor: { in: CONTRACT_ANCHORS } } });
   let moved = 0;
   for (const t of open) {
-    const base = pa[t.anchor as keyof typeof pa] as Date | null;
+    const base = t.anchor === "inspAppt" ? apptDate(pa.answers) : (pa[t.anchor as keyof typeof pa] as Date | null);
     const due = base ? new Date(base.getTime() + (t.offsetDays ?? 0) * 86400000) : null;
     if ((due?.getTime() ?? null) !== (t.dueDate?.getTime() ?? null)) { await tx.task.update({ where: { id: t.id }, data: { dueDate: due } }); moved++; }
   }
@@ -108,10 +108,17 @@ export const factsOf = (info: unknown, writtenStatementNA?: boolean): Facts => {
   return { hoa: o.hoa, year: o.year, newc: o.newc, fin: o.fin, ptype: o.ptype, defect: o.defect, ...(writtenStatementNA === undefined ? {} : { ws: writtenStatementNA ? "No" : "Yes" }) };
 };
 
+/** The inspection appointment's day, from the contract's answers ("2026-10-30T09:00"). */
+export function apptIso(answers: unknown): string | null {
+  const v = answers && typeof answers === "object" ? (answers as Record<string, unknown>).inspAppt : null;
+  return typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : null;
+}
+const apptDate = (answers: unknown) => { const iso = apptIso(answers); return iso ? new Date(`${iso}T00:00:00.000Z`) : null; };
+
 /** Contract dates as anchors for templates. */
-export function contractAnchors(pa: { finalAcceptance: Date | null; inspection: Date | null; writtenStatement: Date | null; hoaRescission: Date | null; closing: Date | null }) {
+export function contractAnchors(pa: { finalAcceptance: Date | null; inspection: Date | null; writtenStatement: Date | null; hoaRescission: Date | null; closing: Date | null; answers?: unknown }) {
   const d = (x: Date | null) => (x ? isoFromDate(x) : null);
-  return { finalAcceptance: d(pa.finalAcceptance), inspection: d(pa.inspection), writtenStatement: d(pa.writtenStatement), hoaRescission: d(pa.hoaRescission), closing: d(pa.closing) };
+  return { finalAcceptance: d(pa.finalAcceptance), inspAppt: apptIso(pa.answers), inspection: d(pa.inspection), writtenStatement: d(pa.writtenStatement), hoaRescission: d(pa.hoaRescission), closing: d(pa.closing) };
 }
 
 /** Moves a file to a status and starts that status's templates (once per file). */

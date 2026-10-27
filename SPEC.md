@@ -376,7 +376,8 @@ Principles:
   date), assignee, type (Task, Call, Text, Email), linked text/email template, condition,
   and optional "moves deal to {status}".
 - **Anchor dates:** Start date, Phone call, Consult (the booked buyer/seller consultation, else
-  the file's consult date), Final Acceptance, Inspection, Written Statement, HOA Rescission,
+  the file's consult date), Final Acceptance, Inspection appointment (the purchase agreement's appointment date; owner
+  request 2026-10-27), Inspection deadline, Written Statement, HOA Rescission,
   Closing. Steps can also be due **5, 10, 15, 30 or 60 minutes before or after** the phone call
   or consult; they move with it. Steps timed from a date that isn't set yet **wait for it**; when
   the date is set or changes, the step's due date updates.

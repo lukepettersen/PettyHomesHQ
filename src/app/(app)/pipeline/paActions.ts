@@ -10,7 +10,7 @@ import { loadForm } from "@/server/pa";
 import { savePaPartners } from "@/server/partners";
 import { syncContract } from "@/server/google";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
-import { closeStepsForWaived, contractAnchors, factsOf, redateContract, runTrigger } from "@/server/automation";
+import { apptIso, closeStepsForWaived, contractAnchors, factsOf, redateContract, runTrigger } from "@/server/automation";
 import { cleanPaAnswers, formProblem, KEY_DATES, type DateKey, type DateStatus, type PaSection } from "@/lib/pa";
 
 const id = z.string().trim().min(1).max(40);
@@ -56,7 +56,7 @@ export async function addPurchaseAgreement(input: z.input<typeof addSchema>) {
       },
      });
      const n = await runTrigger(tx, `pa:${v.side}`, {
-       personId: file.personId, fileId: file.id, paId: created.id, start: c.dates.finalAcceptance ?? today, dates: c.dates, facts: factsOf(c.answers, c.writtenStatementNA),
+       personId: file.personId, fileId: file.id, paId: created.id, start: c.dates.finalAcceptance ?? today, dates: { ...c.dates, inspAppt: apptIso(c.answers) }, facts: factsOf(c.answers, c.writtenStatementNA),
      }, user.id);
      return { ...created, n };
     });
