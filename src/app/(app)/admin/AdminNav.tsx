@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-type Can = { settings: boolean; templates: boolean; trash: boolean; messages: boolean };
-const NEEDS: Record<string, keyof Can> = { "/admin/templates": "templates", "/admin/trash": "trash", "/admin/messages": "messages" };
+type Can = { settings: boolean; templates: boolean; trash: boolean; messages: boolean; owner: boolean };
+const NEEDS: Record<string, keyof Can> = { "/admin/templates": "templates", "/admin/trash": "trash", "/admin/messages": "messages", "/admin/activity": "owner" };
 
 const SECTIONS: [string, [string, string | null][]][] = [
-  ["Team", [["Users & roles", "/admin/users"], ["Trash", "/admin/trash"]]],
+  ["Team", [["Users & roles", "/admin/users"], ["Activity", "/admin/activity"], ["Trash", "/admin/trash"]]],
   ["Data", [["Import from Follow Up Boss", "/admin/import"]]],
   ["People", [["Stages, sources & follow-up", "/admin/lists"], ["Tags", "/admin/tags"], ["Date reminders", "/admin/reminders"], ["Custom fields", "/admin/fields"]]],
   ["Deals", [["Client statuses", "/admin/statuses"], ["Buyer and seller forms", "/admin/file-forms"], ["Purchase agreement forms", "/admin/forms"], ["Task templates", "/admin/templates"]]],

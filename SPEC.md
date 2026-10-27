@@ -69,7 +69,9 @@ Principles:
   variables. Never in code, never in chat, never in the repo.
 - Every write is checked against the user's role on the server.
 - **Activity log:** who created, changed or deleted what, when (people, files, PAs, tasks,
-  settings).
+  settings) **Admin → Activity** *(owner request 2026-10-27; owner only)* shows it a day at a time, for everyone
+  or one person (Earlier day / Later day), with a count by kind (contacts, tasks, emails, texts…) and links to the
+  contact or task. Message text is never in it.
 - **Trash:** deleting a person, file or contract moves it to Trash for 30 days, restorable by
   an Admin; then permanently removed.
 - **Backups:** nightly database backup kept 30 days, plus a nightly export to the owner's
