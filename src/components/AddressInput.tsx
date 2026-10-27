@@ -11,6 +11,7 @@ export function AddressInput({ value, onChange, placeholder = "Street, city", la
   const [hits, setHits] = useState<{ id: string; text: string }[]>([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  const [problem, setProblem] = useState("");
   const [typed, setTyped] = useState(false); // only look up what the person typed, not what was loaded or picked
   const session = useRef("");
   useEffect(() => {
@@ -19,7 +20,7 @@ export function AddressInput({ value, onChange, placeholder = "Street, city", la
     const ctrl = new AbortController();
     const t = setTimeout(() => {
       fetch(`/api/address?q=${encodeURIComponent(value)}&s=${session.current}`, { signal: ctrl.signal }).then((r) => r.json())
-        .then((d) => { setHits(d.results ?? []); setOpen((d.results ?? []).length > 0); setActive(0); }).catch(() => {});
+        .then((d) => { setHits(d.results ?? []); setOpen((d.results ?? []).length > 0); setActive(0); setProblem(d.problem ?? ""); }).catch(() => {});
     }, 250);
     return () => { clearTimeout(t); ctrl.abort(); };
   }, [value, typed]);
@@ -40,6 +41,7 @@ export function AddressInput({ value, onChange, placeholder = "Street, city", la
           else if (e.key === "Enter") { e.preventDefault(); void pick(hits[active]); }
           else if (e.key === "Escape") setOpen(false);
         }} />
+      {problem && <p role="status" className="mt-1 text-xs text-bad">Address lookup: {problem}</p>}
       {open && (
         <ul id={listId} role="listbox" className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-lg border border-misty bg-white py-1 shadow-xl">
           {hits.map((h, i) => (

@@ -10,6 +10,6 @@ export async function GET(req: Request) {
   if (!session?.user?.id) return Response.json({ error: "Sign in first" }, { status: 401 });
   const u = new URL(req.url);
   if (!placesOn()) return Response.json({ off: true, results: [] });
-  const results = await suggestAddresses((u.searchParams.get("q") ?? "").slice(0, 200), (u.searchParams.get("s") ?? "").slice(0, 60));
-  return Response.json({ results }, { headers: { "Cache-Control": "no-store" } });
+  const r = await suggestAddresses((u.searchParams.get("q") ?? "").slice(0, 200), (u.searchParams.get("s") ?? "").slice(0, 60));
+  return Response.json(r, { headers: { "Cache-Control": "no-store" } });
 }
