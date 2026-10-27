@@ -195,7 +195,7 @@ function NewMessage({ onPick, groupsOn, blocked }: { onPick: (key: string) => vo
       {q.trim().length >= 2 && (hits.length ? hits.map((h) => (
         <div key={h.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 py-1 text-sm">
           <b>{h.name}</b>
-          {h.phones.length ? h.phones.map((n) => <button key={n} type="button" className="rounded-full border border-misty bg-white px-2 py-0.5 text-xs font-semibold hover:border-accent" onClick={() => pick(n, h.name)}>{formatPhone(n)}</button>)
+          {h.phones.length ? h.phones.map((n) => <button key={n} type="button" className="rounded-full border border-misty bg-white px-2 py-1 text-sm font-semibold hover:border-accent" onMouseDown={(e) => e.preventDefault()} onClick={() => pick(n, h.name)}>{formatPhone(n)}</button>)
             : <span className="text-xs muted">No phone number on file</span>}
         </div>
       )) : <p className="px-1 text-sm muted">No contacts match.</p>)}

@@ -59,9 +59,13 @@ export function CallCenter() {
       // Problems show here and in Admin → Integrations → troubleshooting, so a call that never rings HQ can be explained.
       let told = false;
       d.on("registered", () => { if (!told) { told = true; report("ready"); } });
+      // Twilio retries on its own, so the same problem can repeat: report each kind once per page load.
+      const seen = new Set<string>();
       d.on("error", (e: { message?: string; code?: number }) => {
         const msg = `${e?.message ?? "unknown"}${e?.code ? ` (${e.code})` : ""}`;
-        console.error("HQ calling:", msg); report("error", msg); setNote(`HQ phone problem: ${msg}`);
+        console.error("HQ calling:", msg);
+        if (seen.has(msg)) return;
+        seen.add(msg); report("error", msg); setNote(`HQ phone problem: ${msg}`);
       });
       await d.register().catch(() => null);
       window.hqCall = async (number: string, name?: string) => {

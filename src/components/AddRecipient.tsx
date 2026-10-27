@@ -28,13 +28,13 @@ export function AddRecipient({ mode, onAdd, exclude = [] }: { mode: "email" | "p
           onKeyDown={(e) => { if (e.key === "Enter" && typed) { e.preventDefault(); add({ value: typed, label: mode === "phone" ? formatPhone(typed) : typed, personId: null }); } if (e.key === "Escape") setOpen(false); }} />
         <button type="button" className="btn" onClick={() => setOpen(false)}>Cancel</button>
       </span>
-      {typed && !exclude.includes(typed) && <button type="button" className="self-start rounded-md px-2 py-1 text-left text-sm hover:bg-sunken" onClick={() => add({ value: typed, label: mode === "phone" ? formatPhone(typed) : typed, personId: null })}>Add <b>{mode === "phone" ? formatPhone(typed) : typed}</b></button>}
+      {typed && !exclude.includes(typed) && <button type="button" className="self-start rounded-md px-2 py-1 text-left text-sm hover:bg-sunken" onMouseDown={(e) => e.preventDefault()} onClick={() => add({ value: typed, label: mode === "phone" ? formatPhone(typed) : typed, personId: null })}>Add <b>{mode === "phone" ? formatPhone(typed) : typed}</b></button>}
       {q.trim().length >= 2 && hits.map((h) => {
         const opts = (mode === "email" ? h.emails.map((e) => e.toLowerCase()) : h.phones).filter((o) => !exclude.includes(o));
         return (
           <div key={h.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 py-0.5 text-sm">
             <b>{h.name}</b>
-            {opts.length ? opts.map((o) => <button key={o} type="button" className="rounded-full border border-misty bg-white px-2 py-0.5 text-xs font-semibold hover:border-accent" onClick={() => add({ value: o, label: `${h.name} · ${mode === "phone" ? formatPhone(o) : o}`, personId: h.id })}>{mode === "phone" ? formatPhone(o) : o}</button>)
+            {opts.length ? opts.map((o) => <button key={o} type="button" className="rounded-full border border-misty bg-white px-2 py-0.5 text-xs font-semibold hover:border-accent" onMouseDown={(e) => e.preventDefault()} onClick={() => add({ value: o, label: `${h.name} · ${mode === "phone" ? formatPhone(o) : o}`, personId: h.id })}>{mode === "phone" ? formatPhone(o) : o}</button>)
               : <span className="text-xs muted">No {mode === "email" ? "email" : "phone number"} on file</span>}
           </div>
         );
