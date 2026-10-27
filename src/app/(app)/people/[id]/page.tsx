@@ -7,7 +7,7 @@ import { loadOptions } from "@/server/people";
 import { loadChecklists, loadPersonTasks } from "@/server/tasks";
 import { loadTemplates } from "@/server/automation";
 import { loadPersonAppointments } from "@/server/appointments";
-import { calendarConnection, emailConnection } from "@/server/google";
+import { calendarConnection, emailConnection, googleKeysSet } from "@/server/google";
 import { loadFileForm, loadPersonFiles, loadStatuses } from "@/server/files";
 import { loadForm, loadPersonContracts } from "@/server/pa";
 import { daysAgo, isoFromDate } from "@/lib/normalize";
@@ -83,7 +83,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
   if (!p) notFound();
   const [appts, buyerFileForm, listingFileForm, taskLists, emailTemplates, gmail] = await Promise.all([loadPersonAppointments(id, p.name), loadFileForm("buyer"), loadFileForm("listing"),
     db.taskList.findMany({ where: { builtin: null }, orderBy: { position: "asc" } }),
-    db.messageTemplate.findMany({ where: { kind: "email" }, orderBy: [{ folder: "asc" }, { name: "asc" }], select: { id: true, name: true, folder: true } }), emailConnection()]);
+    db.messageTemplate.findMany({ where: { kind: "email" }, orderBy: [{ folder: "asc" }, { name: "asc" }], select: { id: true, name: true, folder: true } }), emailConnection(user.id)]);
   const fileForms = { buyer: buyerFileForm, listing: listingFileForm };
   // Offers submitted from HQ (Submit offer), newest first, with what they fill in on the purchase agreement.
   const offers = (await db.offer.findMany({ where: { personId: id, deletedAt: null }, orderBy: { createdAt: "desc" } })).map((o) => {
@@ -101,7 +101,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
     ...(composer.ownerCell && !textPhones.some((x) => x.normalized === composer.ownerCell!.value) ? [composer.ownerCell] : []),
   ] : [];
   const textProps = { ...composer, phones: textPhones.map((x) => x.normalized), autoExtras };
-  const emailProps = { emails: p.emails.map((e) => e.address), sendsFrom: gmail?.email ?? null, templates: emailTemplates.map((t) => ({ id: t.id, name: t.folder ? `${t.folder} · ${t.name}` : t.name })) };
+  const emailProps = { emails: p.emails.map((e) => e.address), sendsFrom: gmail?.email ?? null, ownGmail: !!gmail?.id.startsWith("gmail:"), canConnect: googleKeysSet(), templates: emailTemplates.map((t) => ({ id: t.id, name: t.folder ? `${t.folder} · ${t.name}` : t.name })) };
   // A partner (lender, title, other agent) sees the deals they were picked for.
   const partnerDeals = await db.paPartner.findMany({ where: { personId: p.id, pa: { deletedAt: null, file: { deletedAt: null } } }, include: { pa: { include: { file: { include: { person: { select: { id: true, name: true } } } } } } }, orderBy: { pa: { createdAt: "desc" } } });
   const docs = await db.document.findMany({ where: { personId: id, deletedAt: null }, orderBy: { createdAt: "desc" } });

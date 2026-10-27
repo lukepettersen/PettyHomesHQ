@@ -56,7 +56,7 @@ export async function getDraft(input: { taskId: string; templateId?: string | nu
       templates: templates.map((t) => ({ id: t.id, name: t.folder ? `${t.folder} · ${t.name}` : t.name })),
       to: kind === "email" ? (p?.emails.map((e) => e.address) ?? []) : (p?.phones.map((x) => x.number) ?? []),
       personId: p?.id ?? null, suggest,
-      sendsFrom: kind === "email" ? (await emailConnection())?.email ?? null : null,
+      sendsFrom: kind === "email" ? (await emailConnection(user.id))?.email ?? null : null,
       // Draft text sends from the user's own number when texting is set up (SPEC.md §11).
       textBlocked: kind === "text" ? (await textComposerFor(user, p && (await db.personTag.count({ where: { personId: p.id, tag: { name: TEXT_STOP_TAG } } })) ? p.name : null)).blocked : null,
       subject: subject.text, body: body.text, missing: [...new Set([...subject.missing, ...body.missing])].map(label),

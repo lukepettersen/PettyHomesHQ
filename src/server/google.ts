@@ -27,7 +27,7 @@ export async function calendarConnection() {
 }
 
 /** Swaps the one-time code from Google's consent screen for a refresh token, and stores it encrypted. */
-export async function connectWithCode(code: string, userId: string) {
+export async function connectWithCode(code: string, userId: string, id = "calendar") {
   const r = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ code, client_id: process.env.GOOGLE_CLIENT_ID!, client_secret: process.env.GOOGLE_CLIENT_SECRET!, redirect_uri: redirectUri(), grant_type: "authorization_code" }),
@@ -37,8 +37,13 @@ export async function connectWithCode(code: string, userId: string) {
   // Which account approved: Gmail's profile when reading Gmail was allowed, else the connecting HQ user (filled in on read).
   const prof = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", { headers: { Authorization: `Bearer ${tok.access_token}` } }).catch(() => null);
   const email = prof?.ok ? ((await prof.json()) as { emailAddress?: string }).emailAddress ?? "" : "";
-  await db.googleConnection.upsert({ where: { id: "calendar" }, update: { userId, email, refreshToken: seal(tok.refresh_token), scopes: tok.scope ?? "" }, create: { id: "calendar", userId, email, refreshToken: seal(tok.refresh_token), scopes: tok.scope ?? "" } });
-  cached = { token: tok.access_token, until: Date.now() + (tok.expires_in ?? 3000) * 1000 - 60000 };
+  // Your own Gmail (owner request 2026-10-27) must be your own HQ address, so nobody sends as someone else.
+  if (id !== "calendar") {
+    const me = (await db.user.findUnique({ where: { id: userId }, select: { email: true } }))?.email?.toLowerCase();
+    if (!email || email.toLowerCase() !== me) throw new Error("wrong account");
+  }
+  await db.googleConnection.upsert({ where: { id }, update: { userId, email, refreshToken: seal(tok.refresh_token), scopes: tok.scope ?? "" }, create: { id, userId, email, refreshToken: seal(tok.refresh_token), scopes: tok.scope ?? "" } });
+  cached.set(id, { token: tok.access_token, until: Date.now() + (tok.expires_in ?? 3000) * 1000 - 60000 });
   return email;
 }
 
@@ -47,22 +52,24 @@ export async function disconnect() {
   if (!c) return;
   try { await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(unseal(c.refreshToken))}`, { method: "POST" }); } catch { /* already revoked */ }
   await db.googleConnection.delete({ where: { id: "calendar" } });
-  cached = null;
+  cached.delete("calendar");
 }
 
-let cached: { token: string; until: number } | null = null;
-async function accessToken(): Promise<string | null> {
-  if (cached && cached.until > Date.now()) return cached.token;
-  const c = await calendarConnection();
+// Access tokens per connection: "calendar" (the shared account) or "gmail:<user id>" (someone's own Gmail).
+const cached = new Map<string, { token: string; until: number }>();
+async function accessToken(id = "calendar"): Promise<string | null> {
+  const hit = cached.get(id);
+  if (hit && hit.until > Date.now()) return hit.token;
+  const c = id === "calendar" ? await calendarConnection() : googleKeysSet() ? await db.googleConnection.findUnique({ where: { id } }) : null;
   if (!c) return null;
   const r = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ refresh_token: unseal(c.refreshToken), client_id: process.env.GOOGLE_CLIENT_ID!, client_secret: process.env.GOOGLE_CLIENT_SECRET!, grant_type: "refresh_token" }),
   });
   const tok = await r.json() as { access_token?: string; expires_in?: number };
-  if (!r.ok || !tok.access_token) { console.error("Google Calendar: token refresh failed", r.status); return null; }
-  cached = { token: tok.access_token, until: Date.now() + (tok.expires_in ?? 3000) * 1000 - 60000 };
-  return cached.token;
+  if (!r.ok || !tok.access_token) { console.error(`Google (${id === "calendar" ? "shared" : "own Gmail"}): token refresh failed`, r.status); return null; }
+  cached.set(id, { token: tok.access_token, until: Date.now() + (tok.expires_in ?? 3000) * 1000 - 60000 });
+  return tok.access_token;
 }
 
 async function call(method: string, path: string, body?: unknown): Promise<Response | null> {
@@ -138,38 +145,59 @@ export function syncContract(paId: string) {
   });
 }
 
-/** Gmail: the connected Google account may send email (it approved the Gmail send permission). */
-export async function emailConnection() {
+/** Someone's own Gmail, connected by them so their emails go out as them (owner request 2026-10-27). */
+export async function ownGmail(userId: string) {
+  if (!googleKeysSet()) return null;
+  const c = await db.googleConnection.findUnique({ where: { id: `gmail:${userId}` } });
+  return hasScope(c, GMAIL_SEND_SCOPE) ? c : null;
+}
+
+/** Gmail that sends: with a user, their own Gmail if connected, else the shared account (if it may send email). */
+export async function emailConnection(userId?: string) {
+  const own = userId ? await ownGmail(userId) : null;
+  if (own) return own;
   const c = await calendarConnection();
   return hasScope(c, GMAIL_SEND_SCOPE) ? c : null;
 }
 
-async function gmail(path: string): Promise<Response | null> {
-  const token = await accessToken().catch(() => null);
+export async function disconnectOwnGmail(userId: string) {
+  const id = `gmail:${userId}`;
+  const c = await db.googleConnection.findUnique({ where: { id } });
+  if (!c) return;
+  try { await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(unseal(c.refreshToken))}`, { method: "POST" }); } catch { /* already revoked */ }
+  await db.googleConnection.delete({ where: { id } });
+  cached.delete(id);
+}
+
+async function gmail(path: string, id = "calendar"): Promise<Response | null> {
+  const token = await accessToken(id).catch(() => null);
   if (!token) return null;
   return fetch(`https://gmail.googleapis.com/gmail/v1/users/me/${path}`, { headers: { Authorization: `Bearer ${token}` } });
 }
 
-let sigCache: { html: string | null; until: number } | null = null;
-/** The connected account's Gmail signature (HTML), added to emails sent from HQ. */
-async function gmailSignature(email: string): Promise<string | null> {
-  if (sigCache && sigCache.until > Date.now()) return sigCache.html;
-  if (!hasScope(await calendarConnection(), GMAIL_READ_SCOPE)) return null;
+const sigCache = new Map<string, { html: string | null; until: number }>();
+/** The sending account's Gmail signature (HTML), added to emails sent from HQ. */
+async function gmailSignature(c: { id: string; email: string; scopes: string }): Promise<string | null> {
+  const email = c.email;
+  const hit = sigCache.get(c.id);
+  if (hit && hit.until > Date.now()) return hit.html;
+  if (!hasScope(c, GMAIL_READ_SCOPE)) return null;
   try {
-    const r = await gmail("settings/sendAs");
+    const r = await gmail("settings/sendAs", c.id);
     if (!r?.ok) return null;
     const list = ((await r.json()) as { sendAs?: { sendAsEmail: string; isPrimary?: boolean; signature?: string }[] }).sendAs ?? [];
     const html = (list.find((s) => s.sendAsEmail.toLowerCase() === email.toLowerCase()) ?? list.find((s) => s.isPrimary))?.signature || null;
-    sigCache = { html, until: Date.now() + 10 * 60000 };
+    sigCache.set(c.id, { html, until: Date.now() + 10 * 60000 });
     return html;
   } catch { return null; }
 }
 
 /** Sends a plain-text email from the connected Gmail account. It lands in that account's Sent folder. */
-export async function sendGmail(m: { to: string[]; subject: string; body: string; signature?: boolean; pixelUrl?: string | null; attachments?: Attachment[] }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
-  const c = await emailConnection();
+export async function sendGmail(m: { to: string[]; subject: string; body: string; signature?: boolean; pixelUrl?: string | null; attachments?: Attachment[]; asUserId?: string }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  // asUserId: the team member sending, from their own Gmail when they've connected it.
+  const c = await emailConnection(m.asUserId);
   if (!c) return { ok: false, error: "Gmail isn't connected. An Admin can reconnect Google in Admin → Integrations." };
-  const token = await accessToken().catch(() => null);
+  const token = await accessToken(c.id).catch(() => null);
   if (!token) return { ok: false, error: "Google didn't let HQ in. An Admin can reconnect Google in Admin → Integrations." };
   let raw: string;
   // "Luke Pettersen <luke@pettyhomes.com>": a real name as the sender looks less like a bulk mailer.
@@ -177,7 +205,7 @@ export async function sendGmail(m: { to: string[]; subject: string; body: string
   const from = name ? (/^[\x20-\x7e]*$/.test(name) ? `"${name}" <${c.email}>` : `=?UTF-8?B?${Buffer.from(name).toString("base64")}?= <${c.email}>`) : c.email;
   const withFiles = !!m.attachments?.length;
   try {
-    const mime = { from, ...m, signatureHtml: m.signature === false ? null : await gmailSignature(c.email) };
+    const mime = { from, ...m, signatureHtml: m.signature === false ? null : await gmailSignature(c) };
     raw = withFiles ? buildMimeRaw(mime) : buildMime(mime);
   } catch (e) { return { ok: false, error: (e as Error).message }; }
   try {
@@ -206,27 +234,35 @@ const SYNC_EVERY = 3 * 60000, FIRST_LOOKBACK = 30 * 86400000;
  * 3 minutes for the team (whoever has HQ open triggers it); never fails loudly.
  */
 export async function syncGmail(): Promise<number> {
+  // The shared account plus anyone's own Gmail, so replies to Alyssa land on timelines too (owner request 2026-10-27).
+  const shared = await calendarConnection().catch(() => null);
+  const own = googleKeysSet() ? await db.googleConnection.findMany({ where: { id: { startsWith: "gmail:" } } }).catch(() => []) : [];
+  let added = 0;
+  for (const c of [...(shared ? [shared] : []), ...own]) added += await syncOne(c);
+  return added;
+}
+
+async function syncOne(c: { id: string; email: string; userId: string; scopes: string; gmailSyncedAt: Date | null }): Promise<number> {
   try {
-    const c = await calendarConnection();
     if (!hasScope(c, GMAIL_READ_SCOPE)) return 0;
-    const now = Date.now(), last = c!.gmailSyncedAt;
+    const now = Date.now(), last = c.gmailSyncedAt;
     if (last && now - last.getTime() < SYNC_EVERY) return 0;
     // Claim this run so two tabs don't sync at the same time.
-    const claimed = await db.googleConnection.updateMany({ where: { id: "calendar", gmailSyncedAt: last }, data: { gmailSyncedAt: new Date(now) } });
+    const claimed = await db.googleConnection.updateMany({ where: { id: c.id, gmailSyncedAt: last }, data: { gmailSyncedAt: new Date(now) } });
     if (!claimed.count) return 0;
-    try { return await syncSince(last ? last.getTime() - 10 * 60000 : now - FIRST_LOOKBACK, c!.email, c!.userId); }
-    catch (e) { await db.googleConnection.update({ where: { id: "calendar" }, data: { gmailSyncedAt: last } }); throw e; }
+    try { return await syncSince(last ? last.getTime() - 10 * 60000 : now - FIRST_LOOKBACK, c.email, c.userId, c.id); }
+    catch (e) { await db.googleConnection.update({ where: { id: c.id }, data: { gmailSyncedAt: last } }); throw e; }
   } catch (e) {
     console.error("Gmail: sync failed", e instanceof Error ? e.message : "unknown");
     return 0;
   }
 }
 
-async function syncSince(fromMs: number, accountEmail: string, accountUserId: string): Promise<number> {
+async function syncSince(fromMs: number, accountEmail: string, accountUserId: string, connId = "calendar"): Promise<number> {
   const ids: string[] = [];
   let page = "";
   for (let i = 0; i < 5; i++) {
-    const r = await gmail(`messages?maxResults=100&q=${encodeURIComponent(`after:${Math.floor(fromMs / 1000)} -in:chats -in:spam -in:trash`)}${page ? `&pageToken=${page}` : ""}`);
+    const r = await gmail(`messages?maxResults=100&q=${encodeURIComponent(`after:${Math.floor(fromMs / 1000)} -in:chats -in:spam -in:trash`)}${page ? `&pageToken=${page}` : ""}`, connId);
     if (!r) throw new Error("list: no token");
     if (!r.ok) throw new Error(`list: ${await gmailError(r, "sync")}`);
     const j = (await r.json()) as { messages?: { id: string }[]; nextPageToken?: string };
@@ -240,7 +276,7 @@ async function syncSince(fromMs: number, accountEmail: string, accountUserId: st
   const team = new Set((await db.user.findMany({ select: { email: true } })).map((u) => u.email.toLowerCase()).concat(accountEmail.toLowerCase()));
   let added = 0;
   for (const id of ids.filter((x) => !seen.has(x))) {
-    const r = await gmail(`messages/${id}?format=full`);
+    const r = await gmail(`messages/${id}?format=full`, connId);
     if (!r?.ok) continue;
     const m = (await r.json()) as GMsg;
     const h = (n: string) => m.payload?.headers?.find((x) => x.name.toLowerCase() === n)?.value ?? "";
@@ -257,6 +293,9 @@ async function syncSince(fromMs: number, accountEmail: string, accountUserId: st
     for (const personId of people) {
       const mine = matches.filter((x) => x.personId === personId).map((x) => x.normalized);
       const line = outbound ? `To ${to.filter((a) => mine.includes(a)).join(", ") || mine[0]}` : `From ${from[0]}`;
+      // The same email can be in two team mailboxes (Luke cc'd on Alyssa's): keep one copy on the timeline.
+      const twin = await db.timelineEntry.findFirst({ where: { personId, kind: "email", createdAt: { gte: new Date(at.getTime() - 120000), lte: new Date(at.getTime() + 120000) }, body: { contains: ` · ${subject}\n` } }, select: { id: true } });
+      if (twin) continue;
       try {
         await db.timelineEntry.create({ data: { personId, kind: "email", gmailId: `${id}:${personId}`, body: `${line} · ${subject}\n\n${text}`, createdAt: at, authorId: outbound ? accountUserId : null } });
         await db.person.updateMany({ where: { id: personId, OR: [{ lastContactAt: null }, { lastContactAt: { lt: at } }] }, data: { lastContactAt: at } });

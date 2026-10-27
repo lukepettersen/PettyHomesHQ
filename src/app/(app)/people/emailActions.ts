@@ -46,7 +46,7 @@ export async function sendEmail(input: z.input<typeof sendSchema>) {
     if (!p) throw new UserError("That person was deleted.");
     const to = [...new Set(v.to.map((x) => x.toLowerCase()))];
     const files = await loadAttachments(v.attachments);
-    const r = await sendGmail({ to, subject: v.subject, body: v.body, signature: v.signature, attachments: files });
+    const r = await sendGmail({ to, subject: v.subject, body: v.body, signature: v.signature, attachments: files, asUserId: user.id });
     if (!r.ok) throw new UserError(r.error);
     // Other contacts it went to get it on their timeline too.
     const others = await db.person.findMany({ where: { id: { not: p.id }, deletedAt: null, emails: { some: { normalized: { in: to } } } }, select: { id: true } });

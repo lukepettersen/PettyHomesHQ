@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { FormatBar } from "@/components/FormatBar";
 import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
 import { fillEmailTemplate, sendEmail } from "../emailActions";
@@ -9,7 +9,7 @@ import { AddRecipient, ExtraChips, PartyChecks, type Extra } from "@/components/
 import { AttachFiles, type Attached } from "@/components/AttachFiles";
 
 /** Timeline → Email: pick a template (optional), check it over, send from the connected Gmail (SPEC.md §12). */
-export function EmailComposer({ personId, emails, templates, sendsFrom, onSent, suggest = [] }: { personId: string; emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; onSent?: () => void; suggest?: Extra[] }) {
+export function EmailComposer({ personId, emails, templates, sendsFrom, onSent, suggest = [], ownGmail = false, canConnect = false }: { personId: string; emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; onSent?: () => void; suggest?: Extra[]; ownGmail?: boolean; canConnect?: boolean }) {
   const router = useRouter();
   const [to, setTo] = useState<string[]>(emails);
   const [extras, setExtras] = useState<Extra[]>([]); // other contacts or typed addresses (owner request 2026-10-20)
@@ -41,7 +41,7 @@ export function EmailComposer({ personId, emails, templates, sendsFrom, onSent, 
     if (!confirmClear) { setConfirmClear(true); return; }
     setConfirmClear(false); setSubject(""); setBody(""); setTemplateId(""); setMissing([]); setConfirm(false); setError(""); setNotice("");
   };
-  if (!sendsFrom) return <p className="mt-2 rounded-md bg-sunken px-3 py-2 text-sm muted">Gmail isn&apos;t connected yet. An Admin can connect it in Admin → Integrations (Connect Google), then emails send from here and show on the timeline.</p>;
+  if (!sendsFrom) return <p className="mt-2 rounded-md bg-sunken px-3 py-2 text-sm muted">Gmail isn&apos;t connected yet. {canConnect && <><ConnectMyGmail /> or a</>}{canConnect ? "n" : "An"} Admin can connect it in Admin → Integrations (Connect Google), then emails send from here and show on the timeline.</p>;
 
   const pick = (id: string) => {
     setTemplateId(id); setError(""); setConfirm(false);
@@ -90,7 +90,7 @@ export function EmailComposer({ personId, emails, templates, sendsFrom, onSent, 
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={signature} onChange={(e) => setSignature(e.target.checked)} /> Add my Gmail signature</label>
       {missing.length > 0 && <p className="text-sm text-[#9a6400]">Not filled in (nothing on file): {missing.join(", ")}. Check the message before sending.</p>}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-xs muted">Sends from {sendsFrom}. A copy is in its Gmail Sent folder and here on the timeline.</span>
+        <span className="text-xs muted">Sends from {sendsFrom}{ownGmail ? " (your Gmail)" : ""}. A copy is in its Gmail Sent folder and here on the timeline.{!ownGmail && canConnect && <> <ConnectMyGmail /></>}</span>
         <span className="flex gap-2">
         {(subject || body || templateId) && <button type="button" className="btn" disabled={pending} onClick={clear} onBlur={() => setConfirmClear(false)}>{confirmClear ? "Click again to clear" : "Clear"}</button>}
         <button type="button" className="btn btn-primary" disabled={pending || !all.length || !subject.trim() || !body.trim()} onClick={send} onBlur={() => setConfirm(false)}>
@@ -102,4 +102,21 @@ export function EmailComposer({ personId, emails, templates, sendsFrom, onSent, 
       {notice && <p role="status" className="text-sm text-accent">{notice}</p>}
     </div>
   );
+}
+
+/** Send from your own Gmail (owner request 2026-10-27): Google asks once, then your emails go out as you. */
+function ConnectMyGmail() {
+  const [note, setNote] = useState("");
+  const [back, setBack] = useState("/people");
+  useEffect(() => {
+    const r = new URLSearchParams(window.location.search).get("gmail");
+    setTimeout(() => setBack(window.location.pathname), 0);
+    const msg = r === "connected" ? "Your Gmail is connected. Emails you send from HQ now go out as you." : r === "wrongaccount" ? "That wasn't your own pettyhomes.com Google account. Try again and pick yours." : r ? "Gmail didn't connect. Try again." : "";
+    const t = setTimeout(() => setNote(msg), 0);
+    return () => clearTimeout(t);
+  }, []);
+  return <>
+    <a className="font-semibold text-accent hover:underline" href={`/api/google/connect?mine=1&back=${encodeURIComponent(back)}`}>Send from my own Gmail</a>
+    {note && <span role="status" className="block font-semibold text-accent">{note}</span>}
+  </>;
 }

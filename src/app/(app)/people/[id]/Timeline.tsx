@@ -18,7 +18,7 @@ const TABS: [Kind, string, string, string][] = [
 type Kind = "note" | "send" | "text" | "call" | "email";
 const KIND_LABEL: Record<string, string> = { note: "Note", text: "Text", call: "Call", email: "Email", system: "Update", task: "Task done" };
 const FILTERS: [string, string][] = [["all", "All"], ["note", "Notes"], ["email", "Emails"], ["text", "Texts"], ["call", "Calls"], ["task", "Tasks"]];
-type EmailProps = { emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null };
+type EmailProps = { emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; ownGmail?: boolean; canConnect?: boolean };
 type TextProps = { phones: string[]; templates: { id: string; name: string }[]; from: string | null; blocked: string | null };
 
 export function Timeline({ personId, entries, team, email, text }: { personId: string; entries: Entry[]; team: Member[]; email: EmailProps; text: TextProps }) {

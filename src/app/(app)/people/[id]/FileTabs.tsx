@@ -19,7 +19,7 @@ import { TextComposer } from "@/components/TextComposer";
 import { OfferModal } from "./OfferModal";
 import { DealNotes } from "./DealNotes";
 
-type EmailProps = { emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null };
+type EmailProps = { emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; ownGmail?: boolean; canConnect?: boolean };
 export type OfferRow = { id: string; fileId: string; createdAt: string; address: string; price: number | null; summary: string; prefill: Record<string, string> };
 type Props = { offers: OfferRow[]; email: EmailProps; text: Omit<React.ComponentProps<typeof TextComposer>, "personId">; fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean; canDelete: boolean; timeline: React.ReactNode;
   contracts: PaView[]; forms: Record<Side, PaSection[]>; today: string; checklists: TaskRow[]; team: TeamMember[] };
@@ -112,7 +112,7 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
         <div className="mt-3 rounded-lg border border-misty bg-paper p-3">
           <div className="flex items-center justify-between"><b className="text-sm">Email {personName}</b>
             <button type="button" className="text-xs font-semibold text-accent hover:underline" onClick={() => setEmailing(false)}>Close</button></div>
-          <EmailComposer personId={personId} emails={email.emails} templates={email.templates} sendsFrom={email.sendsFrom} onSent={() => setEmailing(false)} suggest={activePa ? dealEmails(forms[activePa.side], activePa) : []} />
+          <EmailComposer personId={personId} emails={email.emails} templates={email.templates} sendsFrom={email.sendsFrom} ownGmail={email.ownGmail} canConnect={email.canConnect} onSent={() => setEmailing(false)} suggest={activePa ? dealEmails(forms[activePa.side], activePa) : []} />
         </div>
       )}
       {texting && (

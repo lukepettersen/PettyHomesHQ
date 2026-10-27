@@ -26,12 +26,12 @@ async function loadPeople(personIds: string[]) {
 
 /** Who will get it, templates, the saved mailing address and whether Gmail is connected. */
 export async function prepareBulkEmail(input: { ids: string[] }) {
-  return guarded(null, async () => {
+  return guarded(null, async (user) => {
     const v = z.object({ ids }).parse(input);
     const [{ send, skipped }, templates, address, gmail] = await Promise.all([
       loadPeople(v.ids),
       db.messageTemplate.findMany({ where: { kind: "email" }, orderBy: [{ folder: "asc" }, { name: "asc" }], select: { id: true, name: true, folder: true, subject: true, body: true } }),
-      db.appSetting.findUnique({ where: { key: ADDRESS_KEY } }), emailConnection(),
+      db.appSetting.findUnique({ where: { key: ADDRESS_KEY } }), emailConnection(user.id),
     ]);
     return {
       recipients: send.map((r) => ({ personId: r.personId, name: r.name })), skipped, sendsFrom: gmail?.email ?? null,
@@ -64,7 +64,7 @@ const sendSchema = z.object({
 export async function sendBulkEmailBatch(input: z.input<typeof sendSchema>) {
   return guarded(null, async (user) => {
     const v = sendSchema.parse(input);
-    if (!(await emailConnection())) throw new UserError("Gmail isn't connected. An Admin can reconnect Google in Admin → Integrations.");
+    if (!(await emailConnection(user.id))) throw new UserError("Gmail isn't connected. An Admin can reconnect Google in Admin → Integrations.");
     const secret = process.env.NEXTAUTH_SECRET ?? "";
     if (!secret || !publicBase()) throw new UserError("HQ's address isn't set up for unsubscribe links (NEXTAUTH_URL / NEXTAUTH_SECRET).");
     await db.appSetting.upsert({ where: { key: ADDRESS_KEY }, update: { value: v.address }, create: { key: ADDRESS_KEY, value: v.address } });
@@ -78,7 +78,7 @@ export async function sendBulkEmailBatch(input: z.input<typeof sendSchema>) {
       const body = fill(v.body, values).text + bulkFooter(v.address, url);
       // Open tracking (mass emails only; owner decision 2026-10-21).
       const track = await db.emailTrack.create({ data: { batch: v.batch, subject: v.subject, personId: r.personId, sentById: user.id } });
-      const res = await sendGmail({ to: [r.email], subject, body, signature: v.signature, pixelUrl: `${publicBase()}/api/e/${track.id}.gif`, attachments: files });
+      const res = await sendGmail({ to: [r.email], subject, body, signature: v.signature, pixelUrl: `${publicBase()}/api/e/${track.id}.gif`, attachments: files, asUserId: user.id });
       if (!res.ok) {
         await db.emailTrack.delete({ where: { id: track.id } });
         failed.push({ name: r.name, error: res.error });

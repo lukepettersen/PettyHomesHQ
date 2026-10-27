@@ -656,6 +656,12 @@ Principles:
   first run) go on their timeline as Email entries ("From …" / "To …" · subject, the new
   message without the quoted thread, "Show full email"), and count as last contact. Needs
   Gmail read access (Reconnect Google). Only the connected account's mailbox is read.
+- **Send from your own Gmail** *(owner request 2026-10-27)*: anyone can click **Send from my own Gmail** under an
+  email box (Google asks once; it must be their own pettyhomes.com account). Then emails, drafts and mass emails they
+  send from HQ go out as them, with their name and signature, land in their Sent folder, and replies go to them;
+  their mailbox also feeds timelines (one copy kept when two team mailboxes have the same email). Anyone not
+  connected still sends from the shared connected Gmail. System emails (task assignments, offer alerts) stay on
+  the shared account.
 - **Gmail** (still to build):
   - @mention notification emails.
   - "Draft email" creates a Gmail draft with the template filled in and attachments from
