@@ -8,6 +8,8 @@ import { fill } from "@/lib/merge";
 import { mergeFor } from "@/server/merge";
 import { emailConnection } from "@/server/google";
 import { textComposerFor } from "@/server/texting";
+import { groupReady } from "@/server/groupText";
+import { normalizePhone } from "@/lib/normalize";
 import { TEXT_STOP_TAG } from "@/lib/texting";
 import type { Phase } from "@/lib/templates";
 import { dealEmails } from "@/lib/partners";
@@ -48,6 +50,14 @@ export async function getDraft(input: { taskId: string; templateId?: string | nu
       answers: (pa.answers ?? {}) as Record<string, string>,
       partners: Object.fromEntries(pa.partners.map((x) => [x.sectionId, { id: x.person.id, name: x.person.name }])),
     }) : [];
+    // A teammate's drafts copy the owner in, ticked to start (owner request 2026-10-28): their email, or their cell
+    // (Admin → Integrations "calls ring") in a group text.
+    const groups = kind === "text" && (await groupReady());
+    const owner = user.isOwner ? null : await db.user.findFirst({ where: { isOwner: true, status: { not: "DISABLED" } }, select: { name: true, email: true, forwardTo: true } });
+    const copyIn = !owner ? null : kind === "email" ? { name: owner.name, value: owner.email } : groups && owner.forwardTo ? { name: owner.name, value: normalizePhone(owner.forwardTo) } : null;
+    // Draft text lists each number with whose it is (the label when it names someone, else the contact's name).
+    const GENERIC = /^(mobile|cell|home|work|other|main|phone)$/i;
+    const phoneNames = (p?.phones ?? []).map((x) => ({ value: x.number, name: x.label && !GENERIC.test(x.label.trim()) ? x.label : p!.name }));
     const { values, label } = await mergeFor(user, p?.id ?? null, { paId: task.paId, fileId: task.fileId });
     const subject = chosen ? fill(chosen.subject, values) : { text: "", missing: [] };
     const body = chosen ? fill(chosen.body, values) : { text: "", missing: [] };
@@ -55,7 +65,7 @@ export async function getDraft(input: { taskId: string; templateId?: string | nu
       kind, templateId: chosen?.id ?? null, stepMessage,
       templates: templates.map((t) => ({ id: t.id, name: t.folder ? `${t.folder} · ${t.name}` : t.name })),
       to: kind === "email" ? (p?.emails.map((e) => e.address) ?? []) : (p?.phones.map((x) => x.number) ?? []),
-      personId: p?.id ?? null, suggest,
+      personId: p?.id ?? null, suggest, copyIn, groups, phoneNames,
       sendsFrom: kind === "email" ? (await emailConnection(user.id))?.email ?? null : null,
       // Draft text sends from the user's own number when texting is set up (SPEC.md §11).
       textBlocked: kind === "text" ? (await textComposerFor(user, p && (await db.personTag.count({ where: { personId: p.id, tag: { name: TEXT_STOP_TAG } } })) ? p.name : null)).blocked : null,

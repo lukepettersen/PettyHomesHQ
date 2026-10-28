@@ -227,8 +227,10 @@ export type GroupInfo = { title: string; members: { name: string; personId: stri
 /** Group texts' names (the people in them, as contacts where we have them). */
 export async function groupNames(sids: string[]): Promise<Map<string, GroupInfo>> {
   const out = new Map<string, GroupInfo>();
+  // A teammate's own cell (copied in on drafts) shows as their name, not a number (owner request 2026-10-28).
+  const team = new Map((await db.user.findMany({ where: { forwardTo: { not: null } }, select: { name: true, forwardTo: true } })).map((u) => [normalizePhone(u.forwardTo!), u.name]));
   for (const t of await db.textThread.findMany({ where: { sid: { in: sids } } })) {
-    const members = await Promise.all(t.members.map(async (d) => { const p = await personForNumber(d); return { name: p?.name ?? formatPhone(d), personId: p?.id ?? null, digits: d }; }));
+    const members = await Promise.all(t.members.map(async (d) => { const p = await personForNumber(d); return { name: p?.name ?? team.get(d) ?? formatPhone(d), personId: p?.id ?? null, digits: d }; }));
     // A contact with two numbers in the group shows once.
     const shown = members.filter((m, i) => !m.personId || members.findIndex((x) => x.personId === m.personId) === i);
     out.set(t.sid, { title: groupTitle(shown.map((m) => m.name)), members: shown });

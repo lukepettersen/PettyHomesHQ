@@ -8,11 +8,12 @@ import { Modal } from "@/components/Modal";
 import { useRouter } from "next/navigation";
 import { getDraft } from "./draftActions";
 import { sendEmail } from "../people/emailActions";
-import { sendText } from "../messages/actions";
+import { sendText, sendTextGroup } from "../messages/actions";
 import { toPlain } from "@/lib/email";
 import { AddRecipient, ExtraChips, PartyChecks, type Extra } from "@/components/AddRecipient";
 
-type Draft = { kind: "email" | "text"; templateId: string | null; stepMessage: string | null; templates: { id: string; name: string }[]; to: string[]; subject: string; body: string; missing: string[]; personId: string | null; sendsFrom: string | null; textBlocked: string | null; suggest: Extra[] };
+type Draft = { kind: "email" | "text"; templateId: string | null; stepMessage: string | null; templates: { id: string; name: string }[]; to: string[]; subject: string; body: string; missing: string[]; personId: string | null; sendsFrom: string | null; textBlocked: string | null; suggest: Extra[];
+  copyIn: { name: string; value: string } | null; groups: boolean; phoneNames: { value: string; name: string }[] };
 
 /** Draft email / Draft text: the filled-in template to review, then copy or open in the email app. */
 export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () => void }) {
@@ -26,7 +27,12 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
   const [signature, setSignature] = useState(true);
   const [extras, setExtras] = useState<Extra[]>([]); // the deal's lender/title/agents or anyone in HQ (owner request 2026-10-26)
   const [skip, setSkip] = useState<string[]>([]); // the contact's own emails unticked, e.g. a note just to title (owner request 2026-10-26)
-  const toAll = [...(d?.to ?? []).filter((e) => !skip.includes(e)), ...extras.map((x) => x.value)];
+  const [withOwner, setWithOwner] = useState(true); // the owner is copied in on a teammate's drafts, untick to leave out (owner request 2026-10-28)
+  const copyIn = d?.copyIn && withOwner ? [d.copyIn.value] : [];
+  const toAll = [...(d?.to ?? []).filter((e) => !skip.includes(e)), ...extras.map((x) => x.value), ...copyIn.filter((x) => !extras.some((e) => e.value.toLowerCase() === x.toLowerCase()))];
+  // Draft text: every number ticked to start; two or more go as one group text (group texting on), else one text each.
+  const phones = (d?.to ?? []).filter((n) => !skip.includes(n));
+  const textTo = [...phones, ...(d?.kind === "text" ? copyIn : [])];
   const box = useRef<HTMLTextAreaElement>(null);
   const slash = useSlashTemplates({ box, value: body, templates: d?.templates ?? [], onChoose: (id, from, to) => start(async () => {
     const r = await getDraft({ taskId, templateId: id });
@@ -39,11 +45,17 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
   const router = useRouter();
   const canSend = !!(d && d.kind === "email" && d.sendsFrom && d.personId);
   const canText = !!(d && d.kind === "text" && !d.textBlocked && d.personId && d.to.length);
-  const [toPhone, setToPhone] = useState("");
   const text = () => start(async () => {
     setError("");
-    const r = await sendText({ personId: d!.personId, to: toPhone || d!.to[0], body, taskId });
-    if (!r.ok) { setError(r.error); return; }
+    if (d!.groups && textTo.length > 1) {
+      const g = await sendTextGroup({ numbers: textTo, body, personId: d!.personId, taskId });
+      if (!g.ok) { setError(g.error); return; }
+    } else {
+      for (const to of phones) {
+        const r = await sendText({ personId: d!.personId, to, body, taskId });
+        if (!r.ok) { setError(r.error); return; }
+      }
+    }
     router.refresh(); onClose();
   });
   const send = () => {
@@ -84,9 +96,20 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
               {!d.to.length && <span className="text-bad">No email address on file</span>}
               <ExtraChips extras={extras.filter((x) => !(d.suggest ?? []).some((p) => p.value === x.value))} onRemove={(v) => { setConfirm(false); setExtras(extras.filter((x) => x.value !== v)); }} />
               <AddRecipient mode="email" exclude={toAll.map((x) => x.toLowerCase())} onAdd={(x) => { setConfirm(false); setExtras([...extras, x]); }} />
+              {d.copyIn && <label className="flex items-center gap-1"><input type="checkbox" checked={withOwner} onChange={(x) => setWithOwner(x.target.checked)} /> {d.copyIn.name}</label>}
               <PartyChecks parties={d.suggest ?? []} chosen={extras.map((x) => x.value)} onToggle={(x, on) => { setConfirm(false); setExtras(on ? [...extras, x] : extras.filter((y) => y.value !== x.value)); }} />
             </div>
-          ) : <p className="text-sm"><b>To:</b> {d.to.length ? d.to.join(", ") : <span className="text-bad">No phone number on file</span>}</p>}
+          ) : (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              <b>To:</b>
+              {d.phoneNames.map((x) => (
+                <label key={x.value} className="flex items-center gap-1"><input type="checkbox" checked={!skip.includes(x.value)} onChange={(e) => setSkip(e.target.checked ? skip.filter((y) => y !== x.value) : [...skip, x.value])} /> {x.name} <span className="muted">{x.value}</span></label>
+              ))}
+              {d.copyIn && <label className="flex items-center gap-1"><input type="checkbox" checked={withOwner} onChange={(e) => setWithOwner(e.target.checked)} /> {d.copyIn.name} <span className="muted">(cell)</span></label>}
+              {!d.to.length && <span className="text-bad">No phone number on file</span>}
+              {textTo.length > 1 && <span className="w-full text-xs muted">{d.groups ? "Sends as one group text; everyone sees the replies." : "Each number gets its own text."}</span>}
+            </div>
+          )}
           {d.kind === "email" && <label className="label">Subject<input className="input" value={subject} onChange={(e) => setSubject(e.target.value)} /></label>}
           {canSend ? (
             <div className="label">Message
@@ -107,8 +130,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
             {d.kind === "email" && <a className={`btn ${canSend ? "" : "btn-primary"} ${body ? "" : "pointer-events-none opacity-50"}`} href={mailto}>Open in email</a>}
             {canSend && <button type="button" className="btn btn-primary" disabled={pending || !toAll.length || !subject.trim() || !body.trim()} onClick={send} onBlur={() => setConfirm(false)}>
               {pending ? "Sending…" : "Send email"}</button>}
-            {canText && d.to.length > 1 && <select aria-label="Text to" className="input w-auto" value={toPhone || d.to[0]} onChange={(e) => setToPhone(e.target.value)}>{d.to.map((p) => <option key={p}>{p}</option>)}</select>}
-            {canText && <button type="button" className="btn btn-primary" disabled={pending || !body.trim()} onClick={text}>{pending ? "Sending…" : "Send text"}</button>}
+            {canText && <button type="button" className="btn btn-primary" disabled={pending || !body.trim() || !phones.length} onClick={text}>{pending ? "Sending…" : "Send text"}</button>}
           </div>
         </div>
       )}

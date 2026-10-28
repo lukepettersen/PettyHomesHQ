@@ -548,6 +548,11 @@ Principles:
   or missed call comes in; **Move to inbox** undoes it; archiving never deletes anything (Delete still does); unread counts on the Messages tab; bubbles show Sending / Sent / Delivered / Not
   delivered with the reason; refreshes every 15 seconds. **Send text** on a contact's timeline and in
   **Draft text** on checklist steps (template, "/name" in the message; the task is checked off).
+  Draft text lists each of the contact's numbers with whose it is ("Emma 952-607-6774", from the phone's label, else
+  the contact's name), all ticked; two or more go as one group text (group texting on), else one text each.
+  **Copying the owner in** *(owner request 2026-10-28)*: when a teammate (Alyssa) uses Draft email or Draft text,
+  the owner is added and ticked to start (untick to leave out): their email, or in a group text their cell from
+  Admin → Integrations ("calls ring"); in Messages that cell shows as their name.
 - Incoming texts and missed calls show a **small card in the bottom-right corner** with one chime for the number's
   owner; it never blocks the page *(owner request 2026-10-28)*. One row per conversation (newest message, "+N more",
   Open), at most 3, then "And N more in the bell"; × dismisses; it hides by itself after 20 seconds unless the mouse
