@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyReaction, parseReaction, reactsTo } from "./reactions";
+import { applyReaction, reactionText, parseReaction, reactsTo } from "./reactions";
 
 describe("iPhone reactions", () => {
   it("reads tapbacks", () => {
@@ -21,4 +21,19 @@ describe("iPhone reactions", () => {
     expect(l).toEqual([{ emoji: "❤️", by: "6125550101" }]);
     expect(applyReaction(l, { emoji: "❤️", by: "6125550101", removed: true })).toEqual([]);
   });
+});
+
+describe("reactionText", () => {
+  it("uses the iPhone wording, and reads back as the same reaction", () => {
+    expect(reactionText("❤️", "See you tomorrow!")).toBe("Loved “See you tomorrow!”");
+    expect(parseReaction(reactionText("👍", "Ok")!)).toEqual({ emoji: "👍", target: "Ok", removed: false });
+    expect(parseReaction(reactionText("😂", "Ha", true)!)).toEqual({ emoji: "😂", target: "Ha", removed: true });
+  });
+  it("shortens long messages so they still match", () => {
+    const long = "word ".repeat(30).trim();
+    const t = reactionText("‼️", long)!;
+    expect(t.length).toBeLessThan(90);
+    expect(reactsTo(parseReaction(t)!.target, long)).toBe(true);
+  });
+  it("only sends the six reactions", () => { expect(reactionText("🎉", "Hi")).toBeNull(); expect(reactionText("❤️", "  ")).toBeNull(); });
 });

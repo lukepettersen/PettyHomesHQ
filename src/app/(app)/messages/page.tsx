@@ -33,7 +33,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
   const thread = open ? threads.find((t) => t.number === open) : undefined;
   const group = isGroup && open ? (await groupNames([open])).get(open) ?? { title: "Group text", members: [] } : null;
   const person = group ? null : thread?.personId ? { id: thread.personId, name: thread.name } : open ? await personForNumber(open) : null;
-  const conversation = line && open ? await loadConversation(line.number, open) : [];
+  const conversation = line && open ? await loadConversation(line.number, open, user.id) : [];
   // Opening a conversation clears its text / missed-call alerts in the bell (owner request 2026-10-27).
   if (open) await db.notification.updateMany({ where: { toId: user.id, readAt: null, link: `/messages?n=${open}` }, data: { readAt: new Date() } });
   const composer = await textComposerFor(user, person && (await hasTextStop(person.id)) ? person.name : null);

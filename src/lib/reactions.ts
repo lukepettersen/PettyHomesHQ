@@ -39,3 +39,19 @@ export function applyReaction(list: ReactionMark[], r: { emoji: string; by: stri
   const rest = list.filter((x) => !(x.by === r.by && x.emoji === r.emoji));
   return r.removed ? rest : [...rest, { emoji: r.emoji, by: r.by }];
 }
+
+/** The reactions HQ can send (owner request 2026-10-28), in the iPhone wording so phones that understand it show an icon. */
+export const SEND_REACTIONS: { emoji: string; verb: string; noun: string }[] = [
+  { emoji: "❤️", verb: "Loved", noun: "a heart" }, { emoji: "👍", verb: "Liked", noun: "a like" }, { emoji: "😂", verb: "Laughed at", noun: "a laugh" },
+  { emoji: "‼️", verb: "Emphasized", noun: "an exclamation" }, { emoji: "❓", verb: "Questioned", noun: "a question mark" }, { emoji: "👎", verb: "Disliked", noun: "a dislike" },
+];
+const QUOTE_MAX = 60;
+
+/** The text that carries a reaction: Loved “See you tomorrow!”, or Removed a heart from “…”. Long messages are shortened with “…”. */
+export function reactionText(emoji: string, body: string, removed = false): string | null {
+  const kind = SEND_REACTIONS.find((k) => k.emoji === emoji);
+  const flat = body.replace(/\s+/g, " ").trim();
+  if (!kind || !flat) return null;
+  const quote = flat.length > QUOTE_MAX ? `${flat.slice(0, QUOTE_MAX).trimEnd()}…` : flat;
+  return removed ? `Removed ${kind.noun} from “${quote}”` : `${kind.verb} “${quote}”`;
+}

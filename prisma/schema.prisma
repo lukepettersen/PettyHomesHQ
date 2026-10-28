@@ -639,6 +639,17 @@ model PhoneCall {
   @@index([theirNumber])
 }
 
+/// A conversation in Messages someone archived, like an email (owner request 2026-10-28). It comes back to the inbox
+/// when a new text or missed call arrives after archivedAt.
+model TextArchive {
+  ourNumber    String
+  theirNumber  String // digits, or a group key
+  archivedAt   DateTime @default(now())
+  archivedById String?
+
+  @@id([ourNumber, theirNumber])
+}
+
 /// A Twilio Conversation on a team number (group texting, owner request 2026-10-22): which line, and for a group
 /// text the other people in it. One-to-one conversations are kept too, so turning group texting off can close them.
 model TextThread {

@@ -540,8 +540,10 @@ Principles:
 - Two-way SMS from **each team member's own business number** *(owner decision 2026-10-20: Luke and
   Alyssa each have a number)*, plus missed calls. No email here (email stays in Gmail).
 - **Messages page:** conversations on your number (switch to a teammate's to read theirs; you can only
-  send from your own); **+ New message** (find a contact, pick their number) and **All / Unread** tabs
-  *(owner request 2026-10-20)*; unread counts on the Messages tab; bubbles show Sending / Sent / Delivered / Not
+  send from your own); **+ New message** (find a contact, pick their number) and **All / Unread / Archived** tabs
+  *(owner request 2026-10-20)*; **Archive** on a conversation works like email *(owner request 2026-10-28)*: it
+  leaves All and Unread for Archived (and is marked read), and comes back to the inbox by itself when a new text
+  or missed call comes in; **Move to inbox** undoes it; archiving never deletes anything (Delete still does); unread counts on the Messages tab; bubbles show Sending / Sent / Delivered / Not
   delivered with the reason; refreshes every 15 seconds. **Send text** on a contact's timeline and in
   **Draft text** on checklist steps (template, "/name" in the message; the task is checked off).
 - Incoming texts and missed calls show a **small card in the bottom-right corner** with one chime for the number's
@@ -606,6 +608,9 @@ Principles:
   lists, alerts and timelines). **📷** on the text boxes (Send text, Messages, Send to group) attaches up to 5
   JPG/PNG/GIF photos; they upload to the file storage and go as picture texts (MMS). In a group text each extra
   photo is its own message. Needs File storage connected.
+- **Templates in group texts** *(owner request 2026-10-28)*: the Template box and "/name" work when replying to a
+  group and when starting one from + New message. Your own details fill in; client details (like a first name)
+  can't for a whole group, so they're left blank and listed to type in before sending.
 - **Text commands** *(owner request 2026-10-24)*: a text from a team member's own cell (the "calls ring" cell in
   Admin → Integrations) to their own HQ number that starts with **task** adds a task with the same wording as the
   Tasks box quick add ("task call lender re Ortiz Fri 9am", tomorrow, next week, every month, #list, @alyssa), and
@@ -618,8 +623,12 @@ Principles:
 - **Reactions** *(owner request 2026-10-22)*: an iPhone tapback sent to a business number arrives as a text like
   Loved “See you tomorrow!”; HQ shows it as a small icon (❤️ 👍 👎 😂 ‼️ ❓, or the emoji in "Reacted 🎉 to …") on
   the message it quotes in that thread, with no new bubble or alert ("Removed a heart from …" takes it off). If the
-  quoted message isn't found it shows as a normal text. Business numbers can't send tapbacks; a 😊 button on the
-  text boxes adds common emoji to a reply instead.
+  quoted message isn't found it shows as a normal text. **Sending reactions** *(owner request 2026-10-28)*: a ☺ button
+  under each message in Messages (your own number) offers ❤️ 👍 😂 ‼️ ❓ 👎. It sends a text in the iPhone wording
+  (Loved “…”, long messages shortened with “…”), which phones that understand it show as a reaction and others show
+  as that short text; HQ shows it as an icon on the message (no new bubble, still counts toward the daily cap).
+  Clicking the same one again sends "Removed a heart from “…”" and takes it off. A 😊 button on the text boxes adds
+  emoji to a reply.
 - **Admin → Integrations → Texting** on/off switch to pause sending anytime.
 - Safety when on: honor STOP/opt-out automatically (a STOP reply tags them **Text Unsubscribed**; START or
   YES removes it); never text people tagged Text Unsubscribed. **Email Unsubscribed** only stops emails *(owner

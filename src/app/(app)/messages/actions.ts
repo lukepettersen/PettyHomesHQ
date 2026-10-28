@@ -15,6 +15,7 @@ import { sendGroupText, startGroupText, textNumbersAsGroup } from "@/server/grou
 import { closeConversation } from "@/server/twilio";
 import { isGroupKey, MAX_GROUP } from "@/lib/groupText";
 import { MAX_TEXT_PHOTOS } from "@/lib/textMedia";
+import { applyReaction, reactionText, SEND_REACTIONS, type ReactionMark } from "@/lib/reactions";
 
 const id = z.string().trim().min(1).max(40);
 const digits = z.string().trim().min(7).max(30).transform(normalizePhone);
@@ -105,14 +106,61 @@ async function attach(number: string, personId: string) {
   ]);
 }
 
+/** Archive a conversation (it leaves the inbox until a new text comes in), or move it back to the inbox. Archiving marks it read. */
+export async function archiveThread(input: { ourNumber: string; number: string; archived: boolean }) {
+  return guarded("sendTexts", async (user) => {
+    const v = z.object({ ourNumber: z.string().trim().max(20), number: threadKey, archived: z.boolean() }).parse(input);
+    const key = { ourNumber: v.ourNumber, theirNumber: v.number };
+    if (v.archived) {
+      const now = new Date();
+      await db.$transaction([
+        db.textArchive.upsert({ where: { ourNumber_theirNumber: key }, create: { ...key, archivedAt: now, archivedById: user.id }, update: { archivedAt: now, archivedById: user.id } }),
+        db.textMessage.updateMany({ where: { ...key, direction: "in", readAt: null }, data: { readAt: now } }),
+        db.notification.updateMany({ where: { toId: user.id, readAt: null, link: `/messages?n=${v.number}` }, data: { readAt: now } }),
+      ]);
+    } else await db.textArchive.deleteMany({ where: key });
+    await logActivity(user.id, "update", "text", null, `${v.archived ? "Archived" : "Moved to the inbox"} the conversation with ${isGroupKey(v.number) ? "a group" : formatPhone(v.number)}`);
+    revalidatePath("/messages");
+  });
+}
+
 /** Delete a conversation from Messages (two-step in the UI). Contact timelines keep their copy. */
 export async function deleteThread(input: { ourNumber: string; number: string }) {
   return guarded("sendTexts", async (user) => {
     const v = z.object({ ourNumber: z.string().trim().max(20), number: threadKey }).parse(input);
     const r = await db.textMessage.deleteMany({ where: { ourNumber: v.ourNumber, theirNumber: v.number } });
+    await db.textArchive.deleteMany({ where: { ourNumber: v.ourNumber, theirNumber: v.number } });
     // A group text is also ended in Twilio, so its people's numbers are free for other group texts.
     if (isGroupKey(v.number)) { await closeConversation(v.number); await db.textThread.deleteMany({ where: { sid: v.number } }); }
     await logActivity(user.id, "delete", "text", null, `Deleted the conversation with ${isGroupKey(v.number) ? "a group" : formatPhone(v.number)} (${r.count} messages)`);
+    revalidatePath("/messages");
+  });
+}
+
+/**
+ * Heart, thumbs up and the other iPhone reactions on a text (owner request 2026-10-28). It goes out as a text in the
+ * iPhone wording (Loved “…”), which phones that understand it show as an icon; HQ shows it as an icon on the message.
+ * Clicking the same one again removes it. From your own number only.
+ */
+export async function reactToText(input: { messageId: string; emoji: string }) {
+  return guarded("sendTexts", async (user) => {
+    const v = z.object({ messageId: id, emoji: z.enum(SEND_REACTIONS.map((k) => k.emoji) as [string, ...string[]]) }).parse(input);
+    const m = await db.textMessage.findUnique({ where: { id: v.messageId } });
+    if (!m || m.kind !== "sms") throw new UserError("That message wasn't found.");
+    const me = await db.user.findUnique({ where: { id: user.id }, select: { textNumber: true } });
+    if (m.ourNumber !== me?.textNumber) throw new UserError("You can react from your own number only.");
+    const by = `hq:${user.id}`;
+    const marks = (Array.isArray(m.reactions) ? m.reactions : []) as ReactionMark[];
+    const removed = marks.some((x) => x.by === by && x.emoji === v.emoji);
+    const body = reactionText(v.emoji, m.body, removed);
+    if (!body) throw new UserError("Photos without words can't get a reaction from HQ.");
+    const before = new Date();
+    if (isGroupKey(m.theirNumber)) await sendGroupText(user, { sid: m.theirNumber, body });
+    else await sendTextAs(user, { personId: m.personId, to: m.theirNumber, body });
+    await db.$transaction([
+      db.textMessage.updateMany({ where: { ourNumber: m.ourNumber, theirNumber: m.theirNumber, direction: "out", sentById: user.id, body, createdAt: { gte: before } }, data: { kind: "reaction" } }),
+      db.textMessage.update({ where: { id: m.id }, data: { reactions: applyReaction(marks, { emoji: v.emoji, by, removed }) } }),
+    ]);
     revalidatePath("/messages");
   });
 }

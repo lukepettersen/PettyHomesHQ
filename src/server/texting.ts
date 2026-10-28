@@ -220,8 +220,8 @@ export async function sendTextAs(user: { id: string; name: string }, o: { person
 }
 
 // ---------- Messages page ----------
-export type Thread = { number: string; personId: string | null; name: string; last: string; lastKind: string; lastDir: string; at: string; unread: number; group?: boolean };
-export type Bubble = { id: string; direction: string; kind: string; body: string; status: string; error: string | null; by: string | null; at: string; from?: string | null; reactions?: string[]; photos?: string[] };
+export type Thread = { number: string; personId: string | null; name: string; last: string; lastKind: string; lastDir: string; at: string; unread: number; group?: boolean; archived?: boolean };
+export type Bubble = { id: string; direction: string; kind: string; body: string; status: string; error: string | null; by: string | null; at: string; from?: string | null; reactions?: string[]; mine?: string[]; photos?: string[] };
 export type GroupInfo = { title: string; members: { name: string; personId: string | null; digits: string }[] };
 
 /** Group texts' names (the people in them, as contacts where we have them). */
@@ -237,24 +237,30 @@ export async function groupNames(sids: string[]): Promise<Map<string, GroupInfo>
 }
 
 export async function loadThreads(ourNumber: string): Promise<Thread[]> {
-  const latest = await db.textMessage.findMany({ where: { ourNumber }, orderBy: { createdAt: "desc" }, distinct: ["theirNumber"], take: 300, include: { person: { select: { id: true, name: true, deletedAt: true } } } });
+  const latest = await db.textMessage.findMany({ where: { ourNumber, kind: { not: "reaction" } }, orderBy: { createdAt: "desc" }, distinct: ["theirNumber"], take: 300, include: { person: { select: { id: true, name: true, deletedAt: true } } } });
   const unread = await db.textMessage.groupBy({ by: ["theirNumber"], where: { ourNumber, direction: "in", readAt: null }, _count: true });
   const unreadBy = new Map(unread.map((u) => [u.theirNumber, u._count]));
+  // Archived until a new text or missed call comes in after it was archived (owner request 2026-10-28).
+  const archives = new Map((await db.textArchive.findMany({ where: { ourNumber } })).map((a) => [a.theirNumber, a.archivedAt]));
+  const lastIn = archives.size ? new Map((await db.textMessage.groupBy({ by: ["theirNumber"], where: { ourNumber, direction: "in", theirNumber: { in: [...archives.keys()] } }, _max: { createdAt: true } })).map((g) => [g.theirNumber, g._max.createdAt])) : new Map<string, Date | null>();
+  const archived = (n: string) => { const at = archives.get(n); const last = lastIn.get(n); return !!at && (!last || last <= at); };
   const people = new Map<string, { id: string; name: string } | null>();
   const groups = await groupNames(latest.filter((m) => isGroupKey(m.theirNumber)).map((m) => m.theirNumber));
   for (const m of latest) if (!isGroupKey(m.theirNumber) && (!m.person || m.person.deletedAt)) people.set(m.theirNumber, await personForNumber(m.theirNumber));
   return latest.map((m) => {
-    const base = { number: m.theirNumber, last: m.kind === "missed_call" ? "Missed call" : m.body, lastKind: m.kind, lastDir: m.direction, at: m.createdAt.toISOString(), unread: unreadBy.get(m.theirNumber) ?? 0 };
+    const base = { number: m.theirNumber, last: m.kind === "missed_call" ? "Missed call" : m.body, lastKind: m.kind, lastDir: m.direction, at: m.createdAt.toISOString(), unread: unreadBy.get(m.theirNumber) ?? 0, archived: archived(m.theirNumber) };
     if (isGroupKey(m.theirNumber)) return { ...base, personId: null, name: groups.get(m.theirNumber)?.title ?? "Group text", group: true };
     const p = m.person && !m.person.deletedAt ? m.person : people.get(m.theirNumber) ?? null;
     return { ...base, personId: p?.id ?? null, name: p?.name ?? formatPhone(m.theirNumber) };
   });
 }
 
-export async function loadConversation(ourNumber: string, theirNumber: string): Promise<Bubble[]> {
-  const rows = await db.textMessage.findMany({ where: { ourNumber, theirNumber }, orderBy: { createdAt: "asc" }, take: 500, include: { sentBy: { select: { name: true } }, person: { select: { name: true } } } });
+export async function loadConversation(ourNumber: string, theirNumber: string, userId?: string): Promise<Bubble[]> {
+  // Reactions HQ sent are kept (for delivery status and the daily cap) but show as an icon on the message, not a bubble.
+  const rows = await db.textMessage.findMany({ where: { ourNumber, theirNumber, kind: { not: "reaction" } }, orderBy: { createdAt: "asc" }, take: 500, include: { sentBy: { select: { name: true } }, person: { select: { name: true } } } });
   return rows.map((m) => ({ id: m.id, direction: m.direction, kind: m.kind, body: m.body, status: m.status, error: m.error, by: m.sentBy?.name.split(" ")[0] ?? null, at: m.createdAt.toISOString(),
     from: m.fromNumber ? m.person?.name ?? formatPhone(m.fromNumber) : null, reactions: ((Array.isArray(m.reactions) ? m.reactions : []) as ReactionMark[]).map((x) => x.emoji),
+    mine: ((Array.isArray(m.reactions) ? m.reactions : []) as ReactionMark[]).filter((x) => userId && x.by === `hq:${userId}`).map((x) => x.emoji),
     photos: (Array.isArray(m.media) ? m.media : []).map((_, i) => `/api/texts/${m.id}/photo/${i}`) }));
 }
 

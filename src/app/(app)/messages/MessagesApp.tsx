@@ -4,6 +4,7 @@ import { CallLink } from "@/components/CallCenter";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
+import { useDropdown } from "@/components/useDropdown";
 import { TextComposer } from "@/components/TextComposer";
 import { EmojiButton } from "@/components/EmojiButton";
 import { TextPhotoButton, TextPhotoPreviews } from "@/components/TextPhotos";
@@ -12,7 +13,9 @@ import { formatPhone } from "@/lib/normalize";
 import { sendProblem } from "@/lib/texting";
 import type { Bubble, GroupInfo, Thread } from "@/server/texting";
 import { MAX_GROUP } from "@/lib/groupText";
-import { addPersonFromNumber, deleteThread, linkNumber, markRead, sendGroup, startGroup } from "./actions";
+import { SEND_REACTIONS } from "@/lib/reactions";
+import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
+import { addPersonFromNumber, archiveThread, deleteThread, fillTextTemplate, reactToText, linkNumber, markRead, sendGroup, startGroup } from "./actions";
 
 type Line = { userId: string; name: string; number: string };
 type Composer = { from: string | null; blocked: string | null; templates: { id: string; name: string }[] };
@@ -32,7 +35,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
 }) {
   const router = useRouter();
   const [q, setQ] = useState("");
-  const [tab, setTab] = useState<"all" | "unread">("all");
+  const [tab, setTab] = useState<"all" | "unread" | "archived">("all");
   const [starting, setStarting] = useState(false);
   const end = useRef<HTMLDivElement>(null);
   const href = (n: string | null, lineId = line?.userId) => `/messages?${new URLSearchParams({ ...(lineId ? { line: lineId } : {}), ...(n ? { n } : {}) })}`;
@@ -48,8 +51,10 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
       <p className="card mt-4 p-5 text-sm">Nobody has a texting number yet. An Admin adds each person&apos;s Twilio number in Admin → Integrations.</p>
     </div>
   );
-  const unreadThreads = threads.filter((t) => t.unread > 0).length;
-  const shown = threads.filter((t) => tab === "all" || t.unread > 0 || t.number === open).filter((t) => !q.trim() || t.name.toLowerCase().includes(q.trim().toLowerCase()) || t.number.includes(q.replace(/\D/g, "") || "~"));
+  const unreadThreads = threads.filter((t) => t.unread > 0 && !t.archived).length;
+  const archivedThreads = threads.filter((t) => t.archived).length;
+  // All = the inbox (archived conversations are under Archived until someone texts again; owner request 2026-10-28).
+  const shown = threads.filter((t) => t.number === open || (tab === "archived" ? t.archived : !t.archived && (tab === "all" || t.unread > 0))).filter((t) => !q.trim() || t.name.toLowerCase().includes(q.trim().toLowerCase()) || t.number.includes(q.replace(/\D/g, "") || "~"));
   return (
     <div className="mx-auto grid max-w-[1400px] grid-cols-1 items-start gap-3 px-4 py-4 md:grid-cols-[320px_minmax(0,1fr)]">
       <section aria-label="Conversations" className={`card flex flex-col overflow-hidden ${open ? "max-md:hidden" : ""}`}>
@@ -63,10 +68,10 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
               {lines.map((l) => <option key={l.userId} value={l.userId}>{l.userId === line.userId ? "" : "View "}{l.name.split(" ")[0]}&apos;s texts · {formatPhone(l.number)}</option>)}
             </select>
           )}
-          {starting && <NewMessage groupsOn={groupsOn} blocked={composer.blocked} onPick={(n) => { setStarting(false); router.push(href(n)); }} />}
+          {starting && <NewMessage templates={composer.templates} groupsOn={groupsOn} blocked={composer.blocked} onPick={(n) => { setStarting(false); router.push(href(n)); }} />}
           <span className="flex items-center gap-2">
             <span className="inline-flex overflow-hidden rounded-full border border-misty text-sm" role="group" aria-label="Show">
-              {([["all", "All"], ["unread", `Unread${unreadThreads ? ` (${unreadThreads})` : ""}`]] as const).map(([k, l]) => (
+              {([["all", "All"], ["unread", `Unread${unreadThreads ? ` (${unreadThreads})` : ""}`], ["archived", `Archived${archivedThreads ? ` (${archivedThreads})` : ""}`]] as const).map(([k, l]) => (
                 <button key={k} type="button" aria-pressed={tab === k} onClick={() => setTab(k)} className={`px-3 py-1 font-semibold ${tab === k ? "bg-charcoal text-white" : "hover:bg-sunken"}`}>{l}</button>
               ))}
             </span>
@@ -87,7 +92,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
               </li>
             ))}
           </ul>
-        ) : <p className="p-4 text-sm muted">{tab === "unread" && !q.trim() ? "All caught up. No unread texts or missed calls." : threads.length ? "No conversations match." : `No texts yet on ${formatPhone(line.number)}. Click + New message to text a contact.`}</p>}
+        ) : <p className="p-4 text-sm muted">{tab === "archived" && !q.trim() ? "Nothing archived. Click Archive on a conversation when you're done with it." : tab === "unread" && !q.trim() ? "All caught up. No unread texts or missed calls." : threads.length ? "No conversations match." : `No texts yet on ${formatPhone(line.number)}. Click + New message to text a contact.`}</p>}
       </section>
 
       <section aria-label="Conversation" className={`card flex min-h-[60vh] flex-col ${open ? "" : "max-md:hidden"}`}>
@@ -106,6 +111,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
               </div>
               <span className="flex flex-wrap gap-2">
                 {!group && <CallLink className="btn" number={`+1${open}`} name={person?.name}>Call</CallLink>}
+                <ArchiveThread ourNumber={line.number} number={open} archived={!!current?.archived} onDone={(a) => router.push(a ? href(null) : href(open))} />
                 <DeleteThread ourNumber={line.number} number={open} onDone={() => router.push(href(null))} />
               </span>
             </header>
@@ -133,8 +139,9 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
                         )}
                         {!(m.photos?.length && m.body === PHOTO_ONLY) && <p className={`whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${m.direction === "out" ? "bg-accent text-white" : "bg-sunken"}`}>{m.body}</p>}
                         {!!m.reactions?.length && <span className="-mt-2 rounded-full border border-misty bg-white px-1.5 text-sm shadow-sm" aria-label={`Reactions: ${m.reactions.join(" ")}`}>{[...new Set(m.reactions)].join("")}{m.reactions.length > new Set(m.reactions).size ? ` ${m.reactions.length}` : ""}</span>}
-                        <span className="px-1 text-[11px] muted">
-                          {clock(m.at)}{m.direction === "out" ? ` · ${m.by ? `${m.by} · ` : ""}${STATUS[m.status] ?? m.status}` : ""}
+                        <span className={`flex items-center gap-1 px-1 text-[11px] muted ${m.direction === "out" ? "flex-row-reverse" : ""}`}>
+                          {!composer.blocked && m.body !== PHOTO_ONLY && <ReactButton id={m.id} out={m.direction === "out"} mine={m.mine ?? []} onDone={() => router.refresh()} />}
+                          <span>{clock(m.at)}{m.direction === "out" ? ` · ${m.by ? `${m.by} · ` : ""}${STATUS[m.status] ?? m.status}` : ""}</span>
                         </span>
                         {m.error && ["failed", "undelivered"].includes(m.status) && <span className="px-1 text-xs text-bad">{sendProblem(m.error)}</span>}
                       </div>
@@ -145,7 +152,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
               <div ref={end} />
             </div>
             <div className="border-t border-misty p-3">
-              {group ? <GroupComposer key={open} sid={open} blocked={composer.blocked ?? (groupsOn ? null : "Group texting is off (Admin → Integrations), so HQ can't reply to the group.")} from={composer.from} onSent={() => router.refresh()} />
+              {group ? <GroupComposer key={open} sid={open} templates={composer.templates} blocked={composer.blocked ?? (groupsOn ? null : "Group texting is off (Admin → Integrations), so HQ can't reply to the group.")} from={composer.from} onSent={() => router.refresh()} />
                 : <TextComposer key={open} personId={person?.id ?? null} phones={[open]} compact {...composer} />}
             </div>
           </>
@@ -159,13 +166,15 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
  * + New message: find a contact and pick their number. Pick more than one number (group texting on) to start a
  * group text: everyone gets it from your number and replies stay in one conversation.
  */
-function NewMessage({ onPick, groupsOn, blocked }: { onPick: (key: string) => void; groupsOn: boolean; blocked: string | null }) {
+function NewMessage({ onPick, groupsOn, blocked, templates }: { onPick: (key: string) => void; groupsOn: boolean; blocked: string | null; templates: Template[] }) {
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<{ id: string; name: string; phones: string[] }[]>([]);
   const [picked, setPicked] = useState<{ number: string; name: string }[]>([]);
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
+  const box = useRef<HTMLTextAreaElement>(null);
+  const tpl = useGroupTemplates({ templates, box, body, setBody, start, setError });
   useEffect(() => {
     if (q.trim().length < 2) return;
     const ctrl = new AbortController();
@@ -202,7 +211,13 @@ function NewMessage({ onPick, groupsOn, blocked }: { onPick: (key: string) => vo
       {picked.length === 1 && <span className="flex flex-wrap items-center gap-2 text-sm"><button type="button" className="btn btn-primary" onClick={() => onPick(picked[0].number)}>Text {picked[0].name}</button><span className="muted">or add more people for a group text</span></span>}
       {picked.length >= 2 && (blocked ? <p className="text-sm muted">{blocked}</p> : (
         <div className="flex flex-col gap-1">
-          <textarea className="input min-h-20 font-normal" aria-label="Group text message" placeholder="Write the group text" maxLength={1600} value={body} onChange={(e) => setBody(e.target.value)} />
+          {tpl.picker}
+          <div className="relative">
+            <textarea ref={box} className="input min-h-20 w-full font-normal" aria-label="Group text message" placeholder="Write the group text, or type / and a template name" maxLength={1600} value={body}
+              onChange={(e) => { setBody(e.target.value); tpl.slash.track(); }} onKeyDown={tpl.slash.onKeyDown} onKeyUp={tpl.slash.track} onClick={tpl.slash.track} />
+            {tpl.slash.menu}
+          </div>
+          {tpl.note}
           <span className="flex flex-wrap items-center justify-between gap-2 text-xs muted">Everyone gets it from your number; replies show here for the whole group.
             <button type="button" className="btn btn-primary" disabled={pending || !body.trim()} onClick={send}>{pending ? "Sending…" : `Send to ${picked.length} people`}</button>
           </span>
@@ -213,13 +228,47 @@ function NewMessage({ onPick, groupsOn, blocked }: { onPick: (key: string) => vo
   );
 }
 
+type Template = { id: string; name: string };
+
+/**
+ * Text templates in group texts (owner request 2026-10-28): the Template box or "/name". Your own details fill in;
+ * client details (like their first name) can't for a whole group, so those are listed to type in.
+ */
+function useGroupTemplates({ templates, box, body, setBody, start, setError }: {
+  templates: Template[]; box: React.RefObject<HTMLTextAreaElement | null>; body: string; setBody: (s: string) => void;
+  start: (fn: () => Promise<void>) => void; setError: (s: string) => void;
+}) {
+  const [templateId, setTemplateId] = useState("");
+  const [missing, setMissing] = useState<string[]>([]);
+  const slash = useSlashTemplates({ box, value: body, templates, onChoose: (tid, a, b) => start(async () => {
+    const r = await fillTextTemplate({ personId: null, templateId: tid });
+    if (!r.ok) { setError(r.error); return; }
+    setBody(body.slice(0, a) + r.data!.body + body.slice(b)); setTemplateId(tid); setMissing(r.data!.missing);
+    const at = a + r.data!.body.length;
+    requestAnimationFrame(() => { box.current?.focus(); box.current?.setSelectionRange(at, at); });
+  }) });
+  const pick = (tid: string) => {
+    setTemplateId(tid); setError("");
+    if (!tid) { setMissing([]); return; }
+    start(async () => {
+      const r = await fillTextTemplate({ personId: null, templateId: tid });
+      if (!r.ok) { setError(r.error); return; }
+      setBody(r.data!.body); setMissing(r.data!.missing);
+    });
+  };
+  const picker = templates.length ? <label className="label">Template<TemplateSearch templates={templates} value={templateId} onPick={pick} noneLabel="No text templates yet" /></label> : null;
+  const note = missing.length ? <p className="text-xs text-bad">Fill in by hand before sending: {missing.join(", ")}.</p> : null;
+  return { slash, picker, note };
+}
+
 /** Reply in a group text: everyone in the group gets it from your number. */
-function GroupComposer({ sid, blocked, from, onSent }: { sid: string; blocked: string | null; from: string | null; onSent: () => void }) {
+function GroupComposer({ sid, blocked, from, onSent, templates }: { sid: string; blocked: string | null; from: string | null; onSent: () => void; templates: Template[] }) {
   const [body, setBody] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
   const box = useRef<HTMLTextAreaElement>(null);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
+  const tpl = useGroupTemplates({ templates, box, body, setBody, start, setError });
   if (blocked) return <p className="rounded-md bg-sunken px-3 py-2 text-sm muted">{blocked}</p>;
   const send = () => start(async () => {
     setError("");
@@ -229,8 +278,14 @@ function GroupComposer({ sid, blocked, from, onSent }: { sid: string; blocked: s
   });
   return (
     <div className="flex flex-col gap-2">
-      <textarea ref={box} aria-label="Group text message" placeholder="Reply to the group" className="input min-h-20 font-normal" maxLength={1600} value={body}
-        onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && (body.trim() || photos.length) && !pending) { e.preventDefault(); send(); } }} />
+      {tpl.picker}
+      <div className="relative">
+        <textarea ref={box} aria-label="Group text message" placeholder="Reply to the group, or type / and a template name" className="input min-h-20 w-full font-normal" maxLength={1600} value={body}
+          onChange={(e) => { setBody(e.target.value); tpl.slash.track(); }} onKeyUp={tpl.slash.track} onClick={tpl.slash.track}
+          onKeyDown={(e) => { tpl.slash.onKeyDown(e); if (!e.defaultPrevented && e.key === "Enter" && (e.metaKey || e.ctrlKey) && (body.trim() || photos.length) && !pending) { e.preventDefault(); send(); } }} />
+        {tpl.slash.menu}
+      </div>
+      {tpl.note}
       <TextPhotoPreviews photos={photos} onChange={setPhotos} />
       <span className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs muted">To everyone in the group, from your number {from ? formatPhone(from) : ""}</span>
@@ -239,6 +294,38 @@ function GroupComposer({ sid, blocked, from, onSent }: { sid: string; blocked: s
       </span>
       {error && <p role="alert" className="text-sm text-bad">{error}</p>}
     </div>
+  );
+}
+
+/** Heart, thumbs up and the other reactions on a message; the one you already sent is highlighted and clicking it again removes it. */
+function ReactButton({ id, out, mine, onDone }: { id: string; out: boolean; mine: string[]; onDone: () => void }) {
+  const { open, setOpen, ref } = useDropdown<HTMLSpanElement>();
+  const [error, setError] = useState("");
+  const [pending, start] = useTransition();
+  return (
+    <span ref={ref} className="relative">
+      <button type="button" aria-label="React" aria-expanded={open} disabled={pending} onClick={() => setOpen(!open)} className="rounded px-1 text-sm leading-none hover:bg-sunken">{pending ? "…" : "☺︎"}</button>
+      {open && (
+        <span role="group" aria-label="Reactions" className={`absolute top-1/2 z-20 flex -translate-y-1/2 gap-0.5 ${out ? "right-full mr-1" : "left-full ml-1"} rounded-full border border-misty bg-white p-1 shadow-lg`}>
+          {SEND_REACTIONS.map((k) => (
+            <button key={k.emoji} type="button" title={mine.includes(k.emoji) ? `Remove ${k.noun}` : k.verb} aria-pressed={mine.includes(k.emoji)}
+              className={`grid h-8 w-8 place-items-center rounded-full text-lg hover:bg-sunken ${mine.includes(k.emoji) ? "bg-accent-soft" : ""}`}
+              onClick={() => { setOpen(false); setError(""); start(async () => { const r = await reactToText({ messageId: id, emoji: k.emoji }); if (r.ok) onDone(); else setError(r.error); }); }}>{k.emoji}</button>
+          ))}
+        </span>
+      )}
+      {error && <span role="alert" className="absolute top-full z-20 mt-1 w-56 rounded bg-white p-1 text-xs text-bad shadow">{error}</span>}
+    </span>
+  );
+}
+
+/** Archive, like email: done with it for now; a new text brings it back to the inbox. */
+function ArchiveThread({ ourNumber, number, archived, onDone }: { ourNumber: string; number: string; archived: boolean; onDone: (archived: boolean) => void }) {
+  const [pending, start] = useTransition();
+  return (
+    <button type="button" className="btn" disabled={pending} onClick={() => start(async () => { const r = await archiveThread({ ourNumber, number, archived: !archived }); if (r.ok) onDone(!archived); })}>
+      {archived ? "Move to inbox" : "Archive"}
+    </button>
   );
 }
 
