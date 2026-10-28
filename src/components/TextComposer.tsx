@@ -86,7 +86,7 @@ export function TextComposer({ personId, phones, phoneLabels = {}, templates, fr
   };
   return (
     <div className="mt-2 flex flex-col gap-2">
-      <div className={`grid grid-cols-1 gap-2 ${compact ? "" : "sm:grid-cols-2"}`}>
+      <div className="grid grid-cols-1 gap-2">
         {phones.length === 1 && !compact && <div className="label">To<span className="py-1.5 text-sm font-semibold text-charcoal">{formatPhone(to)}</span></div>}
         <div className="flex flex-wrap items-center gap-1.5 sm:col-span-2">
           {phones.length > 1 && <span className="text-sm font-semibold">To</span>}

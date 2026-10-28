@@ -103,6 +103,14 @@ function CopyContact({ name, phones, emails }: { name: string; phones: Row[]; em
   return <button type="button" className="text-sm font-semibold text-accent hover:underline" onClick={copy} aria-live="polite">{msg || "Copy"}</button>;
 }
 
+// Matching line icons for Call / Text / Email (owner wanted them even, 2026-10-28).
+const PHONE = "M6 3h3l2 5-2 1a11 11 0 0 0 6 6l1-2 5 2v3a2 2 0 0 1-2 2A17 17 0 0 1 4 5a2 2 0 0 1 2-2";
+const CHAT = "M5 5h14v10H9l-4 4z";
+const MAIL = "M4 6h16v12H4z M4 7l8 6 8-6";
+function Icon({ d }: { d: string }) {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>;
+}
+
 /** Copies one phone, email or address (owner request 2026-10-28). */
 function CopyOne({ value }: { value: string }) {
   const [done, setDone] = useState("");
@@ -152,9 +160,9 @@ export function InfoCard(p: { id: string; name: string; addresses: AddressRow[];
       </div>
       {/* Call / Text / Email under the name (owner request 2026-10-28): Text and Email open the Timeline composer. */}
       <div className="mt-3 grid grid-cols-3 gap-1.5">
-        {p.phones[0] ? <CallLink className="btn px-0 text-center" number={p.phones[0].value} name={p.name}>📞 Call</CallLink> : <button type="button" className="btn px-0" disabled title="No phone on file">📞 Call</button>}
-        <button type="button" className="btn px-0" disabled={!p.phones.length} title={p.phones.length ? undefined : "No phone on file"} onClick={() => requestCompose("send")}>💬 Text</button>
-        <button type="button" className="btn px-0" disabled={!p.emails.length} title={p.emails.length ? undefined : "No email on file"} onClick={() => requestCompose("email")}>✉️ Email</button>
+        {p.phones[0] ? <CallLink className="btn inline-flex items-center justify-center gap-1.5 px-0" number={p.phones[0].value} name={p.name}><Icon d={PHONE} />Call</CallLink> : <button type="button" className="btn inline-flex items-center justify-center gap-1.5 px-0" disabled title="No phone on file"><Icon d={PHONE} />Call</button>}
+        <button type="button" className="btn inline-flex items-center justify-center gap-1.5 px-0" disabled={!p.phones.length} title={p.phones.length ? undefined : "No phone on file"} onClick={() => requestCompose("send")}><Icon d={CHAT} />Text</button>
+        <button type="button" className="btn inline-flex items-center justify-center gap-1.5 px-0" disabled={!p.emails.length} title={p.emails.length ? undefined : "No email on file"} onClick={() => requestCompose("email")}><Icon d={MAIL} />Email</button>
       </div>
       <ul className="mt-3 flex flex-col gap-1.5 text-sm">
         {p.phones.map((x, i) => <li key={`p${i}`}><CallLink className="link" number={x.value} name={p.name}>{x.value}</CallLink> <span className="muted">({x.label})</span><CopyOne value={x.value} /></li>)}

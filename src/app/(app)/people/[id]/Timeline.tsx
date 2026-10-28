@@ -16,6 +16,8 @@ const TABS: [Kind, string, string, string][] = [
   ["email", "Email", "", ""],
 ];
 type Kind = "note" | "send" | "text" | "call" | "email";
+// The row shows Note, Log text and Log call; Send text and Email open from the contact card's buttons (owner 2026-10-28).
+const ROW = TABS.filter(([k]) => k !== "send" && k !== "email");
 
 // Text / Email on the contact card open this composer (owner request 2026-10-28). The card fires COMPOSE_EVENT; a
 // request made while the Timeline tab isn't showing waits here until it opens.
@@ -97,13 +99,14 @@ export function Timeline({ personId, personName, entries, team, email, text }: {
   return (
     <div className="card mt-3 p-4" ref={top}>
       <div className="flex flex-wrap items-center gap-1">
-        {TABS.map(([k, label]) => (
+        {ROW.map(([k, label]) => (
           <button key={k} type="button" aria-pressed={open && kind === k} aria-expanded={open && kind === k} onClick={() => { if (open && kind === k) setOpen(false); else { setKind(k); setOpen(true); } }}
             className={`rounded-md px-3 py-1.5 text-sm font-semibold ${open && kind === k ? "border border-misty bg-white" : "muted hover:text-charcoal"}`}>{label}</button>
         ))}
         {open && <button type="button" className="ml-auto text-xs font-semibold text-accent hover:underline" onClick={() => setOpen(false)}>Close</button>}
       </div>
       {open && <>
+      {(kind === "send" || kind === "email") && <h3 className="mt-2 text-sm font-bold">{kind === "send" ? "Send text" : "Send email"}</h3>}
       {kind === "email" && <EmailComposer key={reply?.n ?? 0} personId={personId} {...email} initialSubject={reply?.subject ?? ""} />}
       {kind === "send" && <TextComposer personId={personId} {...text} />}
       {kind === "call" && (
