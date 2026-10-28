@@ -445,6 +445,10 @@ Principles:
 - **One task list everywhere:** tasks typed on the Tasks page, a person's own tasks and
   checklist steps from their files are the same records. Checking one off anywhere checks it
   off everywhere.
+- **Done today** *(owner request 2026-10-28)*: at the bottom of Today, a folded "▸ Done today N" lists every task
+  someone checked off since midnight Central (newest first) with the contact, who checked it off and the time. It
+  follows the Me / Everyone / teammate picker by who checked it off. Clicking the check reopens the task. Steps
+  closed automatically (a waived date, a deal that fell through) aren't listed.
 - **Assignment alerts** *(owner request 2026-10-23)*: when someone adds a task for a teammate (quick add with
   @name, the Create task pop-up, or adding while viewing their tasks) or changes a task's assignee to a teammate,
   that person gets a bell notification and, when Gmail is connected, an email to their pettyhomes.com address

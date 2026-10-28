@@ -3,8 +3,12 @@ import { db } from "@/server/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { isDueForTouch } from "@/lib/filters";
 import { initials, isoFromDate, todayCentral } from "@/lib/normalize";
+import { centralDayStart } from "@/lib/texting";
 import { birthdayName, categoryOf, importantDateTasks, isWeekend, parseSubtasks, type Subtask } from "@/lib/tasks";
 import { CONTRACT_ANCHORS, timingLabel, type Anchor } from "@/lib/templates";
+
+/** A task checked off today: who did it and when. */
+export type DoneRow = TaskRow & { doneById: string | null; doneAt: string };
 
 export type TaskRow = {
   id: string; // task id, or the sourceKey for an Important dates task not yet saved
@@ -113,11 +117,13 @@ async function withMailTo(rows: TaskRow[]): Promise<TaskRow[]> {
 export async function loadTaskBoard() {
   const today = isoFromDate(todayCentral());
   const team = await loadTeam();
-  const [lists, tasks, dateTasks, people] = await Promise.all([
+  const [lists, tasks, dateTasks, people, done] = await Promise.all([
     db.taskList.findMany({ orderBy: [{ position: "asc" }, { name: "asc" }] }),
     db.task.findMany({ where: { completedAt: null, deletedAt: null, OR: [{ personId: null }, { person: { deletedAt: null } }], ...LIVE_STEPS }, include: taskInclude, orderBy: [{ dueDate: "asc" }, { priority: "desc" }, { dueTime: "asc" }, { title: "asc" }, { id: "asc" }] }),
     loadDateTasks(team, today),
     db.person.findMany({ where: { deletedAt: null, followUpDays: { gt: 0 } }, select: { id: true, name: true, followUpDays: true, lastTextAt: true, touchAfter: true, assignedToId: true } }),
+    // Done today (owner request 2026-10-28): tasks someone checked off since midnight Central, newest first.
+    db.task.findMany({ where: { completedAt: { gte: centralDayStart() }, completedById: { not: null }, deletedAt: null }, include: taskInclude, orderBy: { completedAt: "desc" }, take: 200 }),
   ]);
   // Due for a touch shows Monday to Friday only (owner 2026-10-24); weekends start empty.
   const weekend = isWeekend(todayCentral());
@@ -133,6 +139,7 @@ export async function loadTaskBoard() {
     today, team, touches, waiting, spreadable, weekend,
     lists: lists.map((l): ListRow => ({ id: l.id, name: l.name, builtin: l.builtin, showOnToday: l.showOnToday })),
     tasks: await withMailTo([...tasks.map(toRow), ...dateTasks]),
+    doneToday: done.map((t): DoneRow => ({ ...toRow(t), doneById: t.completedById, doneAt: t.completedAt!.toISOString() })),
   };
 }
 

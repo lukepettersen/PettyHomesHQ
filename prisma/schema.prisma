@@ -342,6 +342,7 @@ model Task {
   offsetMinutes   Int? // "N minutes before" the anchor's time (phone call); the due time moves with it
   advanceStatusId String? // move the file to this status when done
   completedAt     DateTime?
+  completedById   String? // who checked it off (Done today, owner request 2026-10-28); empty when closed automatically
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   deletedAt       DateTime?

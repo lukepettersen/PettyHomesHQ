@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import type { ListRow, TaskRow, TeamMember, TouchRow } from "@/server/tasks";
+import type { DoneRow, ListRow, TaskRow, TeamMember, TouchRow } from "@/server/tasks";
 import { diffDays, formatTime, longIso, parseQuickAdd, PRIORITIES, repeatLabel, VIEW_COOKIE, WHO_COOKIE } from "@/lib/tasks";
 import { completeDateTask, completeTask, createList, deleteList, logTouch, quickAddTask, spreadTouches, unspreadTouches, renameList, reopenTask, setListOnToday } from "./actions";
 import { ArrangeLists } from "./ArrangeLists";
@@ -11,7 +11,7 @@ import { TaskDetail } from "./TaskDetail";
 import { PersonLink, TaskLine, Toast } from "./parts";
 import { saveTrail } from "@/components/TaskTrail";
 
-type Props = { today: string; team: TeamMember[]; lists: ListRow[]; tasks: TaskRow[]; touches: TouchRow[]; waiting: number; spreadable: number; weekend: boolean; meId: string; initialView: string; initialWho: string; initialTask: string | null };
+type Props = { today: string; team: TeamMember[]; lists: ListRow[]; tasks: TaskRow[]; doneToday: DoneRow[]; touches: TouchRow[]; waiting: number; spreadable: number; weekend: boolean; meId: string; initialView: string; initialWho: string; initialTask: string | null };
 type Done = { row: TaskRow; realId: string; nextId: string | null };
 
 const keyOf = (l: ListRow) => l.builtin ?? `list:${l.id}`;
@@ -387,6 +387,7 @@ export function TasksApp(p: Props) {
 
         {arranging && <ArrangeLists lists={p.lists} notify={setToast} onClose={(saved) => { setArranging(false); if (saved) refresh(); }} />}
         {body()}
+        {view === "today" && <DoneToday rows={p.doneToday.filter((d) => (who === "everyone" || d.doneById === viewingId) && !Object.values(justDone).some((x) => x.realId === d.id))} team={p.team} onChanged={refresh} notify={setToast} />}
         {view === "today" && rows.length === 0 && touches.length === 0 && empty("No tasks yet. Type one in the box above, or add one from a person's page.")}
         <p className="text-xs muted">Quick add understands <code>today</code>, <code>tomorrow</code>, a weekday, <code>next week</code>, <code>9am</code>, <code>every month</code>, <code>#list</code>, <code>@alyssa</code> and <code>re Name</code>. See <Link className="link" href="/people">People</Link> to add tasks for a person.</p>
       </main>
@@ -400,5 +401,35 @@ export function TasksApp(p: Props) {
       )}
       <Toast message={toast} onDone={clearToast} />
     </div>
+  );
+}
+
+/** Done today (owner request 2026-10-28): what was checked off since midnight, folded; clicking the check reopens a task. */
+function DoneToday({ rows, team, onChanged, notify }: { rows: DoneRow[]; team: TeamMember[]; onChanged: () => void; notify: (m: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [busy, start] = useTransition();
+  if (!rows.length) return null;
+  const name = (id: string | null) => team.find((m) => m.id === id)?.name.split(" ")[0] ?? "";
+  const at = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { timeZone: "America/Chicago", hour: "numeric", minute: "2-digit" }).replace(" ", "").toLowerCase();
+  return (
+    <section aria-label="Done today" className="rounded-xl border border-misty bg-white">
+      <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-semibold">
+        <span aria-hidden="true" className="text-xs muted">{open ? "▾" : "▸"}</span> Done today <span className="rounded-full bg-accent-soft px-2 text-xs text-accent">{rows.length}</span>
+      </button>
+      {open && (
+        <ul className="border-t border-misty">
+          {rows.map((t) => (
+            <li key={t.id} className="flex items-center gap-2 border-t border-misty/60 px-3 py-1.5 text-sm first:border-0">
+              <button type="button" disabled={busy} aria-label={`Reopen ${t.title}`} title="Not done? Click to reopen"
+                onClick={() => start(async () => { const r = await reopenTask({ id: t.id }); if (!r.ok) notify(r.error); else { notify(`Reopened "${t.title}".`); onChanged(); } })}
+                className="grid h-5 w-5 flex-none place-items-center rounded-md border border-moss bg-moss text-[11px] font-bold text-white">✓</button>
+              <span className="min-w-0 flex-1 truncate muted line-through">{t.title}</span>
+              {t.personId && t.personName && <PersonLink id={t.personId} name={t.personName} small />}
+              <span className="flex-none text-xs muted">{name(t.doneById)}{name(t.doneById) ? " · " : ""}{at(t.doneAt)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
