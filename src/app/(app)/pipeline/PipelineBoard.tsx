@@ -51,23 +51,19 @@ export function PipelineBoard({ cards, contracts, closed, statuses, today, initi
       {editing ? (
         <StageEditor kind={statusKind} rows={statuses[statusKind]} counts={Object.fromEntries(columns.map((c) => [c.key, c.items.length]))} onDone={() => setEditing(false)} />
       ) : (
-        // Option A (owner-approved 2026-10-28): columns share the width (never under ~150px, so it only scrolls sideways in
-        // the busiest case), empty stages fold to a thin labelled strip, 8 cards a column then "+N more".
+        // Option A (owner-approved 2026-10-28): every stage is a column, all sharing the width evenly (never under ~130px,
+        // so it only scrolls sideways in the busiest case); 8 cards a column then "+N more".
         <div className="mt-3 flex items-start gap-1.5 overflow-x-auto pb-3">
           {columns.map((c, i) => {
             const total = c.items.reduce((t, x) => t + (x.price ?? 0), 0);
-            if (!c.items.length) return (
-              <section key={c.key} aria-label={`${c.name}, empty`} className="flex h-40 w-9 flex-none justify-center rounded-lg border border-dashed border-misty py-2">
-                <span className="rotate-180 text-xs font-semibold whitespace-nowrap muted [writing-mode:vertical-rl]">{c.name} · 0</span>
-              </section>
-            );
             const all = expanded.includes(c.key), shown = all ? c.items : c.items.slice(0, 8);
             return (
-              <section key={c.key} aria-label={c.name} className="flex min-w-[150px] max-w-[360px] flex-1 basis-0 flex-col overflow-hidden rounded-lg border border-misty bg-sunken">
+              <section key={c.key} aria-label={c.name} className="flex min-w-[130px] flex-1 basis-0 flex-col overflow-hidden rounded-lg border border-misty bg-sunken">
                 <div className={`h-[3px] ${c.closed ? "bg-moss" : tab === "uc" ? "bg-coral" : BAR[i % 3]}`} />
                 <div className="flex items-baseline justify-between gap-1 border-b border-misty bg-white px-2 py-1.5 text-[13px]"><b className="leading-tight">{c.name}</b><span className="flex-none text-xs muted">{c.items.length}{total ? ` · ${kMoney(total)}` : ""}</span></div>
                 <div className="flex flex-col gap-1 p-1">
                   {shown.map((x) => "fileId" in x ? <ContractTile key={x.id} card={x} today={today} closed={!!c.closed} /> : <Card key={x.id} card={x} today={today} />)}
+                  {!c.items.length && <span className="py-2 text-center text-xs muted">Empty</span>}
                   {c.items.length > 8 && <button type="button" className="py-0.5 text-xs font-semibold text-accent hover:underline" onClick={() => setExpanded(all ? expanded.filter((k) => k !== c.key) : [...expanded, c.key])}>{all ? "Show fewer" : `+${c.items.length - 8} more`}</button>}
                 </div>
               </section>
