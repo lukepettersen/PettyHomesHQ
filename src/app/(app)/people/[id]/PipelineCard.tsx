@@ -15,6 +15,7 @@ export function PipelineCard({ fileForms, personId, personName, files, contracts
   const [adding, setAdding] = useState<FileKind | null>(null);
   const [msg, setMsg] = useState("");
   const [offering, setOffering] = useState(false);
+  const shownContracts = contracts.filter((c) => !(c.state === "active" && files.some((f) => f.id === c.fileId)));
   return (
     <section className="card p-4" aria-labelledby="pipe-h">
       <h3 id="pipe-h" className="font-bold">Pipeline <span className="text-sm font-normal muted">{files.length || ""}</span></h3>
@@ -23,13 +24,14 @@ export function PipelineCard({ fileForms, personId, personName, files, contracts
           <li key={f.id} className="flex items-start justify-between gap-2 border-t border-misty/60 py-1.5 text-sm first:border-0">
             <span className="min-w-0"><SideChip kind={f.kind} /> <span className={f.closedAt ? "muted" : ""}>{f.kind === "buyer" ? (contracts.find((c) => c.fileId === f.id && c.state === "active")?.address.split(",")[0] ?? fileLine(f)) : (f.address ?? "Listing").split(",")[0]}</span>
               <span className="block text-xs muted">{contracts.some((c) => c.fileId === f.id && c.state === "active") ? "Under contract" : f.status}</span></span>
-            {f.price ? <span className="text-xs muted">{kMoney(f.price)}</span> : null}
+            {(() => { const price = contracts.find((c) => c.fileId === f.id && c.state === "active")?.price ?? f.price; return price ? <span className="text-xs muted">{kMoney(price)}</span> : null; })()}
           </li>
         ))}
       </ul>
-      {contracts.length > 0 && (
+      {/* A contract under way shows on its file's line (one line per deal, owner request 2026-10-28); past ones stay listed. */}
+      {shownContracts.length > 0 && (
         <ul className="flex flex-col">
-          {contracts.map((c) => (
+          {shownContracts.map((c) => (
             <li key={c.id} className="flex items-start justify-between gap-2 border-t border-misty/60 py-1.5 text-sm">
               <span className="min-w-0"><SideChip kind="Contract" /> {c.address.split(",")[0]}
                 <span className="block text-xs muted">{c.state === "active" ? "Under contract" : c.state === "closed" ? `Closed${c.endedOn ? ` ${c.endedOn.slice(5).replace("-", "/")}` : ""}` : "Fell through"}</span></span>
