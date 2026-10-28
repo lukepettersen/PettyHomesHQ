@@ -40,9 +40,17 @@ export function Timeline({ personId, personName, entries, team, email, text }: {
   const [pick, setPick] = useState<{ q: string; i: number } | null>(null);
   const [reply, setReply] = useState<{ subject: string; n: number } | null>(null);
   const top = useRef<HTMLDivElement>(null);
+  const state = useRef({ open, kind });
+  useEffect(() => { state.current = { open, kind }; }, [open, kind]);
   useEffect(() => {
     if (open) top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    const on = (ev: Event) => { waiting = null; setKind((ev as CustomEvent<Kind>).detail); setOpen(true); top.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
+    // The same button tapped again folds it (owner request 2026-10-28).
+    const on = (ev: Event) => {
+      waiting = null;
+      const k = (ev as CustomEvent<Kind>).detail;
+      if (state.current.open && state.current.kind === k) { setOpen(false); return; }
+      setKind(k); setOpen(true); top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
     window.addEventListener(COMPOSE_EVENT, on);
     return () => window.removeEventListener(COMPOSE_EVENT, on);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
