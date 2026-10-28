@@ -92,7 +92,7 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
           <p className="text-xs muted">{activePa ? `Under contract${activePa.dates.closing ? ` · closing ${shortDay(activePa.dates.closing)}` : ""}` : `In ${file.status} since ${shortDay(file.statusSince.slice(0, 10))}`}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {file.kind === "buyer" && <button type="button" className="btn" onClick={() => setOffering(true)}>Submit offer</button>}
+          {file.kind === "buyer" && !activePa && <button type="button" className="btn" onClick={() => setOffering(true)}>Submit offer</button>}
           <button type="button" className="btn" aria-expanded={texting} onClick={() => { setTexting((x) => !x); setEmailing(false); }}>Send text</button>
           <button type="button" className="btn" aria-expanded={emailing} onClick={() => { setEmailing((x) => !x); setTexting(false); }}>Send email</button>
           <button type="button" className="btn" onClick={() => setEditing(true)}>Edit</button>

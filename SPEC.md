@@ -347,7 +347,7 @@ Principles:
 
 ### 7.5 Submit offer (Relay built in) *(owner decision 2026-10-19)*
 - The Relay app's offer flow now lives in HQ. **Submit offer** is on every contact (Pipeline card)
-  and on each buyer deal.
+  and on each buyer deal that isn't under contract yet (hidden once it has a purchase agreement; owner request 2026-10-28).
 - Laid out like Relay *(owner request 2026-10-19)*: full screen on a phone; client card; the
   required terms as small tiles in three columns, each with a check circle that fills when the term
   is heard; optional clauses as checkboxes; one big round mic (**Tap to record** / **Listening… tap
