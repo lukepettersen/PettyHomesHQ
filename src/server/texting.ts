@@ -304,3 +304,29 @@ export async function textComposerFor(user: SessionUser, unsubscribedName?: stri
   const ownerCell = owner?.forwardTo ? { value: normalizePhone(owner.forwardTo), label: owner.id === user.id ? "Your cell" : `${owner.name.split(" ")[0]}'s cell`, personId: (await personForNumber(normalizePhone(owner.forwardTo)))?.id ?? null } : null;
   return { from: me?.textNumber ?? null, blocked, groupsOn: groups, ownerCell, templates: templates.map((t) => ({ id: t.id, name: t.folder ? `${t.folder} · ${t.name}` : t.name })) };
 }
+
+export type ThreadPerson = { id: string; name: string; stage: string | null; assignedTo: string | null; deals: { kind: "Buyer" | "Seller"; line: string; contract: string | null }[] };
+
+/** Who's in a conversation, for the panel on the right of Messages (owner request 2026-10-28): stage, assigned to, and
+ * any open buyer / seller deal (its status, or the contract's address and closing date). */
+export async function loadThreadPeople(personIds: string[]): Promise<ThreadPerson[]> {
+  if (!personIds.length) return [];
+  const people = await db.person.findMany({
+    where: { id: { in: [...new Set(personIds)] }, deletedAt: null },
+    select: {
+      id: true, name: true, stage: { select: { name: true } }, assignedTo: { select: { name: true } },
+      files: { where: { deletedAt: null, closedAt: null }, select: { kind: true, address: true, status: { select: { name: true } }, contracts: { where: { state: "active", deletedAt: null }, select: { address: true, closing: true }, take: 1 } } },
+    },
+  });
+  return people.map((p) => ({
+    id: p.id, name: p.name, stage: p.stage?.name ?? null, assignedTo: p.assignedTo?.name ?? null,
+    deals: p.files.map((f) => {
+      const c = f.contracts[0];
+      return {
+        kind: f.kind === "listing" ? "Seller" as const : "Buyer" as const,
+        line: c ? c.address.split(",")[0] : f.kind === "listing" ? (f.address ?? "Listing").split(",")[0] : f.status?.name ?? "No status",
+        contract: c ? `Under contract${c.closing ? ` · closing ${c.closing.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric" })}` : ""}` : f.kind === "listing" ? f.status?.name ?? null : null,
+      };
+    }),
+  }));
+}

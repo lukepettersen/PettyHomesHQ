@@ -11,7 +11,7 @@ import { TextPhotoButton, TextPhotoPreviews } from "@/components/TextPhotos";
 import { PHOTO_ONLY } from "@/lib/textMedia";
 import { formatPhone } from "@/lib/normalize";
 import { sendProblem } from "@/lib/texting";
-import type { Bubble, GroupInfo, Thread } from "@/server/texting";
+import type { Bubble, GroupInfo, Thread, ThreadPerson } from "@/server/texting";
 import { MAX_GROUP } from "@/lib/groupText";
 import type { ScheduledRow } from "../people/[id]/FileTabs";
 import { SEND_REACTIONS } from "@/lib/reactions";
@@ -31,9 +31,9 @@ const when = (iso: string) => (sameDay(iso, new Date()) ? clock(iso) : day(iso))
 const STATUS: Record<string, string> = { queued: "Sending…", accepted: "Sending…", sending: "Sending…", sent: "Sent", delivered: "Delivered", failed: "Not delivered", undelivered: "Not delivered" };
 
 /** Messages (SPEC.md §11): conversations on the left, the open one on the right. Refreshes every 15 seconds. */
-export function MessagesApp({ lines, line, threads, open, person, conversation, composer, group, groupsOn, scheduled }: {
+export function MessagesApp({ lines, line, threads, open, person, conversation, composer, group, groupsOn, scheduled, threadPeople }: {
   lines: Line[]; line: Line | null; threads: Thread[]; open: string | null; person: { id: string; name: string } | null; conversation: Bubble[]; composer: Composer;
-  group: GroupInfo | null; groupsOn: boolean; scheduled: ScheduledRow[];
+  group: GroupInfo | null; groupsOn: boolean; scheduled: ScheduledRow[]; threadPeople: ThreadPerson[];
 }) {
   const router = useRouter();
   const [q, setQ] = useState("");
@@ -58,7 +58,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
   // All = the inbox (archived conversations are under Archived until someone texts again; owner request 2026-10-28).
   const shown = threads.filter((t) => t.number === open || (tab === "archived" ? t.archived : !t.archived && (tab === "all" || t.unread > 0))).filter((t) => !q.trim() || t.name.toLowerCase().includes(q.trim().toLowerCase()) || t.number.includes(q.replace(/\D/g, "") || "~"));
   return (
-    <div className="mx-auto grid max-w-[1500px] grid-cols-1 gap-3 px-4 py-4 md:h-[calc(100dvh-80px)] md:grid-cols-[190px_320px_minmax(0,1fr)]">
+    <div className={`mx-auto grid max-w-[1600px] grid-cols-1 gap-3 px-4 py-4 md:h-[calc(100dvh-80px)] md:grid-cols-[190px_320px_minmax(0,1fr)] ${open && threadPeople.length ? "xl:grid-cols-[190px_300px_minmax(0,1fr)_260px]" : ""}`}>
       {/* Folders on the left like FUB (owner/assistant request 2026-10-28): Inbox, Unread, Scheduled, Archived. */}
       <nav aria-label="Folders" className={`card flex flex-col gap-1 p-3 ${open ? "max-md:hidden" : ""}`}>
         <div className="mb-1 flex items-center justify-between gap-2">
@@ -166,6 +166,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
           </>
         )}
       </section>
+      {open && threadPeople.length > 0 && <PeoplePanel people={threadPeople} />}
     </div>
   );
 }
@@ -268,8 +269,9 @@ function useGroupTemplates({ templates, box, body, setBody, start, setError }: {
     });
   };
   const picker = templates.length ? <label className="label">Template<TemplateSearch templates={templates} value={templateId} onPick={pick} noneLabel="No text templates yet" /></label> : null;
+  const smallPicker = templates.length ? <span className="w-48"><TemplateSearch templates={templates} value={templateId} onPick={pick} emptyLabel="Template" noneLabel="No text templates yet" /></span> : null;
   const note = missing.length ? <p className="text-xs text-bad">Fill in by hand before sending: {missing.join(", ")}.</p> : null;
-  return { slash, picker, note };
+  return { slash, picker, smallPicker, note };
 }
 
 /** Reply in a group text: everyone in the group gets it from your number. */
@@ -289,22 +291,25 @@ function GroupComposer({ sid, members, blocked, from, onSent, templates }: { sid
     setBody(""); setPhotos([]); onSent();
   });
   return (
+    // Same one-line box as one-to-one texts (owner request 2026-10-28).
     <div className="flex flex-col gap-2">
-      {tpl.picker}
-      <div className="relative">
-        <textarea ref={box} aria-label="Group text message" placeholder="Reply to the group, or type / and a template name" className="input min-h-20 w-full font-normal" maxLength={1600} value={body}
-          onChange={(e) => { setBody(e.target.value); tpl.slash.track(); }} onKeyUp={tpl.slash.track} onClick={tpl.slash.track}
-          onKeyDown={(e) => { tpl.slash.onKeyDown(e); if (!e.defaultPrevented && e.key === "Enter" && (e.metaKey || e.ctrlKey) && (body.trim() || photos.length) && !pending) { e.preventDefault(); send(); } }} />
-        {tpl.slash.menu}
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="relative min-w-[240px] flex-1">
+          <textarea ref={box} aria-label="Group text message" placeholder="Reply to the group… (type / for a template)" rows={1} className="input max-h-40 min-h-[40px] w-full resize-none py-2 font-normal" maxLength={1600} value={body}
+            onChange={(e) => { setBody(e.target.value); tpl.slash.track(); e.target.style.height = "auto"; e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`; }} onKeyUp={tpl.slash.track} onClick={tpl.slash.track}
+            onKeyDown={(e) => { tpl.slash.onKeyDown(e); if (!e.defaultPrevented && e.key === "Enter" && (e.metaKey || e.ctrlKey) && (body.trim() || photos.length) && !pending) { e.preventDefault(); send(); } }} />
+          {tpl.slash.menu}
+        </div>
+        <span className="flex flex-wrap items-center justify-end gap-2">
+          {tpl.smallPicker}
+          <TextPhotoButton photos={photos} onChange={setPhotos} disabled={pending} /><EmojiButton box={box} value={body} onChange={setBody} />
+          <ScheduleText numbers={members} body={body} media={photos} disabled={pending || !body.trim() || members.length < 2} onScheduled={(when) => { setNotice(`Scheduled for ${when}.`); setBody(""); setPhotos([]); onSent(); }} />
+          <button type="button" className="btn btn-primary" disabled={pending || (!body.trim() && !photos.length)} onClick={send}>{pending ? "Sending…" : "Send"}</button>
+        </span>
       </div>
       {tpl.note}
       <TextPhotoPreviews photos={photos} onChange={setPhotos} />
-      <span className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-xs muted">To everyone in the group, from your number {from ? formatPhone(from) : ""}</span>
-        <span className="flex gap-2"><TextPhotoButton photos={photos} onChange={setPhotos} disabled={pending} /><EmojiButton box={box} value={body} onChange={setBody} />
-          <button type="button" className="btn btn-primary" disabled={pending || (!body.trim() && !photos.length)} onClick={send}>{pending ? "Sending…" : "Send to group"}</button></span>
-        <ScheduleText numbers={members} body={body} media={photos} disabled={pending || !body.trim() || members.length < 2} onScheduled={(when) => { setNotice(`Scheduled for ${when}.`); setBody(""); setPhotos([]); onSent(); }} />
-      </span>
+      <span className="text-xs muted">To everyone in the group, from your number {from ? formatPhone(from) : ""}</span>
       {notice && <p role="status" className="text-sm text-accent">{notice}</p>}
       {error && <p role="alert" className="text-sm text-bad">{error}</p>}
     </div>
@@ -355,6 +360,34 @@ function ScheduledList({ rows, q, onChanged }: { rows: ScheduledRow[]; q: string
       ))}
       {error && <li role="alert" className="px-3 py-2 text-sm text-bad">{error}</li>}
     </ul>
+  );
+}
+
+/** Who's in this conversation (owner request 2026-10-28): each contact with stage, assigned to and open deals. Wide screens only. */
+function PeoplePanel({ people }: { people: ThreadPerson[] }) {
+  return (
+    <aside aria-label="People in this conversation" className="card hidden min-h-0 flex-col gap-3 overflow-y-auto p-3 xl:flex">
+      <h2 className="text-xs font-semibold uppercase tracking-wider muted">{people.length > 1 ? `In this text · ${people.length}` : "Contact"}</h2>
+      {people.map((p) => (
+        <section key={p.id} className="border-t border-misty pt-3 first-of-type:border-0 first-of-type:pt-0">
+          <div className="flex items-center gap-2"><Avatar name={p.name} /><Link href={`/people/${p.id}`} className="min-w-0 font-bold leading-tight hover:underline">{p.name} ›</Link></div>
+          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm">
+            <dt className="muted">Stage</dt><dd>{p.stage ?? <span className="muted">Not set</span>}</dd>
+            <dt className="muted">Assigned</dt><dd>{p.assignedTo?.split(" ")[0] ?? <span className="muted">Not set</span>}</dd>
+          </dl>
+          {p.deals.length > 0 && (
+            <ul className="mt-2 flex flex-col gap-1.5">
+              {p.deals.map((d, i) => (
+                <li key={i} className="rounded-md border border-misty bg-paper px-2 py-1.5 text-sm">
+                  <span className={`mr-1 rounded px-1 text-[10px] font-bold uppercase ${d.kind === "Buyer" ? "bg-accent-soft text-accent" : "bg-[#f6e3d9] text-[#9a4f2e]"}`}>{d.kind}</span><b>{d.line}</b>
+                  {d.contract && <span className="block text-xs muted">{d.contract}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ))}
+    </aside>
   );
 }
 

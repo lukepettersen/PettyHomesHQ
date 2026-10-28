@@ -580,6 +580,10 @@ Principles:
   contact) with Call, Archive and ⋯ (Delete); the thread scrolls and the reply box stays at the bottom: a one-line
   box that grows as you type, with Template, 📷, 😊, Schedule and Send beside it and the from-number, count and + Add
   in small print under it.
+  On wide screens a fourth column, **Contact** / **In this text · N** *(owner request 2026-10-28)*, shows each
+  contact in the conversation (link to their page) with stage, assigned to, and each open buyer / seller deal: its
+  status, or "Under contract · closing Nov 17" with the address. Teammates' cells aren't listed. Group replies use the
+  same one-line box.
 - **Messages page:** conversations on your number (switch to a teammate's to read theirs; you can only
   send from your own); **+ New message** (find a contact, pick their number) and **All / Unread / Archived** tabs
   *(owner request 2026-10-20)*; **Archive** on a conversation works like email *(owner request 2026-10-28)*: it
