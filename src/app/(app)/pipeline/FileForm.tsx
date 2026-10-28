@@ -29,7 +29,7 @@ export function FileForm({ kind, personId, personName, fileId, statuses, statusI
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const missing = groups.flatMap((g) => g.fields).filter((q) => q.required && !(v[q.key] ?? "").trim());
+    const missing = groups.flatMap((g) => g.fields).filter((q) => q.required && !(v[q.key] ?? "").trim() && !(q.type === "date-na" && v[`${q.key}_na`] === "yes")); // N/A ticked counts as answered
     if (missing.length) { setError(`Add the ${missing.map((q) => q.label.toLowerCase()).join(" and ")} first.`); return; }
     // Only send what's on screen; anything else on the file is kept as is.
     const sent = Object.fromEntries(Object.entries(v).filter(([k]) => shownKeys.has(k.replace(/_na$/, ""))));

@@ -32,7 +32,7 @@ export function PaWizard({ fileId, fileKind, personName, fileLine, prefill, pa, 
   const names = clientFirstNames(personName);
   const onPage = step === 2 ? sections.slice(0, 1) : step === 3 ? sections.slice(1) : step === 0 ? sections : [];
 
-  const missing = (secs: PaSection[]) => secs.flatMap((s) => s.fields).filter((f) => f.required && !(v[f.key] ?? "").trim());
+  const missing = (secs: PaSection[]) => secs.flatMap((s) => s.fields).filter((f) => f.required && !(v[f.key] ?? "").trim() && !(f.type === "date-na" && v[`${f.key}_na`] === "yes")); // N/A ticked counts as answered
   const submit = (e: React.FormEvent) => {
     e.preventDefault(); setError("");
     if (step === 1) { setStep(2); return; }
