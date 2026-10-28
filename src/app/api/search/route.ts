@@ -32,7 +32,9 @@ export async function GET(req: Request) {
     const email = p.emails.find((x) => x.normalized.includes(q.toLowerCase()));
     const detail = phone ? formatPhone(phone.number) : email ? email.address : p.phones[0] ? formatPhone(p.phones[0].number) : p.emails[0]?.address ?? "";
     // phones (10 digits) and emails: for New message and adding people to an email or text.
-    return { id: p.id, name: p.name, detail, stage: p.stage?.name ?? "", phones: p.phones.map((x) => x.normalized).filter((n) => n.length === 10), emails: p.emails.map((x) => x.address) };
+    return { id: p.id, name: p.name, detail, stage: p.stage?.name ?? "", phones: p.phones.map((x) => x.normalized).filter((n) => n.length === 10), emails: p.emails.map((x) => x.address),
+      // Whose number / email it is, from its label (e.g. "Gayleem" on a couple), for adding people to an email or text.
+      labels: Object.fromEntries([...p.phones.map((x) => [x.normalized, x.label] as const), ...p.emails.map((x) => [x.address.toLowerCase(), x.label] as const)].filter(([, l]) => l)) };
   });
   return Response.json({ results }, { headers: { "Cache-Control": "no-store" } });
 }

@@ -561,7 +561,9 @@ Principles:
 
 - **Send text → + Add:** send the same text to another contact or a typed number too; each gets their own
   text (US business texting can't do group texts), and replies come back separately *(owner request
-  2026-10-20)*.
+  2026-10-20)*. In the + Add search (texts and emails), each number and email shows whose it is from its label, e.g.
+  "612-839-1903 (Gayleem)" on a couple, and the added chip reads "Gayleem · 612-839-1903" (generic labels like
+  Mobile or Home aren't shown) *(owner request 2026-10-28)*.
 - Two-way SMS from **each team member's own business number** *(owner decision 2026-10-20: Luke and
   Alyssa each have a number)*, plus missed calls. No email here (email stays in Gmail).
 - **Messages page:** conversations on your number (switch to a teammate's to read theirs; you can only

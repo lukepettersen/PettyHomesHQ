@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 
 export type Extra = { value: string; label: string; personId: string | null };
-type Hit = { id: string; name: string; phones: string[]; emails: string[] };
+type Hit = { id: string; name: string; phones: string[]; emails: string[]; labels?: Record<string, string> };
+// A label that names someone ("Gayleem") says whose it is; "Mobile", "Home"… don't (owner request 2026-10-28).
+const GENERIC = /^(mobile|cell|home|work|other|main|phone|personal|email)$/i;
+const whose = (h: Hit, o: string) => { const l = h.labels?.[o]?.trim(); return l && !GENERIC.test(l) ? l : ""; };
 
 /** "+ Add": search a contact (pick one of their emails or numbers) or type an address / number yourself. */
 export function AddRecipient({ mode, onAdd, exclude = [] }: { mode: "email" | "phone"; onAdd: (x: Extra) => void; exclude?: string[] }) {
@@ -34,7 +37,7 @@ export function AddRecipient({ mode, onAdd, exclude = [] }: { mode: "email" | "p
         return (
           <div key={h.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 py-0.5 text-sm">
             <b>{h.name}</b>
-            {opts.length ? opts.map((o) => <button key={o} type="button" className="rounded-full border border-misty bg-white px-2 py-0.5 text-xs font-semibold hover:border-accent" onMouseDown={(e) => e.preventDefault()} onClick={() => add({ value: o, label: `${h.name} · ${mode === "phone" ? formatPhone(o) : o}`, personId: h.id })}>{mode === "phone" ? formatPhone(o) : o}</button>)
+            {opts.length ? opts.map((o) => <button key={o} type="button" className="rounded-full border border-misty bg-white px-2 py-0.5 text-xs font-semibold hover:border-accent" onMouseDown={(e) => e.preventDefault()} onClick={() => add({ value: o, label: `${whose(h, o) || h.name} · ${mode === "phone" ? formatPhone(o) : o}`, personId: h.id })}>{mode === "phone" ? formatPhone(o) : o}{whose(h, o) && <span className="font-normal muted"> ({whose(h, o)})</span>}</button>)
               : <span className="text-xs muted">No {mode === "email" ? "email" : "phone number"} on file</span>}
           </div>
         );
