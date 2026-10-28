@@ -9,6 +9,7 @@ import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { coupleName, dateFromIso, formatPhone, normalizeEmail, normalizePhone } from "@/lib/normalize";
 import { findMentions } from "@/lib/mentions";
+import { emailMentions } from "@/server/notifications";
 import { canEditEntry } from "@/lib/timeline";
 import { hasPermission, type Permission } from "@/server/permissions";
 import { cleanFieldValue } from "@/lib/customFields";
@@ -139,7 +140,7 @@ export async function addTimelineEntry(input: z.input<typeof entrySchema>) {
     const v = entrySchema.parse(input);
     const person = await db.person.findFirst({ where: { id: v.personId, deletedAt: null }, select: { id: true, name: true } });
     if (!person) throw new UserError("That person was deleted.");
-    // @mentions notify each teammate named (not the author). Gmail emails follow in Phase 3.
+    // @mentions notify each teammate named (not the author): a bell notification and an email.
     const team = await db.user.findMany({ where: { status: { not: "DISABLED" } }, select: { id: true, name: true } });
     const mentioned = findMentions(v.body, team).filter((m) => m.id !== user.id);
     const snippet = v.body.length > 140 ? `${v.body.slice(0, 140)}…` : v.body;
@@ -149,6 +150,7 @@ export async function addTimelineEntry(input: z.input<typeof entrySchema>) {
       ...mentioned.map((m) => db.notification.create({ data: { toId: m.id, fromId: user.id, personId: v.personId, text: `${user.name.split(" ")[0]} mentioned you on ${person.name}: "${snippet}"` } })),
     ]);
     await logActivity(user.id, "create", "timeline", v.personId, `Logged ${v.kind} for ${person.name}${mentioned.length ? ` (mentioned ${mentioned.map((m) => m.name).join(", ")})` : ""}`);
+    await emailMentions(user, mentioned.map((m) => m.id), person, v.body);
     revalidatePath(`/people/${v.personId}`);
     return { mentioned: mentioned.map((m) => m.name.split(" ")[0]) };
   });

@@ -209,7 +209,8 @@ Principles:
     HQ sent or received, answered or missed calls and task lines can't be changed.
   - **@mentions:** typing `@` in a note, logged call or logged text shows the team; picking
     one inserts "@Alyssa". On save, that person gets a bell notification and, when Gmail is
-    connected, an email to their pettyhomes.com address. Mentions are highlighted in the
+    connected, an email to their pettyhomes.com address with the note and a link to the contact
+    *(built 2026-10-28)*. Mentions are highlighted in the
     timeline. Not available in "Send text" (client-facing).
 - **Right:**
   - **Tasks:** everything open for this person, soonest first. Includes their own tasks and
@@ -694,7 +695,6 @@ Principles:
   connected still sends from the shared connected Gmail. System emails (task assignments, offer alerts) stay on
   the shared account.
 - **Gmail** (still to build):
-  - @mention notification emails.
   - "Draft email" creates a Gmail draft with the template filled in and attachments from
     the person's Files.
 - Smallest scopes needed: sign-in profile; Calendar events; Gmail read (metadata and

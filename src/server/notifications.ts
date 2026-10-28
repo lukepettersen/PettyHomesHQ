@@ -33,3 +33,18 @@ export async function notifyAssigned(by: { id: string; name: string }, taskId: s
     await sendGmail({ to: [t.assignee.email], subject: `New task from ${from}: ${t.title}`, body: `${from} gave you a task in HQ:\n\n${what}${t.notes ? `\n\n${t.notes}` : ""}\n\nOpen it: ${link}`, signature: false });
   } catch { /* the bell already has it */ }
 }
+
+/**
+ * A teammate @mentioned in a note, logged call or logged text gets an email at their pettyhomes.com address with
+ * the note and a link to the contact, when Gmail is connected (owner request 2026-10-28). The bell has it either way.
+ */
+export async function emailMentions(by: { id: string; name: string }, ids: string[], person: { id: string; name: string }, body: string) {
+  if (!ids.length) return;
+  try {
+    if (!(await emailConnection())) return;
+    const from = by.name.split(" ")[0];
+    const link = `${(process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "")}/people/${person.id}`;
+    const to = await db.user.findMany({ where: { id: { in: ids }, status: { not: "DISABLED" } }, select: { email: true } });
+    for (const u of to) await sendGmail({ to: [u.email], subject: `${from} mentioned you on ${person.name}`, body: `${from} mentioned you in a note on ${person.name}:\n\n${body}\n\nOpen in HQ: ${link}`, signature: false });
+  } catch { /* the bell already has it */ }
+}
