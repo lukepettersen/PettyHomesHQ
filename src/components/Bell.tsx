@@ -13,6 +13,9 @@ type Bell = { unread: number; items: BellItem[] };
 const seen = () => { try { return new Set<string>(JSON.parse(localStorage.getItem("hq-alerts-seen") ?? "[]")); } catch { return new Set<string>(); } };
 const markSeen = (ids: string[]) => { try { localStorage.setItem("hq-alerts-seen", JSON.stringify([...seen(), ...ids].slice(-200))); } catch { /* private window */ } };
 
+// Texts and missed calls open the conversation in Messages; offers open the contact.
+const heading = (n: BellItem) => (!n.link?.startsWith("/messages") ? "New offer submitted" : n.text.startsWith("Missed call") ? "Missed call" : "New text");
+
 /** @mentions for the signed-in user: unread count, Mark all read, click to open the person. */
 export function Bell({ initial }: { initial: Bell }) {
   const [data, setData] = useState(initial);
@@ -27,6 +30,8 @@ export function Bell({ initial }: { initial: Bell }) {
   // Alerts (like a submitted offer) pop up over the page with a chime, once per device, until opened or dismissed.
   const [popup, setPopup] = useState<BellItem[]>([]);
   const audio = useRef<AudioContext | null>(null);
+  const rung = useRef(new Set<string>());
+  const hovering = useRef(false);
   useEffect(() => {
     const s = seen();
     // Nothing pops up for the conversation already open on screen; those count as seen (owner request 2026-10-27).
@@ -42,22 +47,6 @@ export function Bell({ initial }: { initial: Bell }) {
     window.addEventListener("pointerdown", unlock); window.addEventListener("keydown", unlock);
     return () => { window.removeEventListener("pointerdown", unlock); window.removeEventListener("keydown", unlock); };
   }, []);
-  useEffect(() => {
-    if (!popup.length) return;
-    const chime = () => {
-      const ctx = audio.current;
-      if (!ctx || ctx.state !== "running") return;
-      [0, 0.15].forEach((at, i) => {
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.frequency.value = i ? 1046 : 784;
-        g.gain.setValueAtTime(0.0001, ctx.currentTime + at); g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + at + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + at + 0.3);
-        o.connect(g).connect(ctx.destination); o.start(ctx.currentTime + at); o.stop(ctx.currentTime + at + 0.32);
-      });
-    };
-    chime();
-    const t = setInterval(chime, 4000);
-    return () => clearInterval(t);
-  }, [popup]);
   const groups = Object.values(popup.reduce<Record<string, { key: string; items: BellItem[] }>>((acc, n) => {
     const key = n.link ?? n.personId ?? n.id;
     (acc[key] ??= { key, items: [] }).items.push(n);
@@ -77,8 +66,33 @@ export function Bell({ initial }: { initial: Bell }) {
     if (n.link) router.push(n.link);
     else if (n.personId) router.push(`/people/${n.personId}`);
   };
-  // Texts and missed calls open the conversation in Messages; offers open the contact.
-  const heading = (n: BellItem) => (!n.link?.startsWith("/messages") ? "New offer submitted" : n.text.startsWith("Missed call") ? "Missed call" : "New text");
+  useEffect(() => {
+    if (!popup.length) return;
+    const chime = () => {
+      const ctx = audio.current;
+      if (!ctx || ctx.state !== "running") return;
+      [0, 0.15].forEach((at, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.frequency.value = i ? 1046 : 784;
+        g.gain.setValueAtTime(0.0001, ctx.currentTime + at); g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + at + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + at + 0.3);
+        o.connect(g).connect(ctx.destination); o.start(ctx.currentTime + at); o.stop(ctx.currentTime + at + 0.32);
+      });
+    };
+    // One chime per new alert (no repeating), and a desktop notification when HQ is in a background tab (owner 2026-10-28).
+    const fresh = popup.filter((n) => !rung.current.has(n.id));
+    if (!fresh.length) return;
+    fresh.forEach((n) => rung.current.add(n.id));
+    chime();
+    if (document.hidden && typeof Notification !== "undefined" && Notification.permission === "granted") {
+      for (const n of fresh.slice(0, 3)) {
+        const d = new Notification(heading(n), { body: n.text, tag: n.link ?? n.id });
+        d.onclick = () => { window.focus(); markSeen([n.id]); setPopup((p) => p.filter((x) => x.id !== n.id)); void openItem(n); d.close(); };
+      }
+    }
+    // The corner card goes away by itself after 20 seconds unless the mouse is on it; the bell keeps them.
+    const t = setTimeout(() => { if (!hovering.current) dismiss(); }, 20000);
+    return () => clearTimeout(t);
+  }, [popup]); // eslint-disable-line react-hooks/exhaustive-deps
   const readAll = async () => {
     setData((d) => ({ unread: 0, items: d.items.map((x) => ({ ...x, read: true })) }));
     await markAllNotificationsRead();
@@ -87,24 +101,25 @@ export function Bell({ initial }: { initial: Bell }) {
   return (
     <div ref={ref} className="relative">
       {popup.length > 0 && createPortal(
-        <div className="fixed inset-0 z-[60] grid place-items-center bg-black/40 p-4">
-          <div role="alertdialog" aria-modal="true" aria-labelledby="alert-h" className="w-full max-w-md overflow-hidden rounded-2xl bg-white text-charcoal shadow-2xl">
-            <h2 id="alert-h" className="bg-moss px-5 py-3 text-lg font-extrabold text-white">{groups.length === 1 && groups[0].items.length === 1 ? heading(popup[0]) : `${popup.length} new from ${groups.length} conversation${groups.length === 1 ? "" : "s"}`}</h2>
-            {/* One row per conversation (newest message shown), at most 4, so a busy group text isn't a wall of alerts. */}
-            <ul className="divide-y divide-misty">
-              {groups.slice(0, 4).map(({ key, items }) => {
-                const n = items[0];
-                return (
-                  <li key={key} className="flex items-center gap-3 px-5 py-3">
-                    <span className="min-w-0 flex-1 text-sm"><span className="line-clamp-2">{n.text}</span>{items.length > 1 && <span className="text-xs muted"> +{items.length - 1} more</span>}</span>
-                    {(n.link || n.personId) && <button type="button" className="btn btn-primary flex-none" onClick={() => { markSeen(items.map((x) => x.id)); setPopup((p) => p.filter((x) => !items.includes(x))); void openItem(n); }}>Open</button>}
-                  </li>
-                );
-              })}
-            </ul>
-            {groups.length > 4 && <p className="px-5 pb-2 text-xs muted">And {groups.length - 4} more in the bell.</p>}
-            <div className="flex justify-end border-t border-misty px-5 py-3"><button type="button" className="btn" onClick={dismiss}>Dismiss</button></div>
+        // A small card in the corner that never blocks the page (owner request 2026-10-28): one line per conversation.
+        <div role="status" aria-live="polite" onMouseEnter={() => { hovering.current = true; }} onMouseLeave={() => { hovering.current = false; }}
+          className="fixed bottom-4 right-4 z-[60] w-[min(360px,calc(100vw-32px))] overflow-hidden rounded-xl border border-misty bg-white text-charcoal shadow-2xl">
+          <div className="flex items-center justify-between bg-moss px-3 py-1.5 text-sm font-bold text-white">
+            <span>{groups.length === 1 && groups[0].items.length === 1 ? heading(popup[0]) : `${popup.length} new · ${groups.length} conversation${groups.length === 1 ? "" : "s"}`}</span>
+            <button type="button" aria-label="Dismiss" className="rounded px-1.5 text-lg leading-none hover:bg-white/20" onClick={dismiss}>×</button>
           </div>
+          <ul className="divide-y divide-misty">
+            {groups.slice(0, 3).map(({ key, items }) => {
+              const n = items[0];
+              return (
+                <li key={key} className="flex items-center gap-2 px-3 py-2">
+                  <span className="min-w-0 flex-1 text-sm"><span className="line-clamp-2">{n.text}</span>{items.length > 1 && <span className="text-xs muted"> +{items.length - 1} more</span>}</span>
+                  {(n.link || n.personId) && <button type="button" className="btn btn-primary flex-none px-2.5 py-1 text-sm" onClick={() => { markSeen(items.map((x) => x.id)); setPopup((p) => p.filter((x) => !items.includes(x))); void openItem(n); }}>Open</button>}
+                </li>
+              );
+            })}
+          </ul>
+          {groups.length > 3 && <p className="px-3 pb-2 text-xs muted">And {groups.length - 3} more in the bell.</p>}
         </div>, document.body)}
       <button type="button" aria-expanded={open} aria-label={data.unread ? `Notifications, ${data.unread} unread` : "Notifications"} onClick={() => { setOpen(!open); if (!open) load(); }}
         className="relative grid h-9 w-9 place-items-center rounded-md text-white hover:bg-white/10">

@@ -544,9 +544,12 @@ Principles:
   *(owner request 2026-10-20)*; unread counts on the Messages tab; bubbles show Sending / Sent / Delivered / Not
   delivered with the reason; refreshes every 15 seconds. **Send text** on a contact's timeline and in
   **Draft text** on checklist steps (template, "/name" in the message; the task is checked off).
-- Incoming texts and missed calls **pop up with a chime** for the number's owner (Open conversation). The pop-up shows
-  one row per conversation (newest message, "+N more"), at most 4; nothing pops up for the conversation already open,
-  and opening a conversation clears its alerts in the bell *(owner request 2026-10-27)*.
+- Incoming texts and missed calls show a **small card in the bottom-right corner** with one chime for the number's
+  owner; it never blocks the page *(owner request 2026-10-28)*. One row per conversation (newest message, "+N more",
+  Open), at most 3, then "And N more in the bell"; × dismisses; it hides by itself after 20 seconds unless the mouse
+  is on it (the bell keeps everything). When HQ is in a background tab and the browser allows notifications, a
+  desktop notification shows too. Nothing pops up for the conversation already open, and opening a conversation
+  clears its alerts in the bell *(owner request 2026-10-27)*.
 - **Calls** to a number ring HQ in that person's browser while HQ is open (Answer / Decline pop-up), and their cell
   too if one is set in Admin → Integrations (Luke), showing the caller's number (if the carrier refuses that, it
   rings again showing the business number); whoever answers first takes it. Not answered in 20 seconds → the caller
