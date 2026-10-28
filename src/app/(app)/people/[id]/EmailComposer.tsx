@@ -10,13 +10,13 @@ import { AddRecipient, ExtraChips, PartyChecks, type Extra } from "@/components/
 import { AttachFiles, type Attached } from "@/components/AttachFiles";
 
 /** Timeline → Email: pick a template (optional), check it over, send from the connected Gmail (SPEC.md §12). */
-export function EmailComposer({ personId, emails, templates, sendsFrom, onSent, suggest = [], ownGmail = false, canConnect = false }: { personId: string; emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; onSent?: () => void; suggest?: Extra[]; ownGmail?: boolean; canConnect?: boolean }) {
+export function EmailComposer({ personId, emails, templates, sendsFrom, onSent, suggest = [], ownGmail = false, canConnect = false, initialSubject = "" }: { personId: string; emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; onSent?: () => void; suggest?: Extra[]; ownGmail?: boolean; canConnect?: boolean; initialSubject?: string }) {
   const router = useRouter();
   const [to, setTo] = useState<string[]>(emails);
   const [extras, setExtras] = useState<Extra[]>([]); // other contacts or typed addresses (owner request 2026-10-20)
   const all = [...to, ...extras.map((x) => x.value)];
   const [templateId, setTemplateId] = useState("");
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState(initialSubject); // "Re: …" from Reply on the timeline
   const [body, setBody] = useState("");
   const [missing, setMissing] = useState<string[]>([]);
   const [confirm, setConfirm] = useState(false);

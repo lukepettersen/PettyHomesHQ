@@ -21,7 +21,7 @@ const FILTERS: [string, string][] = [["all", "All"], ["note", "Notes"], ["email"
 type EmailProps = { emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; ownGmail?: boolean; canConnect?: boolean };
 type TextProps = { phones: string[]; templates: { id: string; name: string }[]; from: string | null; blocked: string | null };
 
-export function Timeline({ personId, entries, team, email, text }: { personId: string; entries: Entry[]; team: Member[]; email: EmailProps; text: TextProps }) {
+export function Timeline({ personId, personName, entries, team, email, text }: { personId: string; personName: string; entries: Entry[]; team: Member[]; email: EmailProps; text: TextProps }) {
   const [kind, setKind] = useState<Kind>("note");
   const [body, setBody] = useState("");
   const [outcome, setOutcome] = useState("Talked");
@@ -30,6 +30,8 @@ export function Timeline({ personId, entries, team, email, text }: { personId: s
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [pick, setPick] = useState<{ q: string; i: number } | null>(null);
+  const [reply, setReply] = useState<{ subject: string; n: number } | null>(null);
+  const top = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
   const [pending, start] = useTransition();
   const matches = pick ? team.filter((m) => m.name.toLowerCase().split(/\s+/).some((w) => w.startsWith(pick.q.toLowerCase()))) : [];
@@ -71,14 +73,14 @@ export function Timeline({ personId, entries, team, email, text }: { personId: s
   }
 
   return (
-    <div className="card mt-3 p-4">
+    <div className="card mt-3 p-4" ref={top}>
       <div className="flex gap-1">
         {TABS.map(([k, label]) => (
           <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}
             className={`rounded-md px-3 py-1.5 text-sm font-semibold ${kind === k ? "border border-misty bg-white" : "muted hover:text-charcoal"}`}>{label}</button>
         ))}
       </div>
-      {kind === "email" && <EmailComposer personId={personId} {...email} />}
+      {kind === "email" && <EmailComposer key={reply?.n ?? 0} personId={personId} {...email} initialSubject={reply?.subject ?? ""} />}
       {kind === "send" && <TextComposer personId={personId} {...text} />}
       {kind === "call" && (
         <select className="input mt-2 w-auto" value={outcome} onChange={(e) => setOutcome(e.target.value)} aria-label="Call outcome">
@@ -115,22 +117,10 @@ export function Timeline({ personId, entries, team, email, text }: { personId: s
         ))}
       </div>
       {shown.length ? (
-        <ol className="mt-3">
-          {shown.map((e) => (
-            <li key={e.id} className="grid grid-cols-[70px_minmax(0,1fr)] gap-3 border-t border-misty py-2.5 text-sm first:border-0">
-              <span className="text-xs font-bold uppercase tracking-wide muted">{KIND_LABEL[e.kind] ?? e.kind}</span>
-              <div>
-                {editing === e.id ? <EditEntry entry={e} onDone={() => { setEditing(null); router.refresh(); }} /> : e.kind === "email" ? <><EmailBody body={e.body} />{e.opened !== undefined && <span className={`text-xs font-semibold ${e.opened ? "text-accent" : "muted"}`}>{e.opened ? `Opened ${new Date(e.opened).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).replace(/ (AM|PM)$/, (m) => m.trim().toLowerCase())}` : "Not opened yet"}</span>}</> : <div className="whitespace-pre-wrap break-words">{e.outcome ? <b>{e.outcome}: </b> : null}{splitMentions(e.body, team).map((part, i) => part.mention ? <mark key={i} className="rounded bg-accent-soft px-0.5 font-semibold text-accent">{part.text}</mark> : part.text)}</div>}
-                {e.audio && <audio controls preload="none" src={e.audio} className="mt-1 w-full max-w-sm" aria-label="Call recording" />}
-                <div className="flex flex-wrap items-center gap-x-3 text-xs muted">
-                  <span>{new Date(e.at).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).replace(/ (AM|PM)$/, (m) => m.trim().toLowerCase())}{e.author ? ` · ${e.author}` : ""}</span>
-                  {e.editable && editing !== e.id && <>
-                    <button type="button" className="font-semibold text-accent hover:underline" onClick={() => setEditing(e.id)}>Edit</button>
-                    <DeleteEntry id={e.id} onDone={() => router.refresh()} />
-                  </>}
-                </div>
-              </div>
-            </li>
+        <ol className="relative mt-3">
+          {threads(shown).map((g) => (
+            <TimelineItem key={g[0].id} items={g} personName={personName} team={team} editing={editing} setEditing={setEditing} onChanged={() => router.refresh()}
+              onReply={(subject) => { setKind("email"); setReply((x) => ({ subject: /^re:/i.test(subject) ? subject : `Re: ${subject}`, n: (x?.n ?? 0) + 1 })); top.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }} />
           ))}
         </ol>
       ) : <p className="mt-3 text-sm muted">Nothing here yet.</p>}
@@ -176,17 +166,134 @@ function DeleteEntry({ id, onDone }: { id: string; onDone: () => void }) {
   );
 }
 
-/** An email on the timeline: "From/To … · Subject" in bold, the message shortened until opened. */
-function EmailBody({ body }: { body: string }) {
+// ---------- Timeline items, threaded like FUB (owner request 2026-10-28) ----------
+const when = (iso: string) => new Date(iso).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).replace(/ (AM|PM)$/, (m) => m.trim().toLowerCase());
+const initials = (name: string) => name.split(/\s+/).filter((w) => /[A-Za-z]/.test(w[0] ?? "")).slice(0, 2).map((w) => w[0].toUpperCase()).join("") || "?";
+const THREAD_GAP = 12 * 3600 * 1000;
+
+/** Texts back and forth close together (within 12 hours, nothing else between) become one thread; everything else stands alone. */
+function threads(list: Entry[]): Entry[][] {
+  const out: Entry[][] = [];
+  for (const e of list) {
+    const last = out[out.length - 1];
+    const prev = last?.[last.length - 1];
+    if (e.kind === "text" && prev?.kind === "text" && Math.abs(new Date(prev.at).getTime() - new Date(e.at).getTime()) <= THREAD_GAP) last.push(e);
+    else out.push([e]);
+  }
+  return out;
+}
+
+const ICON: Record<string, { bg: string; path: string }> = {
+  email: { bg: "bg-[#dfeaf3] text-[#3f6f93]", path: "M4 6h16v12H4z M4 7l8 6 8-6" },
+  text: { bg: "bg-accent-soft text-accent", path: "M5 5h14v10H9l-4 4z" },
+  call: { bg: "bg-[#f6e3d9] text-[#9a4f2e]", path: "M6 3h3l2 5-2 1a11 11 0 0 0 6 6l1-2 5 2v3a2 2 0 0 1-2 2A17 17 0 0 1 4 5a2 2 0 0 1 2-2" },
+  note: { bg: "bg-[#fbefd6] text-[#9a6400]", path: "M6 3h9l3 3v15H6z M9 10h6 M9 14h6" },
+  task: { bg: "bg-accent-soft text-accent", path: "M5 12l4 4 10-10" },
+  system: { bg: "bg-sunken text-muted", path: "M12 7v6 M12 16v.5 M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18" },
+};
+
+function KindDot({ kind, count }: { kind: string; count?: number }) {
+  const ic = ICON[kind] ?? ICON.system;
+  return (
+    <span className={`relative z-[1] grid h-9 w-9 flex-none place-items-center rounded-full ${ic.bg}`} aria-hidden="true">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={ic.path} /></svg>
+      {count && count > 1 ? <span className="absolute -bottom-1 -right-1 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-charcoal px-1 text-[10px] font-bold text-white">{count}</span> : null}
+    </span>
+  );
+}
+
+/** Who sent it and to whom: "Alyssa Chakiton › Jewel Coughlin". */
+function who(e: Entry, personName: string): { from: string; to: string } {
+  if (e.kind === "email") {
+    const head = e.body.split("\n\n")[0];
+    const m = /^(To|From) (.*?) · /.exec(head);
+    if (m?.[1] === "From") return { from: personName, to: e.author ?? "" };
+    return { from: e.author ?? "HQ", to: m ? `${personName} (${m[2]})` : personName };
+  }
+  if (e.kind === "text") return e.outcome === "Received" ? { from: personName, to: e.author ?? "" } : { from: e.author ?? "You", to: personName };
+  return { from: e.author ?? (e.kind === "system" || e.kind === "task" ? "HQ" : personName), to: "" };
+}
+
+function TimelineItem({ items, personName, team, editing, setEditing, onChanged, onReply }: {
+  items: Entry[]; personName: string; team: Member[]; editing: string | null; setEditing: (id: string | null) => void; onChanged: () => void; onReply: (subject: string) => void;
+}) {
   const [open, setOpen] = useState(false);
-  const i = body.indexOf("\n\n");
-  const head = i < 0 ? body : body.slice(0, i), text = i < 0 ? "" : body.slice(i + 2);
-  const long = text.length > 280 || text.split("\n").length > 4;
+  const e = items[0];
+  const { from, to } = who(e, personName);
+  const head = e.kind === "email" ? e.body.split("\n\n")[0] : "";
+  const subject = head.includes(" · ") ? head.slice(head.indexOf(" · ") + 3) : "";
+  const body = e.kind === "email" ? e.body.slice(head.length).trim() : e.body;
+  const label = KIND_LABEL[e.kind] ?? e.kind;
+  return (
+    <li className="relative flex gap-3 pb-5 last:pb-0">
+      <span aria-hidden="true" className="absolute bottom-0 left-[17px] top-9 w-px bg-misty" />
+      <KindDot kind={e.kind} count={items.length} />
+      <div className="min-w-0 flex-1 border-b border-misty pb-4">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex min-w-0 items-start gap-2">
+            <span className="grid h-8 w-8 flex-none place-items-center rounded-full bg-sunken text-xs font-bold text-muted" aria-hidden="true">{initials(from)}</span>
+            <div className="min-w-0">
+              <div className="text-sm"><b>{from}</b>{to && <span className="muted"> › {to}</span>}<span className="sr-only"> · {label}</span></div>
+              <div className="flex flex-wrap items-center gap-2 text-xs muted">
+                <span>{when(e.at)}</span>
+                {e.kind !== "email" && e.kind !== "text" && <span className="rounded bg-sunken px-1.5 font-semibold uppercase tracking-wide">{label}{e.outcome && e.kind === "call" ? ` · ${e.outcome}` : ""}</span>}
+                {e.opened !== undefined && <span className={`rounded-full px-2 font-semibold ${e.opened ? "bg-accent-soft text-accent" : "bg-sunken"}`}>{e.opened ? `Opened ${when(e.opened)}` : "Not opened yet"}</span>}
+              </div>
+            </div>
+          </div>
+          {e.kind === "email" && subject && <button type="button" className="btn px-2.5 py-1 text-sm" onClick={() => onReply(subject)}>↩ Reply</button>}
+        </div>
+        {subject && <p className="mt-2 font-bold">{subject}</p>}
+        <div className="mt-1.5 text-sm">
+          {editing === e.id ? <EditEntry entry={e} onDone={() => { setEditing(null); onChanged(); }} />
+            : e.kind === "email" ? <EmailText text={body} />
+            : items.length > 1 && open ? <Bubbles items={[...items].reverse()} personName={personName} team={team} editing={editing} setEditing={setEditing} onChanged={onChanged} />
+            : <div className="whitespace-pre-wrap break-words">{splitMentions(body, team).map((part, i) => part.mention ? <mark key={i} className="rounded bg-accent-soft px-0.5 font-semibold text-accent">{part.text}</mark> : part.text)}</div>}
+          {e.audio && <audio controls preload="none" src={e.audio} className="mt-1 w-full max-w-sm" aria-label="Call recording" />}
+        </div>
+        {items.length > 1 && <button type="button" className="mt-2 text-sm font-semibold text-accent hover:underline" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Show only the latest" : `View ${items.length - 1} more text message${items.length === 2 ? "" : "s"}`}</button>}
+        {e.editable && editing !== e.id && !(items.length > 1 && open) && (
+          <div className="mt-1 flex gap-3 text-xs">
+            <button type="button" className="font-semibold text-accent hover:underline" onClick={() => setEditing(e.id)}>Edit</button>
+            <DeleteEntry id={e.id} onDone={onChanged} />
+          </div>
+        )}
+      </div>
+    </li>
+  );
+}
+
+/** A text thread opened up: oldest first, ours on the right, theirs on the left. */
+function Bubbles({ items, personName, team, editing, setEditing, onChanged }: { items: Entry[]; personName: string; team: Member[]; editing: string | null; setEditing: (id: string | null) => void; onChanged: () => void }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {items.map((m) => {
+        const mine = m.outcome !== "Received";
+        return (
+          <div key={m.id} className={`flex max-w-[85%] flex-col ${mine ? "items-end self-end" : "items-start self-start"}`}>
+            {editing === m.id ? <EditEntry entry={m} onDone={() => { setEditing(null); onChanged(); }} /> : (
+              <p className={`whitespace-pre-wrap break-words rounded-2xl px-3 py-1.5 ${mine ? "bg-accent text-white" : "bg-sunken"}`}>
+                {splitMentions(m.body, team).map((part, i) => part.mention ? <b key={i}>{part.text}</b> : part.text)}
+              </p>
+            )}
+            <span className="px-1 text-[11px] muted">{mine ? m.author ?? "You" : personName.split(" ")[0]} · {when(m.at)}
+              {m.editable && editing !== m.id && <> · <button type="button" className="font-semibold text-accent hover:underline" onClick={() => setEditing(m.id)}>Edit</button> · <DeleteEntry id={m.id} onDone={onChanged} /></>}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** An email's message, shortened until "Show full email". */
+function EmailText({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const long = text.length > 400 || text.split("\n").length > 6;
   return (
     <div className="break-words">
-      <b className="font-semibold">{head}</b>
-      {text && <div className={`whitespace-pre-wrap ${open || !long ? "" : "line-clamp-4"}`}>{text}</div>}
-      {long && <button type="button" className="text-xs font-semibold text-accent hover:underline" onClick={() => setOpen(!open)}>{open ? "Show less" : "Show full email"}</button>}
+      {text && <div className={`whitespace-pre-wrap ${open || !long ? "" : "line-clamp-6"}`}>{text}</div>}
+      {long && <button type="button" className="mt-1 text-xs font-semibold text-accent hover:underline" onClick={() => setOpen(!open)}>{open ? "Show less" : "Show full email"}</button>}
     </div>
   );
 }

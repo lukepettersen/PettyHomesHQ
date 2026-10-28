@@ -204,6 +204,12 @@ Principles:
   - **Timeline:** composer with Note, Send text, Log text, Log call (with outcome).
     Filters: All, Notes, Texts, Calls, **Tasks**, Emails, Deal activity. Newest first.
     Checking off a task for the person adds a "Task done" line (unchecking removes it).
+    **Layout like FUB** *(owner request 2026-10-28)*: each item has a colored icon on a line down the left (email,
+    text, call, note, task), the author's initials, "Alyssa Chakiton › Sam Ortiz", the date, and for emails the
+    subject in bold, Opened / Not opened yet, the message shortened until "Show full email", and **↩ Reply** (opens
+    the Email tab with "Re: subject"). Texts back and forth within 12 hours of each other (nothing else between) are
+    one thread: the latest message with a count on the icon and "View N more text messages", which opens the thread
+    as chat bubbles (ours on the right).
   - **Edit / Delete** *(owner request 2026-10-23)* under notes, logged calls and logged texts: Edit changes the
     words (and a call's outcome) in place with Save / Cancel; Delete takes two clicks and hides the entry (kept
     as deleted). Only the person who wrote it, or someone allowed to delete records, sees these. Texts and emails
