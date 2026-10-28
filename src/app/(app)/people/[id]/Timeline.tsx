@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { addTimelineEntry, deleteTimelineEntry, editTimelineEntry } from "../actions";
 import { mentionLabel, mentionQuery, splitMentions, type Member } from "@/lib/mentions";
 import { EmailComposer } from "./EmailComposer";
@@ -16,13 +16,19 @@ const TABS: [Kind, string, string, string][] = [
   ["email", "Email", "", ""],
 ];
 type Kind = "note" | "send" | "text" | "call" | "email";
+
+// Text / Email on the contact card open this composer (owner request 2026-10-28). The card fires COMPOSE_EVENT; a
+// request made while the Timeline tab isn't showing waits here until it opens.
+export const COMPOSE_EVENT = "hq-compose";
+let waiting: Kind | null = null;
+export function requestCompose(kind: "send" | "email") { waiting = kind; window.dispatchEvent(new CustomEvent(COMPOSE_EVENT, { detail: kind })); }
 const KIND_LABEL: Record<string, string> = { note: "Note", text: "Text", call: "Call", email: "Email", system: "Update", task: "Task done" };
 const FILTERS: [string, string][] = [["all", "All"], ["note", "Notes"], ["email", "Emails"], ["text", "Texts"], ["call", "Calls"], ["task", "Tasks"]];
 type EmailProps = { emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; ownGmail?: boolean; canConnect?: boolean };
 type TextProps = { phones: string[]; templates: { id: string; name: string }[]; from: string | null; blocked: string | null };
 
 export function Timeline({ personId, personName, entries, team, email, text }: { personId: string; personName: string; entries: Entry[]; team: Member[]; email: EmailProps; text: TextProps }) {
-  const [kind, setKind] = useState<Kind>("note");
+  const [kind, setKind] = useState<Kind>(() => { const k = waiting ?? "note"; waiting = null; return k; });
   const [body, setBody] = useState("");
   const [outcome, setOutcome] = useState("Talked");
   const [filter, setFilter] = useState("all");
@@ -32,6 +38,12 @@ export function Timeline({ personId, personName, entries, team, email, text }: {
   const [pick, setPick] = useState<{ q: string; i: number } | null>(null);
   const [reply, setReply] = useState<{ subject: string; n: number } | null>(null);
   const top = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (kind !== "note") top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const on = (ev: Event) => { waiting = null; setKind((ev as CustomEvent<Kind>).detail); top.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
+    window.addEventListener(COMPOSE_EVENT, on);
+    return () => window.removeEventListener(COMPOSE_EVENT, on);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const box = useRef<HTMLTextAreaElement>(null);
   const [pending, start] = useTransition();
   const matches = pick ? team.filter((m) => m.name.toLowerCase().split(/\s+/).some((w) => w.startsWith(pick.q.toLowerCase()))) : [];

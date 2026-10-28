@@ -1,6 +1,7 @@
 "use client";
 
 import { CallLink } from "@/components/CallCenter";
+import { requestCompose } from "./Timeline";
 import { AddressInput } from "@/components/AddressInput";
 import type { AddressRow } from "@/lib/addresses";
 import { PARTNER_TYPES, partnerLabel } from "@/lib/partners";
@@ -148,6 +149,12 @@ export function InfoCard(p: { id: string; name: string; addresses: AddressRow[];
           </div>
           <p className="text-sm muted">{last === null ? "No contact yet" : last === 0 ? "Last contact today" : `Last contact ${last} days ago`}</p>
         </div>
+      </div>
+      {/* Call / Text / Email under the name (owner request 2026-10-28): Text and Email open the Timeline composer. */}
+      <div className="mt-3 grid grid-cols-3 gap-1.5">
+        {p.phones[0] ? <CallLink className="btn px-0 text-center" number={p.phones[0].value} name={p.name}>📞 Call</CallLink> : <button type="button" className="btn px-0" disabled title="No phone on file">📞 Call</button>}
+        <button type="button" className="btn px-0" disabled={!p.phones.length} title={p.phones.length ? undefined : "No phone on file"} onClick={() => requestCompose("send")}>💬 Text</button>
+        <button type="button" className="btn px-0" disabled={!p.emails.length} title={p.emails.length ? undefined : "No email on file"} onClick={() => requestCompose("email")}>✉️ Email</button>
       </div>
       <ul className="mt-3 flex flex-col gap-1.5 text-sm">
         {p.phones.map((x, i) => <li key={`p${i}`}><CallLink className="link" number={x.value} name={p.name}>{x.value}</CallLink> <span className="muted">({x.label})</span><CopyOne value={x.value} /></li>)}

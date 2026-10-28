@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { COMPOSE_EVENT } from "./Timeline";
 import { factRows, fileLine, money, shortDay, type FileSection, type FileView } from "@/lib/files";
 
 const pick = (o: Record<string, string>, keys: string[]) => Object.fromEntries(keys.filter((k) => o[k]).map((k) => [k, o[k]]));
@@ -29,6 +30,7 @@ type Props = { offers: OfferRow[]; email: EmailProps; text: Omit<React.Component
 export function FileTabs(p: Props) {
   const active = p.files.filter((f) => !f.closedAt);
   const [tab, setTab] = useState(active[0]?.id ?? "timeline");
+  useEffect(() => { const on = () => setTab("timeline"); window.addEventListener(COMPOSE_EVENT, on); return () => window.removeEventListener(COMPOSE_EVENT, on); }, []);
   // A file that was just started opens in its own tab.
   const ids = active.map((f) => f.id).join(",");
   const [known, setKnown] = useState(ids);
