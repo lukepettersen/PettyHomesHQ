@@ -571,6 +571,12 @@ Principles:
   Mobile or Home aren't shown) *(owner request 2026-10-28)*.
 - Two-way SMS from **each team member's own business number** *(owner decision 2026-10-20: Luke and
   Alyssa each have a number)*, plus missed calls. No email here (email stays in Gmail).
+- **Messages layout** *(owner-approved cleanup 2026-10-28)*: the page fills the screen height; the list has + New,
+  whose texts, a full-width search, then All / Unread / Archived chips, and each conversation shows initials (👥 for
+  a group, a red "!" for a missed call), name, last message, time and unread count. The open conversation shows
+  initials and name (no number for a saved contact) with Call, Archive and ⋯ (Delete); the thread scrolls and the
+  reply box stays at the bottom: the message, then one row with the from-number, count and + Add on the left and
+  Template, 📷, 😊, Schedule and Send on the right.
 - **Messages page:** conversations on your number (switch to a teammate's to read theirs; you can only
   send from your own); **+ New message** (find a contact, pick their number) and **All / Unread / Archived** tabs
   *(owner request 2026-10-20)*; **Archive** on a conversation works like email *(owner request 2026-10-28)*: it

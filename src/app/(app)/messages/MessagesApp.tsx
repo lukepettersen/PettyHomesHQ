@@ -57,12 +57,12 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
   // All = the inbox (archived conversations are under Archived until someone texts again; owner request 2026-10-28).
   const shown = threads.filter((t) => t.number === open || (tab === "archived" ? t.archived : !t.archived && (tab === "all" || t.unread > 0))).filter((t) => !q.trim() || t.name.toLowerCase().includes(q.trim().toLowerCase()) || t.number.includes(q.replace(/\D/g, "") || "~"));
   return (
-    <div className="mx-auto grid max-w-[1400px] grid-cols-1 items-start gap-3 px-4 py-4 md:grid-cols-[320px_minmax(0,1fr)]">
-      <section aria-label="Conversations" className={`card flex flex-col overflow-hidden ${open ? "max-md:hidden" : ""}`}>
+    <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-3 px-4 py-4 md:h-[calc(100dvh-80px)] md:grid-cols-[330px_minmax(0,1fr)]">
+      <section aria-label="Conversations" className={`card flex min-h-0 flex-col overflow-hidden ${open ? "max-md:hidden" : ""}`}>
         <div className="flex flex-col gap-2 border-b border-misty p-3">
           <div className="flex items-center justify-between gap-2">
             <h1 className="text-xl font-extrabold">Messages</h1>
-            <button type="button" className="btn btn-primary" onClick={() => setStarting(!starting)} aria-expanded={starting}>{starting ? "Cancel" : "+ New message"}</button>
+            <button type="button" className={`btn ${starting ? "" : "btn-primary"}`} onClick={() => setStarting(!starting)} aria-expanded={starting}>{starting ? "Cancel" : "+ New"}</button>
           </div>
           {lines.length > 1 && (
             <select aria-label="Whose texts" className="input text-sm font-semibold" value={line.userId} onChange={(e) => router.push(href(null, e.target.value))}>
@@ -70,25 +70,26 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
             </select>
           )}
           {starting && <NewMessage templates={composer.templates} groupsOn={groupsOn} blocked={composer.blocked} onPick={(n) => { setStarting(false); router.push(href(n)); }} />}
-          <span className="flex items-center gap-2">
-            <span className="inline-flex overflow-hidden rounded-full border border-misty text-sm" role="group" aria-label="Show">
-              {([["all", "All"], ["unread", `Unread${unreadThreads ? ` (${unreadThreads})` : ""}`], ["archived", `Archived${archivedThreads ? ` (${archivedThreads})` : ""}`]] as const).map(([k, l]) => (
-                <button key={k} type="button" aria-pressed={tab === k} onClick={() => setTab(k)} className={`px-3 py-1 font-semibold ${tab === k ? "bg-charcoal text-white" : "hover:bg-sunken"}`}>{l}</button>
-              ))}
-            </span>
-            <input className="input min-w-0 flex-1" type="search" aria-label="Search conversations" placeholder="Search name or number" value={q} onChange={(e) => setQ(e.target.value)} />
+          {/* Search on its own row, filter chips under it (owner-approved cleanup 2026-10-28). */}
+          <input className="input w-full" type="search" aria-label="Search conversations" placeholder="Search name or number" value={q} onChange={(e) => setQ(e.target.value)} />
+          <span className="flex flex-wrap gap-1.5" role="group" aria-label="Show">
+            {([["all", "All"], ["unread", `Unread${unreadThreads ? ` ${unreadThreads}` : ""}`], ["archived", `Archived${archivedThreads ? ` ${archivedThreads}` : ""}`]] as const).map(([k, l]) => (
+              <button key={k} type="button" aria-pressed={tab === k} onClick={() => setTab(k)} className={`rounded-full border px-3 py-0.5 text-sm font-semibold ${tab === k ? "border-charcoal bg-charcoal text-white" : "border-misty bg-white hover:bg-sunken"}`}>{l}</button>
+            ))}
           </span>
         </div>
         {shown.length ? (
-          <ul className="max-h-[calc(100vh-220px)] overflow-y-auto">
+          <ul className="min-h-0 flex-1 overflow-y-auto max-md:max-h-[70vh]">
             {shown.map((t) => (
               <li key={t.number}>
                 <Link href={href(t.number)} aria-current={t.number === open ? "true" : undefined}
-                  className={`grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 border-t border-misty px-3 py-2.5 first:border-0 hover:bg-sunken ${t.number === open ? "bg-accent-soft" : ""}`}>
-                  <span className={`truncate ${t.unread ? "font-extrabold" : "font-semibold"}`}>{t.group && <span className="mr-1 rounded bg-sunken px-1 text-[11px] font-bold uppercase muted">Group</span>}{t.name}</span>
-                  <span className="text-xs muted">{when(t.at)}</span>
-                  <span className={`truncate text-sm ${t.unread ? "text-charcoal" : "muted"} ${t.lastKind === "missed_call" ? "text-bad" : ""}`}>{t.lastDir === "out" ? "You: " : ""}{t.last}</span>
-                  {t.unread > 0 ? <span className="self-center justify-self-end rounded-full bg-coral px-1.5 text-xs font-bold text-white">{t.unread}</span> : <span />}
+                  className={`grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-x-2.5 border-t border-misty px-3 py-2.5 first:border-0 hover:bg-sunken ${t.number === open ? "bg-accent-soft" : ""}`}>
+                  <Avatar name={t.name} group={!!t.group} missed={t.lastKind === "missed_call"} />
+                  <span className="min-w-0">
+                    <span className={`block truncate ${t.unread ? "font-extrabold" : "font-semibold"}`}>{t.name}</span>
+                    <span className={`block truncate text-sm ${t.lastKind === "missed_call" ? "text-bad" : t.unread ? "text-charcoal" : "muted"}`}>{t.lastDir === "out" ? "You: " : ""}{t.last}</span>
+                  </span>
+                  <span className="flex flex-col items-end gap-1 self-start"><span className="text-xs muted">{when(t.at)}</span>{t.unread > 0 && <span className="rounded-full bg-coral px-1.5 text-xs font-bold text-white">{t.unread}</span>}</span>
                 </Link>
               </li>
             ))}
@@ -96,11 +97,13 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
         ) : <p className="p-4 text-sm muted">{tab === "archived" && !q.trim() ? "Nothing archived. Click Archive on a conversation when you're done with it." : tab === "unread" && !q.trim() ? "All caught up. No unread texts or missed calls." : threads.length ? "No conversations match." : `No texts yet on ${formatPhone(line.number)}. Click + New message to text a contact.`}</p>}
       </section>
 
-      <section aria-label="Conversation" className={`card flex min-h-[60vh] flex-col ${open ? "" : "max-md:hidden"}`}>
+      <section aria-label="Conversation" className={`card flex min-h-[60vh] flex-col overflow-hidden md:min-h-0 ${open ? "" : "max-md:hidden"}`}>
         {!open ? <p className="m-auto p-6 text-sm muted">Pick a conversation.</p> : (
           <>
-            <header className="flex flex-wrap items-center justify-between gap-2 border-b border-misty p-3">
-              <div className="min-w-0">
+            <header className="flex flex-wrap items-center justify-between gap-2 border-b border-misty px-3 py-2.5">
+              <div className="flex min-w-0 items-center gap-2.5">
+                {!group && <Avatar name={person?.name ?? formatPhone(open)} />}
+                <div className="min-w-0">
                 <Link href={href(null)} className="text-sm muted md:hidden">‹ Messages</Link>
                 {group ? (
                   <>
@@ -108,16 +111,16 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
                     <span className="flex flex-wrap gap-x-2 text-sm">{group.members.map((m) => m.personId ? <Link key={m.digits} href={`/people/${m.personId}`} className="link">{m.name}</Link> : <span key={m.digits}>{m.name}</span>)}</span>
                   </>
                 ) : person ? <Link href={`/people/${person.id}`} className="block truncate text-lg font-extrabold hover:underline">{person.name} ›</Link> : <b className="block text-lg font-extrabold">{formatPhone(open)}</b>}
-                {person && <span className="text-xs muted">{formatPhone(open)}</span>}
+                </div>
               </div>
               <span className="flex flex-wrap gap-2">
                 {!group && <CallLink className="btn" number={`+1${open}`} name={person?.name}>Call</CallLink>}
                 <ArchiveThread ourNumber={line.number} number={open} archived={!!current?.archived} onDone={(a) => router.push(a ? href(null) : href(open))} />
-                <DeleteThread ourNumber={line.number} number={open} onDone={() => router.push(href(null))} />
+                <MoreMenu><DeleteThread ourNumber={line.number} number={open} onDone={() => router.push(href(null))} /></MoreMenu>
               </span>
             </header>
             {!person && !group && <Unknown number={open} onDone={() => router.refresh()} />}
-            <div className="flex flex-1 flex-col gap-1.5 overflow-y-auto p-3" style={{ maxHeight: "calc(100vh - 380px)" }}>
+            <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-3 max-md:max-h-[60vh]">
               {conversation.map((m, i) => {
                 const newDay = i === 0 || day(conversation[i - 1].at) !== day(m.at);
                 return (
@@ -152,7 +155,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
               })}
               <div ref={end} />
             </div>
-            <div className="border-t border-misty p-3">
+            <div className="border-t border-misty bg-white px-3 py-2.5">
               {group ? <GroupComposer key={open} sid={open} members={group.members.map((m) => m.digits)} templates={composer.templates} blocked={composer.blocked ?? (groupsOn ? null : "Group texting is off (Admin → Integrations), so HQ can't reply to the group.")} from={composer.from} onSent={() => router.refresh()} />
                 : <TextComposer key={open} personId={person?.id ?? null} phones={[open]} compact {...composer} />}
             </div>
@@ -322,6 +325,23 @@ function ReactButton({ id, out, mine, onDone }: { id: string; out: boolean; mine
         </span>
       )}
       {error && <span role="alert" className="absolute top-full z-20 mt-1 w-56 rounded bg-white p-1 text-xs text-bad shadow">{error}</span>}
+    </span>
+  );
+}
+
+/** Initials in a circle; a group gets 👥, a missed call a red "!". */
+function Avatar({ name, group, missed }: { name: string; group?: boolean; missed?: boolean }) {
+  const ini = name.split(/\s+/).filter((w) => /[A-Za-z]/.test(w[0] ?? "")).slice(0, 2).map((w) => w[0].toUpperCase()).join("") || "#";
+  return <span aria-hidden="true" className={`grid h-9 w-9 flex-none place-items-center rounded-full text-xs font-extrabold ${missed ? "bg-[#f9e1de] text-bad" : group ? "bg-sunken text-muted" : "bg-accent-soft text-accent"}`}>{missed ? "!" : group ? "👥" : ini}</span>;
+}
+
+/** "⋯" for rarely used actions (Delete). */
+function MoreMenu({ children }: { children: React.ReactNode }) {
+  const { open, setOpen, ref } = useDropdown<HTMLSpanElement>();
+  return (
+    <span ref={ref} className="relative">
+      <button type="button" className="btn px-3" aria-label="More" aria-expanded={open} onClick={() => setOpen(!open)}>⋯</button>
+      {open && <span className="absolute right-0 top-full z-20 mt-1 flex w-52 flex-col rounded-lg border border-misty bg-white p-1.5 shadow-xl [&>button]:w-full">{children}</span>}
     </span>
   );
 }
