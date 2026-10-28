@@ -51,14 +51,14 @@ export function PipelineBoard({ cards, contracts, closed, statuses, today, initi
       {editing ? (
         <StageEditor kind={statusKind} rows={statuses[statusKind]} counts={Object.fromEntries(columns.map((c) => [c.key, c.items.length]))} onDone={() => setEditing(false)} />
       ) : (
-        // Option A (owner-approved 2026-10-28): every stage is a column, all sharing the width evenly (never under ~130px,
-        // so it only scrolls sideways in the busiest case); 8 cards a column then "+N more".
-        <div className="mt-3 flex items-start gap-1.5 overflow-x-auto pb-3">
+        // Option A (owner-approved 2026-10-28): every stage is a column sharing the width evenly; more than 6 stages wrap
+        // into two rows (owner request), so columns stay readable; 8 cards a column then "+N more".
+        <div className="mt-3 grid items-start gap-1.5 pb-3 max-md:!grid-cols-1" style={{ gridTemplateColumns: `repeat(${columns.length > 6 ? Math.ceil(columns.length / 2) : columns.length}, minmax(0, 1fr))` }}>
           {columns.map((c, i) => {
             const total = c.items.reduce((t, x) => t + (x.price ?? 0), 0);
             const all = expanded.includes(c.key), shown = all ? c.items : c.items.slice(0, 8);
             return (
-              <section key={c.key} aria-label={c.name} className="flex min-w-[130px] flex-1 basis-0 flex-col overflow-hidden rounded-lg border border-misty bg-sunken">
+              <section key={c.key} aria-label={c.name} className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-misty bg-sunken">
                 <div className={`h-[3px] ${c.closed ? "bg-moss" : tab === "uc" ? "bg-coral" : BAR[i % 3]}`} />
                 <div className="flex items-baseline justify-between gap-1 border-b border-misty bg-white px-2 py-1.5 text-[13px]"><b className="leading-tight">{c.name}</b><span className="flex-none text-xs muted">{c.items.length}{total ? ` · ${kMoney(total)}` : ""}</span></div>
                 <div className="flex flex-col gap-1 p-1">
