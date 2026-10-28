@@ -10,7 +10,7 @@ import { FileForm } from "../../pipeline/FileForm";
 import { deleteFile, setFileStatus } from "../../pipeline/actions";
 import { PaWizard } from "../../pipeline/PaWizard";
 import { PaBox } from "./PaBox";
-import type { PaSection, PaView, Side } from "@/lib/pa";
+import type { DateKey, PaSection, PaView, Side } from "@/lib/pa";
 import { dealEmails } from "@/lib/partners";
 import type { TaskRow, TeamMember } from "@/server/tasks";
 import { Checklist } from "./Checklist";
@@ -22,7 +22,7 @@ import { DealNotes } from "./DealNotes";
 type EmailProps = { emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; ownGmail?: boolean; canConnect?: boolean };
 export type OfferRow = { id: string; fileId: string; createdAt: string; address: string; price: number | null; summary: string; prefill: Record<string, string> };
 type Props = { offers: OfferRow[]; email: EmailProps; text: Omit<React.ComponentProps<typeof TextComposer>, "personId">; fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean; canDelete: boolean; timeline: React.ReactNode;
-  contracts: PaView[]; forms: Record<Side, PaSection[]>; today: string; checklists: TaskRow[]; team: TeamMember[] };
+  contracts: PaView[]; forms: Record<Side, PaSection[]>; pendingAt: DateKey[]; today: string; checklists: TaskRow[]; team: TeamMember[] };
 
 /** Middle column: a tab per active buyer/listing file, then Timeline (SPEC.md §6.3). */
 export function FileTabs(p: Props) {
@@ -59,7 +59,7 @@ export function SideChip({ kind }: { kind: string }) {
   return <span className={`rounded px-1.5 text-[11px] font-bold uppercase tracking-wide ${kind === "buyer" ? "bg-accent-soft text-accent" : "bg-[#f6e3d9] text-[#9a4f2e]"}`}>{kind === "buyer" ? "Buyer" : kind === "listing" ? "Seller" : kind}</span>;
 }
 
-function FilePane({ offers, email, text, fileForms, file, personId, personName, statuses, canSeeCommission, canDelete, onDeleted, contracts, forms, today, checklists, team }: Props & { file: FileView; onDeleted: () => void }) {
+function FilePane({ offers, email, text, fileForms, file, personId, personName, statuses, canSeeCommission, canDelete, onDeleted, contracts, forms, pendingAt, today, checklists, team }: Props & { file: FileView; onDeleted: () => void }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [addingPa, setAddingPa] = useState(false);
@@ -143,7 +143,7 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
         </div>
       )}
       {activePa ? (
-        <PaBox pa={activePa} personName={personName} fileKind={file.kind} fileLine={fileLine(file)} forms={forms} today={today} canSeeCommission={canSeeCommission}>
+        <PaBox pa={activePa} personName={personName} fileKind={file.kind} fileLine={fileLine(file)} forms={forms} pendingAt={pendingAt} today={today} canSeeCommission={canSeeCommission}>
           <Checklist title={activePa.side === "buyer" ? "Buyer contract checklist" : "Seller contract checklist"} tasks={checklists.filter((t) => t.paId === activePa.id)} today={today} team={team} personId={personId} />
         </PaBox>
       ) : (

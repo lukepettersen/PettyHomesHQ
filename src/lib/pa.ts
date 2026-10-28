@@ -204,6 +204,17 @@ export function ucColumn<T extends { untilDate: string | null }>(
   return columns.find((c) => c.untilDate && open.has(c.untilDate as DateKey)) ?? columns[columns.length - 1];
 }
 
+/** The dates a contract must get past to reach the last Under Contract column ("Pending"): each earlier column's "until" date. */
+export function pendingKeys(columns: { untilDate: string | null }[]): DateKey[] {
+  return columns.slice(0, -1).map((c) => c.untilDate).filter((k): k is DateKey => KEY_DATES.some(([x]) => x === k));
+}
+
+/** Pending = every date before the Pending column is met or waived (a passed date counts as met). */
+export function isPending(pa: { answers: Answers; writtenStatementNA: boolean; dates: Record<DateKey, string | null>; dateStatus: Partial<Record<DateKey, DateStatus>> }, keys: DateKey[], today: string): boolean {
+  const apply = new Set(applicableDates(pa));
+  return keys.filter((k) => apply.has(k)).every((k) => ["met", "waived"].includes(effectiveStatus(pa.dates[k], pa.dateStatus[k], today)));
+}
+
 /** "2.7% · $8,424" */
 export function commissionLine(pct: string, price: number): string {
   const n = Number(pct);

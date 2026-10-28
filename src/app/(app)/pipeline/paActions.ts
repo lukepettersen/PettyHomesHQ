@@ -12,7 +12,7 @@ import { syncContract } from "@/server/google";
 import { syncSalesRow } from "@/server/salesSheet";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
 import { apptIso, closeStepsForWaived, contractAnchors, factsOf, redateContract, runTrigger } from "@/server/automation";
-import { cleanPaAnswers, formProblem, KEY_DATES, type DateKey, type DateStatus, type PaSection } from "@/lib/pa";
+import { applicableDates, cleanPaAnswers, formProblem, KEY_DATES, pendingKeys, type DateKey, type DateStatus, type PaSection } from "@/lib/pa";
 
 const id = z.string().trim().min(1).max(40);
 const sideSchema = z.enum(["buyer", "seller"]);
@@ -132,6 +132,27 @@ export async function setKeyDate(input: z.input<typeof dateSchema>) {
     await logActivity(user.id, "update", "purchaseAgreement", pa.id, `${label(v.key)} for ${pa.file.person.name}: ${v.status}${date ? ` (${date})` : ""}`);
     await syncContract(pa.id);
     await syncSalesRow(pa.id, "changed"); // owner's sales Google Sheet, when set up
+    refresh(pa.file.personId);
+  });
+}
+
+/** Mark pending (owner request 2026-10-28): the dates before the Pending column (the inspection deadline) count as met. */
+export async function markPending(paId: string) {
+  return guarded(null, async (user) => {
+    const pa = await db.purchaseAgreement.findFirst({ where: { id: id.parse(paId), deletedAt: null, state: "active" }, include: { file: { include: { person: { select: { name: true } } } } } });
+    if (!pa) throw new UserError("That contract is no longer active.");
+    const cols = await db.pipelineStatus.findMany({ where: { kind: "uc" }, orderBy: { position: "asc" } });
+    const status = obj(pa.dateStatus);
+    const apply = new Set(applicableDates({ answers: obj(pa.answers), writtenStatementNA: pa.writtenStatementNA }));
+    const keys = pendingKeys(cols).filter((k) => apply.has(k) && !["met", "waived"].includes(status[k] ?? ""));
+    if (!keys.length) return;
+    for (const k of keys) status[k] = "met";
+    await db.$transaction(async (tx) => {
+      await tx.purchaseAgreement.update({ where: { id: pa.id }, data: { dateStatus: status } });
+      await redateContract(tx, pa.id);
+    });
+    await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Marked pending for ${pa.file.person.name} (${keys.map(label).join(", ")} met)`);
+    await syncContract(pa.id);
     refresh(pa.file.personId);
   });
 }

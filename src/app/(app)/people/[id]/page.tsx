@@ -1,3 +1,4 @@
+import { pendingKeys } from "@/lib/pa";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/server/db";
@@ -57,6 +58,8 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
     backLabel = current?.name ?? (bq.get("f") || bq.get("q") ? "People" : "All people");
   }
   const user = await requireUser();
+  // Mark pending / Mark closed follow the Pipeline board's Under Contract columns.
+  const pendingAt = pendingKeys(await db.pipelineStatus.findMany({ where: { kind: "uc" }, orderBy: { position: "asc" }, select: { untilDate: true } }));
   const [p, options, tasks, fields, files, statuses, contracts, buyerForm, sellerForm, checklists, templates] = await Promise.all([
     db.person.findFirst({
       where: { id, deletedAt: null },
@@ -147,7 +150,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
 
         <section className="order-3 min-w-0 lg:order-2">
           <FileTabs offers={offers} email={emailProps} text={textProps} fileForms={fileForms} personId={p.id} personName={p.name} files={files} statuses={fileStatuses} canSeeCommission={canSeeCommission}
-            canDelete={hasPermission(user.permissions, "deleteRecords")} contracts={contracts} forms={{ buyer: buyerForm, seller: sellerForm }} today={tasks.today} checklists={checklists} team={tasks.team} timeline={<Timeline personId={p.id} team={tasks.team.map((m) => ({ id: m.id, name: m.name }))} entries={p.timeline.map((e) => ({ id: e.id, kind: e.kind, body: e.body, outcome: e.outcome, author: e.author?.name ?? null, at: e.createdAt.toISOString(), opened: opens.get(e.id), audio: recordings.get(e.id), editable: canEditEntry(e) && (e.authorId === user.id || hasPermission(user.permissions, "deleteRecords")) }))}
+            canDelete={hasPermission(user.permissions, "deleteRecords")} contracts={contracts} forms={{ buyer: buyerForm, seller: sellerForm }} pendingAt={pendingAt} today={tasks.today} checklists={checklists} team={tasks.team} timeline={<Timeline personId={p.id} team={tasks.team.map((m) => ({ id: m.id, name: m.name }))} entries={p.timeline.map((e) => ({ id: e.id, kind: e.kind, body: e.body, outcome: e.outcome, author: e.author?.name ?? null, at: e.createdAt.toISOString(), opened: opens.get(e.id), audio: recordings.get(e.id), editable: canEditEntry(e) && (e.authorId === user.id || hasPermission(user.permissions, "deleteRecords")) }))}
             email={emailProps} text={textProps} />} />
         </section>
 

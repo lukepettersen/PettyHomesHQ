@@ -337,10 +337,13 @@ Principles:
   financing (Conventional/FHA/VA/Cash/Other); people sections are Buyer's agent, Buyer's
   lender, Buyer's title, Seller's title.
 - Commission shows as "2.7% · $8,424" (anyone with "See commissions").
-- On the PA box: key-date tiles (Not set / + Add date, Met, Waived, Extended), facts line,
-  people line, checklist, actions **Edit · Fell through · Mark closed**.
-  A key date that has passed counts as Met unless it was marked otherwise; moving a pending
-  date (Extend, or editing the PA) marks it Extended and shows the original date.
+- On the PA box: key-date tiles (date and status: Pending, Met, Waived, Extended; not clickable,
+  dates change with Edit *(owner request 2026-10-28)*), facts line, people line, checklist, actions
+  **Edit · Fell through · Mark pending**, and once the deal is pending **Mark closed** in place of Mark pending.
+  **Mark pending** (two clicks) marks met the "until" dates of every Under Contract column before the last one
+  (the inspection deadline), which moves the deal to the Pending column; a deal also becomes pending by itself
+  once those dates pass. A key date that has passed counts as Met unless it was marked otherwise; moving a
+  pending date (editing the PA) marks it Extended and shows the original date.
 - **Mark closed:** contract → Closed, file → Closed, person → Past Client; buyer side sets
   homeiversary to the close date; starts post-close template.
 - **Fell through:** contract ends; file returns to its pre-contract status.
