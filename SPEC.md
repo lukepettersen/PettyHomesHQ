@@ -195,7 +195,8 @@ Principles:
 - **Left:** contact info card, Details (stage, follow-up, assigned, source, mailing name),
   Tags, Important Dates. Each card has Edit → Save/Cancel. The contact info card also has **Copy**
   *(owner request 2026-10-22)*: copies the name, phones and emails (with their labels), one per line, to
-  paste into a text or email. **Addresses** *(owner request 2026-10-27)*: any number, each with a label (Home, Lake
+  paste into a text or email. A small copy icon after each phone, email and address copies just that one
+  *(owner request 2026-10-28)*. **Addresses** *(owner request 2026-10-27)*: any number, each with a label (Home, Lake
   cabin…); with two or more, **Mailing address** picks the one mailers, merge fields and calendar events use (with
   one, it is the mailing address). All addresses are searchable. "Delete person" at the bottom
   (Admin only, two-step).

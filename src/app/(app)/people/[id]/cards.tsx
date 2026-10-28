@@ -102,6 +102,20 @@ function CopyContact({ name, phones, emails }: { name: string; phones: Row[]; em
   return <button type="button" className="text-sm font-semibold text-accent hover:underline" onClick={copy} aria-live="polite">{msg || "Copy"}</button>;
 }
 
+/** Copies one phone, email or address (owner request 2026-10-28). */
+function CopyOne({ value }: { value: string }) {
+  const [done, setDone] = useState("");
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(value); setDone("Copied"); } catch { setDone("Couldn't copy"); }
+    setTimeout(() => setDone(""), 1500);
+  };
+  return (
+    <button type="button" aria-label={`Copy ${value}`} title="Copy" onClick={copy} aria-live="polite" className="ml-1 inline-flex items-center rounded px-1 align-middle text-xs muted hover:bg-sunken hover:text-charcoal">
+      {done || <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>}
+    </button>
+  );
+}
+
 export function InfoCard(p: { id: string; name: string; addresses: AddressRow[]; phones: Row[]; emails: Row[]; lastContactDays: number | null }) {
   const e = useEdit();
   const [name, setName] = useState(p.name), [addresses, setAddresses] = useState(p.addresses);
@@ -136,10 +150,10 @@ export function InfoCard(p: { id: string; name: string; addresses: AddressRow[];
         </div>
       </div>
       <ul className="mt-3 flex flex-col gap-1.5 text-sm">
-        {p.phones.map((x, i) => <li key={`p${i}`}><CallLink className="link" number={x.value} name={p.name}>{x.value}</CallLink> <span className="muted">({x.label})</span></li>)}
-        {p.emails.map((x, i) => <li key={`e${i}`} className="break-all"><a className="link" href={`mailto:${x.value}`}>{x.value}</a>{x.label && <span className="muted"> ({x.label})</span>}</li>)}
+        {p.phones.map((x, i) => <li key={`p${i}`}><CallLink className="link" number={x.value} name={p.name}>{x.value}</CallLink> <span className="muted">({x.label})</span><CopyOne value={x.value} /></li>)}
+        {p.emails.map((x, i) => <li key={`e${i}`} className="break-all"><a className="link" href={`mailto:${x.value}`}>{x.value}</a>{x.label && <span className="muted"> ({x.label})</span>}<CopyOne value={x.value} /></li>)}
         {p.addresses.map((x, i) => (
-          <li key={`a${i}`}>{x.value}{(x.label || x.mailing) && <span className="muted"> ({[x.label, x.mailing && "Mailing"].filter(Boolean).join(" · ")})</span>}</li>
+          <li key={`a${i}`}>{x.value}{(x.label || x.mailing) && <span className="muted"> ({[x.label, x.mailing && "Mailing"].filter(Boolean).join(" · ")})</span>}<CopyOne value={x.value} /></li>
         ))}
         {!p.addresses.length && <li><button type="button" className="text-sm muted hover:underline" onClick={() => e.setEditing(true)}>Add address</button></li>}
       </ul>
