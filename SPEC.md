@@ -202,7 +202,8 @@ Principles:
   one, it is the mailing address). All addresses are searchable. "Delete person" at the bottom
   (Admin only, two-step).
 - **Middle:** a tab per active client file (Buyer / Listing) plus **Timeline**.
-  - **Timeline:** composer with Note, Send text, Log text, Log call (with outcome).
+  - **Timeline:** composer with Note, Send text, Log text, Log call (with outcome). It starts folded to just
+    that row of buttons; tapping one opens it, tapping it again or Close folds it *(owner request 2026-10-28)*.
     Filters: All, Notes, Texts, Calls, **Tasks**, Emails, Deal activity. Newest first.
     Checking off a task for the person adds a "Task done" line (unchecking removes it).
     **Layout like FUB** *(owner request 2026-10-28)*: each item has a colored icon on a line down the left (email,

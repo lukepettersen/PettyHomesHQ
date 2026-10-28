@@ -28,7 +28,9 @@ type EmailProps = { emails: string[]; templates: { id: string; name: string }[];
 type TextProps = { phones: string[]; templates: { id: string; name: string }[]; from: string | null; blocked: string | null };
 
 export function Timeline({ personId, personName, entries, team, email, text }: { personId: string; personName: string; entries: Entry[]; team: Member[]; email: EmailProps; text: TextProps }) {
-  const [kind, setKind] = useState<Kind>(() => { const k = waiting ?? "note"; waiting = null; return k; });
+  const [kind, setKind] = useState<Kind>(() => waiting ?? "note");
+  // The composer stays folded until a button is tapped, so the timeline starts higher (owner request 2026-10-28).
+  const [open, setOpen] = useState(() => { const o = waiting !== null; waiting = null; return o; });
   const [body, setBody] = useState("");
   const [outcome, setOutcome] = useState("Talked");
   const [filter, setFilter] = useState("all");
@@ -39,8 +41,8 @@ export function Timeline({ personId, personName, entries, team, email, text }: {
   const [reply, setReply] = useState<{ subject: string; n: number } | null>(null);
   const top = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (kind !== "note") top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    const on = (ev: Event) => { waiting = null; setKind((ev as CustomEvent<Kind>).detail); top.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
+    if (open) top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const on = (ev: Event) => { waiting = null; setKind((ev as CustomEvent<Kind>).detail); setOpen(true); top.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
     window.addEventListener(COMPOSE_EVENT, on);
     return () => window.removeEventListener(COMPOSE_EVENT, on);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -86,12 +88,14 @@ export function Timeline({ personId, personName, entries, team, email, text }: {
 
   return (
     <div className="card mt-3 p-4" ref={top}>
-      <div className="flex gap-1">
+      <div className="flex flex-wrap items-center gap-1">
         {TABS.map(([k, label]) => (
-          <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}
-            className={`rounded-md px-3 py-1.5 text-sm font-semibold ${kind === k ? "border border-misty bg-white" : "muted hover:text-charcoal"}`}>{label}</button>
+          <button key={k} type="button" aria-pressed={open && kind === k} aria-expanded={open && kind === k} onClick={() => { if (open && kind === k) setOpen(false); else { setKind(k); setOpen(true); } }}
+            className={`rounded-md px-3 py-1.5 text-sm font-semibold ${open && kind === k ? "border border-misty bg-white" : "muted hover:text-charcoal"}`}>{label}</button>
         ))}
+        {open && <button type="button" className="ml-auto text-xs font-semibold text-accent hover:underline" onClick={() => setOpen(false)}>Close</button>}
       </div>
+      {open && <>
       {kind === "email" && <EmailComposer key={reply?.n ?? 0} personId={personId} {...email} initialSubject={reply?.subject ?? ""} />}
       {kind === "send" && <TextComposer personId={personId} {...text} />}
       {kind === "call" && (
@@ -119,6 +123,7 @@ export function Timeline({ personId, personName, entries, team, email, text }: {
       </div>
       {error && <p role="alert" className="mt-2 text-sm text-bad">{error}</p>}
       {notice && <p role="status" className="mt-2 text-sm text-accent">{notice}</p>}</>}
+      </>}
 
       <div className="mt-4 flex flex-wrap gap-1.5">
         {FILTERS.map(([k, l]) => (
@@ -132,7 +137,7 @@ export function Timeline({ personId, personName, entries, team, email, text }: {
         <ol className="relative mt-3">
           {threads(shown).map((g) => (
             <TimelineItem key={g[0].id} items={g} personName={personName} team={team} editing={editing} setEditing={setEditing} onChanged={() => router.refresh()}
-              onReply={(subject) => { setKind("email"); setReply((x) => ({ subject: /^re:/i.test(subject) ? subject : `Re: ${subject}`, n: (x?.n ?? 0) + 1 })); top.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }} />
+              onReply={(subject) => { setKind("email"); setOpen(true); setReply((x) => ({ subject: /^re:/i.test(subject) ? subject : `Re: ${subject}`, n: (x?.n ?? 0) + 1 })); top.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }} />
           ))}
         </ol>
       ) : <p className="mt-3 text-sm muted">Nothing here yet.</p>}
