@@ -830,3 +830,14 @@ merge. Each phase is usable on its own.
 ## 18. Open questions
 
 None right now. New ones get added here.
+
+**Parked ideas** *(owner, 2026-10-28: tabled for later; nothing built yet)*:
+- Lead intake: Zillow / website / open house lead emails become contacts automatically (needed before cancelling FUB).
+- Follow-up sequences that send texts/emails on a schedule and stop on reply (like FUB Action Plans; needs the worker).
+- Merge duplicate contacts (possible-duplicates list + Merge).
+- Business dashboard (closed/pending, volume, commission for those allowed, pipeline value, lead source results, yearly
+  goal), possibly fed by the owner's Google Sheet of sales and commissions (private to the owner).
+- Calendar page (everyone's appointments and contract dates for the week).
+- Caller ID: sync HQ contacts to Google Contacts so phones show names (Connect Google Contacts; per person).
+- Call transcripts + summaries (Twilio transcription + Claude; ~$2/month at current volume).
+- Claude app connector for HQ (start read-only, owner only).
