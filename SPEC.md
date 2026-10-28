@@ -620,8 +620,9 @@ Principles:
   (the same people = the same thread), each message labelled with who sent it. **Send to group** replies to
   everyone from that person's number through a Twilio Conversation made for the group on the first reply (Twilio
   allows 10 people, us included). **+ New message** → two or more contacts' numbers → **Send to N people** starts
-  one. On a contact, **Send text** starts with the contact's other numbers and the owner's cell already added (each
-  removable) and sends one group text. Group messages go on the timeline of every contact in the group, once per
+  one. On a contact, **Send text** starts with every one of the contact's numbers as a chip with its label
+  ("612-555-0101 (Sam)") and the owner's cell, each with × to leave it out (a removed number stays as a dashed
+  "+ number" to add back; owner request 2026-10-28), and sends one group text (group texting off: one text each). Group messages go on the timeline of every contact in the group, once per
   contact even when a couple's two numbers are both in it. A text Twilio delivers twice (plainly, SM… or MM… for picture/group texts, and through the group's
   Conversation, IM…, even at the same moment) is saved and alerted once; doubles saved before 2026-10-24 were
   removed once. People who replied STOP block sending to

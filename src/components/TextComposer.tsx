@@ -14,12 +14,15 @@ import { TextPhotoButton, TextPhotoPreviews } from "@/components/TextPhotos";
  * Write and send a text from your own business number (SPEC.md §11): a template (optional, or "/name" in the
  * message), then Send. `blocked` explains why texting isn't available (not connected, no number, they replied STOP…).
  */
-export function TextComposer({ personId, phones, templates, from, blocked, taskId, initial = "", compact, onSent, groupsOn, autoExtras = [] }: {
-  personId: string | null; phones: string[]; templates: { id: string; name: string }[]; from: string | null; blocked: string | null;
+export function TextComposer({ personId, phones, phoneLabels = {}, templates, from, blocked, taskId, initial = "", compact, onSent, groupsOn, autoExtras = [] }: {
+  personId: string | null; phones: string[]; phoneLabels?: Record<string, string>; templates: { id: string; name: string }[]; from: string | null; blocked: string | null;
   taskId?: string | null; initial?: string; compact?: boolean; onSent?: (name: string) => void; groupsOn?: boolean; autoExtras?: Extra[];
 }) {
   const router = useRouter();
-  const [to, setTo] = useState(phones[0] ?? "");
+  // Every number on the contact starts ticked; × leaves one out (owner request 2026-10-28).
+  const [skip, setSkip] = useState<string[]>([]);
+  const chosen = phones.filter((n) => !skip.includes(n));
+  const to = chosen[0] ?? "";
   // Others to send the same text to: one group text when group texting is on (starting with the contact's other
   // numbers and the owner's cell), otherwise each gets their own text.
   const [extras, setExtras] = useState<Extra[]>(autoExtras);
@@ -54,16 +57,21 @@ export function TextComposer({ personId, phones, templates, from, blocked, taskI
   };
   const send = () => start(async () => {
     setError(""); setNotice("");
-    if (groupsOn && extras.length) {
-      const g = await sendTextGroup({ numbers: [to, ...extras.map((x) => x.value)], body, personId, taskId: taskId ?? null, media: photos });
+    if (!to) { setError("Pick at least one of their numbers."); return; }
+    if (groupsOn && chosen.length + extras.length > 1) {
+      const g = await sendTextGroup({ numbers: [...chosen, ...extras.map((x) => x.value)], body, personId, taskId: taskId ?? null, media: photos });
       if (!g.ok) { setError(g.error); return; }
-      setNotice(`Sent as a group text to ${extras.length + 1} people.`);
+      setNotice(`Sent as a group text to ${chosen.length + extras.length} people.`);
       setBody(""); setPhotos([]); setTemplateId(""); setMissing([]); router.refresh(); onSent?.("the group");
       return;
     }
     const r = await sendText({ personId, to, body, taskId: taskId ?? null, media: photos });
     if (!r.ok) { setError(r.error); return; }
     const names = [r.data!.name], failed: string[] = [];
+    for (const n of chosen.slice(1)) {
+      const e = await sendText({ personId, to: n, body, media: photos });
+      if (e.ok) names.push(formatPhone(n)); else failed.push(`${formatPhone(n)}: ${e.error}`);
+    }
     for (const x of extras) {
       const e = await sendText({ personId: x.personId, to: x.value, body, typed: !x.personId, media: photos });
       if (e.ok) names.push(e.data!.name); else failed.push(`${x.label}: ${e.error}`);
@@ -79,15 +87,16 @@ export function TextComposer({ personId, phones, templates, from, blocked, taskI
   return (
     <div className="mt-2 flex flex-col gap-2">
       <div className={`grid grid-cols-1 gap-2 ${compact ? "" : "sm:grid-cols-2"}`}>
-        {phones.length > 1 ? (
-          <label className="label">To
-            <select className="input" value={to} onChange={(e) => setTo(e.target.value)}>{phones.map((p) => <option key={p} value={p}>{formatPhone(p)}</option>)}</select>
-          </label>
-        ) : !compact && <div className="label">To<span className="py-1.5 text-sm font-semibold text-charcoal">{formatPhone(to)}</span></div>}
+        {phones.length === 1 && !compact && <div className="label">To<span className="py-1.5 text-sm font-semibold text-charcoal">{formatPhone(to)}</span></div>}
         <div className="flex flex-wrap items-center gap-1.5 sm:col-span-2">
+          {phones.length > 1 && <span className="text-sm font-semibold">To</span>}
+          {phones.length > 1 && phones.map((n) => skip.includes(n)
+            ? <button key={n} type="button" className="rounded-full border border-dashed border-misty px-2 py-0.5 text-sm muted hover:text-charcoal" onClick={() => setSkip(skip.filter((x) => x !== n))} title="Add this number back">+ {formatPhone(n)}{phoneLabels[n] ? ` (${phoneLabels[n]})` : ""}</button>
+            : <span key={n} className="flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-sm font-semibold text-accent">{formatPhone(n)}{phoneLabels[n] ? ` (${phoneLabels[n]})` : ""}
+                <button type="button" aria-label={`Remove ${formatPhone(n)}`} className="px-0.5 hover:text-bad" onClick={() => setSkip([...skip, n])}>×</button></span>)}
           <ExtraChips extras={extras} onRemove={(v) => setExtras(extras.filter((x) => x.value !== v))} />
-          <AddRecipient mode="phone" exclude={[to, ...extras.map((x) => x.value)]} onAdd={(x) => setExtras([...extras, x])} />
-          {extras.length > 0 && <span className="text-xs muted">{groupsOn ? "Sends as one group text; everyone sees the replies." : "Each person gets their own text; replies come back separately."}</span>}
+          <AddRecipient mode="phone" exclude={[...phones, ...extras.map((x) => x.value)]} onAdd={(x) => setExtras([...extras, x])} />
+          {chosen.length + extras.length > 1 && <span className="text-xs muted">{groupsOn ? "Sends as one group text; everyone sees the replies." : "Each person gets their own text; replies come back separately."}</span>}
         </div>
         <label className="label">Template<TemplateSearch templates={templates} value={templateId} disabled={pending} onPick={pick} noneLabel="No text templates yet" /></label>
       </div>
