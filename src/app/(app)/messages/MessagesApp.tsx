@@ -13,10 +13,11 @@ import { formatPhone } from "@/lib/normalize";
 import { sendProblem } from "@/lib/texting";
 import type { Bubble, GroupInfo, Thread } from "@/server/texting";
 import { MAX_GROUP } from "@/lib/groupText";
+import type { ScheduledRow } from "../people/[id]/FileTabs";
 import { SEND_REACTIONS } from "@/lib/reactions";
 import { ScheduleText } from "@/components/ScheduleText";
 import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
-import { addPersonFromNumber, archiveThread, deleteThread, fillTextTemplate, reactToText, linkNumber, markRead, sendGroup, startGroup } from "./actions";
+import { addPersonFromNumber, archiveThread, cancelScheduledText, deleteThread, fillTextTemplate, reactToText, linkNumber, markRead, sendGroup, startGroup } from "./actions";
 
 type Line = { userId: string; name: string; number: string };
 type Composer = { from: string | null; blocked: string | null; templates: { id: string; name: string }[] };
@@ -30,13 +31,13 @@ const when = (iso: string) => (sameDay(iso, new Date()) ? clock(iso) : day(iso))
 const STATUS: Record<string, string> = { queued: "Sending…", accepted: "Sending…", sending: "Sending…", sent: "Sent", delivered: "Delivered", failed: "Not delivered", undelivered: "Not delivered" };
 
 /** Messages (SPEC.md §11): conversations on the left, the open one on the right. Refreshes every 15 seconds. */
-export function MessagesApp({ lines, line, threads, open, person, conversation, composer, group, groupsOn }: {
+export function MessagesApp({ lines, line, threads, open, person, conversation, composer, group, groupsOn, scheduled }: {
   lines: Line[]; line: Line | null; threads: Thread[]; open: string | null; person: { id: string; name: string } | null; conversation: Bubble[]; composer: Composer;
-  group: GroupInfo | null; groupsOn: boolean;
+  group: GroupInfo | null; groupsOn: boolean; scheduled: ScheduledRow[];
 }) {
   const router = useRouter();
   const [q, setQ] = useState("");
-  const [tab, setTab] = useState<"all" | "unread" | "archived">("all");
+  const [tab, setTab] = useState<"all" | "unread" | "archived" | "scheduled">("all");
   const [starting, setStarting] = useState(false);
   const end = useRef<HTMLDivElement>(null);
   const href = (n: string | null, lineId = line?.userId) => `/messages?${new URLSearchParams({ ...(lineId ? { line: lineId } : {}), ...(n ? { n } : {}) })}`;
@@ -57,28 +58,31 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
   // All = the inbox (archived conversations are under Archived until someone texts again; owner request 2026-10-28).
   const shown = threads.filter((t) => t.number === open || (tab === "archived" ? t.archived : !t.archived && (tab === "all" || t.unread > 0))).filter((t) => !q.trim() || t.name.toLowerCase().includes(q.trim().toLowerCase()) || t.number.includes(q.replace(/\D/g, "") || "~"));
   return (
-    <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-3 px-4 py-4 md:h-[calc(100dvh-80px)] md:grid-cols-[330px_minmax(0,1fr)]">
+    <div className="mx-auto grid max-w-[1500px] grid-cols-1 gap-3 px-4 py-4 md:h-[calc(100dvh-80px)] md:grid-cols-[190px_320px_minmax(0,1fr)]">
+      {/* Folders on the left like FUB (owner/assistant request 2026-10-28): Inbox, Unread, Scheduled, Archived. */}
+      <nav aria-label="Folders" className={`card flex flex-col gap-1 p-3 ${open ? "max-md:hidden" : ""}`}>
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <h1 className="text-xl font-extrabold">Messages</h1>
+        </div>
+        <button type="button" className={`btn mb-2 ${starting ? "" : "btn-primary"}`} onClick={() => setStarting(!starting)} aria-expanded={starting}>{starting ? "Cancel" : "+ New message"}</button>
+        {lines.length > 1 && (
+          <select aria-label="Whose texts" className="input mb-2 text-sm font-semibold" value={line.userId} onChange={(e) => router.push(href(null, e.target.value))}>
+            {lines.map((l) => <option key={l.userId} value={l.userId}>{l.userId === line.userId ? "" : "View "}{l.name.split(" ")[0]}&apos;s texts</option>)}
+          </select>
+        )}
+        {([["all", "Inbox", threads.filter((t) => !t.archived).length], ["unread", "Unread", unreadThreads], ["scheduled", "Scheduled", scheduled.filter((x) => x.status !== "failed").length], ["archived", "Archived", archivedThreads]] as const).map(([k, l, n]) => (
+          <button key={k} type="button" aria-pressed={tab === k} onClick={() => setTab(k)}
+            className={`flex items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm font-semibold ${tab === k ? "bg-accent-soft text-accent" : "hover:bg-sunken"}`}>
+            {l}{n > 0 && <span className={`text-xs ${k === "unread" ? "rounded-full bg-coral px-1.5 font-bold text-white" : "muted"}`}>{n}</span>}
+          </button>
+        ))}
+      </nav>
       <section aria-label="Conversations" className={`card flex min-h-0 flex-col overflow-hidden ${open ? "max-md:hidden" : ""}`}>
         <div className="flex flex-col gap-2 border-b border-misty p-3">
-          <div className="flex items-center justify-between gap-2">
-            <h1 className="text-xl font-extrabold">Messages</h1>
-            <button type="button" className={`btn ${starting ? "" : "btn-primary"}`} onClick={() => setStarting(!starting)} aria-expanded={starting}>{starting ? "Cancel" : "+ New"}</button>
-          </div>
-          {lines.length > 1 && (
-            <select aria-label="Whose texts" className="input text-sm font-semibold" value={line.userId} onChange={(e) => router.push(href(null, e.target.value))}>
-              {lines.map((l) => <option key={l.userId} value={l.userId}>{l.userId === line.userId ? "" : "View "}{l.name.split(" ")[0]}&apos;s texts · {formatPhone(l.number)}</option>)}
-            </select>
-          )}
           {starting && <NewMessage templates={composer.templates} groupsOn={groupsOn} blocked={composer.blocked} onPick={(n) => { setStarting(false); router.push(href(n)); }} />}
-          {/* Search on its own row, filter chips under it (owner-approved cleanup 2026-10-28). */}
           <input className="input w-full" type="search" aria-label="Search conversations" placeholder="Search name or number" value={q} onChange={(e) => setQ(e.target.value)} />
-          <span className="flex flex-wrap gap-1.5" role="group" aria-label="Show">
-            {([["all", "All"], ["unread", `Unread${unreadThreads ? ` ${unreadThreads}` : ""}`], ["archived", `Archived${archivedThreads ? ` ${archivedThreads}` : ""}`]] as const).map(([k, l]) => (
-              <button key={k} type="button" aria-pressed={tab === k} onClick={() => setTab(k)} className={`rounded-full border px-3 py-0.5 text-sm font-semibold ${tab === k ? "border-charcoal bg-charcoal text-white" : "border-misty bg-white hover:bg-sunken"}`}>{l}</button>
-            ))}
-          </span>
         </div>
-        {shown.length ? (
+        {tab === "scheduled" ? <ScheduledList rows={scheduled} q={q} onChanged={() => router.refresh()} /> : shown.length ? (
           <ul className="min-h-0 flex-1 overflow-y-auto max-md:max-h-[70vh]">
             {shown.map((t) => (
               <li key={t.number}>
@@ -326,6 +330,31 @@ function ReactButton({ id, out, mine, onDone }: { id: string; out: boolean; mine
       )}
       {error && <span role="alert" className="absolute top-full z-20 mt-1 w-56 rounded bg-white p-1 text-xs text-bad shadow">{error}</span>}
     </span>
+  );
+}
+
+/** Messages → Scheduled: texts set to go out from this number, soonest first, with Cancel (owner request 2026-10-28). */
+function ScheduledList({ rows, q, onChanged }: { rows: ScheduledRow[]; q: string; onChanged: () => void }) {
+  const [error, setError] = useState("");
+  const [busy, start] = useTransition();
+  const shown = rows.filter((x) => !q.trim() || `${x.to} ${x.body}`.toLowerCase().includes(q.trim().toLowerCase()));
+  if (!shown.length) return <p className="p-4 text-sm muted">{rows.length ? "No scheduled texts match." : "Nothing scheduled. Use Schedule next to Send to send a text later."}</p>;
+  return (
+    <ul className="min-h-0 flex-1 overflow-y-auto">
+      {shown.map((x) => (
+        <li key={x.id} className="border-t border-misty px-3 py-2.5 text-sm first:border-0">
+          <span className="flex items-baseline justify-between gap-2">
+            {x.personId ? <Link href={`/people/${x.personId}`} className="truncate font-semibold hover:underline">{x.to}</Link> : <b className="truncate">{x.to}</b>}
+            <span className={`flex-none text-xs ${x.status === "failed" ? "font-semibold text-bad" : "muted"}`}>{x.status === "failed" ? "Not sent" : x.when}</span>
+          </span>
+          <span className="line-clamp-2 muted">{x.body}</span>
+          {x.error && <span className="block text-xs text-bad">{x.when}: {x.error}</span>}
+          {x.status === "pending" && x.mine && <button type="button" className="mt-0.5 text-xs font-semibold text-bad hover:underline" disabled={busy}
+            onClick={() => start(async () => { setError(""); const r = await cancelScheduledText(x.id); if (!r.ok) setError(r.error); else onChanged(); })}>Cancel</button>}
+        </li>
+      ))}
+      {error && <li role="alert" className="px-3 py-2 text-sm text-bad">{error}</li>}
+    </ul>
   );
 }
 

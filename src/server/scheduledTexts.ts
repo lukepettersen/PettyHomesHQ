@@ -43,10 +43,19 @@ export async function sendDueTexts(now = new Date()): Promise<number> {
 
 /** A contact's scheduled texts not yet sent, and ones that failed in the last week, for the contact page. */
 export async function loadScheduledFor(personId: string, userId: string, canCancelAny: boolean) {
-  const rows = await db.scheduledText.findMany({ where: { personId, OR: [{ status: { in: ["pending", "sending"] } }, { status: "failed", sendAt: { gte: new Date(Date.now() - 7 * 86400000) } }] }, orderBy: { sendAt: "asc" } });
+  return loadScheduled({ personId }, userId, canCancelAny);
+}
+
+/** Scheduled texts from someone's number, for Messages → Scheduled (owner request 2026-10-28). */
+export async function loadScheduledBy(createdById: string, userId: string, canCancelAny: boolean) {
+  return loadScheduled({ createdById }, userId, canCancelAny);
+}
+
+async function loadScheduled(where: { personId?: string; createdById?: string }, userId: string, canCancelAny: boolean) {
+  const rows = await db.scheduledText.findMany({ where: { ...where, OR: [{ status: { in: ["pending", "sending"] } }, { status: "failed", sendAt: { gte: new Date(Date.now() - 7 * 86400000) } }] }, orderBy: { sendAt: "asc" } });
   const by = new Map((await db.user.findMany({ where: { id: { in: rows.map((x) => x.createdById) } }, select: { id: true, name: true } })).map((u) => [u.id, u.name.split(" ")[0]]));
   const names = await namesForNumbers([...new Set(rows.flatMap((x) => x.numbers))]);
   const all = [...new Set(rows.flatMap((x) => x.numbers))];
   const nameOf = (n: string) => names[all.indexOf(n)] ?? n;
-  return rows.map((x) => ({ id: x.id, when: scheduleLabel(x.sendAt), to: [...new Set(x.numbers.map(nameOf))].join(", "), body: x.body, by: by.get(x.createdById) ?? "", mine: x.createdById === userId || canCancelAny, status: x.status, error: x.error }));
+  return rows.map((x) => ({ id: x.id, when: scheduleLabel(x.sendAt), to: [...new Set(x.numbers.map(nameOf))].join(", "), body: x.body, by: by.get(x.createdById) ?? "", mine: x.createdById === userId || canCancelAny, status: x.status, error: x.error, personId: x.personId }));
 }

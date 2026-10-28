@@ -6,6 +6,8 @@ import { groupTextingOn } from "@/server/groupText";
 import { isGroupKey } from "@/lib/groupText";
 import { normalizePhone } from "@/lib/normalize";
 import { MessagesApp } from "./MessagesApp";
+import { loadScheduledBy } from "@/server/scheduledTexts";
+import { hasPermission } from "@/server/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +41,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
   const composer = await textComposerFor(user, person && (await hasTextStop(person.id)) ? person.name : null);
   const mine = line?.userId === user.id;
   return (
-    <MessagesApp lines={lines} line={line} threads={threads} open={open} person={person} conversation={conversation} group={group} groupsOn={await groupTextingOn()}
+    <MessagesApp scheduled={line ? await loadScheduledBy(line.userId, user.id, hasPermission(user.permissions, "deleteRecords")) : []} lines={lines} line={line} threads={threads} open={open} person={person} conversation={conversation} group={group} groupsOn={await groupTextingOn()}
       composer={{ ...composer, blocked: composer.blocked ?? (mine ? null : `These are ${line?.name.split(" ")[0]}'s texts. Replies go from each person's own number, so switch to your number to text.`) }} />
   );
 }

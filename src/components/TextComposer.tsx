@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
 import { formatPhone } from "@/lib/normalize";
 import { MAX_TEXT } from "@/lib/texting";
@@ -37,6 +37,8 @@ export function TextComposer({ personId, phones, phoneLabels = {}, templates, fr
   const [notice, setNotice] = useState("");
   const [pending, start] = useTransition();
   const box = useRef<HTMLTextAreaElement>(null);
+  // The one-line box shrinks back after sending.
+  useEffect(() => { if (compact && !body && box.current) box.current.style.height = ""; }, [compact, body]);
   const slash = useSlashTemplates({ box, value: body, templates, onChoose: (tid, a, b) => start(async () => {
     const r = await fillTextTemplate({ personId, templateId: tid });
     if (!r.ok) { setError(r.error); return; }
@@ -116,10 +118,14 @@ export function TextComposer({ personId, phones, phoneLabels = {}, templates, fr
       {/* Messages uses the compact version: one message box, then one row of tools (owner-approved cleanup 2026-10-28). */}
       {(!compact || phones.length > 1 || extras.length > 0) && recipients}
       {!compact && <label className="label">Template<TemplateSearch templates={templates} value={templateId} disabled={pending} onPick={pick} noneLabel="No text templates yet" /></label>}
-      <div className="relative">
-        <textarea ref={box} aria-label="Text message" placeholder="Write a text, or type / and a template name" className={`input font-normal ${compact ? "min-h-[52px]" : "min-h-24"}`} rows={compact ? 2 : undefined} value={body} maxLength={MAX_TEXT}
-          onChange={(e) => { setBody(e.target.value); slash.track(); }} onKeyDown={onKey} onKeyUp={slash.track} onClick={slash.track} />
-        {slash.menu}
+      {/* Messages: a one-line box that grows as you type (up to about 6 lines), tools beside it (owner request 2026-10-28). */}
+      <div className={compact ? "flex flex-wrap items-end gap-2" : ""}>
+        <div className={`relative ${compact ? "min-w-[240px] flex-1" : ""}`}>
+          <textarea ref={box} aria-label="Text message" placeholder={compact ? "Write your text… (type / for a template)" : "Write a text, or type / and a template name"} className={`input w-full font-normal ${compact ? "max-h-40 min-h-[40px] resize-none py-2" : "min-h-24"}`} rows={compact ? 1 : undefined} value={body} maxLength={MAX_TEXT}
+            onChange={(e) => { setBody(e.target.value); slash.track(); if (compact) { e.target.style.height = "auto"; e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`; } }} onKeyDown={onKey} onKeyUp={slash.track} onClick={slash.track} />
+          {slash.menu}
+        </div>
+        {compact && buttons}
       </div>
       <TextPhotoPreviews photos={photos} onChange={setPhotos} />
       {missing.length > 0 && <p className="text-sm text-[#9a6400]">Not filled in (nothing on file): {missing.join(", ")}. Check the text before sending.</p>}
@@ -127,7 +133,7 @@ export function TextComposer({ personId, phones, phoneLabels = {}, templates, fr
         <span className="flex flex-wrap items-center gap-x-2 text-xs muted">From your number {from ? formatPhone(from) : ""} · {count}
           {compact && <AddRecipient mode="phone" exclude={[...phones, ...extras.map((x) => x.value)]} onAdd={(x) => setExtras([...extras, x])} />}
         </span>
-        {buttons}
+        {!compact && buttons}
       </div>
       {error && <p role="alert" className="text-sm text-bad">{error}</p>}
       {notice && <p role="status" className="text-sm text-accent">{notice}</p>}
