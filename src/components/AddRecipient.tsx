@@ -37,7 +37,7 @@ export function AddRecipient({ mode, onAdd, exclude = [] }: { mode: "email" | "p
         return (
           <div key={h.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 py-0.5 text-sm">
             <b>{h.name}</b>
-            {opts.length ? opts.map((o) => <button key={o} type="button" className="rounded-full border border-misty bg-white px-2 py-0.5 text-xs font-semibold hover:border-accent" onMouseDown={(e) => e.preventDefault()} onClick={() => add({ value: o, label: `${whose(h, o) || h.name} · ${mode === "phone" ? formatPhone(o) : o}`, personId: h.id })}>{mode === "phone" ? formatPhone(o) : o}{whose(h, o) && <span className="font-normal muted"> ({whose(h, o)})</span>}</button>)
+            {opts.length ? opts.map((o) => <button key={o} type="button" className="rounded-full border border-misty bg-white px-2 py-0.5 text-xs font-semibold hover:border-accent" onMouseDown={(e) => e.preventDefault()} onClick={() => add({ value: o, label: mode === "phone" ? whose(h, o) || h.name : `${whose(h, o) || h.name} · ${o}`, personId: h.id })}>{mode === "phone" ? formatPhone(o) : o}{whose(h, o) && <span className="font-normal muted"> ({whose(h, o)})</span>}</button>)
               : <span className="text-xs muted">No {mode === "email" ? "email" : "phone number"} on file</span>}
           </div>
         );

@@ -24,6 +24,8 @@ export function TextComposer({ personId, phones, phoneLabels = {}, templates, fr
   const [skip, setSkip] = useState<string[]>([]);
   const chosen = phones.filter((n) => !skip.includes(n));
   const to = chosen[0] ?? "";
+  // Each number shows whose it is; only when two would read the same is the number added.
+  const nameFor = (n: string) => { const nm = phoneLabels[n]; return nm && phones.filter((x) => phoneLabels[x] === nm).length === 1 ? nm : nm ? `${nm} · ${formatPhone(n)}` : formatPhone(n); };
   // Others to send the same text to: one group text when group texting is on (starting with the contact's other
   // numbers and the owner's cell), otherwise each gets their own text.
   const [extras, setExtras] = useState<Extra[]>(autoExtras);
@@ -92,9 +94,9 @@ export function TextComposer({ personId, phones, phoneLabels = {}, templates, fr
         <div className="flex flex-wrap items-center gap-1.5 sm:col-span-2">
           {phones.length > 1 && <span className="text-sm font-semibold">To</span>}
           {phones.length > 1 && phones.map((n) => skip.includes(n)
-            ? <button key={n} type="button" className="rounded-full border border-dashed border-misty px-2 py-0.5 text-sm muted hover:text-charcoal" onClick={() => setSkip(skip.filter((x) => x !== n))} title="Add this number back">+ {formatPhone(n)}{phoneLabels[n] ? ` (${phoneLabels[n]})` : ""}</button>
-            : <span key={n} className="flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-sm font-semibold text-accent">{formatPhone(n)}{phoneLabels[n] ? ` (${phoneLabels[n]})` : ""}
-                <button type="button" aria-label={`Remove ${formatPhone(n)}`} className="px-0.5 hover:text-bad" onClick={() => setSkip([...skip, n])}>×</button></span>)}
+            ? <button key={n} type="button" className="rounded-full border border-dashed border-misty px-2 py-0.5 text-sm muted hover:text-charcoal" onClick={() => setSkip(skip.filter((x) => x !== n))} title={`Add ${formatPhone(n)} back`}>+ {nameFor(n)}</button>
+            : <span key={n} title={formatPhone(n)} className="flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-sm font-semibold text-accent">{nameFor(n)}
+                <button type="button" aria-label={`Remove ${nameFor(n)}`} className="px-0.5 hover:text-bad" onClick={() => setSkip([...skip, n])}>×</button></span>)}
           <ExtraChips extras={extras} onRemove={(v) => setExtras(extras.filter((x) => x.value !== v))} />
           <AddRecipient mode="phone" exclude={[...phones, ...extras.map((x) => x.value)]} onAdd={(x) => setExtras([...extras, x])} />
           {chosen.length + extras.length > 1 && <span className="text-xs muted">{groupsOn ? "Sends as one group text; everyone sees the replies." : "Each person gets their own text; replies come back separately."}</span>}

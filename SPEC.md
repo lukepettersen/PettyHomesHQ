@@ -643,6 +643,9 @@ Principles:
   lists, alerts and timelines). **📷** on the text boxes (Send text, Messages, Send to group) attaches up to 5
   JPG/PNG/GIF photos; they upload to the file storage and go as picture texts (MMS). In a group text each extra
   photo is its own message. Needs File storage connected.
+- **Names, not numbers** *(owner request 2026-10-28)*: recipients show as names everywhere a text is written or
+  scheduled: a number's label when it names someone ("Emma"), else the contact's name, "Your cell" / "Luke's cell"
+  for a teammate's cell; the number only shows on hover, or when two chips would read the same.
 - **Scheduled texts** *(owner request 2026-10-28)*: **Schedule** sits next to every Send text (contact page, deal,
   Messages, group texts, and Draft text on checklist steps). It opens a calendar date and a time in 30-minute steps
   from 8:00am to 8:00pm Central (quiet hours), at least 5 minutes ahead and within a year. The text goes out from the
@@ -650,7 +653,7 @@ Principles:
   separate worker needed), to the same people it would have gone to then (two or more numbers = one group text when
   group texting is on). It goes on the timeline when it sends, counts toward the daily limit, and still respects
   STOP. A checklist step scheduled from Draft text is checked off when it sends. The contact page lists **Scheduled
-  texts** (when, to whom, by whom, the message) with **Cancel** for the person who scheduled it or anyone allowed to
+  texts** (when, to whom by name, by whom, the message) with **Cancel** for the person who scheduled it or anyone allowed to
   delete records; one that couldn't send shows "Not sent" with the reason for a week, and the scheduler gets a bell
   alert.
 - **Templates in group texts** *(owner request 2026-10-28)*: the Template box and "/name" work when replying to a

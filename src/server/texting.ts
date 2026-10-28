@@ -33,6 +33,21 @@ export async function personForNumber(digits: string) {
   return phone?.person ?? null;
 }
 
+/**
+ * Who a number belongs to, for showing names instead of numbers (owner 2026-10-28): a teammate's cell → their first
+ * name; a contact's number → the phone's label when it names someone ("Emma"), else the contact's name; else the number.
+ */
+export async function namesForNumbers(numbers: string[]): Promise<string[]> {
+  const team = new Map((await db.user.findMany({ where: { forwardTo: { not: null } }, select: { name: true, forwardTo: true } })).map((u) => [normalizePhone(u.forwardTo!), u.name.split(" ")[0]]));
+  const phones = await db.phone.findMany({ where: { normalized: { in: numbers }, person: { deletedAt: null } }, select: { normalized: true, label: true, person: { select: { name: true } } } });
+  return numbers.map((n) => {
+    if (team.has(n)) return team.get(n)!;
+    const p = phones.find((x) => x.normalized === n);
+    if (!p) return formatPhone(n);
+    return p.label && !/^(mobile|cell|home|work|other|main|phone)$/i.test(p.label.trim()) ? p.label : p.person.name;
+  });
+}
+
 export const lineOwner = (ourNumber: string) => db.user.findFirst({ where: { textNumber: ourNumber, status: { not: "DISABLED" } }, select: { id: true, name: true, forwardTo: true } });
 
 export async function setTextStop(personId: string, on: boolean) {
@@ -286,6 +301,6 @@ export async function textComposerFor(user: SessionUser, unsubscribedName?: stri
   // Group texting on: Send text also goes to the owner's cell (Luke's, so he's on every client thread; owner 2026-10-22).
   const groups = (await db.appSetting.findUnique({ where: { key: "texting.groups" } }))?.value === true;
   const owner = groups ? await db.user.findFirst({ where: { isOwner: true, forwardTo: { not: null } }, select: { id: true, name: true, forwardTo: true } }) : null;
-  const ownerCell = owner?.forwardTo ? { value: normalizePhone(owner.forwardTo), label: owner.id === user.id ? `Your cell · ${formatPhone(owner.forwardTo)}` : `${owner.name.split(" ")[0]}'s cell · ${formatPhone(owner.forwardTo)}`, personId: (await personForNumber(normalizePhone(owner.forwardTo)))?.id ?? null } : null;
+  const ownerCell = owner?.forwardTo ? { value: normalizePhone(owner.forwardTo), label: owner.id === user.id ? "Your cell" : `${owner.name.split(" ")[0]}'s cell`, personId: (await personForNumber(normalizePhone(owner.forwardTo)))?.id ?? null } : null;
   return { from: me?.textNumber ?? null, blocked, groupsOn: groups, ownerCell, templates: templates.map((t) => ({ id: t.id, name: t.folder ? `${t.folder} · ${t.name}` : t.name })) };
 }

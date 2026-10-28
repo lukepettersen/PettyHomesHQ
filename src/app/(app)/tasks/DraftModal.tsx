@@ -104,7 +104,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
               <b>To:</b>
               {d.phoneNames.map((x) => (
-                <label key={x.value} className="flex items-center gap-1"><input type="checkbox" checked={!skip.includes(x.value)} onChange={(e) => setSkip(e.target.checked ? skip.filter((y) => y !== x.value) : [...skip, x.value])} /> {x.name} <span className="muted">{x.value}</span></label>
+                <label key={x.value} className="flex items-center gap-1"><input type="checkbox" checked={!skip.includes(x.value)} onChange={(e) => setSkip(e.target.checked ? skip.filter((y) => y !== x.value) : [...skip, x.value])} /> <span title={x.value}>{x.name}</span></label>
               ))}
               {d.copyIn && <label className="flex items-center gap-1"><input type="checkbox" checked={withOwner} onChange={(e) => setWithOwner(e.target.checked)} /> {d.copyIn.name} <span className="muted">(cell)</span></label>}
               {!d.to.length && <span className="text-bad">No phone number on file</span>}

@@ -2,7 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { db } from "@/server/db";
 import { UserError } from "@/server/safe";
-import { sendTextAs } from "@/server/texting";
+import { namesForNumbers, sendTextAs } from "@/server/texting";
 import { groupReady, textNumbersAsGroup } from "@/server/groupText";
 import { formatPhone } from "@/lib/normalize";
 import { scheduleLabel } from "@/lib/scheduledText";
@@ -35,7 +35,7 @@ export async function sendDueTexts(now = new Date()): Promise<number> {
       if (!(e instanceof UserError)) console.error("Scheduled text failed:", s.id, e instanceof Error ? e.name : "error");
       await db.scheduledText.update({ where: { id: s.id }, data: { status: "failed", error: why.slice(0, 300) } });
       // The scheduler hears about it in the bell, with a link to the contact.
-      if (user) await db.notification.create({ data: { toId: user.id, personId: s.personId, alert: true, text: `Scheduled text to ${s.numbers.map(formatPhone).join(", ")} (${scheduleLabel(s.sendAt)}) wasn't sent: ${why}` } });
+      if (user) await db.notification.create({ data: { toId: user.id, personId: s.personId, alert: true, text: `Scheduled text to ${(await namesForNumbers(s.numbers)).join(", ")} (${scheduleLabel(s.sendAt)}) wasn't sent: ${why}` } });
     }
   }
   return sent;
@@ -45,5 +45,8 @@ export async function sendDueTexts(now = new Date()): Promise<number> {
 export async function loadScheduledFor(personId: string, userId: string, canCancelAny: boolean) {
   const rows = await db.scheduledText.findMany({ where: { personId, OR: [{ status: { in: ["pending", "sending"] } }, { status: "failed", sendAt: { gte: new Date(Date.now() - 7 * 86400000) } }] }, orderBy: { sendAt: "asc" } });
   const by = new Map((await db.user.findMany({ where: { id: { in: rows.map((x) => x.createdById) } }, select: { id: true, name: true } })).map((u) => [u.id, u.name.split(" ")[0]]));
-  return rows.map((x) => ({ id: x.id, when: scheduleLabel(x.sendAt), to: x.numbers.map(formatPhone).join(", "), body: x.body, by: by.get(x.createdById) ?? "", mine: x.createdById === userId || canCancelAny, status: x.status, error: x.error }));
+  const names = await namesForNumbers([...new Set(rows.flatMap((x) => x.numbers))]);
+  const all = [...new Set(rows.flatMap((x) => x.numbers))];
+  const nameOf = (n: string) => names[all.indexOf(n)] ?? n;
+  return rows.map((x) => ({ id: x.id, when: scheduleLabel(x.sendAt), to: [...new Set(x.numbers.map(nameOf))].join(", "), body: x.body, by: by.get(x.createdById) ?? "", mine: x.createdById === userId || canCancelAny, status: x.status, error: x.error }));
 }
