@@ -38,7 +38,9 @@ export function TasksCard({ personId, personName, rows, team, today, meId, templ
   }
   const inOrder = order.map((id) => (done[id] ? { ...done[id].row, done: true } : rows.find((r) => r.id === id))).filter((t): t is TaskRow => !!t);
   const list = [...inOrder.filter((t) => !t.done), ...inOrder.filter((t) => t.done)];
-  const shown = all ? list : list.slice(0, 6);
+  // Overdue, then Today; anything later (or with no date yet) waits under "Upcoming" (owner request 2026-10-28).
+  const late = list.filter((t) => t.due && t.due < today), now = list.filter((t) => t.due === today);
+  const later = list.filter((t) => !late.includes(t) && !now.includes(t));
 
   const toggle = (t: TaskRow) => start(async () => {
     setError("");
@@ -59,6 +61,19 @@ export function TasksCard({ personId, personName, rows, team, today, meId, templ
     router.refresh();
   });
 
+  const row = (t: TaskRow) => (
+    <li key={t.id} className="flex items-start gap-2 border-t border-misty/60 py-1.5 first:border-0">
+      <span className="pt-0.5"><CheckButton task={t} onToggle={() => toggle(t)} /></span>
+      <button type="button" onClick={() => setOpenId(t.id)} className="flex min-w-0 flex-1 flex-col text-left text-sm hover:underline">
+        <span className={t.done ? "muted line-through" : "font-medium"}>{t.title}{t.step && <span className="font-normal muted"> · {t.step.source}</span>}</span>
+        <span className={`flex items-center gap-1.5 text-xs ${!t.done && t.due && diffDays(t.due, today) < 0 ? "font-medium text-bad" : "muted"}`}>
+          <KindIcon kind={t.kind} />{t.due || !t.step?.timing ? dueLabel(t.due, t.time, today) : `Waits for date · ${t.step.timing}`}
+        </span>
+      </button>
+      <Avatar member={team.find((m) => m.id === t.assigneeId)} />
+    </li>
+  );
+
   return (
     <section className="card p-4" aria-labelledby="tasks-h">
       <div className="flex items-center justify-between">
@@ -66,21 +81,13 @@ export function TasksCard({ personId, personName, rows, team, today, meId, templ
         <button type="button" className="link text-sm" onClick={() => setAdding(true)}>+ Add task</button>
       </div>
       {list.length === 0 && <p className="mt-1 text-sm muted">No open tasks.</p>}
-      <ul className="mt-2 flex flex-col">
-        {shown.map((t) => (
-          <li key={t.id} className="flex items-start gap-2 border-t border-misty/60 py-1.5 first:border-0">
-            <span className="pt-0.5"><CheckButton task={t} onToggle={() => toggle(t)} /></span>
-            <button type="button" onClick={() => setOpenId(t.id)} className="flex min-w-0 flex-1 flex-col text-left text-sm hover:underline">
-              <span className={t.done ? "muted line-through" : "font-medium"}>{t.title}{t.step && <span className="font-normal muted"> · {t.step.source}</span>}</span>
-              <span className={`flex items-center gap-1.5 text-xs ${!t.done && t.due && diffDays(t.due, today) < 0 ? "font-medium text-bad" : "muted"}`}>
-                <KindIcon kind={t.kind} />{t.due || !t.step?.timing ? dueLabel(t.due, t.time, today) : `Waits for date · ${t.step.timing}`}
-              </span>
-            </button>
-            <Avatar member={team.find((m) => m.id === t.assigneeId)} />
-          </li>
-        ))}
-      </ul>
-      {list.length > 6 && <button type="button" className="link mt-1 text-sm" onClick={() => setAll(!all)}>{all ? "Show fewer" : `Show all ${list.length}`}</button>}
+      {late.length > 0 && <h4 className="mt-2 text-xs font-semibold uppercase tracking-wider text-bad">Overdue <span className="font-normal">{late.length}</span></h4>}
+      {late.length > 0 && <ul className="flex flex-col">{late.map(row)}</ul>}
+      {now.length > 0 && <h4 className="mt-2 text-xs font-semibold uppercase tracking-wider muted">Today <span className="font-normal">{now.length}</span></h4>}
+      {now.length > 0 && <ul className="flex flex-col">{now.map(row)}</ul>}
+      {list.length > 0 && !late.length && !now.length && <p className="mt-1 text-sm muted">Nothing due today.</p>}
+      {later.length > 0 && <button type="button" className="mt-2 text-left text-xs font-semibold uppercase tracking-wider muted hover:text-charcoal" aria-expanded={all} onClick={() => setAll(!all)}>{all ? "▾" : "▸"} Upcoming <span className="font-normal">{later.length}</span></button>}
+      {all && later.length > 0 && <ul className="flex flex-col">{later.map(row)}</ul>}
       {templates.length > 0 && <button type="button" className="link mt-2 block text-sm" onClick={() => setApplying(true)}>Apply template</button>}
       {msg && <p role="status" className="mt-1 text-sm text-accent">{msg}</p>}
       {error && <p role="alert" className="mt-1 text-sm text-bad">{error}</p>}

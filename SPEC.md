@@ -473,7 +473,8 @@ Principles:
   Birthday · Lena"), homeiversaries are just the action ("Send Homeiversary Card")
   (default: text happy birthday/homeiversary on the day to
   everyone; send card 7 days before to Past Clients). Shown up to 60 days ahead. A homeiversary set from a closing first comes up a year later (no card for the closing itself; owner report 2026-10-20). They also show on
-  the contact's Tasks card, where checking one off works the same (owner report 2026-10-17). On the contact's Tasks card, checked-off tasks drop to the bottom (crossed out, so a mis-click can be undone) until the page reloads (owner request 2026-10-21).
+  the contact's Tasks card, where checking one off works the same (owner report 2026-10-17). On the contact's Tasks card, checked-off tasks drop to the bottom (crossed out, so a mis-click can be undone) until the page reloads (owner request 2026-10-21). The card shows **Overdue** first, then **Today**; later tasks and ones waiting for a
+  date sit under **▸ Upcoming (N)**, closed until clicked (owner request 2026-10-28).
 - **Task alarms:** a task with a set time rings for the person it's assigned to when it comes
   due: a pop-up over every page (Done · Snooze 5 min · Open contact · Dismiss), a chime that
   repeats every 2 seconds, a flashing tab title, and a desktop notification once they click
