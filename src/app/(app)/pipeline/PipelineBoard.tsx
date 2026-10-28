@@ -15,6 +15,7 @@ const BAR = ["bg-misty", "bg-mint", "bg-moss"];
 export function PipelineBoard({ cards, contracts, closed, statuses, today, initialTab, canEditStages }: { cards: PipelineCard[]; contracts: ContractCard[]; closed: ContractCard[]; statuses: Record<"buyer" | "listing" | "uc", StatusRow[]>; today: string; initialTab: Tab; canEditStages: boolean }) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [editing, setEditing] = useState(false);
+  const [expanded, setExpanded] = useState<string[]>([]); // columns showing all their cards ("+N more")
   useEffect(() => { window.history.replaceState(null, "", tab === "buyers" ? "/pipeline" : `/pipeline?tab=${tab}`); }, [tab]);
   const buyers = cards.filter((c) => c.kind === "buyer"), sellers = cards.filter((c) => c.kind === "listing");
   const year = today.slice(0, 4);
@@ -50,17 +51,25 @@ export function PipelineBoard({ cards, contracts, closed, statuses, today, initi
       {editing ? (
         <StageEditor kind={statusKind} rows={statuses[statusKind]} counts={Object.fromEntries(columns.map((c) => [c.key, c.items.length]))} onDone={() => setEditing(false)} />
       ) : (
-        <div className="mt-3 flex gap-3 overflow-x-auto pb-3">
+        // Option A (owner-approved 2026-10-28): columns share the width (never under ~150px, so it only scrolls sideways in
+        // the busiest case), empty stages fold to a thin labelled strip, 8 cards a column then "+N more".
+        <div className="mt-3 flex items-start gap-1.5 overflow-x-auto pb-3">
           {columns.map((c, i) => {
             const total = c.items.reduce((t, x) => t + (x.price ?? 0), 0);
+            if (!c.items.length) return (
+              <section key={c.key} aria-label={`${c.name}, empty`} className="flex h-40 w-9 flex-none justify-center rounded-lg border border-dashed border-misty py-2">
+                <span className="rotate-180 text-xs font-semibold whitespace-nowrap muted [writing-mode:vertical-rl]">{c.name} · 0</span>
+              </section>
+            );
+            const all = expanded.includes(c.key), shown = all ? c.items : c.items.slice(0, 8);
             return (
-              <section key={c.key} aria-label={c.name} className="flex w-[260px] flex-none flex-col gap-2">
-                <div className="overflow-hidden rounded-lg border border-misty bg-white">
-                  <div className={`h-1 ${c.closed ? "bg-moss" : tab === "uc" ? "bg-coral" : BAR[i % 3]}`} />
-                  <div className="flex items-baseline justify-between px-3 py-2"><b>{c.name}</b><span className="text-xs muted">{c.items.length} · {total ? kMoney(total) : "$0"}</span></div>
+              <section key={c.key} aria-label={c.name} className="flex min-w-[150px] max-w-[360px] flex-1 basis-0 flex-col overflow-hidden rounded-lg border border-misty bg-sunken">
+                <div className={`h-[3px] ${c.closed ? "bg-moss" : tab === "uc" ? "bg-coral" : BAR[i % 3]}`} />
+                <div className="flex items-baseline justify-between gap-1 border-b border-misty bg-white px-2 py-1.5 text-[13px]"><b className="leading-tight">{c.name}</b><span className="flex-none text-xs muted">{c.items.length}{total ? ` · ${kMoney(total)}` : ""}</span></div>
+                <div className="flex flex-col gap-1 p-1">
+                  {shown.map((x) => "fileId" in x ? <ContractTile key={x.id} card={x} today={today} closed={!!c.closed} /> : <Card key={x.id} card={x} today={today} />)}
+                  {c.items.length > 8 && <button type="button" className="py-0.5 text-xs font-semibold text-accent hover:underline" onClick={() => setExpanded(all ? expanded.filter((k) => k !== c.key) : [...expanded, c.key])}>{all ? "Show fewer" : `+${c.items.length - 8} more`}</button>}
                 </div>
-                {c.items.map((x) => "fileId" in x ? <ContractTile key={x.id} card={x} today={today} closed={!!c.closed} /> : <Card key={x.id} card={x} today={today} />)}
-                {c.items.length === 0 && <div className="rounded-lg border border-dashed border-misty px-3 py-3 text-center text-sm muted">Empty</div>}
               </section>
             );
           })}
@@ -70,51 +79,46 @@ export function PipelineBoard({ cards, contracts, closed, statuses, today, initi
   );
 }
 
-function Card({ card, today }: { card: PipelineCard; today: string }) {
-  const h = health(card.overdue);
-  const title = card.kind === "buyer" ? card.personName : (card.address ?? "Listing").split(",")[0];
-  const sub = card.kind === "buyer" ? fileLine(card) : `${card.personName}${card.price ? ` · ${kMoney(card.price)}` : ""}`;
-  const i = card.info;
-  const meta = card.kind === "buyer"
-    ? (i.repExpires ? `Rep expires ${shortDay(i.repExpires)}` : "")
-    : card.status === "Active" && i.active ? `${Math.max(0, diffDays(today, i.active))} days on market` : i.photos ? `Photos ${shortDay(i.photos)}` : "";
-  const n = card.nextTask, late = !!n?.due && n.due < today;
+function Dot({ h }: { h: string }) {
+  return <span title={HEALTH_LABEL[h as keyof typeof HEALTH_LABEL]} aria-label={HEALTH_LABEL[h as keyof typeof HEALTH_LABEL]} className={`mt-1 h-2 w-2 flex-none rounded-full ${h === "r" ? "bg-bad" : h === "y" ? "bg-[#d4a017]" : "bg-mint"}`} />;
+}
+
+/** The next task line with the assignees' initials: red when late. */
+function Next({ n, today, assignees = [] }: { n: { title: string; due: string | null } | null; today: string; assignees?: string[] }) {
+  const late = !!n?.due && n.due < today;
   return (
-    <Link href={`/people/${card.personId}?from=pipeline`} className="flex flex-col gap-0.5 rounded-lg border border-misty bg-white px-3 py-2.5 text-sm hover:border-accent">
-      <span className="flex items-center justify-between gap-2">
-        <b className="truncate">{title}</b>
-        <span title={HEALTH_LABEL[h]} aria-label={HEALTH_LABEL[h]} className={`h-2.5 w-2.5 flex-none rounded-full ${h === "r" ? "bg-bad" : h === "y" ? "bg-[#d4a017]" : "bg-mint"}`} />
-      </span>
-      <span className="truncate text-xs muted">{sub}</span>
-      {meta && <span className="text-xs muted">{meta}</span>}
-      {card.notes && <span title={card.notes} className="mt-1 truncate rounded bg-[#fdf8e8] px-1.5 py-0.5 text-xs text-[#6b5413]">✎ {card.notes.split("\n")[0]}</span>}
-      <span className={`mt-1 text-xs ${late ? "font-semibold text-bad" : ""}`}>{n ? `${n.title} · ${late ? "overdue" : n.due ? shortDay(n.due) : "no date"}` : "All caught up"}</span>
-      {card.assignees.length > 0 && (
-        <span className="mt-1 flex gap-1">{card.assignees.map((a) => <span key={a} title={a} className="grid h-5 w-5 place-items-center rounded-full bg-accent-soft text-[9px] font-bold text-accent">{initials(a)}</span>)}</span>
-      )}
+    <span className={`text-xs ${late ? "font-semibold text-bad" : "muted"}`}>
+      {n ? `${n.title} · ${late ? shortDay(n.due!) : n.due ? shortDay(n.due) : "no date"}` : "All caught up"}
+      {assignees.map((a) => <span key={a} title={a} className="ml-1 inline-grid h-4 w-4 place-items-center rounded-full bg-accent-soft align-middle text-[8px] font-bold text-accent">{initials(a)}</span>)}
+    </span>
+  );
+}
+
+/** A compact card: name and health dot, then (sellers) who / days on market, then the next task (owner-approved 2026-10-28). */
+function Card({ card, today }: { card: PipelineCard; today: string }) {
+  const title = card.kind === "buyer" ? card.personName : (card.address ?? "Listing").split(",")[0];
+  const i = card.info;
+  const sub = card.kind === "buyer"
+    ? (i.repExpires ? `Rep expires ${shortDay(i.repExpires)}` : "")
+    : [card.personName, card.status === "Active" && i.active ? `${Math.max(0, diffDays(today, i.active))} days on market` : i.photos ? `Photos ${shortDay(i.photos)}` : ""].filter(Boolean).join(" · ");
+  return (
+    <Link href={`/people/${card.personId}?from=pipeline`} title={card.notes ? `Deal notes: ${card.notes}` : undefined} className="flex flex-col rounded-md border border-misty bg-white px-2 py-1.5 text-[13px] leading-snug hover:border-accent">
+      <span className="flex items-start justify-between gap-1.5"><b className="min-w-0 break-words">{title}</b><Dot h={health(card.overdue)} /></span>
+      {sub && <span className="text-xs muted">{sub}</span>}
+      <Next n={card.nextTask} today={today} assignees={card.assignees} />
     </Link>
   );
 }
 
 function ContractTile({ card, today, closed }: { card: ContractCard; today: string; closed: boolean }) {
-  const h = health(card.overdue);
-  const n = card.nextTask, late = !!n?.due && n.due < today;
   return (
-    <Link href={`/people/${card.personId}?from=pipeline`} className="flex flex-col gap-0.5 rounded-lg border border-misty bg-white px-3 py-2.5 text-sm hover:border-accent">
-      <span className="flex items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-1.5">
-          <span className={`rounded px-1 text-[10px] font-bold uppercase ${card.side === "buyer" ? "bg-accent-soft text-accent" : "bg-[#f6e3d9] text-[#9a4f2e]"}`}>{card.side === "buyer" ? "Buyer" : "Seller"}</span>
-          <b className="truncate">{card.address.split(",")[0]}</b>
-        </span>
-        {!closed && <span title={HEALTH_LABEL[h]} aria-label={HEALTH_LABEL[h]} className={`h-2.5 w-2.5 flex-none rounded-full ${h === "r" ? "bg-bad" : h === "y" ? "bg-[#d4a017]" : "bg-mint"}`} />}
+    <Link href={`/people/${card.personId}?from=pipeline`} className="flex flex-col rounded-md border border-misty bg-white px-2 py-1.5 text-[13px] leading-snug hover:border-accent">
+      <span className="flex items-start justify-between gap-1.5">
+        <span className="min-w-0"><span className={`mr-1 rounded px-1 text-[9px] font-bold uppercase ${card.side === "buyer" ? "bg-accent-soft text-accent" : "bg-[#f6e3d9] text-[#9a4f2e]"}`}>{card.side === "buyer" ? "Buyer" : "Seller"}</span><b className="break-words">{card.address.split(",")[0]}</b></span>
+        {!closed && <Dot h={health(card.overdue)} />}
       </span>
-      <span className="truncate text-xs muted">{card.personName} · {kMoney(card.price)}</span>
-      {closed
-        ? <span className="mt-1 text-xs">Closed {card.endedOn ? shortDay(card.endedOn) : ""}</span>
-        : <>
-            <span className="text-xs muted">{card.dates.closing ? `Closing ${shortDay(card.dates.closing)}` : "Closing date not set"}</span>
-            <span className={`mt-1 text-xs ${late ? "font-semibold text-bad" : ""}`}>{n ? `${n.title} · ${late ? "overdue" : n.due ? shortDay(n.due) : "no date"}` : "All caught up"}</span>
-          </>}
+      <span className="text-xs muted">{card.personName} · {kMoney(card.price)}{closed ? ` · Closed ${card.endedOn ? shortDay(card.endedOn) : ""}` : card.dates.closing ? ` · Closing ${shortDay(card.dates.closing)}` : ""}</span>
+      {!closed && <Next n={card.nextTask} today={today} />}
     </Link>
   );
 }

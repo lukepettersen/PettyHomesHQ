@@ -305,8 +305,12 @@ Principles:
 
 ### 7.3 Pipeline page (read-only board)
 - Tabs: **Buyers · Sellers · Under Contract/Pending**, each with counts.
-- Columns show count and dollar total; cards show client, address/price, next task and
-  assignee initials, and a health dot (on track / something overdue / behind).
+- **Fits on one screen** *(owner chose Option A, 2026-10-28)*: columns share the page width (never narrower than
+  about 150px or wider than 360px, so it only scrolls sideways in the busiest case); empty stages fold to a thin
+  labelled strip ("BC Signed · 0"); each column shows 8 cards, then "+N more" (Show fewer folds it back). Column
+  headers show the count, and the dollar total only when there is one.
+- Compact cards: client (sellers: the address, then the client and days on market) with a health dot (on track /
+  something overdue / behind), then the next task (red when late) with assignee initials. Deal notes show on hover.
 - Clients under contract appear only on Under Contract/Pending (both sides together), not on
   Buyers/Sellers.
 - Under Contract/Pending ends with a **Closed in {current year}** column (newest first,
