@@ -144,7 +144,7 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
       )}
       {activePa ? (
         <PaBox pa={activePa} personName={personName} fileKind={file.kind} fileLine={fileLine(file)} forms={forms} pendingAt={pendingAt} today={today} canSeeCommission={canSeeCommission}>
-          <Checklist title={activePa.side === "buyer" ? "Buyer contract checklist" : "Seller contract checklist"} tasks={checklists.filter((t) => t.paId === activePa.id)} today={today} team={team} personId={personId} />
+          <Checklist title="Contract to Close" tasks={checklists.filter((t) => t.paId === activePa.id)} today={today} team={team} personId={personId} />
         </PaBox>
       ) : (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-misty px-3 py-2.5">
