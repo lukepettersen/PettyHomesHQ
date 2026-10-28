@@ -13,7 +13,8 @@ import { splitCouple } from "@/lib/normalize";
 
 export const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 export const GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send";
-export const GMAIL_READ_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"; // emails on timelines, and the Gmail signature
+export const GMAIL_READ_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
+export const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets"; // the owner's sales sheet (owner request 2026-10-28) // emails on timelines, and the Gmail signature
 export const hasScope = (c: { scopes: string } | null, scope: string) => !!c && c.scopes.split(/\s+/).includes(scope);
 export const googleKeysSet = () => !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET;
 export const redirectUri = () => `${(process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "")}/api/google/callback`;
@@ -143,6 +144,13 @@ export function syncContract(paId: string) {
     for (const [key, ev] of wanted) await upsertEvent(key, ev);
     for (const key of existing) if (!wanted.has(key)) await deleteEvent(key);
   });
+}
+
+/** A Google API call as the shared connected account (the owner's): used for the sales sheet. */
+export async function sharedGoogle(url: string, init: RequestInit = {}): Promise<Response | null> {
+  const token = await accessToken().catch(() => null);
+  if (!token) return null;
+  return fetch(url, { ...init, headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...(init.headers ?? {}) }, signal: AbortSignal.timeout(15000), cache: "no-store" });
 }
 
 /** Someone's own Gmail, connected by them so their emails go out as them (owner request 2026-10-27). */

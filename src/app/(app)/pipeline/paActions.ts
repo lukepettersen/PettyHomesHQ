@@ -9,6 +9,7 @@ import { hasPermission } from "@/server/permissions";
 import { loadForm } from "@/server/pa";
 import { savePaPartners } from "@/server/partners";
 import { syncContract } from "@/server/google";
+import { syncSalesRow } from "@/server/salesSheet";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
 import { apptIso, closeStepsForWaived, contractAnchors, factsOf, redateContract, runTrigger } from "@/server/automation";
 import { cleanPaAnswers, formProblem, KEY_DATES, type DateKey, type DateStatus, type PaSection } from "@/lib/pa";
@@ -63,6 +64,7 @@ export async function addPurchaseAgreement(input: z.input<typeof addSchema>) {
     await savePaPartners(pa.id, form, c.answers, v.partners ?? {}, v.saveAsContact ?? [], user.id);
     await logActivity(user.id, "create", "purchaseAgreement", pa.id, `Added ${v.side}-side purchase agreement for ${file.person.name}: ${c.address}${pa.n ? ` (${pa.n} tasks)` : ""}`);
     await syncContract(pa.id); // Google Calendar, when connected
+    await syncSalesRow(pa.id, "added"); // owner's sales Google Sheet, when set up
     refresh(file.personId);
     return { id: pa.id, tasks: pa.n };
   });
@@ -100,6 +102,7 @@ export async function updatePurchaseAgreement(input: z.input<typeof editSchema>)
     await savePaPartners(pa.id, form, c.answers, v.partners ?? {}, v.saveAsContact ?? [], user.id);
     await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Updated purchase agreement for ${pa.file.person.name}${moved.length ? ` (moved ${moved.join(", ")})` : ""}`);
     await syncContract(pa.id);
+    await syncSalesRow(pa.id, "changed"); // owner's sales Google Sheet, when set up
     refresh(pa.file.personId);
   });
 }
@@ -128,6 +131,7 @@ export async function setKeyDate(input: z.input<typeof dateSchema>) {
     });
     await logActivity(user.id, "update", "purchaseAgreement", pa.id, `${label(v.key)} for ${pa.file.person.name}: ${v.status}${date ? ` (${date})` : ""}`);
     await syncContract(pa.id);
+    await syncSalesRow(pa.id, "changed"); // owner's sales Google Sheet, when set up
     refresh(pa.file.personId);
   });
 }
@@ -173,6 +177,7 @@ export async function fellThrough(paId: string) {
     ]);
     await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Fell through: ${pa.address} for ${pa.file.person.name}`);
     await syncContract(pa.id);
+    await syncSalesRow(pa.id, "ended"); // owner's sales Google Sheet, when set up
     refresh(pa.file.personId);
   });
 }

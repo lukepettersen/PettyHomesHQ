@@ -688,6 +688,15 @@ Principles:
   messages for matching) and compose/send.
 - Admin → Integrations shows Connected / Not connected with connect/disconnect.
 
+- **Sales sheet** *(owner request 2026-10-28; owner only)*: Admin → Integrations → Sales sheet takes the link to a tab in
+  the owner's Google Sheet (Google must allow Sheets: Reconnect Google). When a purchase agreement is added, HQ inserts
+  a row under the header row, copying the row below's formulas, colors and dropdowns, and fills: Client name
+  (last names, "Sharpe/Nguyen"), Property address, City, ZIP, Close date, Deal type, Month, Month #, Quarter, Year,
+  Lender (matching the sheet's choices; CASH for cash, N/A on seller side, else OTHER), Referred from ("None" if
+  blank), Sale price, Seller contributions (in dollars), List price (seller side), Commission %, Initial source
+  (when it matches a choice). Source and everything else are left for the owner. Columns are found by their header
+  names; formula columns are never typed over. Changing the close date or price updates that row; Fell through
+  removes it. Every contract gets a row (they're all the owner's). "Last:" shows the latest result or problem.
 - **Address lookup** *(owner request 2026-10-21)*: address boxes (contact Address, purchase agreement
   and buyer/listing Property address) suggest full US addresses as you type (Google Places; Twin Cities
   first); picking one fills street, city, state and ZIP. You can still type anything. Off until

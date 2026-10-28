@@ -10,6 +10,8 @@ import { calendarConnection, disconnect, syncContract } from "@/server/google";
 import { connectNumber } from "@/server/twilio";
 import { applyGroupTexting } from "@/server/groupText";
 import { toE164 } from "@/lib/texting";
+import { SHEET_KEY } from "@/server/salesSheet";
+import { parseSheetLink } from "@/lib/salesSheet";
 
 /** Admin → Integrations → Texting on/off: pause or resume sending. */
 export async function setTexting(on: boolean) {
@@ -99,5 +101,22 @@ export async function refreshCalendar() {
     for (const pa of active) await syncContract(pa.id);
     await logActivity(user.id, "update", "integration", "google-calendar", `Refreshed calendar invites for ${active.length} active contracts`);
     return { count: active.length };
+  });
+}
+
+/** Admin → Integrations → Sales sheet (owner only): which Google Sheet tab gets a row per new contract (owner request 2026-10-28). */
+export async function saveSalesSheet(link: string | null) {
+  return guarded("manageUsers", async (user) => {
+    if (!user.isOwner) throw new UserError("Only Luke can set the sales sheet.");
+    if (!link) {
+      await db.appSetting.deleteMany({ where: { key: SHEET_KEY } });
+      await logActivity(user.id, "update", "integration", "sales-sheet", "Turned off the sales sheet");
+    } else {
+      const s = parseSheetLink(z.string().trim().max(500).parse(link));
+      if (!s) throw new UserError("That isn't a Google Sheets link. Open the tab in Google Sheets and copy the address bar.");
+      await db.appSetting.upsert({ where: { key: SHEET_KEY }, update: { value: { link, ...s } }, create: { key: SHEET_KEY, value: { link, ...s } } });
+      await logActivity(user.id, "update", "integration", "sales-sheet", "Set the sales sheet");
+    }
+    revalidatePath("/admin/integrations");
   });
 }

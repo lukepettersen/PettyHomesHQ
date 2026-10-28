@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
 import { hasPermission } from "@/server/permissions";
 import { allowedDomain } from "@/server/access";
-import { CALENDAR_SCOPE, GMAIL_READ_SCOPE, GMAIL_SEND_SCOPE, googleKeysSet, redirectUri } from "@/server/google";
+import { CALENDAR_SCOPE, GMAIL_READ_SCOPE, GMAIL_SEND_SCOPE, googleKeysSet, redirectUri, SHEETS_SCOPE } from "@/server/google";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
   const state = `${randomBytes(24).toString("base64url")}${mine ? `.mine.${Buffer.from(back).toString("base64url")}` : ""}`;
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   url.search = new URLSearchParams({
-    client_id: process.env.GOOGLE_CLIENT_ID!, redirect_uri: redirectUri(), response_type: "code", scope: mine ? `${GMAIL_SEND_SCOPE} ${GMAIL_READ_SCOPE}` : `${CALENDAR_SCOPE} ${GMAIL_SEND_SCOPE} ${GMAIL_READ_SCOPE}`, include_granted_scopes: "true",
+    client_id: process.env.GOOGLE_CLIENT_ID!, redirect_uri: redirectUri(), response_type: "code", scope: mine ? `${GMAIL_SEND_SCOPE} ${GMAIL_READ_SCOPE}` : `${CALENDAR_SCOPE} ${GMAIL_SEND_SCOPE} ${GMAIL_READ_SCOPE} ${SHEETS_SCOPE}`, include_granted_scopes: "true",
     access_type: "offline", prompt: "consent", state, hd: allowedDomain(), ...(user.email ? { login_hint: user.email } : {}),
   }).toString();
   return new Response(null, {

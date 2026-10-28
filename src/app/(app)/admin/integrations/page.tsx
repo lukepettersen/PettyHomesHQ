@@ -8,7 +8,10 @@ import { listNumbers } from "@/server/twilio";
 import { groupTextingOn } from "@/server/groupText";
 import { recentInbound } from "@/server/textDebug";
 import { CalendarControls } from "./CalendarControls";
-import { calendarConnection, GMAIL_READ_SCOPE, GMAIL_SEND_SCOPE, hasScope } from "@/server/google";
+import { calendarConnection, GMAIL_READ_SCOPE, GMAIL_SEND_SCOPE, hasScope, SHEETS_SCOPE } from "@/server/google";
+import { salesSheet } from "@/server/salesSheet";
+import { requireUser } from "@/server/auth";
+import { SalesSheetControls } from "./SalesSheetControls";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +37,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ g
   const record = await recordCalls();
   const groups = await groupTextingOn();
   const inbound = groups ? await recentInbound() : [];
+  const owner = (await requireUser()).isOwner;
+  const sheet = owner ? await salesSheet() : null;
   return (
     <>
       <h1 className="text-2xl font-extrabold">Integrations</h1>
@@ -52,6 +57,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ g
             <p className="text-sm">{i.what}</p>
             {i.id === "texting" && <TextingSwitch connected={i.connected} on={texting} />}
             {i.id === "texting" && <TextLines lines={lines} cap={cap} numbers={numbers} record={record} groups={groups} inbound={inbound} />}
+            {i.id === "google" && owner && cal && <SalesSheetControls link={sheet?.link ?? ""} last={sheet?.last ?? ""} allowed={hasScope(cal, SHEETS_SCOPE)} />}
             {i.id === "google" && <CalendarControls keysSet={i.connected} email={cal?.email ?? null} connected={!!cal} gmail={{ send: hasScope(cal, GMAIL_SEND_SCOPE), read: hasScope(cal, GMAIL_READ_SCOPE) }} />}
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider muted">{i.connected ? "Railway variables (all set)" : "Add in Railway → Variables"}</h3>
