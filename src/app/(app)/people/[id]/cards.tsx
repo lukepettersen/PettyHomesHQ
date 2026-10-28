@@ -1,7 +1,7 @@
 "use client";
 
 import { CallLink } from "@/components/CallCenter";
-import { requestCompose } from "./Timeline";
+import { requestCompose } from "./compose";
 import { AddressInput } from "@/components/AddressInput";
 import type { AddressRow } from "@/lib/addresses";
 import { PARTNER_TYPES, partnerLabel } from "@/lib/partners";

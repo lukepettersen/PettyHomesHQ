@@ -1,4 +1,5 @@
 import { pendingKeys } from "@/lib/pa";
+import { loadScheduledFor } from "@/server/scheduledTexts";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/server/db";
@@ -96,6 +97,8 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
   // Mass emails show whether they were opened (tracked for mass emails only).
   const recordings = new Map((await db.phoneCall.findMany({ where: { personId: p.id, entryId: { not: null }, recordingSid: { not: null } }, select: { id: true, entryId: true } })).map((c) => [c.entryId!, `/api/calls/${c.id}/audio`] as const));
   const opens = new Map((await db.emailTrack.findMany({ where: { personId: p.id, entryId: { not: null } }, select: { entryId: true, openedAt: true } })).map((t) => [t.entryId!, t.openedAt ? t.openedAt.toISOString() : null] as const));
+  // Scheduled texts not yet sent, and ones that failed in the last week (owner request 2026-10-28).
+  const scheduled = await loadScheduledFor(p.id, user.id, hasPermission(user.permissions, "deleteRecords"));
   const composer = await textComposerFor(user, p.tags.some((t) => t.tag.name === TEXT_STOP_TAG) ? p.name : null);
   const textPhones = p.phones.filter((x) => x.normalized.length === 10);
   // Send text starts with every number on the contact (each removable, owner 2026-10-28) and, with group texting on,
@@ -147,7 +150,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
         </div>
 
         <section className="order-3 min-w-0 lg:order-2">
-          <FileTabs offers={offers} email={emailProps} text={textProps} fileForms={fileForms} personId={p.id} personName={p.name} files={files} statuses={fileStatuses} canSeeCommission={canSeeCommission}
+          <FileTabs scheduled={scheduled} offers={offers} email={emailProps} text={textProps} fileForms={fileForms} personId={p.id} personName={p.name} files={files} statuses={fileStatuses} canSeeCommission={canSeeCommission}
             canDelete={hasPermission(user.permissions, "deleteRecords")} contracts={contracts} forms={{ buyer: buyerForm, seller: sellerForm }} pendingAt={pendingAt} today={tasks.today} checklists={checklists} team={tasks.team} timeline={<Timeline personId={p.id} personName={p.name} team={tasks.team.map((m) => ({ id: m.id, name: m.name }))} entries={p.timeline.map((e) => ({ id: e.id, kind: e.kind, body: e.body, outcome: e.outcome, author: e.author?.name ?? null, at: e.createdAt.toISOString(), opened: opens.get(e.id), audio: recordings.get(e.id), editable: canEditEntry(e) && (e.authorId === user.id || hasPermission(user.permissions, "deleteRecords")) }))}
             email={emailProps} text={textProps} />} />
         </section>

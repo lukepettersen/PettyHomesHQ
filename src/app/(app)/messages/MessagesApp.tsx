@@ -14,6 +14,7 @@ import { sendProblem } from "@/lib/texting";
 import type { Bubble, GroupInfo, Thread } from "@/server/texting";
 import { MAX_GROUP } from "@/lib/groupText";
 import { SEND_REACTIONS } from "@/lib/reactions";
+import { ScheduleText } from "@/components/ScheduleText";
 import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
 import { addPersonFromNumber, archiveThread, deleteThread, fillTextTemplate, reactToText, linkNumber, markRead, sendGroup, startGroup } from "./actions";
 
@@ -152,7 +153,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
               <div ref={end} />
             </div>
             <div className="border-t border-misty p-3">
-              {group ? <GroupComposer key={open} sid={open} templates={composer.templates} blocked={composer.blocked ?? (groupsOn ? null : "Group texting is off (Admin → Integrations), so HQ can't reply to the group.")} from={composer.from} onSent={() => router.refresh()} />
+              {group ? <GroupComposer key={open} sid={open} members={group.members.map((m) => m.digits)} templates={composer.templates} blocked={composer.blocked ?? (groupsOn ? null : "Group texting is off (Admin → Integrations), so HQ can't reply to the group.")} from={composer.from} onSent={() => router.refresh()} />
                 : <TextComposer key={open} personId={person?.id ?? null} phones={[open]} compact {...composer} />}
             </div>
           </>
@@ -170,6 +171,7 @@ function NewMessage({ onPick, groupsOn, blocked, templates }: { onPick: (key: st
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<{ id: string; name: string; phones: string[] }[]>([]);
   const [picked, setPicked] = useState<{ number: string; name: string }[]>([]);
+  const [note, setNote] = useState("");
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
@@ -208,6 +210,7 @@ function NewMessage({ onPick, groupsOn, blocked, templates }: { onPick: (key: st
             : <span className="text-xs muted">No phone number on file</span>}
         </div>
       )) : <p className="px-1 text-sm muted">No contacts match.</p>)}
+      {note && <p role="status" className="text-sm text-accent">{note}</p>}
       {picked.length === 1 && <span className="flex flex-wrap items-center gap-2 text-sm"><button type="button" className="btn btn-primary" onClick={() => onPick(picked[0].number)}>Text {picked[0].name}</button><span className="muted">or add more people for a group text</span></span>}
       {picked.length >= 2 && (blocked ? <p className="text-sm muted">{blocked}</p> : (
         <div className="flex flex-col gap-1">
@@ -220,6 +223,7 @@ function NewMessage({ onPick, groupsOn, blocked, templates }: { onPick: (key: st
           {tpl.note}
           <span className="flex flex-wrap items-center justify-between gap-2 text-xs muted">Everyone gets it from your number; replies show here for the whole group.
             <button type="button" className="btn btn-primary" disabled={pending || !body.trim()} onClick={send}>{pending ? "Sending…" : `Send to ${picked.length} people`}</button>
+            <ScheduleText numbers={picked.map((p) => p.number)} body={body} disabled={pending || !body.trim()} onScheduled={(when) => { setError(""); setBody(""); setPicked([]); setNote(`Group text scheduled for ${when}.`); }} />
           </span>
           {error && <p role="alert" className="text-sm text-bad">{error}</p>}
         </div>
@@ -262,7 +266,8 @@ function useGroupTemplates({ templates, box, body, setBody, start, setError }: {
 }
 
 /** Reply in a group text: everyone in the group gets it from your number. */
-function GroupComposer({ sid, blocked, from, onSent, templates }: { sid: string; blocked: string | null; from: string | null; onSent: () => void; templates: Template[] }) {
+function GroupComposer({ sid, members, blocked, from, onSent, templates }: { sid: string; members: string[]; blocked: string | null; from: string | null; onSent: () => void; templates: Template[] }) {
+  const [notice, setNotice] = useState("");
   const [body, setBody] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
   const box = useRef<HTMLTextAreaElement>(null);
@@ -291,7 +296,9 @@ function GroupComposer({ sid, blocked, from, onSent, templates }: { sid: string;
         <span className="text-xs muted">To everyone in the group, from your number {from ? formatPhone(from) : ""}</span>
         <span className="flex gap-2"><TextPhotoButton photos={photos} onChange={setPhotos} disabled={pending} /><EmojiButton box={box} value={body} onChange={setBody} />
           <button type="button" className="btn btn-primary" disabled={pending || (!body.trim() && !photos.length)} onClick={send}>{pending ? "Sending…" : "Send to group"}</button></span>
+        <ScheduleText numbers={members} body={body} media={photos} disabled={pending || !body.trim() || members.length < 2} onScheduled={(when) => { setNotice(`Scheduled for ${when}.`); setBody(""); setPhotos([]); onSent(); }} />
       </span>
+      {notice && <p role="status" className="text-sm text-accent">{notice}</p>}
       {error && <p role="alert" className="text-sm text-bad">{error}</p>}
     </div>
   );

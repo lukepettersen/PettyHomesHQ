@@ -12,10 +12,13 @@ export function centralToUtc(date: string, time: string): Date {
 }
 
 export const SEND_FROM = "08:00", SEND_UNTIL = "20:00";
+/** Times on the half hour from 8:00am to 8:00pm (owner: 30-minute steps). */
+export const SCHEDULE_TIMES = Array.from({ length: 25 }, (_, i) => `${String(8 + Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`);
 
 /** Why this date and time can't be used, or null: at least 5 minutes ahead, within a year, 8am–8pm Central (quiet hours). */
 export function scheduleProblem(date: string, time: string, now: Date = new Date()): string | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return "Pick a date and a time.";
+  if (!time.endsWith(":00") && !time.endsWith(":30")) return "Pick a time on the hour or half hour.";
   if (time < SEND_FROM || time > SEND_UNTIL) return "Texts go out between 8:00am and 8:00pm Central (quiet hours).";
   const at = centralToUtc(date, time).getTime();
   if (at < now.getTime() + 5 * 60000) return "Pick a time at least 5 minutes from now.";

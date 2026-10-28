@@ -202,8 +202,10 @@ Principles:
   one, it is the mailing address). All addresses are searchable. "Delete person" at the bottom
   (Admin only, two-step).
 - **Middle:** a tab per active client file (Buyer / Listing) plus **Timeline**.
-  - **Timeline:** composer with Note, Log text, Log call (with outcome); Send text and Send email open there from
-    the contact card's Text / Email buttons (not in the row, owner 2026-10-28). It starts folded to just that row;
+  - **Timeline:** composer with Note, Log text, Log call (with outcome). **Text / Email** on the contact card (and
+    ↩ Reply on an email) open one Send text / Send email box at the top of the middle column, above whichever tab is
+    showing (deal or Timeline), without switching tabs; the same button again or Close shuts it (owner 2026-10-28).
+    The deal box no longer has its own Send text / Send email buttons. It starts folded to just that row;
     tapping a button opens it, tapping it again or Close folds it *(owner request 2026-10-28)*.
     Filters: All, Notes, Texts, Calls, **Tasks**, Emails, Deal activity. Newest first.
     Checking off a task for the person adds a "Task done" line (unchecking removes it).
@@ -641,6 +643,16 @@ Principles:
   lists, alerts and timelines). **📷** on the text boxes (Send text, Messages, Send to group) attaches up to 5
   JPG/PNG/GIF photos; they upload to the file storage and go as picture texts (MMS). In a group text each extra
   photo is its own message. Needs File storage connected.
+- **Scheduled texts** *(owner request 2026-10-28)*: **Schedule** sits next to every Send text (contact page, deal,
+  Messages, group texts, and Draft text on checklist steps). It opens a calendar date and a time in 30-minute steps
+  from 8:00am to 8:00pm Central (quiet hours), at least 5 minutes ahead and within a year. The text goes out from the
+  scheduler's own number within a minute of that time, even if nobody has HQ open (the app checks every minute; no
+  separate worker needed), to the same people it would have gone to then (two or more numbers = one group text when
+  group texting is on). It goes on the timeline when it sends, counts toward the daily limit, and still respects
+  STOP. A checklist step scheduled from Draft text is checked off when it sends. The contact page lists **Scheduled
+  texts** (when, to whom, by whom, the message) with **Cancel** for the person who scheduled it or anyone allowed to
+  delete records; one that couldn't send shows "Not sent" with the reason for a week, and the scheduler gets a bell
+  alert.
 - **Templates in group texts** *(owner request 2026-10-28)*: the Template box and "/name" work when replying to a
   group and when starting one from + New message. Your own details fill in; client details (like a first name)
   can't for a whole group, so they're left blank and listed to type in before sending.

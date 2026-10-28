@@ -9,6 +9,7 @@ import { fillTextTemplate, sendText, sendTextGroup } from "@/app/(app)/messages/
 import { AddRecipient, ExtraChips, type Extra } from "@/components/AddRecipient";
 import { EmojiButton } from "@/components/EmojiButton";
 import { TextPhotoButton, TextPhotoPreviews } from "@/components/TextPhotos";
+import { ScheduleText } from "@/components/ScheduleText";
 
 /**
  * Write and send a text from your own business number (SPEC.md §11): a template (optional, or "/name" in the
@@ -115,6 +116,8 @@ export function TextComposer({ personId, phones, phoneLabels = {}, templates, fr
           {body && <button type="button" className="btn" disabled={pending} onClick={() => { setBody(""); setTemplateId(""); setMissing([]); }}>Clear</button>}
           <button type="button" className="btn btn-primary" disabled={pending || (!body.trim() && !photos.length) || !to} onClick={send}>{pending ? "Sending…" : "Send text"}</button>
         </span>
+        <ScheduleText numbers={[...chosen, ...extras.map((x) => x.value)]} body={body} media={photos} personId={personId} taskId={taskId} disabled={pending || !to || !body.trim()}
+          onScheduled={(when) => { setNotice(`Scheduled for ${when}. It's listed on their timeline until it goes out.`); setBody(""); setPhotos([]); setTemplateId(""); setMissing([]); router.refresh(); }} />
       </div>
       {error && <p role="alert" className="text-sm text-bad">{error}</p>}
       {notice && <p role="status" className="text-sm text-accent">{notice}</p>}

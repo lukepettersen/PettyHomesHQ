@@ -640,6 +640,26 @@ model PhoneCall {
   @@index([theirNumber])
 }
 
+/// A text set to go out later from someone's own number (owner request 2026-10-28). Sent by the app's background loop
+/// (src/instrumentation.ts) within a minute of sendAt; two or more numbers go as one group text when group texting is on.
+model ScheduledText {
+  id          String    @id @default(cuid())
+  personId    String?
+  numbers     String[] // digits only
+  body        String
+  media       Json      @default("[]")
+  sendAt      DateTime
+  taskId      String? // a checklist step checked off when it sends
+  createdById String
+  status      String    @default("pending") // pending | sending | sent | failed | canceled
+  error       String?
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([status, sendAt])
+  @@index([personId])
+}
+
 /// A conversation in Messages someone archived, like an email (owner request 2026-10-28). It comes back to the inbox
 /// when a new text or missed call arrives after archivedAt.
 model TextArchive {

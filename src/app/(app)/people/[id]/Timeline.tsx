@@ -1,11 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
+import { requestCompose } from "./compose";
 import { addTimelineEntry, deleteTimelineEntry, editTimelineEntry } from "../actions";
 import { mentionLabel, mentionQuery, splitMentions, type Member } from "@/lib/mentions";
-import { EmailComposer } from "./EmailComposer";
-import { TextComposer } from "@/components/TextComposer";
 
 type Entry = { id: string; kind: string; body: string; outcome: string | null; author: string | null; at: string; opened?: string | null; audio?: string; editable?: boolean };
 const TABS: [Kind, string, string, string][] = [
@@ -19,20 +18,15 @@ type Kind = "note" | "send" | "text" | "call" | "email";
 // The row shows Note, Log text and Log call; Send text and Email open from the contact card's buttons (owner 2026-10-28).
 const ROW = TABS.filter(([k]) => k !== "send" && k !== "email");
 
-// Text / Email on the contact card open this composer (owner request 2026-10-28). The card fires COMPOSE_EVENT; a
-// request made while the Timeline tab isn't showing waits here until it opens.
-export const COMPOSE_EVENT = "hq-compose";
-let waiting: Kind | null = null;
-export function requestCompose(kind: "send" | "email") { waiting = kind; window.dispatchEvent(new CustomEvent(COMPOSE_EVENT, { detail: kind })); }
 const KIND_LABEL: Record<string, string> = { note: "Note", text: "Text", call: "Call", email: "Email", system: "Update", task: "Task done" };
 const FILTERS: [string, string][] = [["all", "All"], ["note", "Notes"], ["email", "Emails"], ["text", "Texts"], ["call", "Calls"], ["task", "Tasks"]];
 type EmailProps = { emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; ownGmail?: boolean; canConnect?: boolean };
 type TextProps = { phones: string[]; templates: { id: string; name: string }[]; from: string | null; blocked: string | null };
 
 export function Timeline({ personId, personName, entries, team, email, text }: { personId: string; personName: string; entries: Entry[]; team: Member[]; email: EmailProps; text: TextProps }) {
-  const [kind, setKind] = useState<Kind>(() => waiting ?? "note");
+  const [kind, setKind] = useState<Kind>("note");
   // The composer stays folded until a button is tapped, so the timeline starts higher (owner request 2026-10-28).
-  const [open, setOpen] = useState(() => { const o = waiting !== null; waiting = null; return o; });
+  const [open, setOpen] = useState(false);
   const [body, setBody] = useState("");
   const [outcome, setOutcome] = useState("Talked");
   const [filter, setFilter] = useState("all");
@@ -40,22 +34,7 @@ export function Timeline({ personId, personName, entries, team, email, text }: {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [pick, setPick] = useState<{ q: string; i: number } | null>(null);
-  const [reply, setReply] = useState<{ subject: string; n: number } | null>(null);
   const top = useRef<HTMLDivElement>(null);
-  const state = useRef({ open, kind });
-  useEffect(() => { state.current = { open, kind }; }, [open, kind]);
-  useEffect(() => {
-    if (open) top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    // The same button tapped again folds it (owner request 2026-10-28).
-    const on = (ev: Event) => {
-      waiting = null;
-      const k = (ev as CustomEvent<Kind>).detail;
-      if (state.current.open && state.current.kind === k) { setOpen(false); return; }
-      setKind(k); setOpen(true); top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    };
-    window.addEventListener(COMPOSE_EVENT, on);
-    return () => window.removeEventListener(COMPOSE_EVENT, on);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const box = useRef<HTMLTextAreaElement>(null);
   const [pending, start] = useTransition();
   const matches = pick ? team.filter((m) => m.name.toLowerCase().split(/\s+/).some((w) => w.startsWith(pick.q.toLowerCase()))) : [];
@@ -106,9 +85,6 @@ export function Timeline({ personId, personName, entries, team, email, text }: {
         {open && <button type="button" className="ml-auto text-xs font-semibold text-accent hover:underline" onClick={() => setOpen(false)}>Close</button>}
       </div>
       {open && <>
-      {(kind === "send" || kind === "email") && <h3 className="mt-2 text-sm font-bold">{kind === "send" ? "Send text" : "Send email"}</h3>}
-      {kind === "email" && <EmailComposer key={reply?.n ?? 0} personId={personId} {...email} initialSubject={reply?.subject ?? ""} />}
-      {kind === "send" && <TextComposer personId={personId} {...text} />}
       {kind === "call" && (
         <select className="input mt-2 w-auto" value={outcome} onChange={(e) => setOutcome(e.target.value)} aria-label="Call outcome">
           <option>Talked</option><option>Left voicemail</option><option>No answer</option>
@@ -148,7 +124,7 @@ export function Timeline({ personId, personName, entries, team, email, text }: {
         <ol className="relative mt-3">
           {threads(shown).map((g) => (
             <TimelineItem key={g[0].id} items={g} personName={personName} team={team} editing={editing} setEditing={setEditing} onChanged={() => router.refresh()}
-              onReply={(subject) => { setKind("email"); setOpen(true); setReply((x) => ({ subject: /^re:/i.test(subject) ? subject : `Re: ${subject}`, n: (x?.n ?? 0) + 1 })); top.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }} />
+              onReply={(subject) => requestCompose("email", /^re:/i.test(subject) ? subject : `Re: ${subject}`)} />
           ))}
         </ol>
       ) : <p className="mt-3 text-sm muted">Nothing here yet.</p>}

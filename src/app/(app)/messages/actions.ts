@@ -16,6 +16,8 @@ import { closeConversation } from "@/server/twilio";
 import { isGroupKey, MAX_GROUP } from "@/lib/groupText";
 import { MAX_TEXT_PHOTOS } from "@/lib/textMedia";
 import { applyReaction, reactionText, SEND_REACTIONS, type ReactionMark } from "@/lib/reactions";
+import { centralToUtc, scheduleLabel, scheduleProblem } from "@/lib/scheduledText";
+import { hasPermission } from "@/server/permissions";
 
 const id = z.string().trim().min(1).max(40);
 const digits = z.string().trim().min(7).max(30).transform(normalizePhone);
@@ -192,5 +194,41 @@ export async function sendTextGroup(input: { numbers: string[]; body: string; pe
       revalidatePath("/tasks");
     }
     return r;
+  });
+}
+
+// ---------- Scheduled texts (owner request 2026-10-28) ----------
+const scheduleSchema = z.object({
+  numbers: z.array(digits).min(1, "Pick at least one number.").max(MAX_GROUP - 1), body: z.string().trim().min(1, "Write a message.").max(MAX_TEXT),
+  personId: id.nullable().optional(), taskId: z.string().trim().max(200).nullable().optional(), media: photos,
+  date: z.string().trim().max(10), time: z.string().trim().max(5),
+});
+
+/** Schedule a text to go out later from your own number (one group text when it has two or more numbers). */
+export async function scheduleText(input: z.input<typeof scheduleSchema>) {
+  return guarded("sendTexts", async (user) => {
+    const v = scheduleSchema.parse(input);
+    const problem = scheduleProblem(v.date, v.time);
+    if (problem) throw new UserError(problem);
+    const me = await db.user.findUnique({ where: { id: user.id }, select: { textNumber: true } });
+    if (!me?.textNumber) throw new UserError("You don't have a texting number yet. An Admin can add it in Admin → Integrations.");
+    const sendAt = centralToUtc(v.date, v.time);
+    const s = await db.scheduledText.create({ data: { personId: v.personId ?? null, numbers: [...new Set(v.numbers)], body: v.body, media: v.media ?? [], sendAt, taskId: v.taskId?.startsWith("date:") ? null : v.taskId ?? null, createdById: user.id } });
+    await logActivity(user.id, "create", "scheduledText", v.personId ?? null, `Scheduled a text to ${s.numbers.map(formatPhone).join(", ")} for ${scheduleLabel(sendAt)}`);
+    if (v.personId) revalidatePath(`/people/${v.personId}`);
+    return { when: scheduleLabel(sendAt) };
+  });
+}
+
+/** Cancel a scheduled text that hasn't gone out: the person who scheduled it, or anyone allowed to delete records. */
+export async function cancelScheduledText(scheduledId: string) {
+  return guarded("sendTexts", async (user) => {
+    const s = await db.scheduledText.findUnique({ where: { id: id.parse(scheduledId) } });
+    if (!s || s.status !== "pending") throw new UserError("That text already went out or was canceled.");
+    if (s.createdById !== user.id && !hasPermission(user.permissions as never, "deleteRecords")) throw new UserError("Only the person who scheduled it can cancel it.");
+    const r = await db.scheduledText.updateMany({ where: { id: s.id, status: "pending" }, data: { status: "canceled" } });
+    if (!r.count) throw new UserError("That text is going out right now.");
+    await logActivity(user.id, "delete", "scheduledText", s.personId, `Canceled the text scheduled for ${scheduleLabel(s.sendAt)}`);
+    if (s.personId) revalidatePath(`/people/${s.personId}`);
   });
 }

@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { COMPOSE_EVENT } from "./Timeline";
+import { COMPOSE_EVENT, type ComposeRequest } from "./compose";
+import { cancelScheduledText } from "../../messages/actions";
 import { factRows, fileLine, money, shortDay, type FileSection, type FileView } from "@/lib/files";
 
 const pick = (o: Record<string, string>, keys: string[]) => Object.fromEntries(keys.filter((k) => o[k]).map((k) => [k, o[k]]));
@@ -24,13 +25,24 @@ import { DealNotes } from "./DealNotes";
 type EmailProps = { emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; ownGmail?: boolean; canConnect?: boolean };
 export type OfferRow = { id: string; fileId: string; createdAt: string; address: string; price: number | null; summary: string; prefill: Record<string, string> };
 type Props = { offers: OfferRow[]; email: EmailProps; text: Omit<React.ComponentProps<typeof TextComposer>, "personId">; fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean; canDelete: boolean; timeline: React.ReactNode;
-  contracts: PaView[]; forms: Record<Side, PaSection[]>; pendingAt: DateKey[]; today: string; checklists: TaskRow[]; team: TeamMember[] };
+  contracts: PaView[]; forms: Record<Side, PaSection[]>; pendingAt: DateKey[]; today: string; checklists: TaskRow[]; team: TeamMember[]; scheduled: ScheduledRow[] };
+export type ScheduledRow = { id: string; when: string; to: string; body: string; by: string; mine: boolean; status: string; error: string | null };
 
 /** Middle column: a tab per active buyer/listing file, then Timeline (SPEC.md §6.3). */
 export function FileTabs(p: Props) {
   const active = p.files.filter((f) => !f.closedAt);
   const [tab, setTab] = useState(active[0]?.id ?? "timeline");
-  useEffect(() => { const on = () => setTab("timeline"); window.addEventListener(COMPOSE_EVENT, on); return () => window.removeEventListener(COMPOSE_EVENT, on); }, []);
+  // Text / Email open here, above whichever tab is showing; the same button again closes it (owner request 2026-10-28).
+  const [compose, setCompose] = useState<(ComposeRequest & { n: number }) | null>(null);
+  useEffect(() => {
+    const on = (ev: Event) => {
+      const d = (ev as CustomEvent<ComposeRequest>).detail;
+      setCompose((cur) => (cur && cur.kind === d.kind && !d.subject ? null : { ...d, n: (cur?.n ?? 0) + 1 }));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    window.addEventListener(COMPOSE_EVENT, on);
+    return () => window.removeEventListener(COMPOSE_EVENT, on);
+  }, []);
   // A file that was just started opens in its own tab.
   const ids = active.map((f) => f.id).join(",");
   const [known, setKnown] = useState(ids);
@@ -53,6 +65,17 @@ export function FileTabs(p: Props) {
         <button role="tab" type="button" aria-selected={shown === "timeline"} onClick={() => setTab("timeline")}
           className={`-mb-px border-b-[3px] px-3 py-2 ${shown === "timeline" ? "border-coral font-semibold" : "border-transparent muted hover:text-charcoal"}`}>Timeline</button>
       </div>
+      {compose && (
+        <div className="card mt-3 p-4">
+          <div className="flex items-center justify-between"><b className="text-sm">{compose.kind === "send" ? "Text" : "Email"} {p.personName}</b>
+            <button type="button" className="text-xs font-semibold text-accent hover:underline" onClick={() => setCompose(null)}>Close</button></div>
+          {compose.kind === "send"
+            ? <TextComposer personId={p.personId} {...p.text} onSent={() => undefined} />
+            : <EmailComposer key={compose.n} personId={p.personId} emails={p.email.emails} templates={p.email.templates} sendsFrom={p.email.sendsFrom} ownGmail={p.email.ownGmail} canConnect={p.email.canConnect}
+                initialSubject={compose.subject ?? ""} onSent={() => setCompose(null)} suggest={(() => { const pa = current && p.contracts.find((c) => c.fileId === current.id && c.state === "active"); return pa ? dealEmails(p.forms[pa.side], pa) : []; })()} />}
+        </div>
+      )}
+      <Scheduled rows={p.scheduled} />
       {current ? <FilePane key={current.id} {...p} file={current} onDeleted={() => setTab("timeline")} /> : p.timeline}
     </>
   );
@@ -68,8 +91,6 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
   const [addingPa, setAddingPa] = useState(false);
   const [editingPa, setEditingPa] = useState(false);
   const { open: moreOpen, setOpen: setMoreOpen, ref: moreRef } = useDropdown<HTMLSpanElement>();
-  const [emailing, setEmailing] = useState(false);
-  const [texting, setTexting] = useState(false);
   const [offering, setOffering] = useState(false);
   const [viewOffer, setViewOffer] = useState<string | null>(null);
   const myOffers = offers.filter((o) => o.fileId === file.id);
@@ -136,25 +157,6 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
           </span>
         </div>
       </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" className="btn" aria-expanded={texting} onClick={() => { setTexting((x) => !x); setEmailing(false); }}>Send text</button>
-        <button type="button" className="btn" aria-expanded={emailing} onClick={() => { setEmailing((x) => !x); setTexting(false); }}>Send email</button>
-      </div>
-      {/* Email opens right here on the deal, so the checklist stays in view while writing. */}
-      {emailing && (
-        <div className="mt-3 rounded-lg border border-misty bg-paper p-3">
-          <div className="flex items-center justify-between"><b className="text-sm">Email {personName}</b>
-            <button type="button" className="text-xs font-semibold text-accent hover:underline" onClick={() => setEmailing(false)}>Close</button></div>
-          <EmailComposer personId={personId} emails={email.emails} templates={email.templates} sendsFrom={email.sendsFrom} ownGmail={email.ownGmail} canConnect={email.canConnect} onSent={() => setEmailing(false)} suggest={activePa ? dealEmails(forms[activePa.side], activePa) : []} />
-        </div>
-      )}
-      {texting && (
-        <div className="mt-3 rounded-lg border border-misty bg-paper p-3">
-          <div className="flex items-center justify-between"><b className="text-sm">Text {personName}</b>
-            <button type="button" className="text-xs font-semibold text-accent hover:underline" onClick={() => setTexting(false)}>Close</button></div>
-          <TextComposer personId={personId} {...text} onSent={(name) => { setTexting(false); setMsg(`Text sent to ${name}.`); }} />
-        </div>
-      )}
       {activePa && <DateStrip pa={activePa} today={today} />}
       <div className={`mt-4 grid gap-3 ${people.length ? "lg:grid-cols-[1.4fr_1fr]" : ""}`}>
         <section aria-label="Notes" className="rounded-xl border border-misty bg-paper px-3.5 py-2.5">
@@ -219,5 +221,32 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
           canSeeCommission={canSeeCommission} onClose={() => setEditing(false)} onSaved={(m) => { setEditing(false); setMsg(m); router.refresh(); }} />
       )}
     </div>
+  );
+}
+
+/** Texts scheduled for this person that haven't gone out (or didn't send), with Cancel (owner request 2026-10-28). */
+function Scheduled({ rows }: { rows: ScheduledRow[] }) {
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [busy, start] = useTransition();
+  if (!rows.length) return null;
+  return (
+    <section aria-label="Scheduled texts" className="card mt-3 px-4 py-3">
+      <h3 className="text-xs font-semibold uppercase tracking-wider muted">Scheduled texts</h3>
+      <ul className="mt-1 flex flex-col">
+        {rows.map((x) => (
+          <li key={x.id} className="flex flex-wrap items-start justify-between gap-2 border-t border-misty/60 py-1.5 text-sm first:border-0">
+            <span className="min-w-0 flex-1">
+              <b>{x.status === "failed" ? "Not sent" : x.when}</b> <span className="muted">to {x.to} · by {x.by}</span>
+              <span className="block truncate">{x.body}</span>
+              {x.error && <span className="block text-xs text-bad">{x.when}: {x.error}</span>}
+            </span>
+            {x.status === "pending" && x.mine && <button type="button" className="text-xs font-semibold text-bad hover:underline" disabled={busy}
+              onClick={() => start(async () => { setError(""); const r = await cancelScheduledText(x.id); if (!r.ok) setError(r.error); else router.refresh(); })}>Cancel</button>}
+          </li>
+        ))}
+      </ul>
+      {error && <p role="alert" className="text-sm text-bad">{error}</p>}
+    </section>
   );
 }

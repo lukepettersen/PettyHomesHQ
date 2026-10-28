@@ -1,0 +1,49 @@
+import "server-only";
+import { createHash } from "node:crypto";
+import { db } from "@/server/db";
+import { UserError } from "@/server/safe";
+import { sendTextAs } from "@/server/texting";
+import { groupReady, textNumbersAsGroup } from "@/server/groupText";
+import { formatPhone } from "@/lib/normalize";
+import { scheduleLabel } from "@/lib/scheduledText";
+
+// Scheduled texts (owner request 2026-10-28): sent from the scheduler's own number within a minute of their time by
+// /api/cron/scheduled-texts, which the app calls every minute (src/instrumentation.ts).
+
+/** The key the app's own minute timer sends to the cron route (derived from NEXTAUTH_SECRET, never shown). */
+export const cronKey = () => createHash("sha256").update(`cron:${process.env.NEXTAUTH_SECRET ?? ""}`).digest("hex");
+
+export async function sendDueTexts(now = new Date()): Promise<number> {
+  const due = await db.scheduledText.findMany({ where: { status: "pending", sendAt: { lte: now } }, orderBy: { sendAt: "asc" }, take: 20 });
+  let sent = 0;
+  for (const s of due) {
+    // Claim it first, so two servers (or two ticks) never send the same text twice.
+    const claim = await db.scheduledText.updateMany({ where: { id: s.id, status: "pending" }, data: { status: "sending" } });
+    if (!claim.count) continue;
+    const user = await db.user.findUnique({ where: { id: s.createdById }, select: { id: true, name: true, status: true } });
+    const media = (Array.isArray(s.media) ? s.media : []).filter((x): x is string => typeof x === "string");
+    try {
+      if (!user || user.status === "DISABLED") throw new Error("The person who scheduled it no longer has access.");
+      if (s.numbers.length > 1 && (await groupReady())) await textNumbersAsGroup(user, { numbers: s.numbers, body: s.body, media });
+      else for (const n of s.numbers) await sendTextAs(user, { personId: s.personId, to: n, body: s.body, media, typed: true });
+      await db.scheduledText.update({ where: { id: s.id }, data: { status: "sent", sentAt: new Date() } });
+      if (s.taskId) await db.task.updateMany({ where: { id: s.taskId, completedAt: null }, data: { completedAt: new Date(), completedById: s.createdById } });
+      sent++;
+    } catch (e) {
+      // Our own messages (STOP, no number, daily limit…) are plain English; anything else gets a plain fallback.
+      const why = e instanceof UserError || (e instanceof Error && e.message.startsWith("The person")) ? e.message : "Something went wrong sending it. Send it by hand from their page.";
+      if (!(e instanceof UserError)) console.error("Scheduled text failed:", s.id, e instanceof Error ? e.name : "error");
+      await db.scheduledText.update({ where: { id: s.id }, data: { status: "failed", error: why.slice(0, 300) } });
+      // The scheduler hears about it in the bell, with a link to the contact.
+      if (user) await db.notification.create({ data: { toId: user.id, personId: s.personId, alert: true, text: `Scheduled text to ${s.numbers.map(formatPhone).join(", ")} (${scheduleLabel(s.sendAt)}) wasn't sent: ${why}` } });
+    }
+  }
+  return sent;
+}
+
+/** A contact's scheduled texts not yet sent, and ones that failed in the last week, for the contact page. */
+export async function loadScheduledFor(personId: string, userId: string, canCancelAny: boolean) {
+  const rows = await db.scheduledText.findMany({ where: { personId, OR: [{ status: { in: ["pending", "sending"] } }, { status: "failed", sendAt: { gte: new Date(Date.now() - 7 * 86400000) } }] }, orderBy: { sendAt: "asc" } });
+  const by = new Map((await db.user.findMany({ where: { id: { in: rows.map((x) => x.createdById) } }, select: { id: true, name: true } })).map((u) => [u.id, u.name.split(" ")[0]]));
+  return rows.map((x) => ({ id: x.id, when: scheduleLabel(x.sendAt), to: x.numbers.map(formatPhone).join(", "), body: x.body, by: by.get(x.createdById) ?? "", mine: x.createdById === userId || canCancelAny, status: x.status, error: x.error }));
+}
