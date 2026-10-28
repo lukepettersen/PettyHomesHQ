@@ -337,9 +337,16 @@ Principles:
   financing (Conventional/FHA/VA/Cash/Other); people sections are Buyer's agent, Buyer's
   lender, Buyer's title, Seller's title.
 - Commission shows as "2.7% · $8,424" (anyone with "See commissions").
-- On the PA box: key-date tiles (date and status: Pending, Met, Waived, Extended; not clickable,
-  dates change with Edit *(owner request 2026-10-28)*), facts line, people line, checklist, actions
-  **Edit · Fell through · Mark pending**, and once the deal is pending **Mark closed** in place of Mark pending.
+- **Deal box layout** *(owner-approved mockup 2026-10-28; the same for buyer and seller deals, before and after a
+  contract)*: one header with the Buyer/Seller chip, the street (or the buyer file's name), city and price once, and
+  the status: a status picker before a contract; "Under contract" or "Pending" plus "Next: Inspection deadline Nov 2
+  (in 5 days)" after. Top right: **Mark pending** (then **Mark closed**) and **Fell through** on a contract, **Submit
+  offer** on a buyer deal without one, and **More ▾** (Edit contract, Edit buyer/seller file, Delete). Below: Send
+  text · Send email; the key dates as a timeline (met dates checked, the next one highlighted, countdowns; not
+  clickable, dates change with Edit contract); a **Notes** box (the deal's facts three across, price left out since
+  it's in the header, then the deal notes) beside a **People** box (lender, title, agents with email and phone, from
+  the contact picked or what was typed); the Contract to Close checklist with a progress bar (all checklists have
+  one). An empty file checklist is hidden while under contract.
   **Mark pending** (two clicks) marks met the "until" dates of every Under Contract column before the last one
   (the inspection deadline), which moves the deal to the Pending column; a deal also becomes pending by itself
   once those dates pass. A key date that has passed counts as Met unless it was marked otherwise; moving a

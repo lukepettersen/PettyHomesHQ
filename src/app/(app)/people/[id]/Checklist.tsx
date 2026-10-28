@@ -9,13 +9,13 @@ import { Avatar, CheckButton, KindIcon } from "../../tasks/parts";
 import { DraftModal } from "../../tasks/DraftModal";
 
 /** A file's or contract's checklist: phases folded (open steps already show in the Tasks card). */
-export function Checklist({ title, tasks, today, team, personId }: { title: string; tasks: TaskRow[]; today: string; team: TeamMember[]; personId?: string }) {
+export function Checklist({ title, tasks, today, team, personId, hideEmpty }: { title: string; tasks: TaskRow[]; today: string; team: TeamMember[]; personId?: string; hideEmpty?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
   const [drafting, setDrafting] = useState<string | null>(null); // email/text step whose template is open
   const [, start] = useTransition();
-  if (!tasks.length) return <p className="mt-3 text-sm muted">No checklist for this yet. Templates for it can be added in Admin → Task templates.</p>;
+  if (!tasks.length) return hideEmpty ? null : <p className="mt-3 text-sm muted">No checklist for this yet. Templates for it can be added in Admin → Task templates.</p>;
   const done = tasks.filter((t) => t.done).length;
   // Soonest due first, finished sections at the bottom (owner request 2026-10-26).
   const sections = checklistOrder(tasks.map((t) => ({ ...t, phase: t.step?.phase ?? "Steps" })));
@@ -26,8 +26,9 @@ export function Checklist({ title, tasks, today, team, personId }: { title: stri
   });
   return (
     <div className="mt-3">
-      <h4 className="text-xs font-semibold uppercase tracking-wider muted">{title} · {done} of {tasks.length} done</h4>
-      <div className="mt-1 flex flex-col rounded-lg border border-misty bg-white">
+      <h4 className="flex justify-between text-xs font-semibold uppercase tracking-wider muted"><span>{title}</span><span>{done} of {tasks.length} done</span></h4>
+      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-sunken" aria-hidden="true"><div className="h-full rounded-full bg-moss" style={{ width: `${Math.round((done / tasks.length) * 100)}%` }} /></div>
+      <div className="mt-2 flex flex-col rounded-lg border border-misty bg-white">
         {sections.map(({ phase: ph, items }) => {
           const left = items.filter((t) => !t.done).length;
           const late = items.some((t) => !t.done && t.due && diffDays(t.due, today) < 0);

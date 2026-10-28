@@ -251,14 +251,14 @@ export type PaView = {
   id: string; fileId: string; side: Side; state: "active" | "closed" | "fell_through"; address: string; price: number; answers: Answers;
   dates: Record<DateKey, string | null>; writtenStatementNA: boolean; dateStatus: Partial<Record<DateKey, DateStatus>>; originalDates: Partial<Record<DateKey, string>>;
   endedOn: string | null; commission: string | null; bac: string | null;
-  partners: Record<string, { id: string; name: string }>; // people section → the contact picked for it
+  partners: Record<string, { id: string; name: string; email?: string; phone?: string }>; // people section → the contact picked for it (first email and phone)
 };
 
 type DbPa = {
   id: string; fileId: string; side: string; state: string; address: string; price: number; answers: unknown; writtenStatementNA: boolean; dateStatus: unknown; originalDates: unknown;
   finalAcceptance: Date | null; inspection: Date | null; writtenStatement: Date | null; hoaRescission: Date | null; closing: Date | null; endedOn: Date | null;
   commission?: { commission: string; bac: string } | null;
-  partners?: { sectionId: string; person: { id: string; name: string } }[];
+  partners?: { sectionId: string; person: { id: string; name: string; emails?: { address: string }[]; phones?: { number: string }[] } }[];
 };
 const obj = <T,>(v: unknown) => (v && typeof v === "object" && !Array.isArray(v) ? (v as T) : ({} as T));
 
@@ -272,7 +272,7 @@ export function toPaView(p: DbPa, canSeeCommission: boolean): PaView {
     endedOn: p.endedOn ? p.endedOn.toISOString().slice(0, 10) : null,
     commission: canSeeCommission ? p.commission?.commission ?? "" : null,
     bac: canSeeCommission ? p.commission?.bac ?? "" : null,
-    partners: Object.fromEntries((p.partners ?? []).map((x) => [x.sectionId, { id: x.person.id, name: x.person.name }])),
+    partners: Object.fromEntries((p.partners ?? []).map((x) => [x.sectionId, { id: x.person.id, name: x.person.name, email: x.person.emails?.[0]?.address, phone: x.person.phones?.[0]?.number }])),
   };
 }
 
