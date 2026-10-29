@@ -187,8 +187,10 @@ export function InfoCard(p: { id: string; name: string; addresses: AddressRow[];
         <button type="button" className="btn inline-flex items-center justify-center gap-1.5 px-0" disabled={!p.emails.length} title={p.emails.length ? undefined : "No email on file"} onClick={() => requestCompose("email")}><Icon d={MAIL} />Email</button>
       </div>
       <ul className="mt-3 flex flex-col gap-1.5 text-sm">
-        {p.phones.map((x, i) => <li key={`p${i}`}><CallLink className="link" number={x.value} name={p.name}>{x.value}</CallLink> <span className="muted">({x.label})</span><CopyOne value={x.value} /></li>)}
-        {p.emails.map((x, i) => <li key={`e${i}`} className="break-all"><a className="link" href={`mailto:${x.value}`}>{x.value}</a>{x.label && <span className="muted"> ({x.label})</span>}<CopyOne value={x.value} /></li>)}
+        {p.phones.map((x, i) => <InlineRow key={`p${i}`} row={x} kind="phone" save={(nx) => updateContactInfo({ id: p.id, name: p.name, addresses: p.addresses, emails: p.emails, phones: p.phones.map((y, j) => (j === i ? nx : y)) })}>
+          <CallLink className="link" number={x.value} name={p.name}>{x.value}</CallLink> <span className="muted">({x.label})</span><CopyOne value={x.value} /></InlineRow>)}
+        {p.emails.map((x, i) => <InlineRow key={`e${i}`} row={x} kind="email" save={(nx) => updateContactInfo({ id: p.id, name: p.name, addresses: p.addresses, phones: p.phones, emails: p.emails.map((y, j) => (j === i ? nx : y)) })}>
+          <a className="link break-all" href={`mailto:${x.value}`}>{x.value}</a>{x.label && <span className="muted"> ({x.label})</span>}<CopyOne value={x.value} /></InlineRow>)}
         {p.addresses.map((x, i) => (
           <li key={`a${i}`}>{x.value}{(x.label || x.mailing) && <span className="muted"> ({[x.label, x.mailing && "Mailing"].filter(Boolean).join(" · ")})</span>}<CopyOne value={x.value} /></li>
         ))}
@@ -223,22 +225,85 @@ export function DetailsCard(p: { id: string; options: Options; stageId: string |
       <SaveRow pending={e.pending} error={e.error} onCancel={() => { e.setError(""); e.setEditing(false); }} />
     </form>
   );
-  const row = (k: string, v: string | null | undefined) => <><dt className="muted">{k}</dt><dd>{v || <span className="muted">Not set</span>}</dd></>;
+  // Click one value to change just it, ✓ saves, ✗ cancels (like FUB, owner request 2026-10-28). Edit still opens all.
+  const current = { stageId: p.stageId ?? "", sourceId: p.sourceId ?? "", assignedToId: p.assignedToId ?? "", followUpDays: p.followUpDays ? String(p.followUpDays) : "", mailingName: p.mailingName, referredBy: p.referredBy, partnerType: p.partnerType ?? "", company: p.company, kids: p.kids };
+  type Key = keyof typeof current;
+  const saveOne = (k: Key, value: string) => updateDetails({ id: p.id, ...current, [k]: value, followUpDays: (k === "followUpDays" ? value : current.followUpDays) ? Number(k === "followUpDays" ? value : current.followUpDays) : null });
+  const fields: { k: Key; label: string; shown: string | null | undefined; options?: [string, string][]; placeholder?: string; show?: boolean }[] = [
+    { k: "stageId", label: "Stage", shown: name(o.stages, p.stageId), options: o.stages.map((x) => [x.id, x.name]) },
+    { k: "followUpDays", label: "Follow up", shown: p.followUpDays ? `Every ${p.followUpDays} days` : null, options: o.followUp.map((d) => [String(d), `Every ${d} days`]) },
+    { k: "assignedToId", label: "Assigned to", shown: name(o.team, p.assignedToId), options: o.team.map((x) => [x.id, x.name]) },
+    { k: "sourceId", label: "Source", shown: name(o.sources, p.sourceId), options: o.sources.map((x) => [x.id, x.name]) },
+    { k: "referredBy", label: "Referred by", shown: p.referredBy },
+    { k: "mailingName", label: "Mailing name", shown: p.mailingName },
+    { k: "kids", label: "Kids", shown: p.kids, placeholder: "First names, e.g. Mia, Leo" },
+    { k: "partnerType", label: "Type", shown: p.partnerType ? partnerLabel(p.partnerType) : null, options: PARTNER_TYPES.map(([k, l]) => [k, l]), show: !!p.partnerType },
+    { k: "company", label: "Company", shown: p.company, show: !!(p.partnerType || p.company) },
+  ];
   return (
     <div className="card p-4">
       <CardHead title="Details" editing={false} onEdit={() => e.setEditing(true)} />
-      <dl className="grid grid-cols-[110px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-sm">
-        {row("Stage", name(o.stages, p.stageId))}
-        {row("Follow up", p.followUpDays ? `Every ${p.followUpDays} days` : null)}
-        {row("Assigned to", name(o.team, p.assignedToId))}
-        {row("Source", name(o.sources, p.sourceId))}
-        {p.referredBy && row("Referred by", p.referredBy)}
-        {row("Mailing name", p.mailingName)}
-        {p.kids && row("Kids", p.kids)}
-        {p.partnerType && row("Type", partnerLabel(p.partnerType))}
-        {(p.partnerType || p.company) && row("Company", p.company)}
+      <dl className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-x-3 gap-y-1 text-sm">
+        {fields.filter((f) => f.show ?? true).map((f) => <InlineField key={f.k} label={f.label} shown={f.shown} value={current[f.k]} options={f.options} placeholder={f.placeholder} onSave={(v) => saveOne(f.k, v)} />)}
       </dl>
     </div>
+  );
+}
+
+/** A phone or email line with a pencil: change just this number/email and its label in place, ✓ saves, ✗ cancels. */
+function InlineRow({ row, kind, save, children }: { row: Row; kind: "phone" | "email"; save: (r: Row) => Promise<{ ok: boolean; error?: string }>; children: React.ReactNode }) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [v, setV] = useState(row.value), [l, setL] = useState(row.label);
+  const [error, setError] = useState("");
+  const [pending, start] = useTransition();
+  const done = () => start(async () => { setError(""); const r = await save({ value: v, label: l }); if (!r.ok) { setError(r.error ?? "Couldn't save."); return; } setEditing(false); router.refresh(); });
+  const cancel = () => { setV(row.value); setL(row.label); setError(""); setEditing(false); };
+  if (!editing) return (
+    <li className="group">{children}
+      <button type="button" aria-label={`Change ${row.value}`} title="Change" onClick={() => setEditing(true)} className="ml-1 inline-flex rounded px-1 align-middle text-xs muted opacity-60 hover:bg-sunken hover:opacity-100 group-hover:opacity-100">✎</button></li>
+  );
+  const keys = (x: React.KeyboardEvent) => { if (x.key === "Enter") done(); if (x.key === "Escape") cancel(); };
+  return (
+    <li className="flex flex-col gap-1">
+      <span className="flex items-center gap-1">
+        <input autoFocus aria-label={kind === "phone" ? "Phone" : "Email"} className="input min-w-0 flex-[2] py-1" value={v} inputMode={kind === "phone" ? "tel" : "email"} onChange={(x) => setV(x.target.value)} onKeyDown={keys} />
+        <input aria-label="Label" placeholder="Label" className="input min-w-0 flex-1 py-1" value={l} onChange={(x) => setL(x.target.value)} onKeyDown={keys} />
+        <button type="button" aria-label="Save" disabled={pending} onClick={done} className="grid h-7 w-7 flex-none place-items-center rounded-full bg-moss text-sm font-bold text-white hover:bg-accent">✓</button>
+        <button type="button" aria-label="Cancel" disabled={pending} onClick={cancel} className="grid h-7 w-7 flex-none place-items-center rounded-full bg-[#f9e1de] text-sm font-bold text-bad">✕</button>
+      </span>
+      {error && <span role="alert" className="text-xs text-bad">{error}</span>}
+    </li>
+  );
+}
+
+/** One Details value: click to change it in place; ✓ saves, ✗ (or Escape) cancels. */
+function InlineField({ label, shown, value, options, placeholder, onSave }: { label: string; shown: string | null | undefined; value: string; options?: [string, string][]; placeholder?: string; onSave: (v: string) => Promise<{ ok: boolean; error?: string }> }) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [v, setV] = useState(value);
+  const [error, setError] = useState("");
+  const [pending, start] = useTransition();
+  const save = () => start(async () => { setError(""); const r = await onSave(v); if (!r.ok) { setError(r.error ?? "Couldn't save."); return; } setEditing(false); router.refresh(); });
+  const cancel = () => { setV(value); setError(""); setEditing(false); };
+  return (
+    <>
+      <dt className="muted">{label}</dt>
+      {editing ? (
+        <dd className="flex flex-col gap-1">
+          <span className="flex items-center gap-1">
+            {options
+              ? <select autoFocus aria-label={label} className="input min-w-0 flex-1 py-1" value={v} onChange={(x) => setV(x.target.value)} onKeyDown={(x) => { if (x.key === "Escape") cancel(); }}><option value="">Not set</option>{options.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+              : <input autoFocus aria-label={label} className="input min-w-0 flex-1 py-1" value={v} placeholder={placeholder} onChange={(x) => setV(x.target.value)} onKeyDown={(x) => { if (x.key === "Enter") save(); if (x.key === "Escape") cancel(); }} />}
+            <button type="button" aria-label={`Save ${label}`} disabled={pending} onClick={save} className="grid h-7 w-7 flex-none place-items-center rounded-full bg-moss text-sm font-bold text-white hover:bg-accent">✓</button>
+            <button type="button" aria-label="Cancel" disabled={pending} onClick={cancel} className="grid h-7 w-7 flex-none place-items-center rounded-full bg-[#f9e1de] text-sm font-bold text-bad hover:bg-[#f3cfc9]">✕</button>
+          </span>
+          {error && <span role="alert" className="text-xs text-bad">{error}</span>}
+        </dd>
+      ) : (
+        <dd><button type="button" title={`Change ${label.toLowerCase()}`} onClick={() => { setV(value); setEditing(true); }} className="-mx-1.5 w-[calc(100%+12px)] rounded px-1.5 py-0.5 text-left hover:bg-sunken">{shown || <span className="muted">Not set</span>}</button></dd>
+      )}
+    </>
   );
 }
 

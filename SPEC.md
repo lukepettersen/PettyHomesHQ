@@ -193,7 +193,10 @@ Principles:
 - **Back link** returns to where you came from (People, Tasks, Messages or Pipeline) and that
   tab stays highlighted.
 - **Left:** contact info card, Details (stage, follow-up, assigned, source, mailing name),
-  Tags, Important Dates. Each card has Edit → Save/Cancel. The contact info card also has **Copy**
+  Tags, Important Dates. Each card has Edit → Save/Cancel. **One field at a time** *(owner request 2026-10-28, like
+  FUB)*: click any Details value (stage, follow up, assigned to, source, referred by, mailing name, kids, type,
+  company) or the ✎ after a phone or email to change just that one in place; ✓ (or Enter) saves, ✕ (or Escape)
+  cancels. Edit still opens the whole card. The contact info card also has **Copy**
   *(owner request 2026-10-22)*: copies the name, phones and emails (with their labels), one per line, to
   paste into a text or email. A small copy icon after each phone, email and address copies just that one
   *(owner request 2026-10-28)*. **Call · Text · Email** buttons under the name *(owner request 2026-10-28)*: Call rings the phone in
