@@ -21,6 +21,7 @@ import { EmailComposer } from "./EmailComposer";
 import { TextComposer } from "@/components/TextComposer";
 import { OfferModal } from "./OfferModal";
 import { DealNotes } from "./DealNotes";
+import { SocialPosts } from "./SocialPosts";
 
 type EmailProps = { emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; ownGmail?: boolean; canConnect?: boolean };
 export type OfferRow = { id: string; fileId: string; createdAt: string; address: string; price: number | null; summary: string; prefill: Record<string, string> };
@@ -107,7 +108,7 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
     if (!r.ok) { setError(r.error ?? "Something went wrong."); return; }
     done?.(); router.refresh();
   });
-  const facts = factRows(fileForms[file.kind], file);
+  const facts = factRows(fileForms[file.kind], file, { blanks: true });
   const answers = { ...file.info, address: file.address ?? "", price: file.price ? String(file.price) : "", ...(file.commission !== null ? { commission: file.commission } : {}), ...(file.bac !== null ? { bac: file.bac } : {}) };
 
   const pend = activePa ? isPending(activePa, pendingAt, today) : false;
@@ -163,6 +164,7 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
           <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider muted">Notes</h3>
           {notesFacts.length > 0 && <FactGrid facts={notesFacts} />}
           <DealNotes key={file.id + file.notes} fileId={file.id} notes={file.notes} notesAt={file.notesAt} notesBy={file.notesBy} />
+          <SocialPosts fileId={file.id} kind={file.kind} posts={file.social} />
         </section>
         {people.length > 0 && (
           <section aria-label="People" className="rounded-xl border border-misty bg-paper px-3.5 py-2.5">

@@ -85,4 +85,11 @@ describe("Money or % display", () => {
     expect(moneyOrPctShown("3%")).toBe("3%");
     expect(moneyOrPctShown("5000")).toBe("$5,000");
   });
+  it("lists unanswered questions asked at the current status as a dash", () => {
+    const form: FileSection[] = [{ id: "a", name: "Consult", fields: [{ key: "time", label: "Timeframe", type: "text" }, { key: "vacant", label: "Vacant?", type: "text" }, { key: "commission", label: "Commission", type: "moneypct" }] },
+      { id: "b", name: "Later", statuses: ["s2"], fields: [{ key: "lockbox", label: "Lockbox", type: "text" }] }];
+    const v = { ...toFileView({ id: "f", kind: "listing", personId: "p", statusId: "s1", statusSince: new Date(), address: null, price: null, info: { time: "0-3 months" }, closedAt: null, person: { name: "X" }, status: { name: "S1" } }, false) };
+    expect(factRows(form, v, { blanks: true })).toEqual([["Timeframe", "0-3 months"], ["Vacant?", "—"]]);
+    expect(factRows(form, v)).toEqual([["Timeframe", "0-3 months"]]);
+  });
 });

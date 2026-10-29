@@ -120,6 +120,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 - Email images: `src/lib/emailImages.ts` (tested), Image button in `src/components/FormatBar.tsx`, upload `/api/email-images`, public `src/app/api/img/[name]` (only `email-images/` names); `![alt](https://…)` rendered by `toHtml` in `src/lib/email.ts`
 - Owner's sales Google Sheet: `src/lib/salesSheet.ts` (row building, tested), `src/server/salesSheet.ts` (`syncSalesRow` from paActions; Sheets API via `sharedGoogle`), Admin → Integrations `SalesSheetControls.tsx`
 - Address lookup: `src/server/places.ts` (Google Places API (New), key server-side), `/api/address` + `/api/address/details`, `src/components/AddressInput.tsx` (contact Address, PA and file `address` fields)
+- Social post descriptions on deals: `src/lib/social.ts` (slots; tested), `ClientFile.social` JSON, `saveSocialPost` in `pipeline/actions.ts`, `people/[id]/SocialPosts.tsx`
 - `src/lib/customFields.ts` — custom field types and value cleaning
 - Owner setup and ops runbook: `docs/ops.md`
 

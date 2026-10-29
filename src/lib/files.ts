@@ -3,6 +3,7 @@
 
 export type FileKind = "buyer" | "listing";
 import { cleanMoneyOrPct, isShown, type FieldType, type PaField, type PaSection } from "./pa";
+import { toSocialPosts, type SocialPosts } from "@/lib/social";
 
 /** A section of the buyer or listing form; `statuses` lists the status ids it shows at (none = every status). */
 export type FileSection = PaSection & { statuses?: string[] };
@@ -115,10 +116,11 @@ export type FileView = {
   id: string; kind: FileKind; personId: string; personName: string; statusId: string | null; status: string; statusSince: string;
   address: string | null; price: number | null; info: Answers; commission: string | null; bac: string | null; closedAt: string | null;
   notes: string; notesAt: string | null; notesBy: string | null;
+  social: SocialPosts;
 };
 
 export function toFileView(
-  f: { id: string; kind: string; personId: string; statusId: string | null; statusSince: Date; address: string | null; price: number | null; info: unknown; closedAt: Date | null; notes?: string; notesAt?: Date | null; notesBy?: string | null; person: { name: string }; status: { name: string } | null; commission?: { commission: string; bac: string } | null },
+  f: { id: string; kind: string; personId: string; statusId: string | null; statusSince: Date; address: string | null; price: number | null; info: unknown; closedAt: Date | null; notes?: string; notesAt?: Date | null; notesBy?: string | null; social?: unknown; person: { name: string }; status: { name: string } | null; commission?: { commission: string; bac: string } | null },
   canSeeCommission: boolean,
 ): FileView {
   const info = f.info && typeof f.info === "object" && !Array.isArray(f.info) ? (f.info as Answers) : {};
@@ -130,6 +132,7 @@ export function toFileView(
     bac: canSeeCommission ? f.commission?.bac ?? "" : null,
     closedAt: f.closedAt ? f.closedAt.toISOString() : null,
     notes: f.notes ?? "", notesAt: f.notesAt ? f.notesAt.toISOString() : null, notesBy: f.notesBy ?? null,
+    social: toSocialPosts(f.social),
   };
 }
 
@@ -138,14 +141,17 @@ export const fileLine = (f: Pick<FileView, "kind" | "address" | "info">) =>
   f.kind === "buyer" ? [f.info.areas, f.info.range].filter(Boolean).join(" · ") || "Looking" : f.address ?? "Address not set";
 
 /** Label/value pairs for the facts line, in form order. Empty values, and commission the viewer can't see, are left out. */
-export function factRows(form: FileSection[], f: FileView): [string, string][] {
+export function factRows(form: FileSection[], f: FileView, opts: { blanks?: boolean } = {}): [string, string][] {
   const out: [string, string][] = [];
   const seen = new Set<string>(["address"]);
+  // With blanks, unanswered questions the form asks at the deal's current status show as "—" (owner request 2026-10-29).
+  const asked = new Set(opts.blanks ? sectionsAt(form, f.statusId, f.info).flatMap((s) => s.fields.map((x) => x.key)) : []);
   for (const fld of form.flatMap((s) => s.fields)) {
     if (seen.has(fld.key)) continue;
     seen.add(fld.key);
+    const hidden = (fld.key === "commission" && f.commission === null) || (fld.key === "bac" && f.bac === null);
     const raw = fld.key === "price" ? (f.price ? String(f.price) : "") : fld.key === "commission" ? f.commission ?? "" : fld.key === "bac" ? f.bac ?? "" : f.info[fld.key] ?? "";
-    if (!raw) continue;
+    if (!raw) { if (asked.has(fld.key) && !hidden) out.push([fld.label, "—"]); continue; }
     const label = fld.key === "price" && f.kind === "listing" ? (f.info.active || f.status === "Active" ? "List price" : fld.label) : fld.label;
     const value = fld.type === "money" ? money(Number(raw)) : fld.type === "moneypct" ? moneyOrPctShown(raw) : fld.type === "date" ? shortDay(raw) : fld.type === "datetime" ? `${shortDay(raw.slice(0, 10))} ${clock(raw.slice(11, 16))}` : fld.type === "pct" ? `${raw}%` : raw;
     out.push([label, value]);

@@ -388,6 +388,7 @@ model ClientFile {
   notes       String              @default("") // Deal notes: free text about this deal (SPEC.md §7.1)
   notesAt     DateTime?
   notesBy     String? // name of who last changed the notes
+  social      Json                @default("{}") // social post descriptions by slot (src/lib/social.ts)
   createdById String?
   createdBy   User?               @relation(fields: [createdById], references: [id])
   createdAt   DateTime            @default(now())

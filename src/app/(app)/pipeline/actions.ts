@@ -11,6 +11,7 @@ import { loadFileForm } from "@/server/files";
 import { syncContract } from "@/server/google";
 import { isoFromDate, todayCentral } from "@/lib/normalize";
 import { factsOf, moveFile, redateConsult, runTrigger } from "@/server/automation";
+import { SOCIAL_SLOTS, toSocialPosts } from "@/lib/social";
 
 const id = z.string().trim().min(1).max(40);
 const kindSchema = z.enum(["buyer", "listing"]);
@@ -139,6 +140,26 @@ export async function saveFileNotes(input: z.input<typeof notesSchema>) {
     await db.clientFile.update({ where: { id: f.id }, data: { notes, notesAt: new Date(), notesBy: user.name } });
     // The log says notes changed, not what they say (they can hold personal details).
     await logActivity(user.id, "update", "clientFile", f.id, `${notes ? "Updated" : "Cleared"} deal notes on ${f.person.name}'s ${f.kind === "buyer" ? "buyer" : "seller"} deal`);
+    refresh(f.personId);
+  });
+}
+
+const socialSchema = z.object({ id, slot: z.enum(["listing", "uc"]), text: z.string().max(3000, "That's long for a post. Trim it under 3,000 characters."), ready: z.boolean() });
+
+/** A deal's social post description (owner request 2026-10-29): text plus "ready to post" once the wording is right. */
+export async function saveSocialPost(input: z.input<typeof socialSchema>) {
+  return guarded(null, async (user) => {
+    const v = socialSchema.parse(input);
+    const f = await db.clientFile.findFirst({ where: { id: v.id, deletedAt: null }, include: { person: { select: { name: true } } } });
+    if (!f) throw new UserError("That deal was deleted.");
+    if (v.slot === "listing" && f.kind !== "listing") throw new UserError("Buyers only have an Under Contract post.");
+    const social = toSocialPosts(f.social);
+    const text = v.text.trim();
+    if (text) social[v.slot] = { text, ready: v.ready, at: new Date().toISOString(), by: user.name };
+    else delete social[v.slot];
+    await db.clientFile.update({ where: { id: f.id }, data: { social } });
+    const label = SOCIAL_SLOTS[f.kind === "listing" ? "listing" : "buyer"].find((x) => x.slot === v.slot)!.label;
+    await logActivity(user.id, "update", "clientFile", f.id, `${text ? (v.ready ? "Marked ready" : "Updated") : "Cleared"} the ${label} on ${f.person.name}'s ${f.kind === "buyer" ? "buyer" : "seller"} deal`);
     refresh(f.personId);
   });
 }

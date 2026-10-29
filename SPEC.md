@@ -288,6 +288,13 @@ Principles:
   at the top of the deal ("+ Add deal notes"; click to edit; Save / Cancel), showing when and by
   whom it was last changed. Kept at every status and on closed deals. The first line shows on
   the Pipeline card (full text on hover). The activity log records that notes changed, not the text.
+- **Social post descriptions** *(owner request 2026-10-29)*: under Deal notes, buyer deals have an **Under Contract
+  post** box; seller deals have **Coming Soon/Active post** and **Under Contract post**. Each holds the caption Alyssa
+  posts. A saved post shows "Needs your edit" (clay) until someone ticks "Wording is right: ready to post" or clicks
+  **Mark ready**, then "Ready to post"; **Copy** puts the text on the clipboard. Shows who changed it and when. No task
+  is created (the checklists already have the posting steps).
+- **Unanswered questions** *(owner request 2026-10-29)*: a deal's Notes box lists every buyer/seller form question
+  asked at its current status, showing "—" for ones not filled in yet (commission/BAC only for "See commissions").
 - Status changes happen **only from the contact page** (status dropdown), or automatically
   when a checklist step marked "moves deal to" is completed.
 - **Buyer and seller forms are editable** in Admin → Buyer and seller forms *(owner request,
