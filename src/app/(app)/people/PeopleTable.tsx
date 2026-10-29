@@ -55,7 +55,8 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
   // Sorting and pages are in the address, so Back from a contact returns to the same spot.
   const href = (p: Record<string, string | null>) => { const q = new URLSearchParams(viewQuery); for (const [k, v] of Object.entries(p)) { if (v) q.set(k, v); else q.delete(k); } return `/people${q.size ? `?${q}` : ""}`; };
   const back = (() => { const q = new URLSearchParams(viewQuery); if (page > 1) q.set("page", String(page)); return q.toString(); })();
-  const setSort = (k: string) => { router.push(href({ sort: k === "name" ? null : k, page: null })); };
+  // Click a column to sort by it; click it again to flip the order (owner request 2026-10-29).
+  const setSort = (k: string) => { const next = sort === k ? `-${k}` : k; router.push(href({ sort: next === "name" ? null : next, page: null })); };
   const [editCols, setEditCols] = useState(false);
   // Column widths: drag a header's right edge. Remembered per list in this browser.
   const widthKey = `hq-colw-${listId ?? "all"}`;
@@ -113,8 +114,11 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
     <select className="input w-auto" value={value} onChange={(e) => setValue(e.target.value)} aria-label="Assign to"><option value="">No one</option>{options.team.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select>
   ) : null;
   const th = (k: string, l: string) => (
-    <th key={k} className="relative whitespace-nowrap px-3 py-2" style={{ width: widthOf(k) }}>
-      <button type="button" className="uppercase tracking-wide hover:text-charcoal" onClick={() => setSort(k)}>{l}{sort === k ? " ↓" : ""}</button>
+    <th key={k} aria-sort={sort === k ? "ascending" : sort === `-${k}` ? "descending" : undefined} className="relative whitespace-nowrap px-3 py-2" style={{ width: widthOf(k) }}>
+      <button type="button" title={sort === k ? "Click to flip the order" : `Sort by ${l.toLowerCase()}`}
+        className={`group inline-flex items-center gap-1 rounded px-1 -mx-1 uppercase tracking-wide hover:bg-sunken hover:text-charcoal ${sort.replace(/^-/, "") === k ? "font-bold text-charcoal" : ""}`} onClick={() => setSort(k)}>
+        {l}<span aria-hidden="true" className={sort.replace(/^-/, "") === k ? "" : "opacity-0 group-hover:opacity-50"}>{sort === `-${k}` ? "↑" : "↓"}</span>
+      </button>
       <span role="separator" aria-orientation="vertical" aria-label={`Resize ${l}`} title="Drag to resize; double-click to reset" onPointerDown={(e) => startResize(k, e)}
         onDoubleClick={() => setWidths((w) => { const n = { ...w }; delete n[k]; try { localStorage.setItem(widthKey, JSON.stringify(n)); } catch { /* private window */ } return n; })}
         className="absolute right-0 top-1 bottom-1 w-2 cursor-col-resize border-r-2 border-transparent hover:border-rabbit" />

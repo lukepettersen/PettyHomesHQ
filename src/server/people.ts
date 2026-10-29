@@ -102,8 +102,10 @@ export async function loadOptions() {
 }
 export type Options = Awaited<ReturnType<typeof loadOptions>>;
 
-/** Sorts like the People table's column headers (Name A–Z, dates most recent first, blanks last). */
-export function sortRows(rows: PersonRow[], sort = "name"): PersonRow[] {
+/** Sorts like the People table's column headers (Name A–Z, dates most recent first, blanks last). "-key" flips the
+ *  order (owner request 2026-10-29); blanks stay last either way. */
+export function sortRows(rows: PersonRow[], sortIn = "name"): PersonRow[] {
+  const desc = sortIn.startsWith("-"), sort = desc ? sortIn.slice(1) : sortIn;
   const days = (d: Date | null | undefined) => (d ? -d.getTime() : Number.MAX_SAFE_INTEGER);
   const next = (r: PersonRow) => (r.birthdays?.length ? Math.min(...r.birthdays.map((b) => daysUntil(b))) : Number.MAX_SAFE_INTEGER);
   const key = (r: PersonRow): string | number => {
@@ -123,7 +125,11 @@ export function sortRows(rows: PersonRow[], sort = "name"): PersonRow[] {
       default: return r.name.toLowerCase();
     }
   };
-  return rows.map((r) => [key(r), r] as const).sort((a, b) => (typeof a[0] === "number" && typeof b[0] === "number" ? a[0] - b[0] : String(a[0]).localeCompare(String(b[0]))) || a[1].name.localeCompare(b[1].name)).map(([, r]) => r);
+  const blank = (k: string | number) => k === "~" || k === Number.MAX_SAFE_INTEGER;
+  const cmp = (a: string | number, b: string | number) => (typeof a === "number" && typeof b === "number" ? a - b : String(a).localeCompare(String(b)));
+  return rows.map((r) => [key(r), r] as const)
+    .sort((a, b) => Number(blank(a[0])) - Number(blank(b[0])) || (desc ? -1 : 1) * cmp(a[0], b[0]) || a[1].name.localeCompare(b[1].name))
+    .map(([, r]) => r);
 }
 
 export const PAGE_SIZE = 100;
