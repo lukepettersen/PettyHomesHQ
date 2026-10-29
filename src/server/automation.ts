@@ -2,7 +2,7 @@ import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
-import { CONTRACT_ANCHORS, expand, minutesOffset, offsetOf, timeBefore, type Anchor, type Facts, type Phase, type Template } from "@/lib/templates";
+import { CONTRACT_ANCHORS, condMet, expand, minutesOffset, offsetOf, timeBefore, type Anchor, type Facts, type Phase, type Template } from "@/lib/templates";
 
 // Task templates in action (SPEC.md §8): start checklists on triggers, re-date steps when contract
 // dates change, and apply "Add/remove tags" steps.
@@ -98,6 +98,32 @@ export async function redateContract(tx: Tx, paId: string) {
     if ((due?.getTime() ?? null) !== (t.dueDate?.getTime() ?? null)) { await tx.task.update({ where: { id: t.id }, data: { dueDate: due } }); moved++; }
   }
   return moved;
+}
+
+/** Contract answers changed (owner request 2026-10-29): steps whose "Only when" now fails come off the checklist (to
+ *  Trash, if still open), and steps whose condition now holds are added. Only conditions that flipped are touched, so
+ *  a step someone deleted by hand isn't brought back by an unrelated edit. */
+export async function recheckConditions(tx: Tx, paId: string, before: Facts, userId: string): Promise<{ added: number; removed: number }> {
+  const pa = await tx.purchaseAgreement.findUniqueOrThrow({ where: { id: paId }, include: { file: { select: { personId: true } } } });
+  const after = factsOf(pa.answers, pa.writtenStatementNA);
+  const used = new Set((await tx.task.findMany({ where: { paId, templateId: { not: null } }, select: { templateId: true }, distinct: ["templateId"] })).map((x) => x.templateId));
+  const ctx: Ctx = { personId: pa.file.personId, fileId: pa.fileId, paId, start: pa.finalAcceptance ? isoFromDate(pa.finalAcceptance) : isoFromDate(todayCentral()), dates: contractAnchors(pa), facts: after };
+  let added = 0, removed = 0;
+  for (const t of (await loadTemplates(tx)).filter((x) => used.has(x.id))) {
+    for (const ph of t.phases) for (const s of ph.steps) {
+      if (!s.cond || s.cond === "always") continue;
+      const now = condMet(s.cond, after);
+      if (condMet(s.cond, before) === now) continue;
+      const mine = { paId, templateId: t.id, stepId: s.id, completedAt: null, deletedAt: null };
+      if (!now) {
+        await tx.task.updateMany({ where: { ...mine, autoState: { in: ["pending", "failed"] } }, data: { autoState: "off" } });
+        removed += (await tx.task.updateMany({ where: mine, data: { deletedAt: new Date() } })).count;
+      } else if (!(await tx.task.findFirst({ where: { paId, templateId: t.id, stepId: s.id, deletedAt: null }, select: { id: true } }))) {
+        added += await applyTemplate(tx, { ...t, phases: [{ ...ph, steps: [s] }] }, ctx, userId);
+      }
+    }
+  }
+  return { added, removed };
 }
 
 /** A waived date's open steps are no longer needed. */

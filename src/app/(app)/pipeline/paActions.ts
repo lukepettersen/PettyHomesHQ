@@ -11,7 +11,7 @@ import { savePaPartners } from "@/server/partners";
 import { syncContract } from "@/server/google";
 import { syncSalesRow } from "@/server/salesSheet";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
-import { apptIso, closeStepsForWaived, contractAnchors, factsOf, redateContract, runTrigger } from "@/server/automation";
+import { apptIso, closeStepsForWaived, contractAnchors, factsOf, recheckConditions, redateContract, runTrigger } from "@/server/automation";
 import { applicableDates, cleanPaAnswers, formProblem, KEY_DATES, pendingKeys, type DateKey, type DateStatus, type PaSection } from "@/lib/pa";
 
 const id = z.string().trim().min(1).max(40);
@@ -91,16 +91,17 @@ export async function updatePurchaseAgreement(input: z.input<typeof editSchema>)
         if (!status[k] || status[k] === "pending" || status[k] === "extended") { status[k] = "extended"; orig[k] = orig[k] ?? before; }
       }
     }
-    await db.$transaction(async (tx) => {
+    const steps = await db.$transaction(async (tx) => {
       await tx.purchaseAgreement.update({
         where: { id: pa.id },
         data: { address: c.address, price: c.price, answers: c.answers, writtenStatementNA: c.writtenStatementNA, ...dateData(c.dates), dateStatus: status, originalDates: orig },
       });
       if (canComm) await tx.paCommission.upsert({ where: { paId: pa.id }, update: c.commission, create: { paId: pa.id, ...c.commission } });
       await redateContract(tx, pa.id);
+      return pa.state === "active" ? recheckConditions(tx, pa.id, factsOf(pa.answers, pa.writtenStatementNA), user.id) : { added: 0, removed: 0 };
     });
     await savePaPartners(pa.id, form, c.answers, v.partners ?? {}, v.saveAsContact ?? [], user.id);
-    await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Updated purchase agreement for ${pa.file.person.name}${moved.length ? ` (moved ${moved.join(", ")})` : ""}`);
+    await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Updated purchase agreement for ${pa.file.person.name}${moved.length ? ` (moved ${moved.join(", ")})` : ""}${steps.added || steps.removed ? ` (checklist: ${steps.added} added, ${steps.removed} removed)` : ""}`);
     await syncContract(pa.id);
     await syncSalesRow(pa.id, "changed"); // owner's sales Google Sheet, when set up
     refresh(pa.file.personId);

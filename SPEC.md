@@ -430,7 +430,10 @@ Principles:
   Condo/townhome. *(Later: Lead source is…, for the Stacie Rihl referral step.)*
 - **Triggers:** when a buyer/listing moves to a status; when a buyer-side or seller-side PA
   is added; **when a contract goes pending** (each side; fired by Mark pending, steps timed from that day or the
-  contract dates, owner request 2026-10-29); when a contract closes (each side); **when a phone call is booked**; **when a
+  contract dates, owner request 2026-10-29); when a contract closes (each side);
+  *Editing a contract* re-checks "Only when" conditions (owner request 2026-10-29): if a changed answer (material
+  defect, HOA, financing, year built, written statement…) flips a step's condition, open steps that no longer apply
+  go to Trash (automatic sends turned off) and steps that now apply are added. Done steps stay. **when a phone call is booked**; **when a
   Buyer consult is booked**, **a Seller consult**, or **either one**; or none.
 - Templates are listed, created, edited and deleted in Admin → Task templates, with a steps
   editor.
