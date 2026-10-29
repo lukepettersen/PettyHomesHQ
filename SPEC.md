@@ -293,7 +293,7 @@ Principles:
 - **Buyer and seller forms are editable** in Admin → Buyer and seller forms *(owner request,
   2026-10-15)*: sections and questions like the PA forms (type, hint, required, choices,
   Show only if), plus **Shown at** (every status or chosen statuses). The starting forms ask
-  the questions listed above. Listing address can't be removed.
+  the questions listed above. Listing address can't be removed (when it's asked in two sections, either copy can go as long as one stays; a copy is labelled "Same question (and answer) as …", owner 2026-10-29).
 - Starting a buyer or listing tags the person **Buyer** or **Seller**.
 - **BAC** is treated like commission: only users with "See commissions" see or edit it.
 

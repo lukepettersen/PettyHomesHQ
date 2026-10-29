@@ -39,6 +39,10 @@ export function FormEditor({ initial, onSave, locked, automation, statuses, step
   const [pending, start] = useTransition();
   const dirty = JSON.stringify(secs) !== JSON.stringify(initial);
   const conds = showIfChoices(secs);
+  // A locked question (address, price) can sit in two sections; only the last copy is locked (owner 2026-10-29).
+  const copies = (key: string) => secs.reduce((n, x) => n + x.fields.filter((f) => f.key === key).length, 0);
+  const isLocked = (key: string) => LOCKED_KEYS.includes(key) && copies(key) === 1;
+  const firstLabel = (key: string, notIn: number) => secs.find((x, j) => j !== notIn && x.fields.some((f) => f.key === key))?.fields.find((f) => f.key === key)?.label;
   const patchSec = (i: number, p: Partial<Section>) => setSecs(secs.map((s, j) => (j === i ? { ...s, ...p } : s)));
   const patchField = (i: number, fi: number, p: Partial<PaField>) => patchSec(i, { fields: secs[i].fields.map((f, j) => (j === fi ? { ...f, ...p } : f)) });
   const moveSec = (i: number, d: number) => { const n = [...secs]; [n[i], n[i + d]] = [n[i + d], n[i]]; setSecs(n); };
@@ -60,16 +64,17 @@ export function FormEditor({ initial, onSave, locked, automation, statuses, step
             <span className="flex gap-1">
               <button type="button" className="btn px-2" aria-label={`Move section ${s.name} up`} disabled={i === 0} onClick={() => moveSec(i, -1)}>↑</button>
               <button type="button" className="btn px-2" aria-label={`Move section ${s.name} down`} disabled={i === secs.length - 1} onClick={() => moveSec(i, 1)}>↓</button>
-              <button type="button" className="btn px-2 text-bad" aria-label={`Remove section ${s.name}`} disabled={s.fields.some((f) => LOCKED_KEYS.includes(f.key))} onClick={() => setSecs(secs.filter((_, j) => j !== i))}>×</button>
+              <button type="button" className="btn px-2 text-bad" aria-label={`Remove section ${s.name}`} disabled={s.fields.some((f) => isLocked(f.key))} onClick={() => setSecs(secs.filter((_, j) => j !== i))}>×</button>
             </span>
           </div>
           <ul>
             {s.fields.map((f, fi) => {
-              const locked = LOCKED_KEYS.includes(f.key), auto = AUTOMATION_KEYS.includes(f.key);
+              const locked = isLocked(f.key), auto = AUTOMATION_KEYS.includes(f.key);
+              const twin = copies(f.key) > 1 ? firstLabel(f.key, i) : undefined;
               return (
                 <li key={f.key} className="flex flex-wrap items-center gap-2 border-b border-misty/60 px-4 py-2 last:border-0">
                   <input aria-label="Question" className="input min-w-[160px] flex-1" value={f.label} onChange={(e) => patchField(i, fi, { label: e.target.value })} />
-                  <select aria-label={`Type of ${f.label}`} className="input w-auto" value={f.type} disabled={locked} onChange={(e) => patchField(i, fi, { type: e.target.value as FieldType, options: e.target.value === "choice" ? f.options ?? ["Option 1", "Option 2"] : undefined })}>
+                  <select aria-label={`Type of ${f.label}`} className="input w-auto" value={f.type} disabled={LOCKED_KEYS.includes(f.key)} onChange={(e) => patchField(i, fi, { type: e.target.value as FieldType, options: e.target.value === "choice" ? f.options ?? ["Option 1", "Option 2"] : undefined })}>
                     {types.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
                   </select>
                   {f.type === "choice" && (
@@ -81,8 +86,9 @@ export function FormEditor({ initial, onSave, locked, automation, statuses, step
                     <option value="">Always</option>
                     {conds.filter(([k]) => !k.startsWith(`${f.key}=`)).map(([k, l]) => <option key={k} value={k}>Only if {l}</option>)}
                   </select>
-                  <label className="flex items-center gap-1 text-sm"><input type="checkbox" checked={!!f.required} disabled={locked} onChange={(e) => patchField(i, fi, { required: e.target.checked || undefined })} /> Required</label>
+                  <label className="flex items-center gap-1 text-sm"><input type="checkbox" checked={!!f.required} disabled={LOCKED_KEYS.includes(f.key)} onChange={(e) => patchField(i, fi, { required: e.target.checked || undefined })} /> Required</label>
                   {auto && <span className="rounded-full bg-accent-soft px-2 text-[11px] font-semibold text-accent" title={locked ? "Can't be removed" : "Removing it makes dependent steps wait"}>Used by automations</span>}
+                  {twin && <span className="w-full text-xs text-[#9a4f2e]">Same question (and answer) as &quot;{twin}&quot; in another section. Remove this copy with × and add a new question if you meant something else.</span>}
                   <span className="ml-auto flex gap-1">
                     <button type="button" className="btn px-2" aria-label={`Move ${f.label} up`} disabled={fi === 0} onClick={() => moveField(i, fi, -1)}>↑</button>
                     <button type="button" className="btn px-2" aria-label={`Move ${f.label} down`} disabled={fi === s.fields.length - 1} onClick={() => moveField(i, fi, 1)}>↓</button>
