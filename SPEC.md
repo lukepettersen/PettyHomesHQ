@@ -258,9 +258,10 @@ scrolls with it until its last card is on screen, then stays put while the middl
 - Purchase agreement people sections (Buyer's lender, Buyer's/Seller's title, Seller's/Buyer's
   agent, Seller's TC) have **"Choose a … from your contacts"**: search-as-you-type over
   partners of that type, most-used first; picking one fills name, company, email and phone
-  and links the contact. Someone typed in by hand can be ticked **Save as contact** (stage
-  Industry Partners, type from the section; an existing contact with that email is linked
-  instead) **+ Add "name" as a new lender/title/realtor** *(owner request
+  and links the contact. Someone typed in by hand is saved as a contact (stage Industry Partners, type from the
+  section) when the contract is saved: **Save as contact** under them starts ticked (owner 2026-10-29: they were
+  being missed) and can be unticked; an existing contact with that email, or a partner with that exact name, is linked
+  instead **+ Add "name" as a new lender/title/realtor** *(owner request
   2026-10-26)* at the bottom of the search puts the typed name in and ticks Save as contact.
 - Money boxes on purchase agreements and buyer/listing forms show dollars as you type ("10000",
   "10k" → "$10,000"); percent boxes show "2.7%" when you leave them *(owner request 2026-10-26)*.

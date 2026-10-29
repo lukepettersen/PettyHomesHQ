@@ -22,7 +22,9 @@ export async function savePaPartners(paId: string, form: PaSection[], answers: R
     const p = partnerFromAnswers(s, answers);
     if (!p.name) continue;
     const email = p.email ? normalizeEmail(p.email) : "";
-    const existing = email ? await db.email.findFirst({ where: { normalized: email, person: { deletedAt: null } }, select: { personId: true } }) : null;
+    // Already a contact? Same email, else a partner with the same name (so saving twice doesn't make duplicates).
+    const existing = (email ? await db.email.findFirst({ where: { normalized: email, person: { deletedAt: null } }, select: { personId: true } }) : null)
+      ?? (await db.person.findFirst({ where: { deletedAt: null, partnerType: { not: null }, name: { equals: p.name, mode: "insensitive" } }, select: { id: true } }).then((x) => (x ? { personId: x.id } : null)));
     if (existing) { links.push({ sectionId: s.id, personId: existing.personId }); continue; }
     const created = await db.person.create({
       data: {

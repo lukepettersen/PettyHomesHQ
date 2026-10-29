@@ -26,7 +26,8 @@ export function PaWizard({ fileId, fileKind, personName, fileLine, prefill, pa, 
   const [pending, start] = useTransition();
   // People sections: the partner contact picked for each, and typed-in ones to save as new contacts.
   const [picked, setPicked] = useState<Record<string, { id: string; name: string }>>(pa?.partners ?? {});
-  const [saveAs, setSaveAs] = useState<string[]>([]);
+  // Typed-in partners are saved as contacts unless unticked (owner 2026-10-29: they were being missed).
+  const [skipSave, setSkipSave] = useState<string[]>([]);
   const form = forms[side].map((s) => ({ ...s, fields: s.fields.filter((f) => canSeeCommission || !COMMISSION_KEYS.includes(f.key)) }));
   const sections = visibleSections(form, v);
   const names = clientFirstNames(personName);
@@ -40,7 +41,7 @@ export function PaWizard({ fileId, fileKind, personName, fileLine, prefill, pa, 
     if (miss.length) { setError(`Add the ${miss.map((f) => f.label.toLowerCase()).join(" and ")} first.`); return; }
     if (step === 2) { setStep(3); return; }
     start(async () => {
-      const links = { partners: Object.fromEntries(Object.entries(picked).map(([k, x]) => [k, x.id])), saveAsContact: saveAs.filter((k) => !picked[k]) };
+      const links = { partners: Object.fromEntries(Object.entries(picked).map(([k, x]) => [k, x.id])), saveAsContact: form.filter((s) => s.people && !picked[s.id] && !skipSave.includes(s.id) && s.fields.some((f) => (v[f.key] ?? "").trim())).map((s) => s.id) };
       const r = editing ? await updatePurchaseAgreement({ id: pa!.id, answers: v, ...links }) : await addPurchaseAgreement({ fileId, side, answers: v, ...links });
       if (!r.ok) { setError(r.error); return; }
       onSaved(editing ? "Saved." : "Purchase agreement added. They're now under contract.");
@@ -73,12 +74,12 @@ export function PaWizard({ fileId, fileKind, personName, fileLine, prefill, pa, 
                 <PartnerPicker type={sectionPartnerType(s)} picked={picked[s.id] ?? null}
                   onPick={(p) => { setV((o) => ({ ...o, ...fillFromPartner(s, p) })); setPicked((x) => ({ ...x, [s.id]: { id: p.id, name: p.name } })); }}
                   onClear={() => setPicked((x) => { const n = { ...x }; delete n[s.id]; return n; })}
-                  onNew={(name) => { setV((o) => ({ ...o, ...newPartnerFill(s, name) })); setSaveAs((x) => (x.includes(s.id) ? x : [...x, s.id])); }} />
+                  onNew={(name) => { setV((o) => ({ ...o, ...newPartnerFill(s, name) })); setSkipSave((x) => x.filter((y) => y !== s.id)); }} />
               )}
               {s.fields.map((f) => <PaInput key={f.key} f={f} v={v} names={names} set={(k, x) => setV((o) => ({ ...o, [k]: x }))} />)}
               {s.people && !picked[s.id] && s.fields.some((f) => (v[f.key] ?? "").trim()) && (
                 <label className="col-span-full flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={saveAs.includes(s.id)} onChange={(e) => setSaveAs((x) => (e.target.checked ? [...x, s.id] : x.filter((y) => y !== s.id)))} />
+                  <input type="checkbox" checked={!skipSave.includes(s.id)} onChange={(e) => setSkipSave((x) => (e.target.checked ? x.filter((y) => y !== s.id) : [...x, s.id]))} />
                   Save as contact, so they&apos;re in the list next time
                 </label>
               )}
