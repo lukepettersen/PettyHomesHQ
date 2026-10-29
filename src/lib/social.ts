@@ -20,3 +20,31 @@ export function toSocialPosts(v: unknown): SocialPosts {
   }
   return out;
 }
+
+/** Luke's starter captions (owner 2026-10-29): Under Contract for everyone; Coming Soon for sellers, with the city,
+ *  price and street filled in when the file has them. */
+export function starterPost(slot: SocialSlot, kind: "buyer" | "listing", f: { address: string | null; price: number | null }): string {
+  if (slot === "uc") return "🔥Under Contract🔥\n\nCongrats to my clients... 🥳";
+  if (kind !== "listing") return "";
+  const parts = (f.address ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  const street = parts[0] ?? "", city = parts.length > 2 ? parts[1] : "";
+  const price = f.price ? `$${f.price.toLocaleString("en-US")}` : "$";
+  return `🎈Coming Soon🎈
+
+🌟 ${city ? `${city}, ` : ""}MN 🌟
+🛏/ 🛁/ 🚗 ${price}
+
+xxxxx
+
+🏠 ${street || "Address"}
+
+▪️
+▪️
+▪️
+
+Want more info or a tour? Reach out to Luke Pettersen!
+📞 612.702.0295
+📧 Luke@theadvisorymn.com
+🌟 Real Producers Rising Star
+🏠 Petty Homes Real Estate`;
+}

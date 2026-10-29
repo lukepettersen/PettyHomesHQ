@@ -292,7 +292,10 @@ Principles:
   post** box; seller deals have **Coming Soon/Active post** and **Under Contract post**. Each holds the caption Alyssa
   posts. A saved post shows "Needs your edit" (clay) until someone ticks "Wording is right: ready to post" or clicks
   **Mark ready**, then "Ready to post"; **Copy** puts the text on the clipboard. Shows who changed it and when. No task
-  is created (the checklists already have the posting steps).
+  is created (the checklists already have the posting steps). An empty box starts from Luke's starter caption
+  (shown as "Needs your edit", "Starter caption, not saved yet"): Under Contract = "🔥Under Contract🔥 / Congrats to my
+  clients... 🥳"; Coming Soon = his Coming Soon caption with the city, list price and street filled in from the
+  seller file (src/lib/social.ts `starterPost`).
 - **Unanswered questions** *(owner request 2026-10-29)*: a deal's Notes box lists every buyer/seller form question
   asked at its current status, showing "—" for ones not filled in yet (commission/BAC only for "See commissions").
 - Status changes happen **only from the contact page** (status dropdown), or automatically
@@ -422,7 +425,8 @@ Principles:
 - **Conditions:** Always, HOA property, Built before 1978, New construction, Written statement included *(owner request 2026-10-20; not marked N/A on the contract)*, YES / NO material defect clause *(the contract's "Material defect clause?" answer; blank counts as no)*, FHA/VA loan,
   Condo/townhome. *(Later: Lead source is…, for the Stacie Rihl referral step.)*
 - **Triggers:** when a buyer/listing moves to a status; when a buyer-side or seller-side PA
-  is added; when a contract closes (each side); **when a phone call is booked**; **when a
+  is added; **when a contract goes pending** (each side; fired by Mark pending, steps timed from that day or the
+  contract dates, owner request 2026-10-29); when a contract closes (each side); **when a phone call is booked**; **when a
   Buyer consult is booked**, **a Seller consult**, or **either one**; or none.
 - Templates are listed, created, edited and deleted in Admin → Task templates, with a steps
   editor.

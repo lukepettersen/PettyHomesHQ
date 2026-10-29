@@ -3,19 +3,21 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { shortDay } from "@/lib/files";
-import { SOCIAL_SLOTS, type SocialPost, type SocialPosts as Posts, type SocialSlot } from "@/lib/social";
+import { SOCIAL_SLOTS, starterPost, type SocialPost, type SocialPosts as Posts, type SocialSlot } from "@/lib/social";
 import { saveSocialPost } from "../../pipeline/actions";
 
 /** Social post descriptions on a deal (owner request 2026-10-29): "Needs your edit" until marked ready, then Copy for posting. */
-export function SocialPosts({ fileId, kind, posts }: { fileId: string; kind: "buyer" | "listing"; posts: Posts }) {
+export function SocialPosts({ fileId, kind, posts, address, price }: { fileId: string; kind: "buyer" | "listing"; posts: Posts; address: string | null; price: number | null }) {
   return (
     <div className="mt-3 flex flex-col gap-2">
-      {SOCIAL_SLOTS[kind].map(({ slot, label }) => <SocialBox key={slot + (posts[slot]?.at ?? "")} fileId={fileId} slot={slot} label={label} post={posts[slot]} />)}
+      {SOCIAL_SLOTS[kind].map(({ slot, label }) => <SocialBox key={slot + (posts[slot]?.at ?? "")} fileId={fileId} slot={slot} label={label} post={posts[slot]} starter={starterPost(slot, kind, { address, price })} />)}
     </div>
   );
 }
 
-function SocialBox({ fileId, slot, label, post }: { fileId: string; slot: SocialSlot; label: string; post?: SocialPost }) {
+function SocialBox({ fileId, slot, label, post: saved, starter }: { fileId: string; slot: SocialSlot; label: string; post?: SocialPost; starter: string }) {
+  // An empty slot with a starter caption shows it, unsaved, as needing your edit (owner 2026-10-29).
+  const post = saved ?? (starter ? { text: starter, ready: false, at: null, by: null } : undefined);
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(post?.text ?? "");
@@ -41,12 +43,12 @@ function SocialBox({ fileId, slot, label, post }: { fileId: string; slot: Social
       {error && <p role="alert" className="mt-1 text-sm text-bad">{error}</p>}
       <div className="mt-2 flex justify-end gap-2">
         <button type="button" className="btn" onClick={cancel} disabled={pending}>Cancel</button>
-        <button type="button" className="btn btn-primary" onClick={() => save(ready)} disabled={pending || (text.trim() === (post?.text ?? "") && ready === (post?.ready ?? false))}>{pending ? "Saving…" : "Save"}</button>
+        <button type="button" className="btn btn-primary" onClick={() => save(ready)} disabled={pending || (!!saved && text.trim() === saved.text && ready === saved.ready)}>{pending ? "Saving…" : "Save"}</button>
       </div>
     </div>
   );
   if (!post) return <button type="button" className="self-start text-sm font-semibold text-accent hover:underline" onClick={() => setEditing(true)}>+ Add {label} description</button>;
-  const when = post.at ? `${shortDay(post.at.slice(0, 10))}${post.by ? ` by ${post.by.split(" ")[0]}` : ""}` : "";
+  const when = post.at ? `${shortDay(post.at.slice(0, 10))}${post.by ? ` by ${post.by.split(" ")[0]}` : ""}` : "Starter caption, not saved yet";
   return (
     <div className={`rounded-lg border px-3 py-2 ${post.ready ? "border-misty bg-white" : "border-[#ecc9b6] bg-[#fbf0ea]"}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">

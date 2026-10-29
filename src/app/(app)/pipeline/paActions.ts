@@ -147,11 +147,13 @@ export async function markPending(paId: string) {
     const keys = pendingKeys(cols).filter((k) => apply.has(k) && !["met", "waived"].includes(status[k] ?? ""));
     if (!keys.length) return;
     for (const k of keys) status[k] = "met";
-    await db.$transaction(async (tx) => {
+    const n = await db.$transaction(async (tx) => {
       await tx.purchaseAgreement.update({ where: { id: pa.id }, data: { dateStatus: status } });
       await redateContract(tx, pa.id);
+      // "When a contract goes pending" checklists (owner request 2026-10-29), timed from today or the contract dates.
+      return runTrigger(tx, `pending:${pa.side}`, { personId: pa.file.personId, fileId: pa.fileId, paId: pa.id, start: isoFromDate(todayCentral()), dates: contractAnchors(pa), facts: factsOf(pa.answers, pa.writtenStatementNA) }, user.id);
     });
-    await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Marked pending for ${pa.file.person.name} (${keys.map(label).join(", ")} met)`);
+    await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Marked pending for ${pa.file.person.name} (${keys.map(label).join(", ")} met)${n ? ` (${n} tasks)` : ""}`);
     await syncContract(pa.id);
     refresh(pa.file.personId);
   });

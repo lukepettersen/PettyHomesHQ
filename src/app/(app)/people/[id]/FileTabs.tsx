@@ -164,7 +164,7 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
           <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider muted">Notes</h3>
           {notesFacts.length > 0 && <FactGrid facts={notesFacts} />}
           <DealNotes key={file.id + file.notes} fileId={file.id} notes={file.notes} notesAt={file.notesAt} notesBy={file.notesBy} />
-          <SocialPosts fileId={file.id} kind={file.kind} posts={file.social} />
+          <SocialPosts fileId={file.id} kind={file.kind} posts={file.social} address={file.address} price={file.price} />
         </section>
         {people.length > 0 && (
           <section aria-label="People" className="rounded-xl border border-misty bg-paper px-3.5 py-2.5">

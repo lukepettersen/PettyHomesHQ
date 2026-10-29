@@ -88,6 +88,8 @@ function Editor({ t: initial, statuses, team, roles, tags, stages, today, templa
               <optgroup label="Purchase agreements">
                 <option value="pa:buyer">When a buyer-side purchase agreement is added</option>
                 <option value="pa:seller">When a seller-side purchase agreement is added</option>
+                <option value="pending:buyer">When a buyer-side contract goes pending</option>
+                <option value="pending:seller">When a seller-side contract goes pending</option>
                 <option value="closed:buyer">When a buyer-side contract closes</option>
                 <option value="closed:seller">When a seller-side contract closes</option>
               </optgroup>
