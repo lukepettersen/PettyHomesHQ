@@ -291,7 +291,7 @@ Principles:
 - **Social post descriptions** *(owner request 2026-10-29)*: under Deal notes, buyer deals have an **Under Contract
   post** box; seller deals have **Coming Soon/Active post** and **Under Contract post**. Each holds the caption Alyssa
   posts. A saved post shows "Needs your edit" (clay) until someone ticks "Wording is right: ready to post" or clicks
-  **Mark ready**, then "Ready to post"; **Copy** puts the text on the clipboard. Shows who changed it and when. No task
+  **Mark ready**, then "Ready to post"; **Copy** puts the text on the clipboard. Each post shows two lines; click it (or Show all) to read the whole caption. Shows who changed it and when. No task
   is created (the checklists already have the posting steps). The Under Contract box shows once the deal has a
   purchase agreement (or a saved Under Contract post); the Coming Soon/Active box from the first "Coming soon…" seller
   stage on (e.g. Coming Soon Prep). An empty box starts from Luke's starter caption
