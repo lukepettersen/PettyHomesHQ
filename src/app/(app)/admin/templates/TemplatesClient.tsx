@@ -59,7 +59,11 @@ function Editor({ t: initial, statuses, team, roles, tags, stages, today, templa
   const movePhase = (i: number, d: number) => { const n = [...t.phases]; [n[i], n[i + d]] = [n[i + d], n[i]]; update({ ...t, phases: n }); };
   const moveStep = (i: number, si: number, d: number) => { const n = [...t.phases[i].steps]; [n[si], n[si + d]] = [n[si + d], n[si]]; setPhase(i, { steps: n }); };
   const trigStatus = t.trigger?.startsWith("status:") ? statuses.find((s) => s.id === t.trigger!.slice(7)) : undefined;
-  const advanceOptions = trigStatus ? statuses.filter((s) => s.kind === trigStatus.kind && s.id !== trigStatus.id) : [];
+  // "When done: move deal to…": the stages of the deal this checklist belongs to. Consult checklists can move the buyer
+  // (or seller) deal too (owner request 2026-10-29); "either consult" offers both, labelled.
+  const consultKinds = t.trigger === "buyerconsult" ? ["buyer"] : t.trigger === "sellerconsult" ? ["listing"] : t.trigger === "anyconsult" ? ["buyer", "listing"] : [];
+  const advanceOptions = trigStatus ? statuses.filter((s) => s.kind === trigStatus.kind && s.id !== trigStatus.id)
+    : statuses.filter((s) => consultKinds.includes(s.kind)).map((s) => (consultKinds.length > 1 ? { ...s, name: `${s.kind === "buyer" ? "buyer" : "seller"}: ${s.name}` } : s));
   const twins = t.trigger ? templates.filter((x) => x.id !== t.id && x.trigger === t.trigger) : [];
   const steps = t.phases.reduce((n, ph) => n + ph.steps.length, 0);
   const preview = expand(t, { start: today }, {});

@@ -441,6 +441,9 @@ scrolls with it until its last card is on screen, then stays put while the middl
   defect, HOA, financing, year built, written statement…) flips a step's condition, open steps that no longer apply
   go to Trash (automatic sends turned off) and steps that now apply are added. Done steps stay. **when a phone call is booked**; **when a
   Buyer consult is booked**, **a Seller consult**, or **either one**; or none.
+  Consult checklists can use **When done: move deal to…** too (buyer stages for a buyer consult, seller stages for a
+  seller consult, both for either; owner request 2026-10-29). A "When done" move also happens when the step is checked
+  off by an automatic send or a scheduled text/email, not only by hand.
   Booking a consult again (after deleting or moving on from one) restarts that consult checklist's steps timed from the
   consult that were already done or deleted, dated from the new consult; open ones just move to it, and steps timed
   from the start date don't repeat (owner request 2026-10-29).

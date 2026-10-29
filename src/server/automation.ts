@@ -212,11 +212,16 @@ export async function restartConsultSteps(tx: Tx, trigger: "buyerconsult" | "sel
 /** A checklist step marked "When done: move deal to…" moves the file once it's done (SPEC.md §7.1), whether it was
  *  checked off by hand or sent by itself (owner 2026-10-29). Returns the stage it moved to, if any. */
 export async function advanceAfterDone(taskId: string, userId: string): Promise<string | null> {
-  const t = await db.task.findUnique({ where: { id: taskId }, select: { title: true, fileId: true, advanceStatusId: true, completedAt: true } });
-  if (!t?.completedAt || !t.advanceStatusId || !t.fileId) return null;
-  const file = await db.clientFile.findFirst({ where: { id: t.fileId, deletedAt: null, closedAt: null }, include: { contracts: { where: { state: "active", deletedAt: null }, select: { id: true } } } });
+  const t = await db.task.findUnique({ where: { id: taskId }, select: { title: true, fileId: true, personId: true, advanceStatusId: true, completedAt: true } });
+  if (!t?.completedAt || !t.advanceStatusId || (!t.fileId && !t.personId)) return null;
   const status = await db.pipelineStatus.findUnique({ where: { id: t.advanceStatusId } });
-  if (!file || !status || file.statusId === status.id || file.contracts.length || status.kind !== file.kind) return null;
+  if (!status) return null;
+  // A consult step made before their buyer/seller deal existed moves their open deal of that kind.
+  const file = await db.clientFile.findFirst({
+    where: { deletedAt: null, closedAt: null, ...(t.fileId ? { id: t.fileId } : { personId: t.personId!, kind: status.kind }) },
+    orderBy: { createdAt: "desc" }, include: { contracts: { where: { state: "active", deletedAt: null }, select: { id: true } } },
+  });
+  if (!file || file.statusId === status.id || file.contracts.length || status.kind !== file.kind) return null;
   await moveFile(file.id, status.id, userId);
   await logActivity(userId, "update", "clientFile", file.id, `Moved to ${status.name} when "${t.title}" was done`);
   return status.name;
