@@ -456,7 +456,8 @@ Principles:
   off everywhere.
 - **Done today** *(owner request 2026-10-28)*: at the bottom of Today, a folded "▸ Done today N" lists every task
   someone checked off since midnight Central (newest first) with the contact, who checked it off and the time. It
-  follows the Me / Everyone / teammate picker by who checked it off. Clicking the check reopens the task. Steps
+  follows the Me / Everyone / teammate picker: a person's list shows what they checked off and their own tasks someone
+  else checked off; it always shows (with "Nothing checked off yet today" when empty) and starts over at midnight. Clicking the check reopens the task. Steps
   closed automatically (a waived date, a deal that fell through) aren't listed.
 - **Assignment alerts** *(owner request 2026-10-23)*: when someone adds a task for a teammate (quick add with
   @name, the Create task pop-up, or adding while viewing their tasks) or changes a task's assignee to a teammate,

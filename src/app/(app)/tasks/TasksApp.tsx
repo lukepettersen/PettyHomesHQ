@@ -387,7 +387,7 @@ export function TasksApp(p: Props) {
 
         {arranging && <ArrangeLists lists={p.lists} notify={setToast} onClose={(saved) => { setArranging(false); if (saved) refresh(); }} />}
         {body()}
-        {view === "today" && <DoneToday rows={p.doneToday.filter((d) => (who === "everyone" || d.doneById === viewingId) && !Object.values(justDone).some((x) => x.realId === d.id))} team={p.team} onChanged={refresh} notify={setToast} />}
+        {view === "today" && <DoneToday rows={p.doneToday.filter((d) => (who === "everyone" || d.doneById === viewingId || d.assigneeId === viewingId) && !Object.values(justDone).some((x) => x.realId === d.id))} team={p.team} onChanged={refresh} notify={setToast} />}
         {view === "today" && rows.length === 0 && touches.length === 0 && empty("No tasks yet. Type one in the box above, or add one from a person's page.")}
         <p className="text-xs muted">Quick add understands <code>today</code>, <code>tomorrow</code>, a weekday, <code>next week</code>, <code>9am</code>, <code>every month</code>, <code>#list</code>, <code>@alyssa</code> and <code>re Name</code>. See <Link className="link" href="/people">People</Link> to add tasks for a person.</p>
       </main>
@@ -404,11 +404,11 @@ export function TasksApp(p: Props) {
   );
 }
 
-/** Done today (owner request 2026-10-28): what was checked off since midnight, folded; clicking the check reopens a task. */
+/** Done today (owner request 2026-10-28): what was checked off since midnight, folded; clicking the check reopens a task.
+ * For a teammate it lists what they checked off and what was theirs that someone else checked off. Always shown. */
 function DoneToday({ rows, team, onChanged, notify }: { rows: DoneRow[]; team: TeamMember[]; onChanged: () => void; notify: (m: string) => void }) {
   const [open, setOpen] = useState(false);
   const [busy, start] = useTransition();
-  if (!rows.length) return null;
   const name = (id: string | null) => team.find((m) => m.id === id)?.name.split(" ")[0] ?? "";
   const at = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { timeZone: "America/Chicago", hour: "numeric", minute: "2-digit" }).replace(" ", "").toLowerCase();
   return (
@@ -416,7 +416,8 @@ function DoneToday({ rows, team, onChanged, notify }: { rows: DoneRow[]; team: T
       <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-semibold">
         <span aria-hidden="true" className="text-xs muted">{open ? "▾" : "▸"}</span> Done today <span className="rounded-full bg-accent-soft px-2 text-xs text-accent">{rows.length}</span>
       </button>
-      {open && (
+      {open && !rows.length && <p className="border-t border-misty px-3 py-2 text-sm muted">Nothing checked off yet today.</p>}
+      {open && rows.length > 0 && (
         <ul className="border-t border-misty">
           {rows.map((t) => (
             <li key={t.id} className="flex items-center gap-2 border-t border-misty/60 px-3 py-1.5 text-sm first:border-0">
