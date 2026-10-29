@@ -195,8 +195,9 @@ Principles:
 - **Left:** contact info card, Details (stage, follow-up, assigned, source, mailing name),
   Tags, Important Dates. Each card has Edit → Save/Cancel. **One field at a time** *(owner request 2026-10-28, like
   FUB)*: click any Details value (stage, follow up, assigned to, source, referred by, mailing name, kids, type,
-  company) or the ✎ after a phone or email to change just that one in place; ✓ (or Enter) saves, ✕ (or Escape)
-  cancels. Edit still opens the whole card. The contact info card also has **Copy**
+  company) or the ✎ after a phone or email to change just that one in place, in one slim box with a small ✓ (or
+  Enter) to save and ✕ (or Escape) to cancel; one field is open at a time. Details has no whole-card Edit any more;
+  the contact info card keeps Edit for the name and adding numbers, emails and addresses. The contact info card also has **Copy**
   *(owner request 2026-10-22)*: copies the name, phones and emails (with their labels), one per line, to
   paste into a text or email. A small copy icon after each phone, email and address copies just that one
   *(owner request 2026-10-28)*. **Call · Text · Email** buttons under the name *(owner request 2026-10-28)*: Call rings the phone in

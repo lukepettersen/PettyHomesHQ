@@ -201,31 +201,10 @@ export function InfoCard(p: { id: string; name: string; addresses: AddressRow[];
 }
 
 export function DetailsCard(p: { id: string; options: Options; stageId: string | null; sourceId: string | null; assignedToId: string | null; followUpDays: number | null; mailingName: string; referredBy: string; partnerType: string | null; company: string; kids: string }) {
-  const e = useEdit();
   const o = p.options;
   const name = (list: { id: string; name: string }[], id: string | null) => list.find((x) => x.id === id)?.name;
-  if (e.editing) return (
-    <form className="card p-4" action={(f) => e.save(() => updateDetails({
-      id: p.id, stageId: String(f.get("stageId")), sourceId: String(f.get("sourceId")), assignedToId: String(f.get("assignedToId")),
-      followUpDays: f.get("followUpDays") ? Number(f.get("followUpDays")) : null, mailingName: String(f.get("mailingName")), referredBy: String(f.get("referredBy")),
-      partnerType: String(f.get("partnerType") ?? ""), company: String(f.get("company") ?? ""), kids: String(f.get("kids") ?? ""),
-    }))}>
-      <CardHead title="Details" editing onEdit={() => {}} />
-      <div className="flex flex-col gap-2.5">
-        <label className="label">Stage<select className="input" name="stageId" defaultValue={p.stageId ?? ""}><option value="">—</option>{o.stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-        <label className="label">Follow up<select className="input" name="followUpDays" defaultValue={p.followUpDays ?? ""}><option value="">Not set</option>{o.followUp.map((d) => <option key={d} value={d}>Every {d} days</option>)}</select></label>
-        <label className="label">Assigned to<select className="input" name="assignedToId" defaultValue={p.assignedToId ?? ""}><option value="">—</option>{o.team.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></label>
-        <label className="label">Source<select className="input" name="sourceId" defaultValue={p.sourceId ?? ""}><option value="">—</option>{o.sources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-        <label className="label">Referred by<input className="input" name="referredBy" defaultValue={p.referredBy} /></label>
-        <label className="label">Mailing name<input className="input" name="mailingName" defaultValue={p.mailingName} /></label>
-        <label className="label">Kids<input className="input" name="kids" defaultValue={p.kids} placeholder="First names, e.g. Mia, Leo" /></label>
-        <label className="label">Type<select className="input" name="partnerType" defaultValue={p.partnerType ?? ""}><option value="">Client / sphere (not a partner)</option>{PARTNER_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>
-        <label className="label">Company<input className="input" name="company" defaultValue={p.company} placeholder="e.g. Edina Title, RE/MAX Results" /></label>
-      </div>
-      <SaveRow pending={e.pending} error={e.error} onCancel={() => { e.setError(""); e.setEditing(false); }} />
-    </form>
-  );
-  // Click one value to change just it, ✓ saves, ✗ cancels (like FUB, owner request 2026-10-28). Edit still opens all.
+  // Click one value to change just it, ✓ saves, ✕ cancels (like FUB, owner request 2026-10-28).
+  const [openKey, setOpenKey] = useState<string | null>(null);
   const current = { stageId: p.stageId ?? "", sourceId: p.sourceId ?? "", assignedToId: p.assignedToId ?? "", followUpDays: p.followUpDays ? String(p.followUpDays) : "", mailingName: p.mailingName, referredBy: p.referredBy, partnerType: p.partnerType ?? "", company: p.company, kids: p.kids };
   type Key = keyof typeof current;
   const saveOne = (k: Key, value: string) => updateDetails({ id: p.id, ...current, [k]: value, followUpDays: (k === "followUpDays" ? value : current.followUpDays) ? Number(k === "followUpDays" ? value : current.followUpDays) : null });
@@ -237,14 +216,16 @@ export function DetailsCard(p: { id: string; options: Options; stageId: string |
     { k: "referredBy", label: "Referred by", shown: p.referredBy },
     { k: "mailingName", label: "Mailing name", shown: p.mailingName },
     { k: "kids", label: "Kids", shown: p.kids, placeholder: "First names, e.g. Mia, Leo" },
-    { k: "partnerType", label: "Type", shown: p.partnerType ? partnerLabel(p.partnerType) : null, options: PARTNER_TYPES.map(([k, l]) => [k, l]), show: !!p.partnerType },
+    { k: "partnerType", label: "Type", shown: p.partnerType ? partnerLabel(p.partnerType) : "Client / sphere", options: PARTNER_TYPES.map(([k, l]) => [k, l]) },
     { k: "company", label: "Company", shown: p.company, show: !!(p.partnerType || p.company) },
   ];
+  // No whole-card Edit any more (owner 2026-10-28): each value edits on its own, one open at a time.
   return (
     <div className="card p-4">
-      <CardHead title="Details" editing={false} onEdit={() => e.setEditing(true)} />
-      <dl className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-x-3 gap-y-1 text-sm">
-        {fields.filter((f) => f.show ?? true).map((f) => <InlineField key={f.k} label={f.label} shown={f.shown} value={current[f.k]} options={f.options} placeholder={f.placeholder} onSave={(v) => saveOne(f.k, v)} />)}
+      <h3 className="mb-2 font-bold">Details</h3>
+      <dl className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-x-3 gap-y-0.5 text-sm">
+        {fields.filter((f) => f.show ?? true).map((f) => <InlineField key={f.k} label={f.label} shown={f.shown} value={current[f.k]} options={f.options} placeholder={f.placeholder}
+          editing={openKey === f.k} onOpen={() => setOpenKey(f.k)} onClose={() => setOpenKey(null)} onSave={(v) => saveOne(f.k, v)} />)}
       </dl>
     </div>
   );
@@ -266,42 +247,45 @@ function InlineRow({ row, kind, save, children }: { row: Row; kind: "phone" | "e
   const keys = (x: React.KeyboardEvent) => { if (x.key === "Enter") done(); if (x.key === "Escape") cancel(); };
   return (
     <li className="flex flex-col gap-1">
-      <span className="flex items-center gap-1">
-        <input autoFocus aria-label={kind === "phone" ? "Phone" : "Email"} className="input min-w-0 flex-[2] py-1" value={v} inputMode={kind === "phone" ? "tel" : "email"} onChange={(x) => setV(x.target.value)} onKeyDown={keys} />
-        <input aria-label="Label" placeholder="Label" className="input min-w-0 flex-1 py-1" value={l} onChange={(x) => setL(x.target.value)} onKeyDown={keys} />
-        <button type="button" aria-label="Save" disabled={pending} onClick={done} className="grid h-7 w-7 flex-none place-items-center rounded-full bg-moss text-sm font-bold text-white hover:bg-accent">✓</button>
-        <button type="button" aria-label="Cancel" disabled={pending} onClick={cancel} className="grid h-7 w-7 flex-none place-items-center rounded-full bg-[#f9e1de] text-sm font-bold text-bad">✕</button>
+      <span className="flex items-center rounded-md border border-accent bg-white pr-1">
+        <input autoFocus aria-label={kind === "phone" ? "Phone" : "Email"} className="min-w-0 flex-[2] bg-transparent px-1.5 py-1 outline-none focus-visible:outline-none" style={{ outline: "none" }} value={v} inputMode={kind === "phone" ? "tel" : "email"} onChange={(x) => setV(x.target.value)} onKeyDown={keys} />
+        <input aria-label="Label" placeholder="Label" className="min-w-0 flex-1 border-l border-misty bg-transparent px-1.5 py-1 outline-none focus-visible:outline-none" style={{ outline: "none" }} value={l} onChange={(x) => setL(x.target.value)} onKeyDown={keys} />
+        <button type="button" aria-label="Save" title="Save" disabled={pending} onClick={done} className="grid h-6 w-6 flex-none place-items-center rounded text-base font-bold text-accent hover:bg-accent-soft">✓</button>
+        <button type="button" aria-label="Cancel" title="Cancel" disabled={pending} onClick={cancel} className="grid h-6 w-6 flex-none place-items-center rounded text-sm text-bad hover:bg-[#f9e1de]">✕</button>
       </span>
       {error && <span role="alert" className="text-xs text-bad">{error}</span>}
     </li>
   );
 }
 
-/** One Details value: click to change it in place; ✓ saves, ✗ (or Escape) cancels. */
-function InlineField({ label, shown, value, options, placeholder, onSave }: { label: string; shown: string | null | undefined; value: string; options?: [string, string][]; placeholder?: string; onSave: (v: string) => Promise<{ ok: boolean; error?: string }> }) {
+/** One Details value: click to change it in place; ✓ (Enter) saves, ✕ (Escape) cancels. Light look, owner 2026-10-28. */
+function InlineField({ label, shown, value, options, placeholder, editing, onOpen, onClose, onSave }: {
+  label: string; shown: string | null | undefined; value: string; options?: [string, string][]; placeholder?: string;
+  editing: boolean; onOpen: () => void; onClose: () => void; onSave: (v: string) => Promise<{ ok: boolean; error?: string }>;
+}) {
   const router = useRouter();
-  const [editing, setEditing] = useState(false);
   const [v, setV] = useState(value);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
-  const save = () => start(async () => { setError(""); const r = await onSave(v); if (!r.ok) { setError(r.error ?? "Couldn't save."); return; } setEditing(false); router.refresh(); });
-  const cancel = () => { setV(value); setError(""); setEditing(false); };
+  const save = () => start(async () => { setError(""); const r = await onSave(v); if (!r.ok) { setError(r.error ?? "Couldn't save."); return; } onClose(); router.refresh(); });
+  const cancel = () => { setV(value); setError(""); onClose(); };
+  const keys = (x: React.KeyboardEvent) => { if (x.key === "Enter") { x.preventDefault(); save(); } if (x.key === "Escape") cancel(); };
   return (
     <>
       <dt className="muted">{label}</dt>
       {editing ? (
-        <dd className="flex flex-col gap-1">
-          <span className="flex items-center gap-1">
+        <dd className="flex flex-col">
+          <span className="flex items-center rounded-md border border-accent bg-white pr-1 focus-within:ring-2 focus-within:ring-accent-soft">
             {options
-              ? <select autoFocus aria-label={label} className="input min-w-0 flex-1 py-1" value={v} onChange={(x) => setV(x.target.value)} onKeyDown={(x) => { if (x.key === "Escape") cancel(); }}><option value="">Not set</option>{options.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
-              : <input autoFocus aria-label={label} className="input min-w-0 flex-1 py-1" value={v} placeholder={placeholder} onChange={(x) => setV(x.target.value)} onKeyDown={(x) => { if (x.key === "Enter") save(); if (x.key === "Escape") cancel(); }} />}
-            <button type="button" aria-label={`Save ${label}`} disabled={pending} onClick={save} className="grid h-7 w-7 flex-none place-items-center rounded-full bg-moss text-sm font-bold text-white hover:bg-accent">✓</button>
-            <button type="button" aria-label="Cancel" disabled={pending} onClick={cancel} className="grid h-7 w-7 flex-none place-items-center rounded-full bg-[#f9e1de] text-sm font-bold text-bad hover:bg-[#f3cfc9]">✕</button>
+              ? <select autoFocus aria-label={label} className="min-w-0 flex-1 bg-transparent px-1.5 py-1 outline-none focus-visible:outline-none" style={{ outline: "none" }} value={v} onChange={(x) => setV(x.target.value)} onKeyDown={keys}><option value="">Not set</option>{options.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+              : <input autoFocus aria-label={label} className="min-w-0 flex-1 bg-transparent px-1.5 py-1 outline-none focus-visible:outline-none" style={{ outline: "none" }} value={v} placeholder={placeholder} onChange={(x) => setV(x.target.value)} onKeyDown={keys} />}
+            <button type="button" aria-label={`Save ${label}`} title="Save" disabled={pending} onClick={save} className="grid h-6 w-6 flex-none place-items-center rounded text-base font-bold text-accent hover:bg-accent-soft">✓</button>
+            <button type="button" aria-label="Cancel" title="Cancel" disabled={pending} onClick={cancel} className="grid h-6 w-6 flex-none place-items-center rounded text-sm text-bad hover:bg-[#f9e1de]">✕</button>
           </span>
           {error && <span role="alert" className="text-xs text-bad">{error}</span>}
         </dd>
       ) : (
-        <dd><button type="button" title={`Change ${label.toLowerCase()}`} onClick={() => { setV(value); setEditing(true); }} className="-mx-1.5 w-[calc(100%+12px)] rounded px-1.5 py-0.5 text-left hover:bg-sunken">{shown || <span className="muted">Not set</span>}</button></dd>
+        <dd><button type="button" title={`Change ${label.toLowerCase()}`} onClick={() => { setV(value); onOpen(); }} className="-mx-1.5 w-[calc(100%+12px)] rounded px-1.5 py-1 text-left hover:bg-sunken">{shown || <span className="muted">Not set</span>}</button></dd>
       )}
     </>
   );
