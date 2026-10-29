@@ -1,6 +1,7 @@
 "use client";
 
 import { CallLink } from "@/components/CallCenter";
+import { useDropdown } from "@/components/useDropdown";
 import { requestCompose } from "./compose";
 import { AddressInput } from "@/components/AddressInput";
 import type { AddressRow } from "@/lib/addresses";
@@ -111,6 +112,26 @@ function Icon({ d }: { d: string }) {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>;
 }
 
+/** Two or more numbers: Call asks which one (owner request 2026-10-28), by the phone's label (Emma, Vy…). */
+function CallPicker({ phones, name }: { phones: Row[]; name: string }) {
+  const { open, setOpen, ref } = useDropdown<HTMLSpanElement>();
+  return (
+    <span ref={ref} className="relative">
+      <button type="button" className="btn inline-flex w-full items-center justify-center gap-1.5 px-0" aria-expanded={open} onClick={() => setOpen(!open)}><Icon d={PHONE} />Call ▾</button>
+      {open && (
+        <span role="menu" className="absolute left-0 top-full z-30 mt-1 flex w-56 flex-col rounded-lg border border-misty bg-white p-1 shadow-xl">
+          {phones.map((x) => (
+            <CallLink key={x.value} className="flex justify-between gap-2 rounded px-2.5 py-1.5 text-left text-sm hover:bg-sunken" number={x.value} name={x.label && !/^(mobile|cell|home|work|other|main|phone)$/i.test(x.label) ? x.label : name}>
+              {/* Names, not numbers (owner 2026-10-28); the number only when the label doesn't say whose it is. */}
+              <b title={x.value}>{x.label && !/^(mobile|cell|home|work|other|main|phone)$/i.test(x.label) ? x.label : `${name} (${x.label || "phone"}) · ${x.value}`}</b>
+            </CallLink>
+          ))}
+        </span>
+      )}
+    </span>
+  );
+}
+
 /** Copies one phone, email or address (owner request 2026-10-28). */
 function CopyOne({ value }: { value: string }) {
   const [done, setDone] = useState("");
@@ -160,7 +181,8 @@ export function InfoCard(p: { id: string; name: string; addresses: AddressRow[];
       </div>
       {/* Call / Text / Email under the name (owner request 2026-10-28): Text and Email open the Timeline composer. */}
       <div className="mt-3 grid grid-cols-3 gap-1.5">
-        {p.phones[0] ? <CallLink className="btn inline-flex items-center justify-center gap-1.5 px-0" number={p.phones[0].value} name={p.name}><Icon d={PHONE} />Call</CallLink> : <button type="button" className="btn inline-flex items-center justify-center gap-1.5 px-0" disabled title="No phone on file"><Icon d={PHONE} />Call</button>}
+        {p.phones.length > 1 ? <CallPicker phones={p.phones} name={p.name} />
+          : p.phones[0] ? <CallLink className="btn inline-flex items-center justify-center gap-1.5 px-0" number={p.phones[0].value} name={p.name}><Icon d={PHONE} />Call</CallLink> : <button type="button" className="btn inline-flex items-center justify-center gap-1.5 px-0" disabled title="No phone on file"><Icon d={PHONE} />Call</button>}
         <button type="button" className="btn inline-flex items-center justify-center gap-1.5 px-0" disabled={!p.phones.length} title={p.phones.length ? undefined : "No phone on file"} onClick={() => requestCompose("send")}><Icon d={CHAT} />Text</button>
         <button type="button" className="btn inline-flex items-center justify-center gap-1.5 px-0" disabled={!p.emails.length} title={p.emails.length ? undefined : "No email on file"} onClick={() => requestCompose("email")}><Icon d={MAIL} />Email</button>
       </div>
