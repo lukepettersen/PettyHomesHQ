@@ -52,7 +52,7 @@ export async function submitOffer(input: z.input<typeof submitSchema>) {
     if (!file) {
       // No buyer deal yet: start one, tagged Buyer, at Submitting offers (or the first buyer status).
       const status = offerStatus ?? statuses[0];
-      if (!status) throw new UserError("Add buyer statuses in Admin → Client statuses first.");
+      if (!status) throw new UserError("Add buyer statuses in Admin → Pipeline stages first.");
       const created = await db.$transaction(async (tx) => {
         const f = await tx.clientFile.create({ data: { personId: person.id, kind: "buyer", statusId: status.id, info: {}, createdById: user.id } });
         const tag = await tx.tag.upsert({ where: { name: "Buyer" }, update: {}, create: { name: "Buyer" } });

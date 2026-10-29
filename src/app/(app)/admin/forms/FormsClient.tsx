@@ -16,10 +16,10 @@ export function FormsClient({ forms }: { forms: Record<Side, PaSection[]> }) {
       <div role="tablist" aria-label="Form" className="mb-3 flex gap-1 border-b border-misty">
         {(["buyer", "seller"] as const).map((s) => (
           <button key={s} role="tab" type="button" aria-selected={side === s} onClick={() => setSide(s)}
-            className={`-mb-px border-b-[3px] px-3 py-2 ${side === s ? "border-coral font-semibold" : "border-transparent muted"}`}>{s === "buyer" ? "Buyer side" : "Seller side"}</button>
+            className={`-mb-px border-b-[3px] px-3 py-2 ${side === s ? "border-coral font-semibold" : "border-transparent muted"}`}>{s === "buyer" ? "Buyer" : "Seller"}</button>
         ))}
       </div>
-      <FormEditor key={side} initial={forms[side]} locked={LOCKED_KEYS} automation={AUTOMATION_KEYS} stepLabels types={PA_FIELD_TYPES}
+      <FormEditor key={side} initial={forms[side]} locked={LOCKED_KEYS} automation={AUTOMATION_KEYS} stepLabels types={PA_FIELD_TYPES} copyFrom={side === "seller" ? { label: "Buyer", sections: forms.buyer } : undefined}
         onSave={(sections) => saveForm({ side, sections })} />
     </>
   );
@@ -28,14 +28,17 @@ export function FormsClient({ forms }: { forms: Record<Side, PaSection[]> }) {
 type Section = PaSection & { statuses?: string[] };
 
 /** Shared by the purchase agreement and buyer/listing forms. With `statuses`, each section picks the statuses it shows at. */
-export function FormEditor({ initial, onSave, locked, automation, statuses, stepLabels, types = FIELD_TYPES }: {
+export function FormEditor({ initial, onSave, locked, automation, statuses, stepLabels, types = FIELD_TYPES, copyFrom }: {
   initial: Section[]; onSave: (sections: Section[]) => Promise<{ ok: true } | { ok: false; error: string }>;
   locked: string[]; automation: string[]; statuses?: { id: string; name: string }[]; stepLabels?: boolean; types?: [FieldType, string][];
+  /** "Copy from Buyer" on the seller form (owner request 2026-10-29): replaces these questions with a copy to edit. */
+  copyFrom?: { label: string; sections: Section[] };
 }) {
   const LOCKED_KEYS = locked, AUTOMATION_KEYS = automation;
   const router = useRouter();
   const [secs, setSecs] = useState<Section[]>(initial);
   const [error, setError] = useState("");
+  const [copyConfirm, setCopyConfirm] = useState(false);
   const [pending, start] = useTransition();
   const dirty = JSON.stringify(secs) !== JSON.stringify(initial);
   const conds = showIfChoices(secs);
@@ -50,6 +53,15 @@ export function FormEditor({ initial, onSave, locked, automation, statuses, step
 
   return (
     <div className="flex flex-col gap-4">
+      {copyFrom && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-misty px-3 py-2 text-sm">
+          <span className="muted">Start from the {copyFrom.label.toLowerCase()} form: copies its sections and questions here for you to edit. Nothing changes until you save.</span>
+          <button type="button" className="btn" onBlur={() => setCopyConfirm(false)} onClick={() => {
+            if (!copyConfirm) { setCopyConfirm(true); return; }
+            setSecs(JSON.parse(JSON.stringify(copyFrom.sections))); setCopyConfirm(false); setError("");
+          }}>{copyConfirm ? "Click again to replace these questions" : `Copy from ${copyFrom.label}`}</button>
+        </div>
+      )}
       {secs.map((s, i) => (
         <section key={s.id} className="card">
           <div className="flex flex-wrap items-center gap-2 border-b border-misty px-4 py-3">

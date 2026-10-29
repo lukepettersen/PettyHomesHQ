@@ -164,7 +164,7 @@ export async function saveSocialPost(input: z.input<typeof socialSchema>) {
   });
 }
 
-// ---------- Edit stages (Pipeline board and Admin → Client statuses) ----------
+// ---------- Edit stages (Pipeline board and Admin → Pipeline stages) ----------
 const UNTIL = ["inspection", "hoaRescission", "writtenStatement", "closing"] as const;
 const stagesSchema = z.object({
   kind: z.enum(["buyer", "listing", "uc"]),
@@ -211,7 +211,7 @@ export async function saveStages(input: z.input<typeof stagesSchema>) {
   });
 }
 
-// ---------- Admin → Buyer and seller forms ----------
+// ---------- Admin → Deal questions ----------
 const fileFieldSchema = z.object({
   key: z.string().regex(/^[A-Za-z][\w]{0,40}$/), label: z.string().trim().max(80),
   type: z.enum(["text", "money", "number", "pct", "date", "date-na", "datetime", "yesno", "choice", "moneypct"]),

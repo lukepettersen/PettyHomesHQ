@@ -5,7 +5,7 @@ import { Logo } from "@/components/Logo";
 import { SignInButton } from "./SignInButton";
 
 const ERRORS: Record<string, string> = {
-  AccessDenied: "That Google account isn't on the Petty Homes team. Sign in with your @pettyhomes.com account, or ask Luke to add you in Admin → Users & roles.",
+  AccessDenied: "That Google account isn't on the Petty Homes team. Sign in with your @pettyhomes.com account, or ask Luke to add you in Admin → Users & permissions.",
   Default: "Sign-in didn't work. Try again.",
 };
 

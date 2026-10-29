@@ -15,7 +15,7 @@ export function Checklist({ title, tasks, today, team, personId, hideEmpty }: { 
   const [error, setError] = useState("");
   const [drafting, setDrafting] = useState<string | null>(null); // email/text step whose template is open
   const [, start] = useTransition();
-  if (!tasks.length) return hideEmpty ? null : <p className="mt-3 text-sm muted">No checklist for this yet. Templates for it can be added in Admin → Task templates.</p>;
+  if (!tasks.length) return hideEmpty ? null : <p className="mt-3 text-sm muted">No checklist for this yet. Templates for it can be added in Admin → Checklists.</p>;
   const done = tasks.filter((t) => t.done).length;
   // Soonest due first, finished sections at the bottom (owner request 2026-10-26).
   const sections = checklistOrder(tasks.map((t) => ({ ...t, phase: t.step?.phase ?? "Steps" })));

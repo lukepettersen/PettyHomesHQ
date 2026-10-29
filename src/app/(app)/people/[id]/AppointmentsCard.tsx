@@ -142,7 +142,7 @@ function BookModal({ type, types = BUILTIN_TYPES, personId, personName, today, p
           })}
         </fieldset>
         <p className="text-xs muted">{calendarConnected ? "Adds it to Google Calendar and sends the invites." : "Saved in HQ only. Connect Google Calendar in Admin → Integrations to add appointments to the calendar."}{calendarConnected && !hasEmail && ` There's no email on file for ${client}, so only the team gets the invite.`}</p>
-        {type === "call" && !edit && <p className="text-xs muted">{starts.length ? `Starts ${starts.map((t) => `"${t.name}"`).join(" + ")}: ${steps} tasks timed from today and the call.` : "No template starts when a call is booked. Add one in Admin → Task templates."}</p>}
+        {type === "call" && !edit && <p className="text-xs muted">{starts.length ? `Starts ${starts.map((t) => `"${t.name}"`).join(" + ")}: ${steps} tasks timed from today and the call.` : "No template starts when a call is booked. Add one in Admin → Checklists."}</p>}
         {(type === "buyer" || type === "seller") && !edit && starts.length > 0 && <p className="text-xs muted">Starts {starts.map((t) => `"${t.name}"`).join(" + ")}: {steps} task{steps === 1 ? "" : "s"} timed from today and the consult.</p>}
         {offerFile && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={thenFile} onChange={(e) => setThenFile(e.target.checked)} /> Also start a {fileKind === "buyer" ? "buyer" : "listing"} at Consult scheduled (opens next)</label>}
         {error && <p role="alert" className="text-sm text-bad">{error}</p>}

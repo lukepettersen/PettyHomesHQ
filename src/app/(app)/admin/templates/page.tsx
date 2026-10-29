@@ -19,7 +19,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
   for (const sec of [...(await loadForm("buyer")), ...(await loadForm("seller"))]) if (sec.people && !roles.has(sec.id)) roles.set(sec.id, sec.name);
   return (
     <>
-      <h1 className="text-2xl font-extrabold">Task templates</h1>
+      <h1 className="text-2xl font-extrabold">Checklists</h1>
       <p className="mb-4 mt-1 text-sm muted">
         A template is a list of steps that become tasks. It starts when a deal enters a stage, when a purchase agreement is added or closes, when a phone call is booked, or when you apply it from a contact.
         Due dates count from the start date or a contract date and move when that date changes. If the date isn&apos;t set yet, the task waits for it.

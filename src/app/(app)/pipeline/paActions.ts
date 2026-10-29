@@ -206,7 +206,7 @@ export async function fellThrough(paId: string) {
   });
 }
 
-// ---------- Admin → Purchase agreement forms ----------
+// ---------- Admin → Deal questions → Purchase agreement ----------
 const fieldSchema = z.object({
   key: z.string().regex(/^[A-Za-z][\w]{0,40}$/), label: z.string().trim().max(80),
   type: z.enum(["text", "money", "number", "pct", "date", "date-na", "datetime", "yesno", "choice", "client", "moneypct"]),

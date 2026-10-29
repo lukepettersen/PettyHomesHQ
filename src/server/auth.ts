@@ -9,7 +9,7 @@ import { allowedDomain, isAllowedGoogleAccount } from "@/server/access";
 import { hasPermission, type Permission } from "@/server/permissions";
 
 // Sign-in rules (SPEC.md §4): Google only, @pettyhomes.com only, and the person must be on the
-// team list (invited or active) in Admin → Users & roles. Everyone else is turned away.
+// team list (invited or active) in Admin → Users & permissions. Everyone else is turned away.
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   // The cookie can last up to 400 days; signInStillGood() ends sign-ins that weren't "kept" after 12 hours.

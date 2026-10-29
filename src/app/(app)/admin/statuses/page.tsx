@@ -15,7 +15,7 @@ export default async function Page() {
   const count = Object.fromEntries(counts.map((c) => [c.statusId ?? "", c._count]));
   return (
     <>
-      <h1 className="text-2xl font-extrabold">Client statuses</h1>
+      <h1 className="text-2xl font-extrabold">Pipeline stages</h1>
       <p className="mb-4 mt-1 text-sm muted">The stages on the Pipeline board. Renaming a stage moves everyone in it; a stage can&apos;t be deleted while clients are in it.</p>
       <StatusesClient title="Buyer Pipeline" kind="buyer" rows={statuses.buyer} counts={count} />
       <StatusesClient title="Seller Pipeline" kind="listing" rows={statuses.listing} counts={count} />

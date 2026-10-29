@@ -70,7 +70,7 @@ export async function sendDueAutoTasks(now = new Date()): Promise<number> {
 
       // The message: the step's template, filled in for this person and deal at send time.
       const filled = await autoMessage(t, su);
-      if (!filled) throw new UserError("No message template is picked for this step (Admin → Task templates).");
+      if (!filled) throw new UserError("No message template is picked for this step (Admin → Checklists).");
       const { body, subject } = filled;
       if (body.missing.length || (t.kind === "email" && subject.missing.length)) throw new UserError("Some details the template needs aren't filled in yet, so it wasn't sent. Send it by hand from the step.");
 

@@ -90,7 +90,7 @@ async function loadAutoSteps(where: { personId?: string; createdById?: string },
     const su = await autoSender(t);
     const msg = su ? await autoMessage(t, su) : null;
     const missing = msg ? [...new Set([...msg.body.missing, ...(t.kind === "email" ? msg.subject.missing : [])])].map(msg.label) : [];
-    const preview = !msg ? "No message template is picked for this step yet (Admin → Task templates)."
+    const preview = !msg ? "No message template is picked for this step yet (Admin → Checklists)."
       : `${t.kind === "email" ? `Subject: ${msg.subject.text}\n\n` : ""}${msg.body.text}${missing.length ? `\n\n⚠️ Not filled in yet: ${missing.join(", ")}. It won't send until they are.` : ""}`;
     return [{
       id: `task:${t.id}`, at: at?.getTime() ?? Infinity, when: at ? scheduleLabel(at) : "No date yet",

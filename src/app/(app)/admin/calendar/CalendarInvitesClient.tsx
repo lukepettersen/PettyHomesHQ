@@ -98,7 +98,7 @@ export function CalendarInvitesClient({ rules: initial, options, fields, connect
       })}
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" className="btn" onClick={add}>+ Add calendar invite</button>
-        <span className="text-xs muted">Need a date that isn&apos;t listed (like sewer scope or earnest money due)? Add it as a Date or Date and time question in Admin → Purchase agreement forms, and it shows up here.</span>
+        <span className="text-xs muted">Need a date that isn&apos;t listed (like sewer scope or earnest money due)? Add it as a Date or Date and time question in Admin → Deal questions → Purchase agreement, and it shows up here.</span>
       </div>
       {connected && !dirty && (
         <div className="card flex flex-wrap items-center gap-3 p-4 text-sm">

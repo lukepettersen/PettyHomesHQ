@@ -52,7 +52,7 @@ export function StageEditor({ kind, rows: initial, counts, onDone }: { kind: "bu
           onClick={() => setRows([...rows, { key: `new${Date.now()}`, id: null, name: "New stage", untilDate: uc ? "closing" : null }])}>+ Add stage</button>
       </div>
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <span className="mr-auto text-xs muted">{uc ? "Each column holds a contract until its date is met or waived, then it moves right; columns whose date doesn't apply are skipped. " : "Renaming moves everyone in that stage. "}Changes also show in Admin → Client statuses.</span>
+        <span className="mr-auto text-xs muted">{uc ? "Each column holds a contract until its date is met or waived, then it moves right; columns whose date doesn't apply are skipped. " : "Renaming moves everyone in that stage. "}Changes also show in Admin → Pipeline stages.</span>
         {error && <span role="alert" className="text-sm text-bad">{error}</span>}
         <button type="button" className="btn" disabled={pending} onClick={onDone}>Cancel</button>
         <button type="button" className="btn btn-primary" disabled={pending} onClick={save}>Save stages</button>
