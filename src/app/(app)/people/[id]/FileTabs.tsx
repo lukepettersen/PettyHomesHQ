@@ -229,6 +229,7 @@ function Scheduled({ rows }: { rows: ScheduledRow[] }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [busy, start] = useTransition();
+  const [full, setFull] = useState<string[]>([]); // texts opened to read in full (owner request 2026-10-28)
   if (!rows.length) return null;
   return (
     <section aria-label="Scheduled texts" className="card mt-3 px-4 py-3">
@@ -238,7 +239,8 @@ function Scheduled({ rows }: { rows: ScheduledRow[] }) {
           <li key={x.id} className="flex flex-wrap items-start justify-between gap-2 border-t border-misty/60 py-1.5 text-sm first:border-0">
             <span className="min-w-0 flex-1">
               <b>{x.status === "failed" ? "Not sent" : x.when}</b> <span className="muted">to {x.to} · by {x.by}</span>
-              <span className="block truncate">{x.body}</span>
+              <button type="button" aria-expanded={full.includes(x.id)} title={full.includes(x.id) ? "Show less" : "Show the whole text"} onClick={() => setFull(full.includes(x.id) ? full.filter((y) => y !== x.id) : [...full, x.id])}
+                className={`block w-full text-left hover:text-accent ${full.includes(x.id) ? "whitespace-pre-wrap break-words" : "truncate"}`}>{x.body}</button>
               {x.error && <span className="block text-xs text-bad">{x.when}: {x.error}</span>}
             </span>
             {x.status === "pending" && x.mine && <button type="button" className="text-xs font-semibold text-bad hover:underline" disabled={busy}

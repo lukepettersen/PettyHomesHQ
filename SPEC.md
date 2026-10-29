@@ -670,7 +670,7 @@ Principles:
   separate worker needed), to the same people it would have gone to then (two or more numbers = one group text when
   group texting is on). It goes on the timeline when it sends, counts toward the daily limit, and still respects
   STOP. A checklist step scheduled from Draft text is checked off when it sends. The contact page lists **Scheduled
-  texts** (when, to whom by name, by whom, the message) with **Cancel** for the person who scheduled it or anyone allowed to
+  texts** (when, to whom by name, by whom, the message shortened; click it to read the whole text) with **Cancel** for the person who scheduled it or anyone allowed to
   delete records; one that couldn't send shows "Not sent" with the reason for a week, and the scheduler gets a bell
   alert.
 - **Templates in group texts** *(owner request 2026-10-28)*: the Template box and "/name" work when replying to a

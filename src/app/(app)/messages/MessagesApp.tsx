@@ -342,6 +342,7 @@ function ReactButton({ id, out, mine, onDone }: { id: string; out: boolean; mine
 function ScheduledList({ rows, q, onChanged }: { rows: ScheduledRow[]; q: string; onChanged: () => void }) {
   const [error, setError] = useState("");
   const [busy, start] = useTransition();
+  const [full, setFull] = useState<string[]>([]);
   const shown = rows.filter((x) => !q.trim() || `${x.to} ${x.body}`.toLowerCase().includes(q.trim().toLowerCase()));
   if (!shown.length) return <p className="p-4 text-sm muted">{rows.length ? "No scheduled texts match." : "Nothing scheduled. Use Schedule next to Send to send a text later."}</p>;
   return (
@@ -352,7 +353,8 @@ function ScheduledList({ rows, q, onChanged }: { rows: ScheduledRow[]; q: string
             {x.personId ? <Link href={`/people/${x.personId}`} className="truncate font-semibold hover:underline">{x.to}</Link> : <b className="truncate">{x.to}</b>}
             <span className={`flex-none text-xs ${x.status === "failed" ? "font-semibold text-bad" : "muted"}`}>{x.status === "failed" ? "Not sent" : x.when}</span>
           </span>
-          <span className="line-clamp-2 muted">{x.body}</span>
+          <button type="button" aria-expanded={full.includes(x.id)} title={full.includes(x.id) ? "Show less" : "Show the whole text"} onClick={() => setFull(full.includes(x.id) ? full.filter((y) => y !== x.id) : [...full, x.id])}
+            className={`block w-full text-left muted hover:text-charcoal ${full.includes(x.id) ? "whitespace-pre-wrap break-words" : "line-clamp-2"}`}>{x.body}</button>
           {x.error && <span className="block text-xs text-bad">{x.when}: {x.error}</span>}
           {x.status === "pending" && x.mine && <button type="button" className="mt-0.5 text-xs font-semibold text-bad hover:underline" disabled={busy}
             onClick={() => start(async () => { setError(""); const r = await cancelScheduledText(x.id); if (!r.ok) setError(r.error); else onChanged(); })}>Cancel</button>}
