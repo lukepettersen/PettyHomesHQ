@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
-import { redateConsult, runTrigger } from "@/server/automation";
+import { redateConsult, restartConsultSteps, runTrigger } from "@/server/automation";
 import { syncAppointment } from "@/server/google";
 import { loadApptTypes } from "@/server/appointments";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
@@ -42,8 +42,10 @@ export async function bookAppointment(input: z.input<typeof bookSchema>) {
       if (v.type === "buyer" || v.type === "seller") {
         // Templates that start when a consultation is booked; linked to their active file when there is one.
         const file = await tx.clientFile.findFirst({ where: { personId: v.personId, kind: v.type === "buyer" ? "buyer" : "listing", deletedAt: null, closedAt: null }, orderBy: { createdAt: "desc" } });
-        tasks = await runTrigger(tx, `${v.type}consult`, { personId: v.personId, fileId: file?.id ?? null, start: isoFromDate(todayCentral()), dates: { consult: v.date }, times: { consult: v.start } }, user.id);
+        const ctx = { personId: v.personId, fileId: file?.id ?? null, start: isoFromDate(todayCentral()), dates: { consult: v.date }, times: { consult: v.start } };
+        tasks = await runTrigger(tx, `${v.type}consult`, ctx, user.id);
         await redateConsult(tx, v.personId);
+        tasks += await restartConsultSteps(tx, `${v.type}consult`, ctx, user.id);
       }
       return { id: a.id, tasks };
     });
@@ -78,7 +80,7 @@ export async function updateAppointment(input: z.input<typeof editSchema>) {
     // A moved call re-dates the open steps timed from it.
     if (moved && a.type === "call") {
       const open = await db.task.findMany({ where: { personId: a.personId, anchor: "phoneCall", completedAt: null, deletedAt: null } });
-      for (const t of open) await db.task.update({ where: { id: t.id }, data: { dueDate: new Date(dateFromIso(v.date).getTime() + (t.offsetDays ?? 0) * 86400000), ...(t.offsetMinutes != null ? { dueTime: v.start ? timeBefore(v.start, t.offsetMinutes) : null } : t.offsetDays === 0 && t.dueTime ? { dueTime: v.start } : {}) } });
+      for (const t of open) await db.task.update({ where: { id: t.id }, data: { dueDate: new Date(dateFromIso(v.date).getTime() + (t.offsetDays ?? 0) * 86400000), ...(t.offsetMinutes != null ? { dueTime: v.start ? timeBefore(v.start, t.offsetMinutes) : null } : t.offsetDays === 0 && t.dueTime && !t.autoSend ? { dueTime: v.start } : {}) } });
     }
     if (moved && (a.type === "buyer" || a.type === "seller")) await redateConsult(db, a.personId);
     await syncAppointment(a.id);

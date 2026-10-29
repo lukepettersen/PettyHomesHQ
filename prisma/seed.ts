@@ -84,6 +84,12 @@ async function main() {
     }
     await db.appSetting.create({ data: { key: "pa.notesUpgrade", value: true } });
   }
+  // One-time fix (2026-10-29): booking a consult used to overwrite an automatic step's picked send time with the
+  // consult's time. Once only, so a time someone later changes by hand stays.
+  if (!(await db.appSetting.findUnique({ where: { key: "tasks.autoTimeFix" } }))) {
+    await db.$executeRaw`UPDATE "Task" SET "dueTime" = "autoSend"->>'time' WHERE "autoState" = 'pending' AND "offsetMinutes" IS NULL AND "completedAt" IS NULL AND "autoSend"->>'time' IS NOT NULL AND "dueTime" IS DISTINCT FROM "autoSend"->>'time'`;
+    await db.appSetting.create({ data: { key: "tasks.autoTimeFix", value: true } });
+  }
   // Buyer and listing forms, once, shown at the same statuses as before they were editable.
   for (const kind of ["buyer", "listing"] as const) {
     if (!(await db.fileFormDef.findUnique({ where: { kind } }))) {

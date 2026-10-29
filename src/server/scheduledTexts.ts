@@ -8,7 +8,7 @@ import { formatPhone } from "@/lib/normalize";
 import { scheduleLabel } from "@/lib/scheduledText";
 import { toLabel } from "@/lib/autoSend";
 import type { AutoSend } from "@/lib/templates";
-import { autoSendAt } from "@/server/autoSend";
+import { autoMessage, autoSendAt, autoSender } from "@/server/autoSend";
 import { loadForm } from "@/server/pa";
 import { loadScheduledEmails } from "@/server/scheduledEmails";
 
@@ -79,18 +79,25 @@ async function loadAutoSteps(where: { personId?: string; createdById?: string },
   const team = await db.user.findMany({ select: { id: true, name: true } });
   const first = (id: string | null) => team.find((u) => u.id === id)?.name.split(" ")[0] ?? "";
   const roles = new Map([...(await loadForm("buyer")), ...(await loadForm("seller"))].filter((s) => s.people).map((s) => [`people:${s.id}`, s.name]));
-  return tasks.flatMap((t) => {
+  const rows = await Promise.all(tasks.map(async (t) => {
     const auto = t.autoSend as AutoSend | null;
     if (!auto || !Array.isArray(auto.to)) return [];
     const from = auto.from || first(t.assigneeId);
     if (where.createdById && from.toLowerCase() !== first(where.createdById).toLowerCase()) return [];
     const at = autoSendAt(t);
+    // What it will say, filled in now (owner request 2026-10-29); it's filled in again when it sends.
+    const su = await autoSender(t);
+    const msg = su ? await autoMessage(t, su) : null;
+    const missing = msg ? [...new Set([...msg.body.missing, ...(t.kind === "email" ? msg.subject.missing : [])])].map(msg.label) : [];
+    const preview = !msg ? "No message template is picked for this step yet (Admin → Task templates)."
+      : `${t.kind === "email" ? `Subject: ${msg.subject.text}\n\n` : ""}${msg.body.text}${missing.length ? `\n\n⚠️ Not filled in yet: ${missing.join(", ")}. It won't send until they are.` : ""}`;
     return [{
       id: `task:${t.id}`, at: at?.getTime() ?? Infinity, when: at ? scheduleLabel(at) : "No date yet",
       to: toLabel(auto.to, { client: t.person?.name ?? "Client", ...Object.fromEntries(roles) }),
-      body: `Automatic ${t.kind === "email" ? "email" : "text"} from the checklist: ${t.title}`, by: from,
+      body: `Automatic ${t.kind === "email" ? "email" : "text"} from the checklist: ${t.title}\n\n${preview}`, by: from,
       mine: canCancelAny || t.assigneeId === userId || first(userId).toLowerCase() === from.toLowerCase(),
       status: t.autoState === "failed" ? "failed" : "pending", error: t.autoError, personId: t.personId, auto: true,
     }];
-  });
+  }));
+  return rows.flat();
 }

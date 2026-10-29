@@ -184,7 +184,26 @@ export async function redateConsult(tx: Tx, personId: string) {
   for (const t of open) {
     const c = await consultFor(tx, personId, t.fileId);
     const due = c ? new Date(dateFromIso(c.date).getTime() + (t.offsetDays ?? 0) * 86400000) : null;
-    const time = !c?.time ? null : t.offsetMinutes != null ? timeBefore(c.time, t.offsetMinutes) : (t.offsetDays ?? 0) === 0 ? c.time : t.dueTime;
+    // An automatic step keeps the send time picked for it (unless it's timed in minutes from the consult).
+    const auto = t.autoSend && t.offsetMinutes == null ? (t.autoSend as { time?: string }).time ?? null : null;
+    const time = auto ?? (!c?.time ? null : t.offsetMinutes != null ? timeBefore(c.time, t.offsetMinutes) : (t.offsetDays ?? 0) === 0 ? c.time : t.dueTime);
     await tx.task.update({ where: { id: t.id }, data: { dueDate: due, dueTime: time } });
   }
+}
+
+/** A consult booked again (owner request 2026-10-29): steps timed from the consult that were already done (or
+ *  deleted) start over for the new one; steps timed from the start date don't repeat. Returns tasks made. */
+export async function restartConsultSteps(tx: Tx, trigger: "buyerconsult" | "sellerconsult", ctx: Ctx, userId: string): Promise<number> {
+  const templates = (await loadTemplates(tx)).filter((t) => t.trigger === trigger || t.trigger === "anyconsult");
+  let n = 0;
+  for (const t of templates) {
+    const mine = { templateId: t.id, personId: ctx.personId, ...(ctx.fileId ? { fileId: ctx.fileId } : {}) };
+    if (!(await tx.task.findFirst({ where: mine, select: { id: true } }))) continue; // never started here: runTrigger handles it
+    for (const ph of t.phases) for (const s of ph.steps) {
+      if (s.anchor !== "consult" || s.dir === "none") continue;
+      if (await tx.task.findFirst({ where: { ...mine, stepId: s.id, completedAt: null, deletedAt: null }, select: { id: true } })) continue;
+      n += await applyTemplate(tx, { ...t, phases: [{ ...ph, steps: [s] }] }, ctx, userId);
+    }
+  }
+  return n;
 }

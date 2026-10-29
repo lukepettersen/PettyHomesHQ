@@ -438,6 +438,9 @@ scrolls with it until its last card is on screen, then stays put while the middl
   defect, HOA, financing, year built, written statement…) flips a step's condition, open steps that no longer apply
   go to Trash (automatic sends turned off) and steps that now apply are added. Done steps stay. **when a phone call is booked**; **when a
   Buyer consult is booked**, **a Seller consult**, or **either one**; or none.
+  Booking a consult again (after deleting or moving on from one) restarts that consult checklist's steps timed from the
+  consult that were already done or deleted, dated from the new consult; open ones just move to it, and steps timed
+  from the start date don't repeat (owner request 2026-10-29).
 - Templates are listed, created, edited and deleted in Admin → Task templates, with a steps
   editor.
 - Seeded templates (from the FUB review, simplified): the five buyer status templates, five
@@ -720,7 +723,9 @@ scrolls with it until its last card is on screen, then stays put while the middl
   send (and the step stays open to do by hand, the sender and assignee get a bell alert) when no template is picked,
   a merge field the template needs is blank, or nobody has a number/email. Upcoming automatic steps show on the
   contact page's Scheduled list (and texts in the sender's Messages → Scheduled) with **Turn off**, which keeps the
-  step as a normal one to do by hand. The checklist marks them "Auto" (red "Auto · not sent" with the reason when
+  step as a normal one to do by hand; clicking one shows the message it will send, filled in for that person now (with
+  any details still missing). An automatic step always keeps its picked time, even when the consult or call it's timed
+  from moves. The checklist marks them "Auto" (red "Auto · not sent" with the reason when
   one failed).
 - **Templates in group texts** *(owner request 2026-10-28)*: the Template box and "/name" work when replying to a
   group and when starting one from + New message. Your own details fill in; client details (like a first name)

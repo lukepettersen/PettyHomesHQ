@@ -27,6 +27,26 @@ const asAuto = (v: unknown): AutoSend | null => (v && typeof v === "object" && A
 export const autoSendAt = (t: { dueDate: Date | null; dueTime: string | null; autoSend: unknown }) =>
   t.dueDate ? centralToUtc(isoFromDate(t.dueDate), t.dueTime ?? asAuto(t.autoSend)?.time ?? "09:00") : null;
 
+/** The step's message template filled in for its person and deal, as the sender (null when no template is picked).
+ *  Same lookup as Draft text/email: the template picked, else one named like the step's old typed name. */
+export async function autoMessage(t: { templateId: string | null; stepId: string | null; kind: string; personId: string | null; paId: string | null; fileId: string | null }, su: SessionUser) {
+  const tpl = t.templateId ? await db.taskTemplate.findUnique({ where: { id: t.templateId } }) : null;
+  const step = (Array.isArray(tpl?.phases) ? (tpl!.phases as unknown as Phase[]) : []).flatMap((p) => p.steps).find((s) => s.id === t.stepId);
+  const msg = step?.messageId ? await db.messageTemplate.findUnique({ where: { id: step.messageId } })
+    : step?.message ? await db.messageTemplate.findFirst({ where: { kind: t.kind, name: { equals: step.message, mode: "insensitive" } } }) : null;
+  if (!msg) return null;
+  const { values, label } = await mergeFor(su, t.personId, { paId: t.paId, fileId: t.fileId });
+  return { body: fill(msg.body, values), subject: fill(msg.subject, values), label };
+}
+
+/** The person an automatic step sends as: its "from" teammate, else whoever it's assigned to, else the owner. */
+export async function autoSender(t: { autoSend: unknown; assigneeId: string | null }): Promise<SessionUser | null> {
+  const auto = asAuto(t.autoSend);
+  const team = await db.user.findMany({ where: { status: { not: "DISABLED" } }, include: { role: true } });
+  const u = (auto?.from ? team.find((x) => x.name.split(/\s+/)[0].toLowerCase() === auto.from.toLowerCase()) : null) ?? team.find((x) => x.id === t.assigneeId) ?? team.find((x) => x.isOwner);
+  return u ? { id: u.id, name: u.name, email: u.email, role: u.role.name, permissions: u.role.permissions, isOwner: u.isOwner } : null;
+}
+
 export async function sendDueAutoTasks(now = new Date()): Promise<number> {
   const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
   const due = (await db.task.findMany({
@@ -48,14 +68,9 @@ export async function sendDueAutoTasks(now = new Date()): Promise<number> {
       const su: SessionUser = { id: sender.id, name: sender.name, email: sender.email, role: sender.role.name, permissions: sender.role.permissions, isOwner: sender.isOwner };
 
       // The message: the step's template, filled in for this person and deal at send time.
-      const tpl = t.templateId ? await db.taskTemplate.findUnique({ where: { id: t.templateId } }) : null;
-      const step = (Array.isArray(tpl?.phases) ? (tpl!.phases as unknown as Phase[]) : []).flatMap((p) => p.steps).find((s) => s.id === t.stepId);
-      // Same lookup as Draft text/email: the template picked, else one named like the step's old typed name.
-      const msg = step?.messageId ? await db.messageTemplate.findUnique({ where: { id: step.messageId } })
-        : step?.message ? await db.messageTemplate.findFirst({ where: { kind: t.kind, name: { equals: step.message, mode: "insensitive" } } }) : null;
-      if (!msg) throw new UserError("No message template is picked for this step (Admin → Task templates).");
-      const { values } = await mergeFor(su, t.personId, { paId: t.paId, fileId: t.fileId });
-      const body = fill(msg.body, values), subject = fill(msg.subject, values);
+      const filled = await autoMessage(t, su);
+      if (!filled) throw new UserError("No message template is picked for this step (Admin → Task templates).");
+      const { body, subject } = filled;
       if (body.missing.length || (t.kind === "email" && subject.missing.length)) throw new UserError("Some details the template needs aren't filled in yet, so it wasn't sent. Send it by hand from the step.");
 
       // Who it goes to.
