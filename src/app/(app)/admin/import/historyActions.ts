@@ -43,7 +43,7 @@ export async function importTemplates() {
     const rows = (await templateRows()).filter((r) => !r.skip);
     if (rows.length) await db.messageTemplate.createMany({ data: rows.map((r) => ({ kind: r.kind, name: r.name, folder: r.folder, subject: r.subject, body: r.body, fubKey: r.key })), skipDuplicates: true });
     await logActivity(user.id, "create", "import", "fub-templates", `Copied ${rows.length} templates from Follow Up Boss`);
-    revalidatePath("/admin/messages"); revalidatePath("/admin/import");
+    revalidatePath("/admin/text-templates"); revalidatePath("/admin/email-templates"); revalidatePath("/admin/import");
     return { added: rows.length };
   });
 }
@@ -52,7 +52,7 @@ export async function removeImportedTemplates() {
   return guarded("manageUsers", async (user) => {
     const r = await db.messageTemplate.deleteMany({ where: { fubKey: { not: null } } });
     await logActivity(user.id, "delete", "import", "fub-templates", `Removed ${r.count} templates copied from Follow Up Boss`);
-    revalidatePath("/admin/messages"); revalidatePath("/admin/import");
+    revalidatePath("/admin/text-templates"); revalidatePath("/admin/email-templates"); revalidatePath("/admin/import");
     return { removed: r.count };
   });
 }

@@ -13,17 +13,18 @@ export const dynamic = "force-dynamic";
 export default async function AdminHome() {
   const user = await requireUser();
   const can: Can = { settings: hasPermission(user.permissions, "manageUsers"), templates: hasPermission(user.permissions, "editTaskTemplates"), trash: hasPermission(user.permissions, "deleteRecords"), messages: hasPermission(user.permissions, "editMessageTemplates"), owner: user.isOwner };
-  const [google, texting, trash, templates, checklists, users] = await Promise.all([
+  const [google, texting, trash, texts, emails, checklists, users] = await Promise.all([
     calendarConnection(), textingEnabled(),
     trashCount(),
-    db.messageTemplate.count(), db.taskTemplate.count(),
+    db.messageTemplate.count({ where: { kind: "text" } }), db.messageTemplate.count({ where: { kind: "email" } }), db.taskTemplate.count(),
     db.user.findMany({ where: { status: { not: "DISABLED" } }, orderBy: [{ isOwner: "desc" }, { name: "asc" }], select: { name: true, role: { select: { name: true } } } }),
   ]);
   const ok = (on: boolean, yes = "Connected", no = "Not connected") => ({ text: on ? yes : no, tone: on ? "ok" : "warn" } as const);
   // What each page says on the right: a status or a count.
   const badge: Record<string, { text: string; tone: "ok" | "warn" | "n" }> = {
     "/admin/trash": { text: String(trash), tone: "n" },
-    "/admin/messages": { text: String(templates), tone: "n" },
+    "/admin/text-templates": { text: String(texts), tone: "n" },
+    "/admin/email-templates": { text: String(emails), tone: "n" },
     "/admin/templates": { text: String(checklists), tone: "n" },
   };
   const connections = [

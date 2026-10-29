@@ -12,7 +12,7 @@ import { FolderList } from "@/components/FolderList";
 type Kind = "email" | "text";
 export type Msg = { id: string | null; kind: Kind; name: string; folder: string; subject: string; body: string };
 
-export function MessagesClient({ templates, initialKind, initialId, fields }: { templates: Msg[]; initialKind: Kind; initialId: string | null; fields: MergeField[] }) {
+export function MessagesClient({ templates, initialKind, initialId, fields, fixedKind }: { templates: Msg[]; initialKind: Kind; initialId: string | null; fields: MergeField[]; fixedKind?: boolean }) {
   const router = useRouter();
   const [kind, setKind] = useState<Kind>(initialKind);
   const [selId, setSelId] = useState<string | null>(initialId ?? templates.find((t) => t.kind === initialKind)?.id ?? null);
@@ -24,16 +24,16 @@ export function MessagesClient({ templates, initialKind, initialId, fields }: { 
   const folders = [...new Set(list.map((t) => t.folder).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const sel = draftNew ?? templates.find((t) => t.id === selId && t.kind === kind) ?? null;
   const guard = (fn: () => void) => { if (dirty) { setMsg("Save or discard your changes first."); return; } setMsg(""); fn(); };
-  const url = (k: Kind, id: string | null) => window.history.replaceState(null, "", `/admin/messages?kind=${k}${id ? `&t=${id}` : ""}`);
+  const url = (k: Kind, id: string | null) => window.history.replaceState(null, "", `/admin/${k}-templates${id ? `?t=${id}` : ""}`);
 
   return (
     <>
-      <div role="tablist" aria-label="Template type" className="mb-3 flex gap-1 border-b border-misty">
+      {!fixedKind && <div role="tablist" aria-label="Template type" className="mb-3 flex gap-1 border-b border-misty">
         {(["email", "text"] as const).map((k) => (
           <button key={k} role="tab" type="button" aria-selected={kind === k} onClick={() => guard(() => { setKind(k); setDraftNew(null); setFolder(null); const first = templates.find((t) => t.kind === k)?.id ?? null; setSelId(first); url(k, first); })}
             className={`-mb-px border-b-[3px] px-3 py-2 ${kind === k ? "border-coral font-semibold" : "border-transparent muted"}`}>{k === "email" ? "Email templates" : "Text templates"} <span className="text-xs muted">{templates.filter((t) => t.kind === k).length}</span></button>
         ))}
-      </div>
+      </div>}
       {msg && <p role="alert" className="mb-2 text-sm text-bad">{msg}</p>}
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
         <FolderList key={kind} items={list.map((t) => ({ id: t.id!, name: t.name, folder: t.folder }))} selectedId={draftNew ? null : selId}

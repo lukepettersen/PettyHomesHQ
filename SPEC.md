@@ -849,7 +849,8 @@ scrolls with it until its last card is on screen, then stays put while the middl
 
 **Layout (owner-approved redesign 2026-10-29):** clicking Admin opens an **Admin home** page with six groups, each
 page listed with a one-line description: **Team** (Users & permissions, Activity, Trash), **Connections**
-(Integrations, with Google / Texting & calls / File storage status), **Texts & emails** (Templates, Calendar invites,
+(Integrations, with Google / Texting & calls / File storage status), **Texts & emails** (**Text templates** and
+**Email templates** as separate pages, each with its own folders, owner request 2026-10-29; Calendar invites,
 Appointment types), **Deals** (Pipeline stages, Checklists, Deal questions), **Contacts** (Stages, sources &
 follow-up, Tags, Custom fields, Date reminders), **Data & tools** (Import from Follow Up Boss, Tools menu). Counts show
 for Trash, templates and checklists. Inside a page the left menu has the same groups and "‹ Admin home". Plainer names:

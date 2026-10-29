@@ -15,7 +15,7 @@ export const PERMISSION_HELP: Record<keyof typeof PERMISSIONS, string> = {
   deleteRecords: "Move people, deals and tasks to Trash, and restore them",
   manageUsers: "This page, plus most Admin settings",
   editTaskTemplates: "Admin → Checklists (task templates and automatic texts/emails)",
-  editMessageTemplates: "Admin → Text & email templates",
+  editMessageTemplates: "Admin → Text templates and Email templates",
   exportData: "Download contacts as a spreadsheet (CSV)",
   sendTexts: "Text and call from their own HQ number",
 };

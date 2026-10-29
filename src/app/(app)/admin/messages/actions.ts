@@ -25,7 +25,7 @@ export async function saveMessageTemplate(input: z.input<typeof schema>) {
     const data = { kind: v.kind, name: v.name, folder: v.folder, subject: v.kind === "email" ? v.subject : "", body: v.body };
     const t = v.id ? await db.messageTemplate.update({ where: { id: v.id }, data }) : await db.messageTemplate.create({ data });
     await logActivity(user.id, v.id ? "update" : "create", "messageTemplate", t.id, `${v.id ? "Saved" : "Created"} ${v.kind} template "${t.name}"`);
-    revalidatePath("/admin/messages"); revalidatePath("/admin/templates");
+    revalidatePath("/admin/text-templates"); revalidatePath("/admin/email-templates"); revalidatePath("/admin/templates");
     return { id: t.id };
   });
 }
@@ -34,7 +34,7 @@ export async function deleteMessageTemplate(id: string) {
   return guarded("editMessageTemplates", async (user) => {
     const t = await db.messageTemplate.delete({ where: { id: z.string().min(1).max(40).parse(id) } });
     await logActivity(user.id, "delete", "messageTemplate", t.id, `Deleted ${t.kind} template "${t.name}"`);
-    revalidatePath("/admin/messages"); revalidatePath("/admin/templates");
+    revalidatePath("/admin/text-templates"); revalidatePath("/admin/email-templates"); revalidatePath("/admin/templates");
   });
 }
 
@@ -49,6 +49,6 @@ export async function moveMessageTemplate(input: z.input<typeof moveSchema>) {
     if (before.folder === v.folder) return;
     await db.messageTemplate.update({ where: { id: v.id }, data: { folder: v.folder } });
     await logActivity(user.id, "update", "messageTemplate", v.id, `Moved ${before.kind} template "${before.name}" from ${before.folder || "no folder"} to ${v.folder || "no folder"}`);
-    revalidatePath("/admin/messages"); revalidatePath("/admin/templates");
+    revalidatePath("/admin/text-templates"); revalidatePath("/admin/email-templates"); revalidatePath("/admin/templates");
   });
 }

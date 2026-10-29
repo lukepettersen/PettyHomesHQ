@@ -14,7 +14,8 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     { label: "Integrations", href: "/admin/integrations", desc: "Google (calendar, email, sheet), texting & calls, file storage" },
   ] },
   { name: "Texts & emails", icon: "💬", blurb: "What you send and when.", items: [
-    { label: "Templates", href: "/admin/messages", desc: "Text and email templates, by folder", need: "messages" },
+    { label: "Text templates", href: "/admin/text-templates", desc: "Texts to pick from, by folder", need: "messages" },
+    { label: "Email templates", href: "/admin/email-templates", desc: "Emails to pick from, by folder", need: "messages" },
     { label: "Calendar invites", href: "/admin/calendar", desc: "Which contract dates send calendar invites" },
     { label: "Appointment types", href: "/admin/appointments", desc: "Phone call, consults, showing and your own" },
   ] },
