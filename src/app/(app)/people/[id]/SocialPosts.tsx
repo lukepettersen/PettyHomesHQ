@@ -23,7 +23,7 @@ function SocialBox({ fileId, slot, label, post: saved, starter }: { fileId: stri
   const [text, setText] = useState(post?.text ?? "");
   const [ready, setReady] = useState(post?.ready ?? false);
   const [copied, setCopied] = useState(false);
-  const [full, setFull] = useState(false); // two lines until clicked open (owner 2026-10-29)
+  const [full, setFull] = useState(false); // about four lines until clicked open (owner 2026-10-29)
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const save = (r: boolean, t = text) => start(async () => {
@@ -64,8 +64,8 @@ function SocialBox({ fileId, slot, label, post: saved, starter }: { fileId: stri
         </span>
       </div>
       <button type="button" aria-expanded={full} title={full ? "Show less" : "Show the whole post"} onClick={() => setFull(!full)}
-        className={`mt-1 block w-full whitespace-pre-wrap text-left text-sm hover:text-accent ${full ? "" : "line-clamp-2"}`}>{post.text}</button>
-      {!full && post.text.split("\n").length > 2 && <button type="button" className="text-xs font-semibold text-accent hover:underline" onClick={() => setFull(true)}>Show all</button>}
+        className={`mt-1 block w-full whitespace-pre-wrap text-left text-sm leading-5 hover:text-accent ${full ? "" : "max-h-20 overflow-hidden"}`}>{post.text}</button>
+      {!full && (post.text.split("\n").length > 4 || post.text.length > 280) && <button type="button" className="text-xs font-semibold text-accent hover:underline" onClick={() => setFull(true)}>Show all</button>}
       {error && <p role="alert" className="mt-1 text-sm text-bad">{error}</p>}
     </div>
   );
