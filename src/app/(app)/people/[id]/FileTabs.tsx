@@ -13,7 +13,7 @@ import { deleteFile, setFileStatus } from "../../pipeline/actions";
 import { PaWizard } from "../../pipeline/PaWizard";
 import { DateStrip, FactGrid, nextKeyDate, paFacts, PaButtons, paPeople, PeopleList } from "./PaBox";
 import { useDropdown } from "@/components/useDropdown";
-import { isPending, type DateKey, type PaSection, type PaView, type Side } from "@/lib/pa";
+import { isPending, ucColumn, type DateKey, type PaSection, type PaView, type Side } from "@/lib/pa";
 import { dealEmails } from "@/lib/partners";
 import type { TaskRow, TeamMember } from "@/server/tasks";
 import { Checklist } from "./Checklist";
@@ -25,7 +25,7 @@ import { DealNotes } from "./DealNotes";
 type EmailProps = { emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; ownGmail?: boolean; canConnect?: boolean };
 export type OfferRow = { id: string; fileId: string; createdAt: string; address: string; price: number | null; summary: string; prefill: Record<string, string> };
 type Props = { offers: OfferRow[]; email: EmailProps; text: Omit<React.ComponentProps<typeof TextComposer>, "personId">; fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean; canDelete: boolean; timeline: React.ReactNode;
-  contracts: PaView[]; forms: Record<Side, PaSection[]>; pendingAt: DateKey[]; today: string; checklists: TaskRow[]; team: TeamMember[]; scheduled: ScheduledRow[] };
+  contracts: PaView[]; forms: Record<Side, PaSection[]>; pendingAt: DateKey[]; ucColumns: { name: string; untilDate: string | null }[]; today: string; checklists: TaskRow[]; team: TeamMember[]; scheduled: ScheduledRow[] };
 export type ScheduledRow = { id: string; when: string; to: string; body: string; by: string; mine: boolean; status: string; error: string | null; personId?: string | null };
 
 /** Middle column: a tab per active buyer/listing file, then Timeline (SPEC.md §6.3). */
@@ -85,7 +85,7 @@ export function SideChip({ kind }: { kind: string }) {
   return <span className={`rounded px-1.5 text-[11px] font-bold uppercase tracking-wide ${kind === "buyer" ? "bg-accent-soft text-accent" : "bg-[#f6e3d9] text-[#9a4f2e]"}`}>{kind === "buyer" ? "Buyer" : kind === "listing" ? "Seller" : kind}</span>;
 }
 
-function FilePane({ offers, email, text, fileForms, file, personId, personName, statuses, canSeeCommission, canDelete, onDeleted, contracts, forms, pendingAt, today, checklists, team }: Props & { file: FileView; onDeleted: () => void }) {
+function FilePane({ offers, email, text, fileForms, file, personId, personName, statuses, canSeeCommission, canDelete, onDeleted, contracts, forms, pendingAt, ucColumns, today, checklists, team }: Props & { file: FileView; onDeleted: () => void }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [addingPa, setAddingPa] = useState(false);
@@ -185,7 +185,7 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
         </div>
       )}
       {activePa ? (
-        <div className="mt-2"><Checklist title="Contract to Close" tasks={checklists.filter((t) => t.paId === activePa.id)} today={today} team={team} personId={personId} /></div>
+        <div className="mt-2"><Checklist title={`Contract to Close${(() => { const col = ucColumn(ucColumns, activePa, today); return col ? ` · ${col.name}` : ""; })()}`} tasks={checklists.filter((t) => t.paId === activePa.id)} today={today} team={team} personId={personId} /></div>
       ) : (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-misty px-3 py-2.5">
           <span><b>Offer accepted?</b> <span className="text-sm muted">Add the purchase agreement to put {personName.split(" ")[0]} under contract{myOffers.length ? "; it starts filled in from the latest offer" : ""}.</span></span>

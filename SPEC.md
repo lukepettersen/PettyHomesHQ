@@ -364,7 +364,7 @@ Principles:
   text · Send email; the key dates as a timeline (met dates checked, the next one highlighted, countdowns; not
   clickable, dates change with Edit contract); a **Notes** box (the deal's facts three across, price left out since
   it's in the header, then the deal notes) beside a **People** box (lender, title, agents with email and phone, from
-  the contact picked or what was typed); the Contract to Close checklist with a progress bar (all checklists have
+  the contact picked or what was typed); the Contract to Close checklist (its heading names the deal's Under Contract column, e.g. "Contract to Close · Inspection" / "· Pending", owner request 2026-10-29) with a progress bar (all checklists have
   one). An empty file checklist is hidden while under contract.
   **Mark pending** (two clicks) marks met the "until" dates of every Under Contract column before the last one
   (the inspection deadline), which moves the deal to the Pending column; a deal also becomes pending by itself
