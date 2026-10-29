@@ -44,3 +44,23 @@ describe("couple names written with and / +", () => {
     expect(nameParts("Andrea Sanders")).toEqual({ first: "Andrea", last: "Sanders" });
   });
 });
+
+describe("appointment merge fields", () => {
+  it("fills the next appointment and the next of each kind", () => {
+    const v = mergeValues({ personName: "Sam Ortiz", appts: [
+      { type: "showing", label: "Showing", date: "2026-11-03", start: "14:00", location: "123 Main St" },
+      { type: "buyer", label: "Buyer Consult", date: "2026-11-05", start: null, location: "" },
+    ] });
+    expect(v.next_appointment).toBe("Tuesday, November 3 at 2:00pm");
+    expect(v.next_appointment_time).toBe("2:00pm");
+    expect(v.next_appointment_type).toBe("Showing");
+    expect(v.next_appointment_place).toBe("123 Main St");
+    expect(v.next_showing).toBe("Tuesday, November 3 at 2:00pm");
+    expect(v.next_consult).toBe("Thursday, November 5");
+    expect(v.next_phone_call).toBe("");
+  });
+  it("lists them in their own group", () => {
+    expect(formMergeFields([]).filter((f) => f.group === "Appointments").map((f) => f.key)).toContain("next_consult");
+  });
+});
+

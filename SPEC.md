@@ -698,6 +698,10 @@ scrolls with it until its last card is on screen, then stays put while the middl
   texts** (when, to whom by name, by whom, the message shortened; click it to read the whole text) with **Cancel** for the person who scheduled it or anyone allowed to
   delete records; one that couldn't send shows "Not sent" with the reason for a week, and the scheduler gets a bell
   alert.
+- **Appointment merge fields** *(owner request 2026-10-29)*: text and email templates can use the person's upcoming
+  appointments (today's only if not started yet): {next_appointment} ("Tuesday, November 3 at 2:00pm"), its date,
+  time, type and location, and {next_consult} (buyer or seller), {next_showing}, {next_phone_call}. Listed under
+  "Appointments" in the merge field picker.
 - **Scheduled emails** *(owner request 2026-10-29)*: **Schedule** sits next to Send email (contact page and Draft email
   on checklist steps), with the same calendar date and 30-minute times as texts. It goes out from the scheduler's Gmail
   within a minute of that time (same minute timer), with its recipients, signature choice and attachments, goes on the

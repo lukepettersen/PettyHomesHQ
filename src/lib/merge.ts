@@ -12,6 +12,9 @@ export const MERGE_FIELDS: [string, string][] = [
   ["final_acceptance_date", "Final Acceptance"], ["inspection_date", "Inspection deadline"], ["inspection_appointment", "Inspection appointment"],
   ["written_statement_date", "Written Statement"], ["closing_date", "Closing date"],
   ["lender_name", "Lender"], ["title_company", "Title company"],
+  ["next_appointment", "Next appointment (day and time)"], ["next_appointment_date", "Next appointment date"], ["next_appointment_time", "Next appointment time"],
+  ["next_appointment_type", "Next appointment type"], ["next_appointment_place", "Next appointment location"],
+  ["next_consult", "Next consult (buyer or seller)"], ["next_showing", "Next showing"], ["next_phone_call", "Next phone call"],
   ["agent_name", "Luke's full name"], ["agent_first_name", "Luke's first name"], ["assistant_name", "Assistant's name"], ["my_name", "Your name"], ["my_first_name", "Your first name"],
 ];
 
@@ -22,6 +25,8 @@ export type MergeCtx = {
   dates?: Partial<Record<"finalAcceptance" | "inspection" | "writtenStatement" | "closing", string | null>>;
   inspAppt?: string | null; lender?: string | null; titleCompany?: string | null;
   agentName?: string; assistantName?: string; myName?: string;
+  /** Their upcoming appointments, soonest first (owner request 2026-10-29). */
+  appts?: { type: string; label: string; date: string; start: string | null; location: string }[];
   extra?: Record<string, string>; // answers from the contract and file, already formatted (formValues)
 };
 
@@ -58,6 +63,15 @@ export function mergeValues(c: MergeCtx): Record<string, string> {
     lender_name: c.lender ?? "", title_company: c.titleCompany ?? "",
     agent_name: c.agentName ?? "", agent_first_name: (c.agentName ?? "").split(/\s+/)[0], assistant_name: c.assistantName ?? "", my_name: c.myName ?? "",
   };
+  // Upcoming appointments: "Tuesday, November 3 at 2:00pm" (just the day when no time is set).
+  const ap = c.appts ?? [];
+  const when = (a?: { date: string; start: string | null }) => (a ? `${longDate(a.date)}${a.start ? ` at ${clock(a.start)}` : ""}` : "");
+  const next = ap[0];
+  Object.assign(base, {
+    next_appointment: when(next), next_appointment_date: next ? longDate(next.date) : "", next_appointment_time: next?.start ? clock(next.start) : "",
+    next_appointment_type: next?.label ?? "", next_appointment_place: next?.location ?? "",
+    next_consult: when(ap.find((a) => a.type === "buyer" || a.type === "seller")), next_showing: when(ap.find((a) => a.type === "showing")), next_phone_call: when(ap.find((a) => a.type === "call")),
+  });
   // Form answers fill in everything else; the built-in fields win when they have a value.
   const out = { ...c.extra };
   for (const [k, v] of Object.entries(base)) if (v || !out[k]) out[k] = v;
@@ -79,19 +93,21 @@ const ALIAS: Record<string, string> = {
 export const mergeKey = (k: string) => ALIAS[k] ?? k.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase().replace(/[^a-z0-9_]/g, "_");
 
 export type MergeField = { key: string; label: string; group: string };
+const APPTS = ["next_appointment", "next_appointment_date", "next_appointment_time", "next_appointment_type", "next_appointment_place", "next_consult", "next_showing", "next_phone_call"];
 const CLIENT = ["first_name", "last_name", "full_name", "mailing_name"], TEAM = ["agent_name", "agent_first_name", "assistant_name", "my_name"];
 const labelOf = (k: string) => MERGE_FIELDS.find(([x]) => x === k)![1];
 
 /** Every merge field, grouped: client, each form's questions (first form to ask wins), then the team. */
 export function formMergeFields(forms: { group: string; sections: PaSection[] }[]): MergeField[] {
   const out: MergeField[] = CLIENT.map((key) => ({ key, label: labelOf(key), group: "Client" }));
-  const seen = new Set([...CLIENT, ...TEAM]);
+  const seen = new Set([...CLIENT, ...TEAM, ...APPTS]);
   const add = (f: MergeField) => { if (!seen.has(f.key)) { seen.add(f.key); out.push(f); } };
   for (const { group, sections } of forms) for (const s of sections) for (const q of s.fields) {
     add({ key: mergeKey(q.key), label: s.people ? `${s.name} · ${q.label}` : q.label, group });
     if (q.key === "commission") add({ key: "commission_amount", label: "Commission ($, from % × price)", group });
   }
   for (const [key, label] of MERGE_FIELDS) add({ key, label, group: "Contract" }); // built-ins a form no longer asks
+  for (const key of APPTS) out.push({ key, label: labelOf(key), group: "Appointments" });
   for (const key of TEAM) out.push({ key, label: labelOf(key), group: "Team" });
   return out;
 }
@@ -131,7 +147,7 @@ export function fill(text: string, values: Record<string, string>): { text: stri
 export const SAMPLE: MergeCtx = {
   personName: "Sam & Lena Ortiz", address: "2215 Hillside Ave, Edina", price: 389000,
   dates: { finalAcceptance: "2026-10-01", inspection: "2026-10-20", writtenStatement: "2026-11-01", closing: "2026-11-20" },
-  inspAppt: "2026-10-16T10:00", lender: "Pat Lee", titleCompany: "Edina Title", agentName: "Luke Pettersen", assistantName: "Alyssa Chakiton", myName: "Alyssa Chakiton",
+  inspAppt: "2026-10-16T10:00", appts: [{ type: "buyer", label: "Buyer Consult", date: "2026-10-14", start: "14:00", location: "Petty Homes office" }], lender: "Pat Lee", titleCompany: "Edina Title", agentName: "Luke Pettersen", assistantName: "Alyssa Chakiton", myName: "Alyssa Chakiton",
   extra: { earnest_money: "$5,000", seller_contributions: "$3,000", commission: "2.7%", bac: "$695", commission_amount: "$10,503", financing: "Conventional",
     buyer_agent_name: "Jordan Reyes", buyer_agent_email: "jordan@example.com", seller_agent_name: "Casey Moore", title_contact: "Kim Olson", hoa_rescission_date: "Monday, October 12" },
 };

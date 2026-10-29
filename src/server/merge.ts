@@ -4,7 +4,9 @@ import { loadForm } from "@/server/pa";
 import { loadFileForm } from "@/server/files";
 import { hasPermission } from "@/server/permissions";
 import type { SessionUser } from "@/server/auth";
-import { isoFromDate } from "@/lib/normalize";
+import { isoFromDate, todayCentral } from "@/lib/normalize";
+import { apptLabel } from "@/lib/appointments";
+import { loadApptTypes } from "@/server/appointments";
 import { formMergeFields, formValues, mergeValues, type MergeCtx } from "@/lib/merge";
 import type { PaSection } from "@/lib/pa";
 
@@ -50,10 +52,23 @@ export async function mergeFor(user: SessionUser, personId: string | null, where
         dates: { finalAcceptance: dn(pa.finalAcceptance), inspection: dn(pa.inspection), writtenStatement: pa.writtenStatementNA ? null : dn(pa.writtenStatement), closing: dn(pa.closing) } });
     } else if (file) Object.assign(ctx, { address: file.address, price: file.price, lender: obj(file.info).lender ?? null });
   }
+  if (p) ctx.appts = await upcomingAppts(p.id);
   const team = await db.user.findMany({ where: { status: { not: "DISABLED" } }, orderBy: { isOwner: "desc" } });
   ctx.agentName = team.find((t) => t.isOwner)?.name ?? "";
   ctx.assistantName = team.find((t) => !t.isOwner)?.name ?? "";
   ctx.myName = user.name;
   ctx.extra = extra;
   return { values: mergeValues(ctx), label: (k: string) => fields.find((f) => f.key === k)?.label ?? k };
+}
+
+/** Their appointments from now on (today's only if they haven't started yet, Central time), soonest first. */
+async function upcomingAppts(personId: string) {
+  const today = todayCentral();
+  const now = new Date().toLocaleTimeString("en-GB", { timeZone: "America/Chicago", hour: "2-digit", minute: "2-digit", hour12: false });
+  const [rows, types] = await Promise.all([
+    db.appointment.findMany({ where: { personId, deletedAt: null, date: { gte: today } }, orderBy: [{ date: "asc" }, { start: "asc" }], take: 20 }),
+    loadApptTypes(),
+  ]);
+  return rows.filter((a) => a.date.getTime() !== today.getTime() || !a.start || a.start >= now)
+    .map((a) => ({ type: a.type, label: apptLabel(a.type, types), date: isoFromDate(a.date), start: a.start, location: a.location }));
 }
