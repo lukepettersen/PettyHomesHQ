@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { SaveBar } from "@/components/SaveBar";
-import { AUTOMATION_KEYS, FIELD_TYPES, LOCKED_KEYS, PA_FIELD_TYPES, showIfChoices, type FieldType, type PaField, type PaSection, type Side } from "@/lib/pa";
+import { AUTOMATION_KEYS, copySection, FIELD_TYPES, LOCKED_KEYS, PA_FIELD_TYPES, showIfChoices, type FieldType, type PaField, type PaSection, type Side } from "@/lib/pa";
 import { saveForm } from "../../pipeline/paActions";
 
 const newKey = (label: string) => `q${label.replace(/[^A-Za-z0-9]/g, "").slice(0, 16)}${Math.random().toString(36).slice(2, 6)}`;
@@ -39,6 +39,7 @@ export function FormEditor({ initial, onSave, locked, automation, statuses, step
   const [secs, setSecs] = useState<Section[]>(initial);
   const [error, setError] = useState("");
   const [copyConfirm, setCopyConfirm] = useState(false);
+  const [copyNote, setCopyNote] = useState("");
   const [pending, start] = useTransition();
   const dirty = JSON.stringify(secs) !== JSON.stringify(initial);
   const conds = showIfChoices(secs);
@@ -54,12 +55,26 @@ export function FormEditor({ initial, onSave, locked, automation, statuses, step
   return (
     <div className="flex flex-col gap-4">
       {copyFrom && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-misty px-3 py-2 text-sm">
-          <span className="muted">Start from the {copyFrom.label.toLowerCase()} form: copies its sections and questions here for you to edit. Nothing changes until you save.</span>
-          <button type="button" className="btn" onBlur={() => setCopyConfirm(false)} onClick={() => {
-            if (!copyConfirm) { setCopyConfirm(true); return; }
-            setSecs(JSON.parse(JSON.stringify(copyFrom.sections))); setCopyConfirm(false); setError("");
-          }}>{copyConfirm ? "Click again to replace these questions" : `Copy from ${copyFrom.label}`}</button>
+        <div className="flex flex-col gap-2 rounded-lg border border-dashed border-misty px-3 py-2 text-sm">
+          <span className="muted">Copy from the {copyFrom.label.toLowerCase()} form, then edit anything: names, questions, order. Nothing changes until you save.</span>
+          <span className="flex flex-wrap items-center gap-2">
+            {/* One section at a time, added at the bottom; questions this form already asks are left out. */}
+            <select className="input w-auto" aria-label={`Copy a section from ${copyFrom.label}`} value="" onChange={(e) => {
+              const src = copyFrom.sections.find((x) => x.id === e.target.value);
+              if (!src) return;
+              const { section, skipped } = copySection(src, secs, newKey("section"));
+              setSecs([...secs, section]); setError("");
+              setCopyNote(`Added "${src.name}" at the bottom${skipped ? ` (${skipped} question${skipped === 1 ? "" : "s"} left out: this form already asks ${skipped === 1 ? "it" : "them"})` : ""}. Edit it below.`);
+            }}>
+              <option value="">Copy a section from {copyFrom.label}…</option>
+              {copyFrom.sections.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.fields.length} question{x.fields.length === 1 ? "" : "s"})</option>)}
+            </select>
+            <button type="button" className="btn" onBlur={() => setCopyConfirm(false)} onClick={() => {
+              if (!copyConfirm) { setCopyConfirm(true); return; }
+              setSecs(JSON.parse(JSON.stringify(copyFrom.sections))); setCopyConfirm(false); setError(""); setCopyNote(`Copied the whole ${copyFrom.label.toLowerCase()} form. Edit it below.`);
+            }}>{copyConfirm ? "Click again to replace all these questions" : `Copy everything from ${copyFrom.label}`}</button>
+          </span>
+          {copyNote && <span role="status" className="text-accent">{copyNote}</span>}
         </div>
       )}
       {secs.map((s, i) => (

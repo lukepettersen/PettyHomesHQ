@@ -850,7 +850,8 @@ follow-up, Tags, Custom fields, Date reminders), **Data & tools** (Import from F
 for Trash, templates and checklists. Inside a page the left menu has the same groups and "‹ Admin home". Plainer names:
 Client statuses → **Pipeline stages**, Task templates → **Checklists**, Buyer and seller forms + Purchase agreement
 forms → **Deal questions** (two tabs; the purchase agreement tab has **Buyer** / **Seller** and, on Seller, **Copy from
-Buyer**, which replaces the seller questions with a copy to edit; two clicks, nothing changes until Save). Users &
+Buyer**: either **copy one section** (added at the bottom, leaving out questions the seller form already asks) or
+**copy everything** (replaces the seller questions; two clicks). Copies are fully editable; nothing changes until Save). Users &
 permissions shows each person as a row (initials, name, email, status, role, Edit, Remove) and each permission as an
 on/off switch per role with a one-line explanation.
 

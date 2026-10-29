@@ -278,3 +278,11 @@ export function toPaView(p: DbPa, canSeeCommission: boolean): PaView {
   };
 }
 
+
+/** "Copy a section from Buyer" (owner request 2026-10-29): a copy of one section to add to another form, leaving out
+ *  questions that form already asks (same key), so nothing is asked twice. The copy gets its own section id. */
+export function copySection<S extends PaSection>(section: S, into: PaSection[], newId: string): { section: S; skipped: number } {
+  const have = new Set(into.flatMap((x) => x.fields.map((f) => f.key)));
+  const fields = section.fields.filter((f) => !have.has(f.key)).map((f) => ({ ...f, options: f.options ? [...f.options] : undefined }));
+  return { section: { ...section, id: newId, fields }, skipped: section.fields.length - fields.length };
+}

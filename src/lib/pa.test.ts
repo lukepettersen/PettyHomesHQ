@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applicableDates, cleanMoneyOrPct, cleanPaAnswers, clientFirstNames, commissionLine, DEFAULT_FORMS, effectiveStatus, formProblem, ucColumn, upgradeNotesAnswers, upgradeNotesForm, visibleSections, type PaSection } from "./pa";
+import { applicableDates, copySection, cleanMoneyOrPct, cleanPaAnswers, clientFirstNames, commissionLine, DEFAULT_FORMS, effectiveStatus, formProblem, ucColumn, upgradeNotesAnswers, upgradeNotesForm, visibleSections, type PaSection } from "./pa";
 
 const buyer = DEFAULT_FORMS.buyer;
 const TODAY = "2026-10-13";
@@ -122,3 +122,15 @@ describe("Money or % (owner request 2026-10-26)", () => {
     expect(() => cleanMoneyOrPct("150%", "Seller contributions")).toThrow();
   });
 });
+
+describe("copying a section to the other side", () => {
+  it("copies the questions the other form doesn't already ask", () => {
+    const sec: PaSection = { id: "s1", name: "Closing", fields: [{ key: "closing", label: "Close date", type: "date" }, { key: "qWalk", label: "Walkthrough", type: "text" }] };
+    const into: PaSection[] = [{ id: "a", name: "Dates", fields: [{ key: "closing", label: "Closing", type: "date" }] }];
+    const r = copySection(sec, into, "new1");
+    expect(r.section.id).toBe("new1");
+    expect(r.section.fields.map((f) => f.key)).toEqual(["qWalk"]);
+    expect(r.skipped).toBe(1);
+  });
+});
+
