@@ -5,7 +5,8 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
-import { templateProblem, type Template } from "@/lib/templates";
+import { templateProblem, type Phase, type Template } from "@/lib/templates";
+import { openUses, syncTemplateToOpen } from "@/server/automation";
 
 const FIXED_TRIGGERS = ["pa:buyer", "pa:seller", "pending:buyer", "pending:seller", "closed:buyer", "closed:seller", "phonecall", "buyerconsult", "sellerconsult", "anyconsult", "offer"];
 const tags = z.array(z.string().trim().min(1).max(60)).max(20).optional();
@@ -43,7 +44,20 @@ export async function saveTemplate(input: z.input<typeof templateSchema>) {
     const steps = t.phases.reduce((n, p) => n + p.steps.length, 0);
     await logActivity(user.id, v.id ? "update" : "create", "taskTemplate", saved.id, `${v.id ? "Saved" : "Created"} task template "${t.name}" (${steps} steps)`);
     revalidatePath("/admin/templates");
-    return { id: saved.id };
+    return { id: saved.id, openDeals: v.id ? await openUses(saved.id) : 0 };
+  });
+}
+
+/** "Update the open deals already using it" (owner request 2026-10-29): brings their open steps in line with the saved checklist. */
+export async function updateOpenDeals(templateId: string) {
+  return guarded("editTaskTemplates", async (user) => {
+    const row = await db.taskTemplate.findUnique({ where: { id: z.string().min(1).max(40).parse(templateId) } });
+    if (!row) throw new UserError("That checklist was deleted.");
+    const t: Template = { id: row.id, name: row.name, trigger: row.trigger, folder: row.folder, phases: Array.isArray(row.phases) ? (row.phases as unknown as Phase[]) : [] };
+    const r = await syncTemplateToOpen(t, user.id);
+    await logActivity(user.id, "update", "taskTemplate", row.id, `Updated ${r.deals} open deal${r.deals === 1 ? "" : "s"} from checklist "${row.name}" (${r.updated} changed, ${r.added} added, ${r.removed} removed)`);
+    revalidatePath("/admin/templates"); revalidatePath("/tasks");
+    return r;
   });
 }
 

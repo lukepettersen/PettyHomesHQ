@@ -448,6 +448,11 @@ scrolls with it until its last card is on screen, then stays put while the middl
   Booking a consult again (after deleting or moving on from one) restarts that consult checklist's steps timed from the
   consult that were already done or deleted, dated from the new consult; open ones just move to it, and steps timed
   from the start date don't repeat (owner request 2026-10-29).
+- **Updating deals already using a checklist** *(owner request 2026-10-29)*: after saving a checklist that open deals
+  already use, HQ offers **Update the N deals**. Their open steps take the new name, type, phase, timing, message,
+  "when done" and automatic send (re-dated from their dates); new steps are added; steps removed from the checklist, or
+  whose "Only when" no longer fits, go to Trash. Done steps, steps someone deleted, dates set by hand, who a step is
+  assigned to, and tag/stage steps are left alone. "Not now" keeps the old behavior (only deals that start it later).
 - Templates are listed, created, edited and deleted in Admin → Task templates, with a steps
   editor.
 - Seeded templates (from the FUB review, simplified): the five buyer status templates, five

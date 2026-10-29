@@ -100,7 +100,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 - `src/components/AlarmCenter.tsx` + `src/app/api/alarms/route.ts` — task alarms (pop-up and chime when a timed task comes due)
 - `src/lib/files.ts` (questions per status, commission stripping via `toFileView`, tested), `src/server/files.ts`, actions in `src/app/(app)/pipeline/actions.ts`
 - `src/lib/pa.ts` (PA forms, Show only if, cleaning, key dates, UC column, `toPaView` commission stripping, Client name questions, one-time Notes upgrade run from `prisma/seed.ts`; tested), `src/server/pa.ts`, `src/app/(app)/pipeline/paActions.ts`
-- `src/lib/templates.ts` (steps, anchors, conditions, expand; tested), `src/server/automation.ts` (runTrigger, applyTemplate, redateContract, moveFile), `prisma/starterTemplates.ts`
+- `src/lib/templates.ts` (steps, anchors, conditions, expand; tested), `src/server/automation.ts` (runTrigger, applyTemplate, redateContract, moveFile, `syncTemplateToOpen` for "Update the open deals", `advanceAfterDone`, `recheckConditions`, `restartConsultSteps`), `prisma/starterTemplates.ts`
 - Admin pages check their own permission with `adminGate()` in `src/app/(app)/admin/gate.tsx`; Admin home + menu groups from `src/app/(app)/admin/sections.ts` (`page.tsx`, `AdminNav.tsx`), Deal questions tabs `DealQuestionTabs.tsx`
 - `src/lib/appointments.ts` (names, contract dates; tested), `src/server/appointments.ts`, `src/app/(app)/people/apptActions.ts`
 - Contract calendar invites: `src/lib/contractInvites.ts` (rules, titles, defaults; tested), `src/server/contractInvites.ts` (rules in AppSetting, PA date options), Admin → Calendar invites in `src/app/(app)/admin/calendar/`

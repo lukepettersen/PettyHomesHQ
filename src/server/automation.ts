@@ -31,11 +31,27 @@ export async function runTrigger(tx: Tx, trigger: string, ctx: Ctx, userId: stri
 
 /** Creates the template's tasks for a person (and file/contract). Tag steps run right away. */
 export async function applyTemplate(tx: Tx, t: Template, ctxIn: Ctx, userId: string, opts: { once?: boolean } = {}): Promise<number> {
-  let ctx = ctxIn;
-  if (opts.once && ctx.fileId) {
-    const already = await tx.task.findFirst({ where: { templateId: t.id, fileId: ctx.fileId, ...(ctx.paId ? { paId: ctx.paId } : {}) }, select: { id: true } });
+  if (opts.once && ctxIn.fileId) {
+    const already = await tx.task.findFirst({ where: { templateId: t.id, fileId: ctxIn.fileId, ...(ctxIn.paId ? { paId: ctxIn.paId } : {}) }, select: { id: true } });
     if (already) return 0;
   }
+  const { ctx, who, specs } = await prepare(tx, t, ctxIn, userId);
+  let n = 0;
+  for (const spec of specs) {
+    const s = spec.step;
+    if (s.type === "tags") { await applyTags(tx, ctx.personId, s.addTags ?? [], s.removeTags ?? []); continue; }
+    if (s.type === "stage") { await applyStage(tx, ctx.personId, s.stage ?? "", t.name); continue; }
+    await tx.task.create({ data: { ...stepData(t, spec, ctx, who), personId: ctx.personId, fileId: ctx.fileId ?? null, paId: ctx.paId ?? null, templateId: t.id, stepId: s.id, createdById: userId } });
+    n++;
+  }
+  return n;
+}
+
+type Spec = ReturnType<typeof expand>["tasks"][number];
+
+/** Who each step goes to, the consult date for steps timed from it, and the steps that apply (with due dates). */
+async function prepare(tx: Tx, t: Template, ctxIn: Ctx, userId: string) {
+  let ctx = ctxIn;
   const [team, person] = await Promise.all([
     tx.user.findMany({ where: { status: { not: "DISABLED" } }, select: { id: true, name: true } }),
     tx.person.findUniqueOrThrow({ where: { id: ctx.personId }, select: { assignedToId: true } }),
@@ -46,28 +62,93 @@ export async function applyTemplate(tx: Tx, t: Template, ctxIn: Ctx, userId: str
     const c = await consultFor(tx, ctx.personId, ctx.fileId ?? null);
     ctx = { ...ctx, dates: { ...ctx.dates, consult: c?.date ?? null }, times: { ...ctx.times, consult: c?.time ?? null } };
   }
-  const { tasks } = expand(t, { start: ctx.start, ...ctx.dates }, ctx.facts ?? {});
-  let n = 0;
-  for (const spec of tasks) {
-    const s = spec.step;
-    if (s.type === "tags") { await applyTags(tx, ctx.personId, s.addTags ?? [], s.removeTags ?? []); continue; }
-    if (s.type === "stage") { await applyStage(tx, ctx.personId, s.stage ?? "", t.name); continue; }
-    // A step set to send by itself goes out at its chosen time on the due date (owner request 2026-10-29).
-    const auto = (s.type === "text" || s.type === "email") && s.auto && spec.due ? s.auto : null;
-    const autoTime = auto && minutesOffset(s) == null ? auto.time : null;
-    await tx.task.create({
-      data: {
-        ...(auto ? { autoSend: auto, autoState: "pending" } : {}),
-        title: s.name, kind: s.type, personId: ctx.personId, fileId: ctx.fileId ?? null, paId: ctx.paId ?? null,
-        templateId: t.id, stepId: s.id, phase: spec.phase, anchor: s.dir === "none" ? null : s.anchor, offsetDays: s.dir === "none" ? null : offsetOf(s),
-        dueDate: spec.due ? dateFromIso(spec.due) : null, dueTime: !spec.due ? null : autoTime ? autoTime : minutesOffset(s) != null ? (ctx.times?.[s.anchor] ? timeBefore(ctx.times[s.anchor]!, minutesOffset(s)!) : null) : offsetOf(s) === 0 ? ctx.times?.[s.anchor] ?? null : null,
-        offsetMinutes: minutesOffset(s), // positive = before, negative = after
-        assigneeId: who(s.assignee), advanceStatusId: s.advance || null, createdById: userId,
-      },
+  return { ctx, who, specs: expand(t, { start: ctx.start, ...ctx.dates }, ctx.facts ?? {}).tasks };
+}
+
+/** A step's task fields: title, kind, phase, timing, due date/time, assignee, "when done" and automatic send. */
+function stepData(t: Template, spec: Spec, ctx: Ctx, who: (first: string) => string) {
+  const s = spec.step;
+  // A step set to send by itself goes out at its chosen time on the due date (owner request 2026-10-29).
+  const auto = (s.type === "text" || s.type === "email") && s.auto && spec.due ? s.auto : null;
+  const autoTime = auto && minutesOffset(s) == null ? auto.time : null;
+  return {
+    autoSend: auto ?? undefined, autoState: auto ? "pending" : null,
+    title: s.name, kind: s.type, phase: spec.phase, anchor: s.dir === "none" ? null : s.anchor, offsetDays: s.dir === "none" ? null : offsetOf(s),
+    dueDate: spec.due ? dateFromIso(spec.due) : null, dueTime: !spec.due ? null : autoTime ? autoTime : minutesOffset(s) != null ? (ctx.times?.[s.anchor] ? timeBefore(ctx.times[s.anchor]!, minutesOffset(s)!) : null) : offsetOf(s) === 0 ? ctx.times?.[s.anchor] ?? null : null,
+    offsetMinutes: minutesOffset(s), // positive = before, negative = after
+    assigneeId: who(s.assignee), advanceStatusId: s.advance || null,
+  };
+}
+
+/**
+ * "Update the deals already using it" (owner request 2026-10-29): after a checklist is edited, every place it already
+ * started (each person/deal/contract with open steps from it) is brought in line. Open steps get the new name, timing,
+ * assignee, message and automatic send; new steps are added; steps removed (or whose "Only when" no longer fits) go to
+ * Trash. Done steps, steps someone deleted, and tag/stage steps are left alone. Returns what changed.
+ */
+export async function syncTemplateToOpen(t: Template, userId: string): Promise<{ deals: number; updated: number; added: number; removed: number }> {
+  const out = { deals: 0, updated: 0, added: 0, removed: 0 };
+  const open = await db.task.findMany({ where: { templateId: t.id, completedAt: null, deletedAt: null, personId: { not: null }, person: { deletedAt: null } }, select: { personId: true, fileId: true, paId: true } });
+  const groups = [...new Map(open.map((g) => [`${g.personId}|${g.fileId ?? ""}|${g.paId ?? ""}`, g])).values()];
+  const stepIds = new Set(t.phases.flatMap((p) => p.steps.map((x) => x.id)));
+  for (const g of groups) {
+    await db.$transaction(async (tx) => {
+      const where = { templateId: t.id, personId: g.personId!, fileId: g.fileId, paId: g.paId };
+      const all = await tx.task.findMany({ where, orderBy: { createdAt: "asc" } });
+      if (g.fileId && !(await tx.clientFile.findFirst({ where: { id: g.fileId, deletedAt: null, closedAt: null }, select: { id: true } }))) return;
+      const pa = g.paId ? await tx.purchaseAgreement.findUnique({ where: { id: g.paId } }) : null;
+      const file = !pa && g.fileId ? await tx.clientFile.findUnique({ where: { id: g.fileId }, select: { info: true } }) : null;
+      const call = t.phases.some((p) => p.steps.some((x) => x.anchor === "phoneCall"))
+        ? await tx.appointment.findFirst({ where: { personId: g.personId!, type: "call", deletedAt: null }, orderBy: [{ date: "desc" }, { createdAt: "desc" }] }) : null;
+      const ctxIn: Ctx = {
+        personId: g.personId!, fileId: g.fileId, paId: g.paId,
+        start: isoFromDate(todayCentral(all[0]?.createdAt ?? new Date())), // the day this checklist started for them
+        dates: { ...(pa ? contractAnchors(pa) : {}), ...(call ? { phoneCall: isoFromDate(call.date) } : {}) },
+        times: call?.start ? { phoneCall: call.start } : {},
+        facts: pa ? factsOf(pa.answers, pa.writtenStatementNA) : file ? factsOf(file.info) : {},
+      };
+      const { ctx, who, specs } = await prepare(tx, t, ctxIn, userId);
+      const applies = new Map(specs.map((x) => [x.step.id, x]));
+      let changed = false;
+      for (const task of all.filter((x) => !x.completedAt && !x.deletedAt)) {
+        const spec = task.stepId ? applies.get(task.stepId) : undefined;
+        if (!spec || !stepIds.has(task.stepId!)) {
+          // Removed from the checklist, or its "Only when" no longer fits: to Trash (restorable).
+          await tx.task.update({ where: { id: task.id }, data: { deletedAt: new Date(), ...(task.autoState === "pending" ? { autoState: "off" } : {}) } });
+          out.removed++; changed = true; continue;
+        }
+        if (spec.step.type === "tags" || spec.step.type === "stage") continue;
+        const d = stepData(t, spec, ctx, who);
+        // A step already sent, failed or turned off keeps that state unless it stopped being automatic.
+        const autoState = !d.autoSend ? (task.autoState === "pending" ? "off" : task.autoState) : task.autoState && task.autoState !== "off" ? task.autoState : "pending";
+        // A date someone set by hand (the step was detached from its timing) and who it's assigned to stay as they are.
+        const handDated = !task.anchor && spec.step.dir !== "none";
+        const next = { ...d, autoSend: d.autoSend ?? task.autoSend ?? undefined, autoState, assigneeId: task.assigneeId,
+          ...(handDated ? { anchor: task.anchor, offsetDays: task.offsetDays, offsetMinutes: task.offsetMinutes, dueDate: task.dueDate, dueTime: task.dueTime } : {}) };
+        const same = task.title === next.title && task.kind === next.kind && task.phase === next.phase && task.anchor === next.anchor && task.offsetDays === next.offsetDays && task.offsetMinutes === next.offsetMinutes
+          && (task.dueDate?.getTime() ?? null) === (next.dueDate?.getTime() ?? null) && task.dueTime === next.dueTime && task.assigneeId === next.assigneeId && task.advanceStatusId === next.advanceStatusId
+          && JSON.stringify(task.autoSend ?? null) === JSON.stringify(next.autoSend ?? null) && task.autoState === next.autoState;
+        if (same) continue;
+        await tx.task.update({ where: { id: task.id }, data: { ...next, autoSend: next.autoSend === undefined ? undefined : (next.autoSend as object) } });
+        out.updated++; changed = true;
+      }
+      // New steps: added unless this step was ever on their checklist (done or deleted counts).
+      const seen = new Set(all.map((x) => x.stepId));
+      for (const spec of specs) {
+        if (seen.has(spec.step.id) || spec.step.type === "tags" || spec.step.type === "stage") continue;
+        await tx.task.create({ data: { ...stepData(t, spec, ctx, who), personId: ctx.personId, fileId: ctx.fileId ?? null, paId: ctx.paId ?? null, templateId: t.id, stepId: spec.step.id, createdById: userId } });
+        out.added++; changed = true;
+      }
+      if (changed) out.deals++;
     });
-    n++;
   }
-  return n;
+  return out;
+}
+
+/** How many people/deals currently have open steps from a checklist (for "Update the N open deals"). */
+export async function openUses(templateId: string): Promise<number> {
+  const rows = await db.task.findMany({ where: { templateId, completedAt: null, deletedAt: null, personId: { not: null }, person: { deletedAt: null } }, select: { personId: true, fileId: true, paId: true }, distinct: ["personId", "fileId", "paId"] });
+  return rows.length;
 }
 
 /** "Change stage" step: sets the contact's stage (a stage that was renamed or removed is skipped). */

@@ -6,7 +6,7 @@ import { SaveBar } from "@/components/SaveBar";
 import type { StatusRow } from "@/server/files";
 import { ANCHORS, CONDS, expand, MINUTE_OPTIONS, newId, STEP_TYPES, TIMED_ANCHORS, triggerLabel, type Phase, type Step, type Template } from "@/lib/templates";
 import { longIso } from "@/lib/tasks";
-import { deleteTemplate, duplicateTemplate, moveTemplate, saveTemplate } from "./actions";
+import { deleteTemplate, duplicateTemplate, moveTemplate, saveTemplate, updateOpenDeals } from "./actions";
 import { FolderList } from "@/components/FolderList";
 
 type Props = { roles: { id: string; name: string }[]; messages: { id: string; kind: string; name: string; folder: string }[]; templates: Template[]; statuses: StatusRow[]; team: string[]; tags: string[]; stages: string[]; today: string; initialId: string | null };
@@ -21,6 +21,8 @@ export function TemplatesClient(p: Props) {
   const sel = p.templates.find((t) => t.id === selId) ?? p.templates[0] ?? null;
   const folders = [...new Set(p.templates.map((t) => t.folder ?? "").filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const [folder, setFolder] = useState<string | null>(null); // the folder open in the side panel
+  // "Update the open deals" offer after a save; kept here because the editor reloads when the save lands.
+  const [offer, setOffer] = useState<{ id: string; uses: number; synced: string } | null>(null);
   const pick = (id: string) => {
     if (dirty) { setMsg("Save or discard your changes first."); return; }
     setMsg(""); setSelId(id); window.history.replaceState(null, "", `/admin/templates?t=${id}`);
@@ -40,16 +42,20 @@ export function TemplatesClient(p: Props) {
         top={<button type="button" className="btn btn-primary" onClick={create}>+ New template</button>} />
       <div className="min-w-0">
         {msg && <p role="alert" className="mb-2 text-sm text-bad">{msg}</p>}
-        {sel ? <Editor folders={folders} key={sel.id + JSON.stringify(sel)} {...p} t={sel} onDirty={setDirty} onSelect={(id) => { setSelId(id); router.refresh(); }} /> : <div className="card p-6 muted">No templates yet. Create one with + New template.</div>}
+        {sel ? <Editor folders={folders} key={sel.id + JSON.stringify(sel)} {...p} t={sel} onDirty={setDirty} offer={offer?.id === sel.id ? offer : null} onOffer={setOffer} onSelect={(id) => { setSelId(id); router.refresh(); }} /> : <div className="card p-6 muted">No templates yet. Create one with + New template.</div>}
       </div>
     </div>
   );
 }
 
-function Editor({ t: initial, statuses, team, roles, tags, stages, today, templates, messages, folders, onDirty, onSelect }: Props & { folders: string[]; t: Template; onDirty: (d: boolean) => void; onSelect: (id: string | null) => void }) {
+function Editor({ t: initial, statuses, team, roles, tags, stages, today, templates, messages, folders, onDirty, onSelect, offer, onOffer }: Props & {
+  folders: string[]; t: Template; onDirty: (d: boolean) => void; onSelect: (id: string | null) => void;
+  offer: { id: string; uses: number; synced: string } | null; onOffer: (o: { id: string; uses: number; synced: string } | null) => void;
+}) {
   const router = useRouter();
   const [t, setT] = useState<Template>(initial);
   const [error, setError] = useState("");
+  const uses = offer?.uses ?? 0, synced = offer?.synced ?? "";
   const [confirm, setConfirm] = useState("");
   const [pending, start] = useTransition();
   const dirty = JSON.stringify(t) !== JSON.stringify(initial);
@@ -79,7 +85,14 @@ function Editor({ t: initial, statuses, team, roles, tags, stages, today, templa
     setError("");
     const r = await saveTemplate({ id: t.id, name: t.name, trigger: t.trigger, folder: t.folder ?? "", phases: t.phases });
     if (!r.ok) { setError(r.error); return; }
-    onDirty(false); router.refresh();
+    onOffer(r.data!.openDeals ? { id: t.id, uses: r.data!.openDeals, synced: "" } : null); onDirty(false); router.refresh();
+  });
+  const syncOpen = () => start(async () => {
+    setError("");
+    const r = await updateOpenDeals(t.id);
+    if (!r.ok) { setError(r.error); return; }
+    const d = r.data!;
+    onOffer({ id: t.id, uses: 0, synced: d.deals ? `Updated ${d.deals} deal${d.deals === 1 ? "" : "s"}: ${d.updated} step${d.updated === 1 ? "" : "s"} changed, ${d.added} added, ${d.removed} moved to Trash.` : "Their open steps already match this checklist." });
   });
 
   return (
@@ -129,7 +142,17 @@ function Editor({ t: initial, statuses, team, roles, tags, stages, today, templa
             }}>{confirm === "del" ? "Click again to delete" : "Delete"}</button>
           </span>
         </div>
-        <p className="text-xs muted">{t.trigger ? "Changes apply to deals that reach this point from now on. Tasks already created stay as they are." : "Apply it from any contact page: Tasks card → Apply template."}</p>
+        <p className="text-xs muted">{t.trigger ? "Changes apply to deals that reach this point from now on. After saving, you can also update the deals already using it." : "Apply it from any contact page: Tasks card → Apply template."}</p>
+        {uses > 0 && !dirty && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-accent/40 bg-accent-soft px-3 py-2 text-sm">
+            <span><b>Saved.</b> {uses} open deal{uses === 1 ? " is" : "s are"} already using this checklist. Update {uses === 1 ? "it" : "them"} too? Done steps, dates set by hand and who steps are assigned to stay as they are; removed steps go to Trash.</span>
+            <span className="flex gap-2">
+              <button type="button" className="btn" onClick={() => onOffer(null)}>Not now</button>
+              <button type="button" className="btn btn-primary" disabled={pending} onClick={syncOpen}>{pending ? "Updating…" : `Update ${uses === 1 ? "it" : `the ${uses} deals`}`}</button>
+            </span>
+          </div>
+        )}
+        {synced && <p role="status" className="text-sm text-accent">{synced}</p>}
         {twins.length > 0 && <p className="text-sm text-[#9a6400]">{twins.map((x) => x.name).join(", ")} also starts here. Both will add their tasks.</p>}
       </section>
 
