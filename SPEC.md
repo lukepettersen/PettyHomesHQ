@@ -847,12 +847,12 @@ scrolls with it until its last card is on screen, then stays put while the middl
 
 ## 13. Admin
 
-**Layout (owner-approved redesign 2026-10-29):** clicking Admin opens an **Admin home** page with six groups, each
-page listed with a one-line description: **Team** (Users & permissions, Activity, Trash), **Connections**
-(Integrations, with Google / Texting & calls / File storage status), **Texts & emails** (**Text templates** and
-**Email templates** as separate pages, each with its own folders, owner request 2026-10-29; Calendar invites,
-Appointment types), **Deals** (Pipeline stages, Checklists, Deal questions), **Contacts** (Stages, sources &
-follow-up, Tags, Custom fields, Date reminders), **Data & tools** (Import from Follow Up Boss, Tools menu). Counts show
+**Layout (owner-approved redesign 2026-10-29):** clicking Admin opens an **Admin home** page with five groups, each
+page listed with a one-line description: **Team** (Users & permissions, Activity, Trash), **Texts & emails** (Text
+templates, Email templates: separate pages, each with its own folders), **Deals** (Pipeline stages, Deal questions,
+Checklists, Calendar invites), **Contacts** (Stages, sources & follow-up, Tags, Custom fields, Date reminders,
+Appointment types), **Connections & tools** (Integrations, with Google / Texting & calls / File storage status; Tools
+menu; Import from Follow Up Boss). Counts show
 for Trash, templates and checklists. Inside a page the left menu has the same groups and "‹ Admin home". Plainer names:
 Client statuses → **Pipeline stages**, Task templates → **Checklists**, Buyer and seller forms + Purchase agreement
 forms → **Deal questions** (two tabs; the purchase agreement tab has **Buyer** / **Seller** and, on Seller, **Copy from
