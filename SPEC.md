@@ -292,7 +292,9 @@ Principles:
   post** box; seller deals have **Coming Soon/Active post** and **Under Contract post**. Each holds the caption Alyssa
   posts. A saved post shows "Needs your edit" (clay) until someone ticks "Wording is right: ready to post" or clicks
   **Mark ready**, then "Ready to post"; **Copy** puts the text on the clipboard. Shows who changed it and when. No task
-  is created (the checklists already have the posting steps). An empty box starts from Luke's starter caption
+  is created (the checklists already have the posting steps). The Under Contract box shows once the deal has a
+  purchase agreement (or a saved Under Contract post); the Coming Soon/Active box from the first "Coming soon…" seller
+  stage on (e.g. Coming Soon Prep). An empty box starts from Luke's starter caption
   (shown as "Needs your edit", "Starter caption, not saved yet"): Under Contract = "🔥Under Contract🔥 / Congrats to my
   clients... 🥳"; Coming Soon = his Coming Soon caption with the city, list price and street filled in from the
   seller file (src/lib/social.ts `starterPost`).
@@ -376,6 +378,8 @@ Principles:
   it's in the header, then the deal notes) beside a **People** box (lender, title, agents with email and phone, from
   the contact picked or what was typed); the Contract to Close checklist (its heading names the deal's Under Contract column, e.g. "Contract to Close · Inspection" / "· Pending", owner request 2026-10-29) with a progress bar (all checklists have
   one). An empty file checklist is hidden while under contract.
+  Key dates count as met only when marked (Mark pending, or the date's status), never just because they passed;
+  Final Acceptance is the one exception (owner 2026-10-29). So a contract goes pending only via Mark pending.
   **Mark pending** (two clicks) marks met the "until" dates of every Under Contract column before the last one
   (the inspection deadline), which moves the deal to the Pending column; a deal also becomes pending by itself
   once those dates pass. A key date that has passed counts as Met unless it was marked otherwise; moving a

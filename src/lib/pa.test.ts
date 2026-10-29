@@ -43,8 +43,10 @@ describe("key dates and Under Contract column", () => {
   it("knows which dates apply", () => {
     expect(applicableDates({ answers: { hoa: "No" }, writtenStatementNA: true })).toEqual(["finalAcceptance", "inspection", "closing"]);
   });
-  it("treats a passed date as met", () => {
-    expect(effectiveStatus("2026-10-01", "pending", TODAY)).toBe("met");
+  it("only treats a passed Final Acceptance as met; other dates wait to be marked", () => {
+    expect(effectiveStatus("2026-10-01", "pending", TODAY, "finalAcceptance")).toBe("met");
+    expect(effectiveStatus("2026-10-01", "pending", TODAY, "inspection")).toBe("pending");
+    expect(effectiveStatus("2026-10-01", undefined, TODAY)).toBe("pending");
     expect(effectiveStatus("2026-10-20", "pending", TODAY)).toBe("pending");
     expect(effectiveStatus("2026-10-20", "waived", TODAY)).toBe("waived");
   });

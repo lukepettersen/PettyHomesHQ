@@ -7,10 +7,10 @@ import { SOCIAL_SLOTS, starterPost, type SocialPost, type SocialPosts as Posts, 
 import { saveSocialPost } from "../../pipeline/actions";
 
 /** Social post descriptions on a deal (owner request 2026-10-29): "Needs your edit" until marked ready, then Copy for posting. */
-export function SocialPosts({ fileId, kind, posts, address, price }: { fileId: string; kind: "buyer" | "listing"; posts: Posts; address: string | null; price: number | null }) {
+export function SocialPosts({ fileId, kind, posts, address, price, underContract, comingSoon }: { fileId: string; kind: "buyer" | "listing"; posts: Posts; address: string | null; price: number | null; underContract: boolean; comingSoon: boolean }) {
   return (
     <div className="mt-3 flex flex-col gap-2">
-      {SOCIAL_SLOTS[kind].map(({ slot, label }) => <SocialBox key={slot + (posts[slot]?.at ?? "")} fileId={fileId} slot={slot} label={label} post={posts[slot]} starter={starterPost(slot, kind, { address, price })} />)}
+      {SOCIAL_SLOTS[kind].filter(({ slot }) => (slot === "uc" ? underContract : comingSoon || underContract) || posts[slot]).map(({ slot, label }) => <SocialBox key={slot + (posts[slot]?.at ?? "")} fileId={fileId} slot={slot} label={label} post={posts[slot]} starter={starterPost(slot, kind, { address, price })} />)}
     </div>
   );
 }

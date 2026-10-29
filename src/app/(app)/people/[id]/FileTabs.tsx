@@ -109,6 +109,9 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
     done?.(); router.refresh();
   });
   const facts = factRows(fileForms[file.kind], file, { blanks: true });
+  // The Coming Soon/Active post shows from the first "Coming soon…" stage on (owner 2026-10-29).
+  const csAt = list.findIndex((x) => /coming soon/i.test(x.name));
+  const comingSoonYet = csAt < 0 || list.findIndex((x) => x.id === file.statusId) >= csAt;
   const answers = { ...file.info, address: file.address ?? "", price: file.price ? String(file.price) : "", ...(file.commission !== null ? { commission: file.commission } : {}), ...(file.bac !== null ? { bac: file.bac } : {}) };
 
   const pend = activePa ? isPending(activePa, pendingAt, today) : false;
@@ -164,7 +167,7 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
           <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider muted">Notes</h3>
           {notesFacts.length > 0 && <FactGrid facts={notesFacts} />}
           <DealNotes key={file.id + file.notes} fileId={file.id} notes={file.notes} notesAt={file.notesAt} notesBy={file.notesBy} />
-          <SocialPosts fileId={file.id} kind={file.kind} posts={file.social} address={file.address} price={file.price} />
+          <SocialPosts fileId={file.id} kind={file.kind} posts={file.social} address={file.address} price={file.price} underContract={!!activePa} comingSoon={comingSoonYet} />
         </section>
         {people.length > 0 && (
           <section aria-label="People" className="rounded-xl border border-misty bg-paper px-3.5 py-2.5">

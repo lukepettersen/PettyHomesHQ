@@ -17,7 +17,7 @@ const inDays = (d: string, today: string) => { const n = diffDays(d, today); ret
 
 /** The next key date that isn't met or waived, for "Next: Inspection deadline Mon Nov 2 (in 5 days)". */
 export function nextKeyDate(pa: PaView, today: string): { label: string; date: string; when: string } | null {
-  const k = applicableDates(pa).find((x) => pa.dates[x] && !["met", "waived"].includes(effectiveStatus(pa.dates[x], pa.dateStatus[x], today)));
+  const k = applicableDates(pa).find((x) => pa.dates[x] && !["met", "waived"].includes(effectiveStatus(pa.dates[x], pa.dateStatus[x], today, x)));
   return k ? { label: keyLabel(k), date: pa.dates[k]!, when: inDays(pa.dates[k]!, today).toLowerCase() } : null;
 }
 
@@ -45,15 +45,15 @@ export function PaButtons({ pa, personName, pendingAt, today, onMsg, onError }: 
 /** Key dates as a timeline: met ones checked, the next one highlighted, countdowns. Dates change with Edit contract. */
 export function DateStrip({ pa, today }: { pa: PaView; today: string }) {
   const keys = applicableDates(pa);
-  const next = keys.find((k) => pa.dates[k] && !["met", "waived"].includes(effectiveStatus(pa.dates[k], pa.dateStatus[k], today)));
-  const doneCount = keys.filter((k) => ["met", "waived"].includes(effectiveStatus(pa.dates[k], pa.dateStatus[k], today))).length;
+  const next = keys.find((k) => pa.dates[k] && !["met", "waived"].includes(effectiveStatus(pa.dates[k], pa.dateStatus[k], today, k)));
+  const doneCount = keys.filter((k) => ["met", "waived"].includes(effectiveStatus(pa.dates[k], pa.dateStatus[k], today, k))).length;
   return (
     <ol className="relative isolate mt-5 grid gap-y-4 max-sm:grid-cols-2" style={{ gridTemplateColumns: `repeat(${keys.length}, minmax(0, 1fr))` }}>
       <li aria-hidden="true" className="absolute top-[11px] h-[3px] bg-misty max-sm:hidden" style={{ left: `${50 / keys.length}%`, right: `${50 / keys.length}%` }} />
       <li aria-hidden="true" className="absolute top-[11px] h-[3px] bg-moss max-sm:hidden" style={{ left: `${50 / keys.length}%`, width: `${(Math.max(0, Math.min(doneCount, keys.length - 1)) / keys.length) * 100}%` }} />
       {keys.map((k) => {
         const d = pa.dates[k];
-        const st = effectiveStatus(d, pa.dateStatus[k], today);
+        const st = effectiveStatus(d, pa.dateStatus[k], today, k);
         const done = st === "met" || st === "waived";
         const isNext = k === next;
         return (

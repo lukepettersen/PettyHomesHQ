@@ -190,9 +190,11 @@ export function applicableDates(pa: { answers: Answers; writtenStatementNA: bool
 }
 
 /** A pending or extended date that has passed counts as met. */
-export function effectiveStatus(date: string | null, stored: DateStatus | undefined, today: string): DateStatus {
+/** A key date's status. Dates only count as met when someone marks them (Mark pending, or the date picker), never just
+ *  because they passed (owner 2026-10-29); Final Acceptance is the exception, met once it's in the past. */
+export function effectiveStatus(date: string | null, stored: DateStatus | undefined, today: string, key?: DateKey): DateStatus {
   const s = stored ?? "pending";
-  if ((s === "pending" || s === "extended") && date && date < today) return "met";
+  if (key === "finalAcceptance" && (s === "pending" || s === "extended") && date && date < today) return "met";
   return s;
 }
 
@@ -200,7 +202,7 @@ export function effectiveStatus(date: string | null, stored: DateStatus | undefi
 export function ucColumn<T extends { untilDate: string | null }>(
   columns: T[], pa: { answers: Answers; writtenStatementNA: boolean; dates: Record<DateKey, string | null>; dateStatus: Partial<Record<DateKey, DateStatus>> }, today: string,
 ): T | undefined {
-  const open = new Set(applicableDates(pa).filter((k) => !["met", "waived"].includes(effectiveStatus(pa.dates[k], pa.dateStatus[k], today))));
+  const open = new Set(applicableDates(pa).filter((k) => !["met", "waived"].includes(effectiveStatus(pa.dates[k], pa.dateStatus[k], today, k))));
   return columns.find((c) => c.untilDate && open.has(c.untilDate as DateKey)) ?? columns[columns.length - 1];
 }
 
@@ -209,10 +211,10 @@ export function pendingKeys(columns: { untilDate: string | null }[]): DateKey[] 
   return columns.slice(0, -1).map((c) => c.untilDate).filter((k): k is DateKey => KEY_DATES.some(([x]) => x === k));
 }
 
-/** Pending = every date before the Pending column is met or waived (a passed date counts as met). */
+/** Pending = every date before the Pending column is marked met or waived. */
 export function isPending(pa: { answers: Answers; writtenStatementNA: boolean; dates: Record<DateKey, string | null>; dateStatus: Partial<Record<DateKey, DateStatus>> }, keys: DateKey[], today: string): boolean {
   const apply = new Set(applicableDates(pa));
-  return keys.filter((k) => apply.has(k)).every((k) => ["met", "waived"].includes(effectiveStatus(pa.dates[k], pa.dateStatus[k], today)));
+  return keys.filter((k) => apply.has(k)).every((k) => ["met", "waived"].includes(effectiveStatus(pa.dates[k], pa.dateStatus[k], today, k)));
 }
 
 /** "2.7% · $8,424" */
