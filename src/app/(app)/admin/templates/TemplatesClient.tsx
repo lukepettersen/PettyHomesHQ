@@ -9,7 +9,7 @@ import { longIso } from "@/lib/tasks";
 import { deleteTemplate, duplicateTemplate, moveTemplate, saveTemplate } from "./actions";
 import { FolderList } from "@/components/FolderList";
 
-type Props = { messages: { id: string; kind: string; name: string; folder: string }[]; templates: Template[]; statuses: StatusRow[]; team: string[]; tags: string[]; stages: string[]; today: string; initialId: string | null };
+type Props = { roles: { id: string; name: string }[]; messages: { id: string; kind: string; name: string; folder: string }[]; templates: Template[]; statuses: StatusRow[]; team: string[]; tags: string[]; stages: string[]; today: string; initialId: string | null };
 const blankStep = (): Step => ({ id: newId("s"), name: "New step", assignee: "", type: "task", days: 0, dir: "on", anchor: "start", cond: "always" });
 
 export function TemplatesClient(p: Props) {
@@ -46,7 +46,7 @@ export function TemplatesClient(p: Props) {
   );
 }
 
-function Editor({ t: initial, statuses, team, tags, stages, today, templates, messages, folders, onDirty, onSelect }: Props & { folders: string[]; t: Template; onDirty: (d: boolean) => void; onSelect: (id: string | null) => void }) {
+function Editor({ t: initial, statuses, team, roles, tags, stages, today, templates, messages, folders, onDirty, onSelect }: Props & { folders: string[]; t: Template; onDirty: (d: boolean) => void; onSelect: (id: string | null) => void }) {
   const router = useRouter();
   const [t, setT] = useState<Template>(initial);
   const [error, setError] = useState("");
@@ -203,6 +203,7 @@ function Editor({ t: initial, statuses, team, tags, stages, today, templates, me
                     })()}
                   </label>
                 )}
+                {(s.type === "email" || s.type === "text") && <AutoSendFields step={s} team={team} roles={roles} field={field} onChange={(auto) => setStep(i, si, { auto })} />}
                 {s.type === "stage" && (
                   <label className="flex items-center gap-1 text-xs font-semibold muted">Change contact&apos;s stage to
                     <select className={field} value={s.stage ?? ""} onChange={(e) => setStep(i, si, { stage: e.target.value || undefined })}>
@@ -255,5 +256,41 @@ function TagList({ label, value, all, onChange }: { label: string; value: string
         <option value="">+ tag</option>{all.filter((g) => !value.includes(g)).map((g) => <option key={g}>{g}</option>)}
       </select>
     </span>
+  );
+}
+
+const HALF_HOURS = Array.from({ length: 25 }, (_, i) => `${String(8 + Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`);
+const clock = (t: string) => { const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")}${h < 12 ? "am" : "pm"}`; };
+
+/**
+ * "Send automatically" on a text/email step (owner request 2026-10-29): it goes out by itself at this time on the due
+ * date, from the person picked, to the people ticked. Until then it's listed under Scheduled, where it can be turned off.
+ */
+function AutoSendFields({ step, team, roles, field, onChange }: { step: Step; team: string[]; roles: { id: string; name: string }[]; field: string; onChange: (a: Step["auto"]) => void }) {
+  const a = step.auto;
+  const timed = step.dir === "minutesBefore" || step.dir === "minutesAfter";
+  const toggle = (k: string, on: boolean) => a && onChange({ ...a, to: on ? [...a.to, k] : a.to.filter((x) => x !== k) });
+  const opts: [string, string][] = [["client", "Client(s)"], ...roles.map((r): [string, string] => [`people:${r.id}`, r.name]), ...team.map((t): [string, string] => [`team:${t}`, t])];
+  return (
+    <div className="flex w-full flex-col gap-1.5 rounded-md border border-dashed border-misty px-2.5 py-2">
+      <label className="flex items-center gap-2 text-xs font-semibold">
+        <input type="checkbox" checked={!!a} disabled={step.dir === "none"} onChange={(e) => onChange(e.target.checked ? { from: "", to: ["client"], time: "09:00" } : undefined)} />
+        Send automatically {step.dir === "none" && <span className="font-normal muted">(needs a due date)</span>}
+      </label>
+      {a && (
+        <>
+          <span className="flex flex-wrap items-center gap-2 text-xs font-semibold muted">
+            {!timed && <label className="flex items-center gap-1">at<select className={field} value={a.time} onChange={(e) => onChange({ ...a, time: e.target.value })}>{HALF_HOURS.map((t) => <option key={t} value={t}>{clock(t)}</option>)}</select>on the due date</label>}
+            {timed && <span>at the step&apos;s time ({step.minutes} min {step.dir === "minutesBefore" ? "before" : "after"})</span>}
+            <label className="flex items-center gap-1">from<select className={field} value={a.from} onChange={(e) => onChange({ ...a, from: e.target.value })}><option value="">Whoever the step is assigned to</option>{team.map((t) => <option key={t} value={t}>{t}</option>)}</select></label>
+          </span>
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+            <b className="muted">to</b>
+            {opts.map(([k, l]) => <label key={k} className="flex items-center gap-1"><input type="checkbox" checked={a.to.includes(k)} onChange={(e) => toggle(k, e.target.checked)} /> {l}</label>)}
+          </span>
+          {!step.messageId && !step.message && <span className="text-xs text-bad">Pick a message template above, or it can&apos;t send.</span>}
+        </>
+      )}
+    </div>
   );
 }

@@ -677,6 +677,21 @@ Principles:
   texts** (when, to whom by name, by whom, the message shortened; click it to read the whole text) with **Cancel** for the person who scheduled it or anyone allowed to
   delete records; one that couldn't send shows "Not sent" with the reason for a week, and the scheduler gets a bell
   alert.
+- **Automatic texts and emails from checklists** *(owner request 2026-10-29)*: in Admin → Task templates, a text or
+  email step that has a due date can be set to **Send automatically**. Each step picks the time (30-minute steps,
+  8:00am–8:00pm Central, on the step's due date; a step timed in minutes before/after an appointment uses that time),
+  **from** whom (whoever the step is assigned to, or a named teammate: texts go from their HQ number, emails from
+  their own Gmail when connected) and **to** whom: the client(s), any of the deal people on the contract (lender,
+  title, agents, TC), Luke and/or Alyssa (their cell for texts). It sends on its own, no approval, using the step's
+  message template filled in for that person and deal at send time. Because it rides on the step's due date, it moves
+  when the contract date it's timed from changes. When it sends, the step is checked off by the sender, and it goes
+  on the timeline (texts to two or more numbers go as one group text when group texting is on; texts still respect
+  STOP, quiet hours and the daily limit). Anyone with nothing on file is skipped and noted on the step. It doesn't
+  send (and the step stays open to do by hand, the sender and assignee get a bell alert) when no template is picked,
+  a merge field the template needs is blank, or nobody has a number/email. Upcoming automatic steps show on the
+  contact page's Scheduled list (and texts in the sender's Messages → Scheduled) with **Turn off**, which keeps the
+  step as a normal one to do by hand. The checklist marks them "Auto" (red "Auto · not sent" with the reason when
+  one failed).
 - **Templates in group texts** *(owner request 2026-10-28)*: the Template box and "/name" work when replying to a
   group and when starting one from + New message. Your own details fill in; client details (like a first name)
   can't for a whole group, so they're left blank and listed to type in before sending.

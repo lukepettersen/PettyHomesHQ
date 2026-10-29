@@ -18,6 +18,7 @@ import { MAX_TEXT_PHOTOS } from "@/lib/textMedia";
 import { applyReaction, reactionText, SEND_REACTIONS, type ReactionMark } from "@/lib/reactions";
 import { centralToUtc, scheduleLabel, scheduleProblem } from "@/lib/scheduledText";
 import { hasPermission } from "@/server/permissions";
+import type { SessionUser } from "@/server/auth";
 
 const id = z.string().trim().min(1).max(40);
 const digits = z.string().trim().min(7).max(30).transform(normalizePhone);
@@ -223,6 +224,7 @@ export async function scheduleText(input: z.input<typeof scheduleSchema>) {
 /** Cancel a scheduled text that hasn't gone out: the person who scheduled it, or anyone allowed to delete records. */
 export async function cancelScheduledText(scheduledId: string) {
   return guarded("sendTexts", async (user) => {
+    if (scheduledId.startsWith("task:")) return turnOffAutoStep(user, scheduledId.slice(5));
     const s = await db.scheduledText.findUnique({ where: { id: id.parse(scheduledId) } });
     if (!s || s.status !== "pending") throw new UserError("That text already went out or was canceled.");
     if (s.createdById !== user.id && !hasPermission(user.permissions as never, "deleteRecords")) throw new UserError("Only the person who scheduled it can cancel it.");
@@ -231,4 +233,15 @@ export async function cancelScheduledText(scheduledId: string) {
     await logActivity(user.id, "delete", "scheduledText", s.personId, `Canceled the text scheduled for ${scheduleLabel(s.sendAt)}`);
     if (s.personId) revalidatePath(`/people/${s.personId}`);
   });
+}
+
+/** Turning off a checklist step's automatic send: the step stays on the checklist to do by hand (owner request 2026-10-29). */
+async function turnOffAutoStep(user: SessionUser, taskId: string) {
+  const t = await db.task.findFirst({ where: { id: id.parse(taskId), deletedAt: null } });
+  if (!t || !t.autoState || t.autoState === "off" || t.autoState === "sent") throw new UserError("That step already went out or isn't automatic any more.");
+  const r = await db.task.updateMany({ where: { id: t.id, autoState: { in: ["pending", "failed"] } }, data: { autoState: "off" } });
+  if (!r.count) throw new UserError("That step is going out right now.");
+  await logActivity(user.id, "update", "task", t.personId, `Turned off the automatic send for "${t.title}"; it stays on the checklist to do by hand`);
+  if (t.personId) revalidatePath(`/people/${t.personId}`);
+  revalidatePath("/messages");
 }

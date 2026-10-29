@@ -32,6 +32,8 @@ export type TaskRow = {
   paId: string | null;
   /** Checklist step details: "Buyer checklist", its phase and timing; due date locked when timed from a contract date. */
   step: { source: string; phase: string | null; timing: string | null; locked: boolean } | null;
+  /** Checklist steps that send by themselves (owner request 2026-10-29): pending, sending, sent, failed or off. */
+  auto?: { state: string; error: string | null } | null;
   /** Important dates (birthdays, homeiversaries): who to address the card to, without opening their page (owner 2026-10-27). */
   mailTo?: { name: string; address: string | null } | null;
 };
@@ -57,7 +59,7 @@ export function toRow(t: DbTask): TaskRow {
     due: t.dueDate ? isoFromDate(t.dueDate) : null, time: t.dueTime, repeat: t.repeat, priority: t.priority,
     subtasks: parseSubtasks(t.subtasks), listId: t.listId, personId: t.personId, personName: t.person?.name ?? null,
     assigneeId: t.assigneeId, sourceKey: t.sourceKey, cat: categoryOf(t), done: !!t.completedAt,
-    fileId: t.fileId, paId: t.paId, step: stepOf(t),
+    fileId: t.fileId, paId: t.paId, step: stepOf(t), auto: t.autoState && t.autoState !== "off" ? { state: t.autoState, error: t.autoError } : null,
   };
 }
 

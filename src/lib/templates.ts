@@ -12,7 +12,14 @@ export type Step = {
   message?: string; // a template name typed before templates existed; shown until one is picked
   addTags?: string[]; removeTags?: string[]; // "Add/remove tags" steps
   stage?: string; // "Change stage" steps: the stage name to set on the contact (owner request 2026-10-21)
+  auto?: AutoSend; // text/email steps: send by itself at its time (owner request 2026-10-29)
 };
+/**
+ * A text/email step that sends by itself (owner 2026-10-29): from = a team member's first name, "" = whoever the step
+ * is assigned to; to = "client", "people:<PA people section id>" (lender, title, agents) and "team:<first name>";
+ * time = "HH:MM" Central on the due date (steps timed in minutes from an appointment use that time instead).
+ */
+export type AutoSend = { from: string; to: string[]; time: string };
 export type Phase = { id: string; name: string; steps: Step[] };
 export type Template = { id: string; name: string; trigger: string | null; folder?: string; phases: Phase[] };
 

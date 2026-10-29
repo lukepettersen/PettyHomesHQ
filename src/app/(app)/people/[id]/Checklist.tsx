@@ -46,7 +46,7 @@ export function Checklist({ title, tasks, today, team, personId, hideEmpty }: { 
                       <li key={t.id} className="flex items-center gap-2 px-3 py-1.5 pl-8 text-sm">
                         <CheckButton task={t} onToggle={() => toggle(t)} />
                         <KindIcon kind={t.kind} />
-                        <span className={`min-w-0 flex-1 ${t.done ? "muted line-through" : ""}`}>{t.title}</span>
+                        <span className={`min-w-0 flex-1 ${t.done ? "muted line-through" : ""}`}>{t.title}{t.auto && <AutoBadge auto={t.auto} />}</span>
                         {!t.done && personId && (t.kind === "email" || t.kind === "text") && (
                           <button type="button" className="btn px-2 py-0.5 text-xs" onClick={() => setDrafting(t.id)}>{t.kind === "email" ? "Draft email" : "Draft text"}</button>
                         )}
@@ -64,5 +64,16 @@ export function Checklist({ title, tasks, today, team, personId, hideEmpty }: { 
       {error && <p role="alert" className="mt-1 text-sm text-bad">{error}</p>}
       {drafting && <DraftModal taskId={drafting} onClose={() => { setDrafting(null); router.refresh(); }} />}
     </div>
+  );
+}
+
+/** "Auto" on a step that sends by itself; red "Not sent" with the reason when it failed (owner request 2026-10-29). */
+function AutoBadge({ auto }: { auto: { state: string; error: string | null } }) {
+  const failed = auto.state === "failed";
+  return (
+    <span title={failed ? auto.error ?? "" : auto.state === "sent" ? (auto.error ?? "Sent automatically") : "Sends by itself at its due time. Turn it off under Scheduled."}
+      className={`ml-1.5 rounded-full px-1.5 py-px align-[1px] text-[10.5px] font-bold ${failed ? "bg-[#f9e1de] text-bad" : "bg-accent-soft text-accent"}`}>
+      {failed ? "Auto · not sent" : auto.state === "sent" ? "Sent automatically" : "Auto"}
+    </span>
   );
 }

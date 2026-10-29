@@ -51,11 +51,15 @@ export async function applyTemplate(tx: Tx, t: Template, ctxIn: Ctx, userId: str
     const s = spec.step;
     if (s.type === "tags") { await applyTags(tx, ctx.personId, s.addTags ?? [], s.removeTags ?? []); continue; }
     if (s.type === "stage") { await applyStage(tx, ctx.personId, s.stage ?? "", t.name); continue; }
+    // A step set to send by itself goes out at its chosen time on the due date (owner request 2026-10-29).
+    const auto = (s.type === "text" || s.type === "email") && s.auto && spec.due ? s.auto : null;
+    const autoTime = auto && minutesOffset(s) == null ? auto.time : null;
     await tx.task.create({
       data: {
+        ...(auto ? { autoSend: auto, autoState: "pending" } : {}),
         title: s.name, kind: s.type, personId: ctx.personId, fileId: ctx.fileId ?? null, paId: ctx.paId ?? null,
         templateId: t.id, stepId: s.id, phase: spec.phase, anchor: s.dir === "none" ? null : s.anchor, offsetDays: s.dir === "none" ? null : offsetOf(s),
-        dueDate: spec.due ? dateFromIso(spec.due) : null, dueTime: !spec.due ? null : minutesOffset(s) != null ? (ctx.times?.[s.anchor] ? timeBefore(ctx.times[s.anchor]!, minutesOffset(s)!) : null) : offsetOf(s) === 0 ? ctx.times?.[s.anchor] ?? null : null,
+        dueDate: spec.due ? dateFromIso(spec.due) : null, dueTime: !spec.due ? null : autoTime ? autoTime : minutesOffset(s) != null ? (ctx.times?.[s.anchor] ? timeBefore(ctx.times[s.anchor]!, minutesOffset(s)!) : null) : offsetOf(s) === 0 ? ctx.times?.[s.anchor] ?? null : null,
         offsetMinutes: minutesOffset(s), // positive = before, negative = after
         assigneeId: who(s.assignee), advanceStatusId: s.advance || null, createdById: userId,
       },

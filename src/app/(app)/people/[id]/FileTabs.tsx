@@ -26,7 +26,7 @@ type EmailProps = { emails: string[]; templates: { id: string; name: string }[];
 export type OfferRow = { id: string; fileId: string; createdAt: string; address: string; price: number | null; summary: string; prefill: Record<string, string> };
 type Props = { offers: OfferRow[]; email: EmailProps; text: Omit<React.ComponentProps<typeof TextComposer>, "personId">; fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean; canDelete: boolean; timeline: React.ReactNode;
   contracts: PaView[]; forms: Record<Side, PaSection[]>; pendingAt: DateKey[]; ucColumns: { name: string; untilDate: string | null }[]; today: string; checklists: TaskRow[]; team: TeamMember[]; scheduled: ScheduledRow[] };
-export type ScheduledRow = { id: string; when: string; to: string; body: string; by: string; mine: boolean; status: string; error: string | null; personId?: string | null };
+export type ScheduledRow = { id: string; when: string; to: string; body: string; by: string; mine: boolean; status: string; error: string | null; personId?: string | null; auto?: boolean };
 
 /** Middle column: a tab per active buyer/listing file, then Timeline (SPEC.md §6.3). */
 export function FileTabs(p: Props) {
@@ -232,8 +232,8 @@ function Scheduled({ rows }: { rows: ScheduledRow[] }) {
   const [full, setFull] = useState<string[]>([]); // texts opened to read in full (owner request 2026-10-28)
   if (!rows.length) return null;
   return (
-    <section aria-label="Scheduled texts" className="card mt-3 px-4 py-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wider muted">Scheduled texts</h3>
+    <section aria-label="Scheduled" className="card mt-3 px-4 py-3">
+      <h3 className="text-xs font-semibold uppercase tracking-wider muted">{rows.some((x) => x.auto) ? "Scheduled texts & emails" : "Scheduled texts"}</h3>
       <ul className="mt-1 flex flex-col">
         {rows.map((x) => (
           <li key={x.id} className="flex flex-wrap items-start justify-between gap-2 border-t border-misty/60 py-1.5 text-sm first:border-0">
@@ -244,7 +244,7 @@ function Scheduled({ rows }: { rows: ScheduledRow[] }) {
               {x.error && <span className="block text-xs text-bad">{x.when}: {x.error}</span>}
             </span>
             {x.status === "pending" && x.mine && <button type="button" className="text-xs font-semibold text-bad hover:underline" disabled={busy}
-              onClick={() => start(async () => { setError(""); const r = await cancelScheduledText(x.id); if (!r.ok) setError(r.error); else router.refresh(); })}>Cancel</button>}
+              onClick={() => start(async () => { setError(""); const r = await cancelScheduledText(x.id); if (!r.ok) setError(r.error); else router.refresh(); })}>{x.auto ? "Turn off" : "Cancel"}</button>}
           </li>
         ))}
       </ul>

@@ -342,6 +342,9 @@ model Task {
   offsetMinutes   Int? // "N minutes before" the anchor's time (phone call); the due time moves with it
   advanceStatusId String? // move the file to this status when done
   completedAt     DateTime?
+  autoSend        Json? // checklist step that sends by itself: { from, to, time } (owner request 2026-10-29)
+  autoState       String? // pending | sending | sent | failed | off (turned off by someone)
+  autoError       String?
   completedById   String? // who checked it off (Done today, owner request 2026-10-28); empty when closed automatically
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
@@ -350,6 +353,7 @@ model Task {
   @@index([dueDate])
   @@index([personId])
   @@index([assigneeId, completedAt])
+  @@index([autoState, dueDate])
   @@index([fileId])
   @@index([paId])
 }

@@ -6,6 +6,10 @@ import { namesForNumbers, sendTextAs } from "@/server/texting";
 import { groupReady, textNumbersAsGroup } from "@/server/groupText";
 import { formatPhone } from "@/lib/normalize";
 import { scheduleLabel } from "@/lib/scheduledText";
+import { toLabel } from "@/lib/autoSend";
+import type { AutoSend } from "@/lib/templates";
+import { autoSendAt } from "@/server/autoSend";
+import { loadForm } from "@/server/pa";
 
 // Scheduled texts (owner request 2026-10-28): sent from the scheduler's own number within a minute of their time by
 // /api/cron/scheduled-texts, which the app calls every minute (src/instrumentation.ts).
@@ -57,5 +61,34 @@ async function loadScheduled(where: { personId?: string; createdById?: string },
   const names = await namesForNumbers([...new Set(rows.flatMap((x) => x.numbers))]);
   const all = [...new Set(rows.flatMap((x) => x.numbers))];
   const nameOf = (n: string) => names[all.indexOf(n)] ?? n;
-  return rows.map((x) => ({ id: x.id, when: scheduleLabel(x.sendAt), to: [...new Set(x.numbers.map(nameOf))].join(", "), body: x.body, by: by.get(x.createdById) ?? "", mine: x.createdById === userId || canCancelAny, status: x.status, error: x.error, personId: x.personId }));
+  const texts = rows.map((x) => ({ id: x.id, at: x.sendAt.getTime(), when: scheduleLabel(x.sendAt), to: [...new Set(x.numbers.map(nameOf))].join(", "), body: x.body, by: by.get(x.createdById) ?? "", mine: x.createdById === userId || canCancelAny, status: x.status, error: x.error, personId: x.personId, auto: false }));
+  const autos = await loadAutoSteps(where, userId, canCancelAny);
+  return [...texts, ...autos].sort((a, b) => a.at - b.at);
+}
+
+/** Checklist steps that send by themselves (owner request 2026-10-29), listed with the scheduled texts. On a contact page
+ *  both texts and emails; in Messages only the texts that go out from that person's number. Id "task:<id>". */
+async function loadAutoSteps(where: { personId?: string; createdById?: string }, userId: string, canCancelAny: boolean) {
+  const tasks = await db.task.findMany({
+    where: { autoState: { in: ["pending", "sending", "failed"] }, completedAt: null, deletedAt: null, ...(where.personId ? { personId: where.personId } : { kind: "text" }) },
+    include: { person: { select: { name: true } } }, orderBy: { dueDate: "asc" }, take: 100,
+  });
+  if (!tasks.length) return [];
+  const team = await db.user.findMany({ select: { id: true, name: true } });
+  const first = (id: string | null) => team.find((u) => u.id === id)?.name.split(" ")[0] ?? "";
+  const roles = new Map([...(await loadForm("buyer")), ...(await loadForm("seller"))].filter((s) => s.people).map((s) => [`people:${s.id}`, s.name]));
+  return tasks.flatMap((t) => {
+    const auto = t.autoSend as AutoSend | null;
+    if (!auto || !Array.isArray(auto.to)) return [];
+    const from = auto.from || first(t.assigneeId);
+    if (where.createdById && from.toLowerCase() !== first(where.createdById).toLowerCase()) return [];
+    const at = autoSendAt(t);
+    return [{
+      id: `task:${t.id}`, at: at?.getTime() ?? Infinity, when: at ? scheduleLabel(at) : "No date yet",
+      to: toLabel(auto.to, { client: t.person?.name ?? "Client", ...Object.fromEntries(roles) }),
+      body: `Automatic ${t.kind === "email" ? "email" : "text"} from the checklist: ${t.title}`, by: from,
+      mine: canCancelAny || t.assigneeId === userId || first(userId).toLowerCase() === from.toLowerCase(),
+      status: t.autoState === "failed" ? "failed" : "pending", error: t.autoError, personId: t.personId, auto: true,
+    }];
+  });
 }

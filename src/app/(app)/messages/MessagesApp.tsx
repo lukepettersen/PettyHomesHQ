@@ -357,7 +357,7 @@ function ScheduledList({ rows, q, onChanged }: { rows: ScheduledRow[]; q: string
             className={`block w-full text-left muted hover:text-charcoal ${full.includes(x.id) ? "whitespace-pre-wrap break-words" : "line-clamp-2"}`}>{x.body}</button>
           {x.error && <span className="block text-xs text-bad">{x.when}: {x.error}</span>}
           {x.status === "pending" && x.mine && <button type="button" className="mt-0.5 text-xs font-semibold text-bad hover:underline" disabled={busy}
-            onClick={() => start(async () => { setError(""); const r = await cancelScheduledText(x.id); if (!r.ok) setError(r.error); else onChanged(); })}>Cancel</button>}
+            onClick={() => start(async () => { setError(""); const r = await cancelScheduledText(x.id); if (!r.ok) setError(r.error); else onChanged(); })}>{x.auto ? "Turn off" : "Cancel"}</button>}
         </li>
       ))}
       {error && <li role="alert" className="px-3 py-2 text-sm text-bad">{error}</li>}

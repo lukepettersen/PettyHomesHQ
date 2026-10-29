@@ -73,6 +73,9 @@ export function TaskDetail({ task, lists, team, onClose, onToggle, onDirty, onSa
         <p className="mx-3.5 mt-3 flex flex-col gap-1 rounded-md bg-sunken px-3 py-2 text-[12.5px] muted">
           <span>From {task.personName ? <b className="text-charcoal">{task.personName}</b> : "a person"}&apos;s {task.step.source.toLowerCase()}{task.step.phase ? ` · ${task.step.phase}` : ""}</span>
           {task.step.timing && <span>Timing: {task.step.timing}.{task.step.locked ? " It moves when that date changes on their page, unless you set a date here." : ""}</span>}
+          {task.auto?.state === "pending" && <span className="font-semibold text-accent">Sends automatically at its due time. Turn it off under Scheduled on their page.</span>}
+          {task.auto?.state === "failed" && <span className="font-semibold text-bad">The automatic send didn&apos;t go out: {task.auto.error}</span>}
+          {task.auto?.state === "sent" && <span className="font-semibold text-accent">Sent automatically.{task.auto.error ? ` ${task.auto.error}.` : ""}</span>}
         </p>
       )}
       {canDraft && (
