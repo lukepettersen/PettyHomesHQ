@@ -30,6 +30,7 @@ import { storageConnected } from "@/server/storage";
 import { PAGE_SIZE, queryPeople } from "@/server/people";
 import { RememberRecent } from "@/components/SearchBox";
 import { normalizeOffer, paPrefill } from "@/lib/offer";
+import { StickySide } from "@/components/StickySide";
 
 const BACK: Record<string, [string, string]> = { tasks: ["/tasks", "Tasks"], people: ["/people", "People"], pipeline: ["/pipeline", "Pipeline"] };
 
@@ -130,7 +131,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
       </div>
       <div className="mt-2 grid grid-cols-1 items-start gap-3 lg:grid-cols-[290px_minmax(0,1fr)_300px]">
         {/* On a phone: contact info, then Tasks, then Timeline, then the other cards (SPEC.md §17). */}
-        <div className="contents lg:sticky lg:top-3 lg:flex lg:min-w-0 lg:flex-col lg:gap-3">
+        <StickySide className="contents lg:sticky lg:top-[var(--side-top,12px)] lg:flex lg:min-w-0 lg:flex-col lg:gap-3">
           <div className="order-1 min-w-0">
             <InfoCard id={p.id} name={p.name} lastContactDays={daysAgo(p.lastContactAt)}
               addresses={p.addresses.length ? p.addresses.map((x) => ({ label: x.label, value: x.value, mailing: x.mailing })) : p.address ? [{ label: "", value: p.address, mailing: false }] : []}
@@ -148,7 +149,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
             <DatesCard id={p.id} name={p.name} birthdays={birthdays} homeiversary={home ? isoFromDate(home.date) : ""} />
             {hasPermission(user.permissions, "deleteRecords") && <DeletePerson id={p.id} name={p.name} />}
           </div>
-        </div>
+        </StickySide>
 
         <section className="order-3 min-w-0 lg:order-2">
           <FileTabs scheduled={scheduled} offers={offers} email={emailProps} text={textProps} fileForms={fileForms} personId={p.id} personName={p.name} files={files} statuses={fileStatuses} canSeeCommission={canSeeCommission}
@@ -156,7 +157,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
             email={emailProps} text={textProps} />} />
         </section>
 
-        <aside className="order-2 flex min-w-0 flex-col gap-3 lg:sticky lg:top-3 lg:order-3">
+        <StickySide as="aside" className="order-2 flex min-w-0 flex-col gap-3 lg:sticky lg:top-[var(--side-top,12px)] lg:order-3">
           <TasksCard lists={taskLists.map((l) => ({ id: l.id, name: l.name, builtin: null, showOnToday: l.showOnToday }))} personId={p.id} personName={p.name} rows={tasks.rows} team={tasks.team} today={tasks.today} meId={user.id}
             templates={templates.map((t) => ({ id: t.id, name: t.name, manual: !t.trigger }))} files={files.filter((f) => !f.closedAt).map((f) => ({ id: f.id, label: `${f.kind === "buyer" ? "Buyer" : "Seller"} · ${f.kind === "buyer" ? f.status : (f.address ?? "").split(",")[0]}` }))} />
           <PipelineCard fileForms={fileForms} personId={p.id} personName={p.name} files={files} contracts={contracts} statuses={fileStatuses} canSeeCommission={canSeeCommission} />
@@ -165,7 +166,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
             activeKinds={files.filter((f) => !f.closedAt).map((f) => f.kind)} statuses={fileStatuses} canSeeCommission={canSeeCommission} />
           <FilesCard personId={p.id} connected={storageConnected()} isAdmin={hasPermission(user.permissions, "manageUsers")}
             docs={docs.map((d) => ({ id: d.id, name: d.name, size: d.size, date: d.createdAt.toISOString().slice(0, 10) }))} />
-        </aside>
+        </StickySide>
       </div>
     </div>
   );

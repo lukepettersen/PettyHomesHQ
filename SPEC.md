@@ -190,6 +190,9 @@ Principles:
   booked afterwards from the contact page (Appointments → + Book), owner decision 2026-10-14.
 
 ### 6.3 Contact page (3 columns)
+
+Scrolling *(owner request 2026-10-29, like Follow Up Boss)*: the whole page scrolls together; each side column
+scrolls with it until its last card is on screen, then stays put while the middle keeps scrolling.
 - **Back link** returns to where you came from (People, Tasks, Messages or Pipeline) and that
   tab stays highlighted.
 - **Left:** contact info card, Details (stage, follow-up, assigned, source, mailing name),
