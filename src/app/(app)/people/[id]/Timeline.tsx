@@ -23,10 +23,11 @@ const FILTERS: [string, string][] = [["all", "All"], ["note", "Notes"], ["email"
 type EmailProps = { emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; ownGmail?: boolean; canConnect?: boolean };
 type TextProps = { phones: string[]; templates: { id: string; name: string }[]; from: string | null; blocked: string | null };
 
-export function Timeline({ personId, personName, entries, team, email, text }: { personId: string; personName: string; entries: Entry[]; team: Member[]; email: EmailProps; text: TextProps }) {
+export function Timeline({ personId, personName, entries, team, startOpen = false }: { personId: string; personName: string; entries: Entry[]; team: Member[]; email?: EmailProps; text?: TextProps; startOpen?: boolean }) {
   const [kind, setKind] = useState<Kind>("note");
   // The composer stays folded until a button is tapped, so the timeline starts higher (owner request 2026-10-28).
-  const [open, setOpen] = useState(false);
+  // Someone with no buyer/seller file lands on the Timeline with Note open, ready to type (owner request 2026-10-29).
+  const [open, setOpen] = useState(startOpen);
   const [body, setBody] = useState("");
   const [outcome, setOutcome] = useState("Talked");
   const [filter, setFilter] = useState("all");

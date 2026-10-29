@@ -209,7 +209,7 @@ Principles:
   - **Timeline:** composer with Note, Log text, Log call (with outcome). **Text / Email** on the contact card (and
     ↩ Reply on an email) open one Send text / Send email box at the top of the middle column, above whichever tab is
     showing (deal or Timeline), without switching tabs; the same button again or Close shuts it (owner 2026-10-28).
-    The deal box no longer has its own Send text / Send email buttons. It starts folded to just that row;
+    The deal box no longer has its own Send text / Send email buttons. It starts folded to just that row (except for someone with no open buyer/seller file, where Note starts open, owner 2026-10-29);
     tapping a button opens it, tapping it again or Close folds it *(owner request 2026-10-28)*.
     Filters: All, Notes, Texts, Calls, **Tasks**, Emails, Deal activity. Newest first.
     Checking off a task for the person adds a "Task done" line (unchecking removes it).
