@@ -9,7 +9,7 @@ import { notifyAssigned } from "@/server/notifications";
 import { findOrCreateList, quickAdd } from "@/server/quickAdd";
 import { loadDateTasks, loadTeam } from "@/server/tasks";
 import { isDueForTouch } from "@/lib/filters";
-import { applyTemplate, contractAnchors, factsOf, loadTemplates, moveFile } from "@/server/automation";
+import { advanceAfterDone, applyTemplate, contractAnchors, factsOf, loadTemplates, moveFile } from "@/server/automation";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
 import { categoryOf, longIso, nextDue, parseQuickAdd, parseTime, stripPersonWord, workdays, type Repeat } from "@/lib/tasks";
 
@@ -85,17 +85,8 @@ export async function completeTask(taskId: string) {
     });
     await logActivity(user.id, "update", "task", t.id, `Completed "${t.title}"`);
     // A checklist step marked "When done: move deal to…" moves the file (SPEC.md §7.1).
-    let movedTo: string | null = null;
-    if (t.advanceStatusId && t.fileId) {
-      const file = await db.clientFile.findFirst({ where: { id: t.fileId, deletedAt: null, closedAt: null }, include: { contracts: { where: { state: "active", deletedAt: null }, select: { id: true } } } });
-      const status = await db.pipelineStatus.findUnique({ where: { id: t.advanceStatusId } });
-      if (file && status && file.statusId !== status.id && !file.contracts.length && status.kind === file.kind) {
-        await moveFile(file.id, status.id, user.id);
-        await logActivity(user.id, "update", "clientFile", file.id, `Moved to ${status.name} when "${t.title}" was done`);
-        movedTo = status.name;
-        revalidatePath("/pipeline");
-      }
-    }
+    const movedTo = await advanceAfterDone(t.id, user.id);
+    if (movedTo) revalidatePath("/pipeline");
     refresh(t.personId);
     return { nextId, movedTo };
   });

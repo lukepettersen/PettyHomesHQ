@@ -9,6 +9,7 @@ import { scheduleLabel } from "@/lib/scheduledText";
 import { toLabel } from "@/lib/autoSend";
 import type { AutoSend } from "@/lib/templates";
 import { autoMessage, autoSendAt, autoSender } from "@/server/autoSend";
+import { advanceAfterDone } from "@/server/automation";
 import { loadForm } from "@/server/pa";
 import { loadScheduledEmails } from "@/server/scheduledEmails";
 
@@ -32,7 +33,7 @@ export async function sendDueTexts(now = new Date()): Promise<number> {
       if (s.numbers.length > 1 && (await groupReady())) await textNumbersAsGroup(user, { numbers: s.numbers, body: s.body, media });
       else for (const n of s.numbers) await sendTextAs(user, { personId: s.personId, to: n, body: s.body, media, typed: true });
       await db.scheduledText.update({ where: { id: s.id }, data: { status: "sent", sentAt: new Date() } });
-      if (s.taskId) await db.task.updateMany({ where: { id: s.taskId, completedAt: null }, data: { completedAt: new Date(), completedById: s.createdById } });
+      if (s.taskId && (await db.task.updateMany({ where: { id: s.taskId, completedAt: null }, data: { completedAt: new Date(), completedById: s.createdById } })).count) await advanceAfterDone(s.taskId, s.createdById);
       sent++;
     } catch (e) {
       // Our own messages (STOP, no number, daily limit…) are plain English; anything else gets a plain fallback.

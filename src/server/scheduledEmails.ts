@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/server/db";
 import { UserError } from "@/server/safe";
 import { deliverEmail } from "@/server/emailSend";
+import { advanceAfterDone } from "@/server/automation";
 import { scheduleLabel } from "@/lib/scheduledText";
 import type { z } from "zod";
 import type { attachmentList } from "@/server/attachments";
@@ -21,7 +22,7 @@ export async function sendDueEmails(now = new Date()): Promise<number> {
       if (!user || user.status === "DISABLED") throw new UserError("The person who scheduled it no longer has access.");
       await deliverEmail(user, { personId: s.personId, to: s.to, subject: s.subject, body: s.body, signature: s.signature, attachments: (Array.isArray(s.attachments) ? s.attachments : []) as z.infer<typeof attachmentList> });
       await db.scheduledEmail.update({ where: { id: s.id }, data: { status: "sent", sentAt: new Date() } });
-      if (s.taskId) await db.task.updateMany({ where: { id: s.taskId, completedAt: null }, data: { completedAt: new Date(), completedById: s.createdById } });
+      if (s.taskId && (await db.task.updateMany({ where: { id: s.taskId, completedAt: null }, data: { completedAt: new Date(), completedById: s.createdById } })).count) await advanceAfterDone(s.taskId, s.createdById);
       sent++;
     } catch (e) {
       const why = e instanceof UserError ? e.message : "Something went wrong sending it. Send it by hand from their page.";

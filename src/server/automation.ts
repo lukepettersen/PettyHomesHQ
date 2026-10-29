@@ -1,6 +1,7 @@
 import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
+import { logActivity } from "@/server/activity";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
 import { CONTRACT_ANCHORS, condMet, expand, minutesOffset, offsetOf, timeBefore, type Anchor, type Facts, type Phase, type Template } from "@/lib/templates";
 
@@ -206,4 +207,17 @@ export async function restartConsultSteps(tx: Tx, trigger: "buyerconsult" | "sel
     }
   }
   return n;
+}
+
+/** A checklist step marked "When done: move deal to…" moves the file once it's done (SPEC.md §7.1), whether it was
+ *  checked off by hand or sent by itself (owner 2026-10-29). Returns the stage it moved to, if any. */
+export async function advanceAfterDone(taskId: string, userId: string): Promise<string | null> {
+  const t = await db.task.findUnique({ where: { id: taskId }, select: { title: true, fileId: true, advanceStatusId: true, completedAt: true } });
+  if (!t?.completedAt || !t.advanceStatusId || !t.fileId) return null;
+  const file = await db.clientFile.findFirst({ where: { id: t.fileId, deletedAt: null, closedAt: null }, include: { contracts: { where: { state: "active", deletedAt: null }, select: { id: true } } } });
+  const status = await db.pipelineStatus.findUnique({ where: { id: t.advanceStatusId } });
+  if (!file || !status || file.statusId === status.id || file.contracts.length || status.kind !== file.kind) return null;
+  await moveFile(file.id, status.id, userId);
+  await logActivity(userId, "update", "clientFile", file.id, `Moved to ${status.name} when "${t.title}" was done`);
+  return status.name;
 }

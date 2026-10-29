@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/server/db";
 import { UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
+import { advanceAfterDone } from "@/server/automation";
 import { sendTextAs } from "@/server/texting";
 import { groupReady, textNumbersAsGroup } from "@/server/groupText";
 import { sendGmail } from "@/server/google";
@@ -104,6 +105,7 @@ export async function sendDueAutoTasks(now = new Date()): Promise<number> {
       }
       await db.task.update({ where: { id: t.id }, data: { autoState: "sent", autoError: r.missing.length ? `Not sent to ${r.missing.join(", ")} (nothing on file)` : null, completedAt: new Date(), completedById: sender.id } });
       await logActivity(sender.id, "create", kind, person.id, `Sent automatically: "${t.title}" to ${r.names.join(", ")}`);
+      await advanceAfterDone(t.id, sender.id); // "When done: move deal to…"
       sent++;
     } catch (e) {
       const why = e instanceof UserError ? e.message : "Something went wrong sending it. Send it by hand from the step.";
