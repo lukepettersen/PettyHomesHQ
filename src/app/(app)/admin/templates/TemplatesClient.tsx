@@ -141,11 +141,12 @@ function Editor({ t: initial, statuses, team, roles, tags, stages, today, templa
                   <button type="button" className="btn px-1.5 py-0.5" aria-label={`Move ${s.name} down`} disabled={si === ph.steps.length - 1} onClick={() => moveStep(i, si, 1)}>↓</button>
                 </span>
                 <input aria-label="Step name" className={`${field} min-w-[200px] flex-1 font-medium`} value={s.name} onChange={(e) => setStep(i, si, { name: e.target.value })} />
-                <label className="flex items-center gap-1 text-xs font-semibold muted">Assignee
+                {/* Tag and stage steps happen right away and make no task, so they have no assignee or due date (owner 2026-10-29). */}
+                {s.type !== "tags" && s.type !== "stage" && <label className="flex items-center gap-1 text-xs font-semibold muted">Assignee
                   <select className={field} value={s.assignee} onChange={(e) => setStep(i, si, { assignee: e.target.value })}>
                     <option value="">Person&apos;s assignee</option>{team.map((n) => <option key={n}>{n}</option>)}
                   </select>
-                </label>
+                </label>}
                 <label className="flex items-center gap-1 text-xs font-semibold muted">Type
                   <select className={field} value={s.type} onChange={(e) => setStep(i, si, { type: e.target.value as Step["type"] })}>
                     {STEP_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
@@ -157,6 +158,7 @@ function Editor({ t: initial, statuses, team, roles, tags, stages, today, templa
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pl-14 max-sm:pl-0">
+                {(s.type === "tags" || s.type === "stage") ? <span className="text-xs muted">Happens automatically the moment this checklist starts. No task is made.</span> :
                 <span className="flex flex-wrap items-center gap-1 text-xs font-semibold muted">Due
                   {s.dir === "minutesBefore" || s.dir === "minutesAfter" ? (
                     <select aria-label={`Minutes for ${s.name}`} className={field} value={s.minutes ?? 15} onChange={(e) => setStep(i, si, { minutes: Number(e.target.value) })}>
@@ -177,7 +179,7 @@ function Editor({ t: initial, statuses, team, roles, tags, stages, today, templa
                   <select aria-label={`Date ${s.name} counts from`} className={field} value={s.anchor} disabled={s.dir === "none"} onChange={(e) => setStep(i, si, { anchor: e.target.value as Step["anchor"] })}>
                     {ANCHORS.filter(([k]) => (s.dir !== "minutesBefore" && s.dir !== "minutesAfter") || TIMED_ANCHORS.includes(k)).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
                   </select>
-                </span>
+                </span>}
                 <label className="flex items-center gap-1 text-xs font-semibold muted">Only when
                   <select className={field} value={s.cond} onChange={(e) => setStep(i, si, { cond: e.target.value as Step["cond"] })}>
                     {CONDS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
