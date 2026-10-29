@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isDueForTouch, matchesAll, parseFilters, type PersonFacts } from "./filters";
+import { describeFilter, isDueForTouch, matches, matchesAll, parseFilters, type PersonFacts } from "./filters";
 
 const now = new Date("2026-10-12T12:00:00Z");
 const daysAgo = (n: number) => new Date(now.getTime() - n * 86400000);
@@ -67,3 +67,19 @@ describe("isDueForTouch with Spread out", () => {
     expect(isDueForTouch({ followUpDays: 90, lastTextAt: new Date("2026-10-01T00:00:00Z"), touchAfter: new Date("2026-10-10T00:00:00Z") }, now)).toBe(false);
   });
 });
+
+describe("pipeline status filter", () => {
+  const base = { stage: "Lead", type: null, source: null, tags: [], followUpDays: null, lastContactAt: null, assignedTo: null, hasUpcomingTask: false };
+  it("matches any of the picked statuses, or no open deal", () => {
+    const p = { ...base, pipeline: ["buyer:Showing homes", "uc:Inspection"] };
+    expect(matches(p, { field: "pipeline", op: "isAny", value: "buyer:Showing homes" })).toBe(true);
+    expect(matches(p, { field: "pipeline", op: "isAny", value: "listing:Active||uc:Pending" })).toBe(false);
+    expect(matches(p, { field: "pipeline", op: "isNot", value: "uc:Inspection" })).toBe(false);
+    expect(matches({ ...base, pipeline: [] }, { field: "pipeline", op: "isAny", value: "none" })).toBe(true);
+    expect(matches(p, { field: "pipeline", op: "isAny", value: "none" })).toBe(false);
+  });
+  it("reads well", () => {
+    expect(describeFilter({ field: "pipeline", op: "isAny", value: "listing:Active||uc:Pending||none" })).toBe("Pipeline status is any of Seller · Active, Under contract · Pending, No open deal");
+  });
+});
+

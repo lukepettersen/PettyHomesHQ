@@ -145,6 +145,8 @@ Principles:
   - Smart lists: filter builder with fields Stage, Tag, Source, Deal status, Follow-up,
     Last contact (more/less than N days), Due for a touch, Assigned to, **Has an upcoming
     task (yes/no)** *(new)*.
+  - *(2026-10-29)* **Pipeline status** "is any of / is none of": any buyer stage, seller stage or Under Contract
+    column (a deal under contract counts in its column, not its old stage), or "No open deal".
   - *(2026-10-14)* More specific filters: Stage / Type / Source / Assigned to (incl. Nobody)
     "is any of / is none of" (several at once); Tags "has any of / has all of / has none
     of"; **Last call, Last text, Last email** and Last contact (any) more/less than N days

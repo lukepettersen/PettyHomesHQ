@@ -1,7 +1,8 @@
 import "server-only";
 import { db } from "@/server/db";
 import { daysUntil, matchesAll, parseFilters, isDueForTouch, type Filter, type PersonFacts } from "@/lib/filters";
-import { todayCentral } from "@/lib/normalize";
+import { isoFromDate, todayCentral } from "@/lib/normalize";
+import { toPaView, ucColumn } from "@/lib/pa";
 import { partnerLabel } from "@/lib/partners";
 import { parseColumns } from "@/lib/columns";
 
@@ -34,6 +35,7 @@ export async function loadPeopleRows(): Promise<PersonRow[]> {
       addresses: { select: { value: true } },
       emails: { orderBy: { position: "asc" } },
       dates: { select: { kind: true, date: true } },
+      files: { where: { deletedAt: null, closedAt: null }, select: { kind: true, status: { select: { name: true } }, contracts: { where: { state: "active", deletedAt: null }, take: 1 } } },
       _count: { select: { tasks: { where: { completedAt: null, deletedAt: null, dueDate: { gte: today } } } } },
     },
   });
@@ -42,6 +44,14 @@ export async function loadPeopleRows(): Promise<PersonRow[]> {
   for (const g of await db.timelineEntry.groupBy({ by: ["personId", "kind"], where: { deletedAt: null, kind: { in: ["call", "text", "email"] } }, _max: { createdAt: true } }))
     if (g._max.createdAt) lastBy.set(`${g.personId}:${g.kind}`, g._max.createdAt);
   const mmdd = (d: Date) => d.toISOString().slice(5, 10);
+  // Where each open deal sits: its stage, or its Under Contract column once there's an active purchase agreement.
+  const ucCols = await db.pipelineStatus.findMany({ where: { kind: "uc" }, orderBy: { position: "asc" }, select: { name: true, untilDate: true } });
+  const todayIso = isoFromDate(today);
+  const where = (f: (typeof people)[number]["files"][number]) => {
+    const pa = f.contracts[0];
+    if (pa) return `uc:${ucColumn(ucCols, toPaView(pa, false), todayIso)?.name ?? "Under contract"}`;
+    return f.status ? `${f.kind === "listing" ? "listing" : "buyer"}:${f.status.name}` : null;
+  };
   return people.map((p) => {
     const facts: PersonFacts = {
       stage: p.stage?.name ?? null,
@@ -56,6 +66,7 @@ export async function loadPeopleRows(): Promise<PersonRow[]> {
       createdAt: p.createdAt, hasEmail: p.emails.length > 0, hasPhone: p.phones.length > 0,
       birthdays: p.dates.filter((d) => d.kind === "birthday").map((d) => mmdd(d.date)),
       homeiversary: (() => { const h = p.dates.find((d) => d.kind === "homeiversary"); return h ? mmdd(h.date) : null; })(),
+      pipeline: p.files.map(where).filter((x): x is string => !!x),
     };
     return {
       ...facts, id: p.id, name: p.name, company: p.company, address: p.address, mailingName: p.mailingName, kids: p.kids, phone: p.phones[0]?.number ?? null, email: p.emails[0]?.address ?? null, dueForTouch: isDueForTouch(facts),
@@ -85,12 +96,13 @@ export function applyFilters(rows: PersonRow[], filters: Filter[]): PersonRow[] 
 
 /** Lists used by forms: stages, sources, follow-up options, tags, team. */
 export async function loadOptions() {
-  const [stages, sources, follow, tags, team] = await Promise.all([
+  const [stages, sources, follow, tags, team, statuses] = await Promise.all([
     db.stage.findMany({ orderBy: { position: "asc" } }),
     db.source.findMany({ orderBy: { position: "asc" } }),
     db.followUpOption.findMany({ orderBy: { position: "asc" } }),
     db.tag.findMany({ orderBy: { name: "asc" } }),
     db.user.findMany({ where: { status: { not: "DISABLED" } }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    db.pipelineStatus.findMany({ orderBy: { position: "asc" }, select: { kind: true, name: true } }),
   ]);
   return {
     stages: stages.map((s) => ({ id: s.id, name: s.name })),
@@ -98,6 +110,8 @@ export async function loadOptions() {
     followUp: follow.map((f) => f.days),
     tags: tags.map((t) => t.name),
     team,
+    // Pipeline status filter choices: buyer stages, seller stages, Under Contract columns, then no open deal.
+    pipeline: [...(["buyer", "listing", "uc"] as const).flatMap((k) => statuses.filter((s) => s.kind === k).map((s) => `${k}:${s.name}`)), "none"],
   };
 }
 export type Options = Awaited<ReturnType<typeof loadOptions>>;

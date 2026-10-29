@@ -53,7 +53,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
         <FilterBar key={`${current?.id}|${sp.f}|${sp.new}`} list={current ? { id: current.id, name: current.name, filters: current.filters } : undefined} working={working} q={q}
           startBuilding={!!sp.new && working.length === 0} newCollectionId={sp.new}
           collections={collections.map((c) => ({ id: c.id, name: c.name }))}
-          options={{ stages: options.stages.map((s) => s.name), tags: options.tags, sources: options.sources.map((s) => s.name), followUp: options.followUp, team: options.team.map((u) => u.name) }} />
+          options={{ stages: options.stages.map((s) => s.name), tags: options.tags, sources: options.sources.map((s) => s.name), followUp: options.followUp, team: options.team.map((u) => u.name), pipeline: options.pipeline }} />
         <PeopleTable
           listId={current?.id ?? null} columns={columns} sort={sp.sort ?? "name"} page={page} pages={pages} total={shown.length} viewQuery={viewQuery.toString()}
           allIds={shown.map((r) => r.id)}

@@ -2,16 +2,17 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { DAY_FIELDS, describeFilter, FIELD_LABELS, FIELD_OPS, MULTI_OPS, type Filter, type FilterField } from "@/lib/filters";
+import { DAY_FIELDS, describeFilter, FIELD_LABELS, FIELD_OPS, MULTI_OPS, pipelineLabel, type Filter, type FilterField } from "@/lib/filters";
 import { Modal } from "@/components/Modal";
 import { PARTNER_TYPES } from "@/lib/partners";
 import { createSmartList, saveSmartListFilters } from "./listActions";
 
-export type FilterOptions = { stages: string[]; tags: string[]; sources: string[]; followUp: number[]; team: string[] };
+export type FilterOptions = { stages: string[]; tags: string[]; sources: string[]; followUp: number[]; team: string[]; pipeline: string[] };
 
 function valuesFor(field: FilterField, o: FilterOptions): [string, string][] | null {
   switch (field) {
     case "stage": return o.stages.map((s) => [s, s]);
+    case "pipeline": return o.pipeline.map((v) => [v, pipelineLabel(v)]);
     case "type": return PARTNER_TYPES.map(([, l]) => [l, l]);
     case "tag": return o.tags.map((s) => [s, s]);
     case "source": return o.sources.map((s) => [s, s]);

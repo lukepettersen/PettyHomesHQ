@@ -6,7 +6,7 @@ export type Filter = { field: FilterField; op: string; value: string };
 export type FilterField =
   | "stage" | "type" | "tag" | "source" | "assigned" | "followUp"
   | "lastContact" | "lastCall" | "lastText" | "lastEmail" | "created"
-  | "birthday" | "homeiversary" | "hasEmail" | "hasPhone" | "dueForTouch" | "upcomingTask";
+  | "birthday" | "homeiversary" | "hasEmail" | "hasPhone" | "dueForTouch" | "upcomingTask" | "pipeline";
 
 export type PersonFacts = {
   stage: string | null;
@@ -26,10 +26,20 @@ export type PersonFacts = {
   hasPhone?: boolean;
   birthdays?: string[]; // "MM-DD"
   homeiversary?: string | null; // "MM-DD"
+  /** Where their open deals sit (owner request 2026-10-29): "buyer:<stage>", "listing:<stage>", "uc:<Under Contract column>". */
+  pipeline?: string[];
 };
 
+/** "buyer:Consult scheduled" → "Buyer · Consult scheduled"; "none" → "No open deal". */
+export function pipelineLabel(v: string): string {
+  if (v === "none") return "No open deal";
+  const i = v.indexOf(":");
+  const kind = v.slice(0, i), name = v.slice(i + 1);
+  return `${kind === "buyer" ? "Buyer" : kind === "listing" ? "Seller" : "Under contract"} · ${name}`;
+}
+
 export const FIELD_LABELS: Record<FilterField, string> = {
-  stage: "Stage", type: "Type", tag: "Tags", source: "Source", assigned: "Assigned to", followUp: "Follow-up",
+  stage: "Stage", pipeline: "Pipeline status", type: "Type", tag: "Tags", source: "Source", assigned: "Assigned to", followUp: "Follow-up",
   lastContact: "Last contact (any)", lastCall: "Last call", lastText: "Last text", lastEmail: "Last email", created: "Added to HQ",
   birthday: "Birthday", homeiversary: "Homeiversary", hasEmail: "Has an email", hasPhone: "Has a phone",
   dueForTouch: "Due for a touch", upcomingTask: "Has an upcoming task",
@@ -47,6 +57,7 @@ export const FIELD_OPS: Record<FilterField, [string, string][]> = {
   created: [["lessThan", "less than"], ["moreThan", "more than"]],
   birthday: [["within", "in the next"]], homeiversary: [["within", "in the next"]],
   hasEmail: [["is", "is"]], hasPhone: [["is", "is"]], dueForTouch: [["is", "is"]], upcomingTask: [["is", "is"]],
+  pipeline: [["isAny", "is any of"], ["isNot", "is none of"]],
 };
 /** Fields whose value is a number of days. */
 export const DAY_FIELDS: FilterField[] = ["lastContact", "lastCall", "lastText", "lastEmail", "created", "birthday", "homeiversary"];
@@ -115,6 +126,11 @@ export function matches(p: PersonFacts, f: Filter, now = new Date()): boolean {
     case "hasPhone": return !!p.hasPhone === yes;
     case "dueForTouch": return isDueForTouch(p, now) === yes;
     case "upcomingTask": return p.hasUpcomingTask === yes;
+    case "pipeline": {
+      const mine = (p.pipeline ?? []).map((x) => x.toLowerCase());
+      const hit = vals.some((v) => (v === "none" ? !mine.length : mine.includes(v)));
+      return f.op === "isNot" ? !hit : hit;
+    }
     default: return true;
   }
 }
@@ -132,6 +148,7 @@ export function describeFilter(f: Filter): string {
   }
   if (f.field === "birthday" || f.field === "homeiversary") return `${FIELD_LABELS[f.field]} in the next ${f.value} days`;
   if (f.field === "followUp") return valuesOf(f).map((v) => (v === "none" ? "No follow-up set" : `Follow-up every ${v} days`)).join(" or ");
+  if (f.field === "pipeline") return `${FIELD_LABELS.pipeline} ${op} ${valuesOf(f).map(pipelineLabel).join(", ")}`;
   if (["dueForTouch", "upcomingTask", "hasEmail", "hasPhone"].includes(f.field)) return `${FIELD_LABELS[f.field]}: ${f.value === "yes" ? "yes" : "no"}`;
   return `${FIELD_LABELS[f.field]} ${op} ${list}`;
 }
