@@ -121,7 +121,7 @@ export function Timeline({ personId, personName, entries, team, email, text }: {
         ))}
       </div>
       {shown.length ? (
-        <ol className="relative mt-3">
+        <ol className="relative isolate mt-3">
           {threads(shown).map((g) => (
             <TimelineItem key={g[0].id} items={g} personName={personName} team={team} editing={editing} setEditing={setEditing} onChanged={() => router.refresh()}
               onReply={(subject) => requestCompose("email", /^re:/i.test(subject) ? subject : `Re: ${subject}`)} />

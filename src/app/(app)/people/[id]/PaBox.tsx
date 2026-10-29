@@ -48,7 +48,7 @@ export function DateStrip({ pa, today }: { pa: PaView; today: string }) {
   const next = keys.find((k) => pa.dates[k] && !["met", "waived"].includes(effectiveStatus(pa.dates[k], pa.dateStatus[k], today)));
   const doneCount = keys.filter((k) => ["met", "waived"].includes(effectiveStatus(pa.dates[k], pa.dateStatus[k], today))).length;
   return (
-    <ol className="relative mt-5 grid gap-y-4 max-sm:grid-cols-2" style={{ gridTemplateColumns: `repeat(${keys.length}, minmax(0, 1fr))` }}>
+    <ol className="relative isolate mt-5 grid gap-y-4 max-sm:grid-cols-2" style={{ gridTemplateColumns: `repeat(${keys.length}, minmax(0, 1fr))` }}>
       <li aria-hidden="true" className="absolute top-[11px] h-[3px] bg-misty max-sm:hidden" style={{ left: `${50 / keys.length}%`, right: `${50 / keys.length}%` }} />
       <li aria-hidden="true" className="absolute top-[11px] h-[3px] bg-moss max-sm:hidden" style={{ left: `${50 / keys.length}%`, width: `${(Math.max(0, Math.min(doneCount, keys.length - 1)) / keys.length) * 100}%` }} />
       {keys.map((k) => {
