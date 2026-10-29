@@ -698,6 +698,11 @@ scrolls with it until its last card is on screen, then stays put while the middl
   texts** (when, to whom by name, by whom, the message shortened; click it to read the whole text) with **Cancel** for the person who scheduled it or anyone allowed to
   delete records; one that couldn't send shows "Not sent" with the reason for a week, and the scheduler gets a bell
   alert.
+- **Scheduled emails** *(owner request 2026-10-29)*: **Schedule** sits next to Send email (contact page and Draft email
+  on checklist steps), with the same calendar date and 30-minute times as texts. It goes out from the scheduler's Gmail
+  within a minute of that time (same minute timer), with its recipients, signature choice and attachments, goes on the
+  timeline, and checks off the checklist step it came from. The contact page's Scheduled list shows it ("Email:
+  subject…") with Cancel; one that couldn't send shows "Not sent" with the reason and a bell alert.
 - **Automatic texts and emails from checklists** *(owner request 2026-10-29)*: in Admin → Task templates, a text or
   email step that has a due date can be set to **Send automatically**. Each step picks the time (30-minute steps,
   8:00am–8:00pm Central, on the step's due date; a step timed in minutes before/after an appointment uses that time),

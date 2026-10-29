@@ -6,11 +6,12 @@ import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { mergeFor } from "@/server/merge";
-import { sendGmail } from "@/server/google";
 import { fill } from "@/lib/merge";
-import { toPlain } from "@/lib/email";
 import { completeTask } from "../tasks/actions";
-import { attachmentList, loadAttachments } from "@/server/attachments";
+import { attachmentList } from "@/server/attachments";
+import { deliverEmail } from "@/server/emailSend";
+import { hasPermission } from "@/server/permissions";
+import { centralToUtc, scheduleLabel, scheduleProblem } from "@/lib/scheduledText";
 
 const id = z.string().trim().min(1).max(40);
 
@@ -42,25 +43,46 @@ const sendSchema = z.object({
 export async function sendEmail(input: z.input<typeof sendSchema>) {
   return guarded(null, async (user) => {
     const v = sendSchema.parse(input);
-    const p = await db.person.findFirst({ where: { id: v.personId, deletedAt: null }, include: { emails: true } });
-    if (!p) throw new UserError("That person was deleted.");
-    const to = [...new Set(v.to.map((x) => x.toLowerCase()))];
-    const files = await loadAttachments(v.attachments);
-    const r = await sendGmail({ to, subject: v.subject, body: v.body, signature: v.signature, attachments: files, asUserId: user.id });
-    if (!r.ok) throw new UserError(r.error);
-    // Other contacts it went to get it on their timeline too.
-    const others = await db.person.findMany({ where: { id: { not: p.id }, deletedAt: null, emails: { some: { normalized: { in: to } } } }, select: { id: true } });
-    const entry = (personId: string) => db.timelineEntry.create({ data: { personId, kind: "email", gmailId: r.id ? `${r.id}:${personId}` : null, body: `To ${to.join(", ")} · ${v.subject}\n\n${toPlain(v.body)}${files.length ? `\n\n📎 ${files.map((f) => f.name).join(", ")}` : ""}`, authorId: user.id } });
-    await db.$transaction([
-      entry(p.id), ...others.map((o) => entry(o.id)),
-      db.person.updateMany({ where: { id: { in: [p.id, ...others.map((o) => o.id)] } }, data: { lastContactAt: new Date() } }),
-    ]);
-    await logActivity(user.id, "create", "email", p.id, `Emailed ${p.name}: "${v.subject}"`);
+    const p = await deliverEmail(user, v);
     if (v.taskId) {
       const t = await db.task.findFirst({ where: { id: v.taskId, personId: p.id, deletedAt: null, completedAt: null } });
       if (t) await completeTask(t.id);
     }
     revalidatePath(`/people/${p.id}`);
     revalidatePath("/tasks");
+  });
+}
+
+const scheduleSchema = sendSchema.extend({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), time: z.string().regex(/^\d{2}:\d{2}$/) });
+
+/** Schedule an email (owner request 2026-10-29): it goes out from your Gmail within a minute of the time you pick. */
+export async function scheduleEmail(input: z.input<typeof scheduleSchema>) {
+  return guarded(null, async (user) => {
+    const v = scheduleSchema.parse(input);
+    const problem = scheduleProblem(v.date, v.time);
+    if (problem) throw new UserError(problem);
+    const p = await db.person.findFirst({ where: { id: v.personId, deletedAt: null }, select: { id: true, name: true } });
+    if (!p) throw new UserError("That person was deleted.");
+    const sendAt = centralToUtc(v.date, v.time);
+    await db.scheduledEmail.create({ data: {
+      personId: p.id, to: [...new Set(v.to.map((x) => x.toLowerCase()))], subject: v.subject, body: v.body, signature: v.signature ?? true,
+      attachments: v.attachments ?? [], sendAt, taskId: v.taskId?.startsWith("date:") ? null : v.taskId ?? null, createdById: user.id,
+    } });
+    await logActivity(user.id, "create", "scheduledEmail", p.id, `Scheduled an email to ${p.name} for ${scheduleLabel(sendAt)}: "${v.subject}"`);
+    revalidatePath(`/people/${p.id}`);
+    return { when: scheduleLabel(sendAt) };
+  });
+}
+
+/** Cancel a scheduled email that hasn't gone out: the person who scheduled it, or anyone allowed to delete records. */
+export async function cancelScheduledEmail(scheduledId: string) {
+  return guarded(null, async (user) => {
+    const s = await db.scheduledEmail.findUnique({ where: { id: id.parse(scheduledId) } });
+    if (!s || s.status !== "pending") throw new UserError("That email already went out or was canceled.");
+    if (s.createdById !== user.id && !hasPermission(user.permissions as never, "deleteRecords")) throw new UserError("Only the person who scheduled it can cancel it.");
+    const r = await db.scheduledEmail.updateMany({ where: { id: s.id, status: "pending" }, data: { status: "canceled" } });
+    if (!r.count) throw new UserError("That email is going out right now.");
+    await logActivity(user.id, "delete", "scheduledEmail", s.personId, `Canceled the email scheduled for ${scheduleLabel(s.sendAt)}`);
+    revalidatePath(`/people/${s.personId}`);
   });
 }

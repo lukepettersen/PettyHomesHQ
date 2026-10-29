@@ -11,7 +11,7 @@ import { sendEmail } from "../people/emailActions";
 import { sendText, sendTextGroup } from "../messages/actions";
 import { toPlain } from "@/lib/email";
 import { AddRecipient, ExtraChips, PartyChecks, type Extra } from "@/components/AddRecipient";
-import { ScheduleText } from "@/components/ScheduleText";
+import { ScheduleEmail, ScheduleText } from "@/components/ScheduleText";
 
 type Draft = { kind: "email" | "text"; templateId: string | null; stepMessage: string | null; templates: { id: string; name: string }[]; to: string[]; subject: string; body: string; missing: string[]; personId: string | null; sendsFrom: string | null; textBlocked: string | null; suggest: Extra[];
   copyIn: { name: string; value: string } | null; groups: boolean; phoneNames: { value: string; name: string }[] };
@@ -133,6 +133,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
               {pending ? "Sending…" : "Send email"}</button>}
             {canText && <button type="button" className="btn btn-primary" disabled={pending || !body.trim() || !phones.length} onClick={text}>{pending ? "Sending…" : "Send text"}</button>}
             {/* Schedule it for later instead; the step is checked off when it goes out (owner request 2026-10-28). */}
+            {canSend && d.personId && <ScheduleEmail email={{ personId: d.personId, taskId, to: toAll, subject, body, signature }} disabled={pending || !toAll.length || !subject.trim() || !body.trim()} onScheduled={() => { router.refresh(); onClose(); }} />}
             {canText && <ScheduleText numbers={d.groups ? textTo : phones} body={body} personId={d.personId} taskId={taskId} disabled={pending || !body.trim() || !phones.length} onScheduled={() => { router.refresh(); onClose(); }} />}
           </div>
         </div>

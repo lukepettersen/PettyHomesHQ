@@ -6,6 +6,7 @@ import { FormatBar } from "@/components/FormatBar";
 import { EmailPreview } from "@/components/EmailPreview";
 import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
 import { fillEmailTemplate, sendEmail } from "../emailActions";
+import { ScheduleEmail } from "@/components/ScheduleText";
 import { AddRecipient, ExtraChips, PartyChecks, type Extra } from "@/components/AddRecipient";
 import { AttachFiles, type Attached } from "@/components/AttachFiles";
 
@@ -93,8 +94,10 @@ export function EmailComposer({ personId, emails, templates, sendsFrom, onSent, 
       {missing.length > 0 && <p className="text-sm text-[#9a6400]">Not filled in (nothing on file): {missing.join(", ")}. Check the message before sending.</p>}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs muted">Sends from {sendsFrom}{ownGmail ? " (your Gmail)" : ""}. A copy is in its Gmail Sent folder and here on the timeline.{!ownGmail && canConnect && <> <ConnectMyGmail /></>}</span>
-        <span className="flex gap-2">
+        <span className="flex flex-wrap justify-end gap-2">
         {(subject || body || templateId) && <button type="button" className="btn" disabled={pending} onClick={clear} onBlur={() => setConfirmClear(false)}>{confirmClear ? "Click again to clear" : "Clear"}</button>}
+        <ScheduleEmail email={{ personId, to: all, subject, body, signature, attachments: files }} disabled={pending || !all.length || !subject.trim() || !body.trim()}
+          onScheduled={(when) => { setNotice(`Scheduled for ${when}.`); setSubject(""); setBody(""); setTemplateId(""); setMissing([]); setExtras([]); setFiles([]); router.refresh(); }} />
         <button type="button" className="btn btn-primary" disabled={pending || !all.length || !subject.trim() || !body.trim()} onClick={send} onBlur={() => setConfirm(false)}>
           {pending ? "Sending…" : "Send email"}
         </button>

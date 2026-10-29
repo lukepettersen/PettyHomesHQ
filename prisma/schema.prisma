@@ -665,6 +665,27 @@ model ScheduledText {
   @@index([personId])
 }
 
+/// An email set to go out later from the scheduler's Gmail (owner request 2026-10-29), sent by the minute timer.
+model ScheduledEmail {
+  id          String    @id @default(cuid())
+  personId    String
+  to          String[]
+  subject     String
+  body        String
+  signature   Boolean   @default(true)
+  attachments Json      @default("[]")
+  sendAt      DateTime
+  taskId      String? // a checklist step checked off when it sends
+  createdById String
+  status      String    @default("pending") // pending | sending | sent | failed | canceled
+  error       String?
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([status, sendAt])
+  @@index([personId])
+}
+
 /// A conversation in Messages someone archived, like an email (owner request 2026-10-28). It comes back to the inbox
 /// when a new text or missed call arrives after archivedAt.
 model TextArchive {

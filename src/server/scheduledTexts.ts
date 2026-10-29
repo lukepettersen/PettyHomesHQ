@@ -10,6 +10,7 @@ import { toLabel } from "@/lib/autoSend";
 import type { AutoSend } from "@/lib/templates";
 import { autoSendAt } from "@/server/autoSend";
 import { loadForm } from "@/server/pa";
+import { loadScheduledEmails } from "@/server/scheduledEmails";
 
 // Scheduled texts (owner request 2026-10-28): sent from the scheduler's own number within a minute of their time by
 // /api/cron/scheduled-texts, which the app calls every minute (src/instrumentation.ts).
@@ -47,7 +48,8 @@ export async function sendDueTexts(now = new Date()): Promise<number> {
 
 /** A contact's scheduled texts not yet sent, and ones that failed in the last week, for the contact page. */
 export async function loadScheduledFor(personId: string, userId: string, canCancelAny: boolean) {
-  return loadScheduled({ personId }, userId, canCancelAny);
+  const [texts, emails] = await Promise.all([loadScheduled({ personId }, userId, canCancelAny), loadScheduledEmails(personId, userId, canCancelAny)]);
+  return [...texts, ...emails].sort((a, b) => a.at - b.at);
 }
 
 /** Scheduled texts from someone's number, for Messages → Scheduled (owner request 2026-10-28). */
