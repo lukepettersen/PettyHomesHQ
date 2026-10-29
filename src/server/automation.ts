@@ -214,14 +214,19 @@ export async function restartConsultSteps(tx: Tx, trigger: "buyerconsult" | "sel
 export async function advanceAfterDone(taskId: string, userId: string): Promise<string | null> {
   const t = await db.task.findUnique({ where: { id: taskId }, select: { title: true, fileId: true, personId: true, advanceStatusId: true, completedAt: true } });
   if (!t?.completedAt || !t.advanceStatusId || (!t.fileId && !t.personId)) return null;
-  const status = await db.pipelineStatus.findUnique({ where: { id: t.advanceStatusId } });
+  let status = await db.pipelineStatus.findUnique({ where: { id: t.advanceStatusId } });
   if (!status) return null;
   // A consult step made before their buyer/seller deal existed moves their open deal of that kind.
-  const file = await db.clientFile.findFirst({
-    where: { deletedAt: null, closedAt: null, ...(t.fileId ? { id: t.fileId } : { personId: t.personId!, kind: status.kind }) },
-    orderBy: { createdAt: "desc" }, include: { contracts: { where: { state: "active", deletedAt: null }, select: { id: true } } },
+  const find = (where: Prisma.ClientFileWhereInput) => db.clientFile.findFirst({
+    where: { deletedAt: null, closedAt: null, ...where }, orderBy: { createdAt: "desc" }, include: { contracts: { where: { state: "active", deletedAt: null }, select: { id: true } } },
   });
-  if (!file || file.statusId === status.id || file.contracts.length || status.kind !== file.kind) return null;
+  const file = t.fileId ? await find({ id: t.fileId }) : (await find({ personId: t.personId!, kind: status.kind })) ?? (await find({ personId: t.personId! }));
+  if (!file || file.contracts.length) return null;
+  // "Consult complete (buyer or seller)": on the other kind of deal, the stage with the same name.
+  const target = status.kind === file.kind ? status
+    : await db.pipelineStatus.findFirst({ where: { kind: file.kind, name: { equals: status.name, mode: "insensitive" } } });
+  if (!target || file.statusId === target.id) return null;
+  status = target;
   await moveFile(file.id, status.id, userId);
   await logActivity(userId, "update", "clientFile", file.id, `Moved to ${status.name} when "${t.title}" was done`);
   return status.name;

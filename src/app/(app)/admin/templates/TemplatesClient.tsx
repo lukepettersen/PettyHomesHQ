@@ -63,7 +63,13 @@ function Editor({ t: initial, statuses, team, roles, tags, stages, today, templa
   // (or seller) deal too (owner request 2026-10-29); "either consult" offers both, labelled.
   const consultKinds = t.trigger === "buyerconsult" ? ["buyer"] : t.trigger === "sellerconsult" ? ["listing"] : t.trigger === "anyconsult" ? ["buyer", "listing"] : [];
   const advanceOptions = trigStatus ? statuses.filter((s) => s.kind === trigStatus.kind && s.id !== trigStatus.id)
-    : statuses.filter((s) => consultKinds.includes(s.kind)).map((s) => (consultKinds.length > 1 ? { ...s, name: `${s.kind === "buyer" ? "buyer" : "seller"}: ${s.name}` } : s));
+    : consultKinds.length < 2 ? statuses.filter((s) => consultKinds.includes(s.kind))
+    // Either consult: a stage both sides have shows once and moves whichever deal the consult was for.
+    : statuses.filter((s) => s.kind === "buyer" || s.kind === "listing").flatMap((s) => {
+      const shared = statuses.some((x) => x.kind === (s.kind === "buyer" ? "listing" : "buyer") && x.name.toLowerCase() === s.name.toLowerCase());
+      if (shared) return s.kind === "buyer" ? [{ ...s, name: `${s.name} (buyer or seller)` }] : [];
+      return [{ ...s, name: `${s.kind === "buyer" ? "buyer" : "seller"}: ${s.name}` }];
+    });
   const twins = t.trigger ? templates.filter((x) => x.id !== t.id && x.trigger === t.trigger) : [];
   const steps = t.phases.reduce((n, ph) => n + ph.steps.length, 0);
   const preview = expand(t, { start: today }, {});
