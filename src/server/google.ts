@@ -146,6 +146,29 @@ export function syncContract(paId: string) {
   });
 }
 
+/**
+ * An event that isn't about any contact ("dentist Fri 3pm"), from the text assistant (owner request 2026-10-30): goes
+ * straight on the connected calendar with the given guests. Returns the Google event id, or null if it couldn't.
+ */
+export async function addCalendarEvent(e: { title: string; date: string; start: string | null; end: string | null; location: string; guests: { email: string; name: string }[] }): Promise<string | null> {
+  try {
+    if (!(await calendarConnection())) return null;
+    const r = await call("POST", "?sendUpdates=all", apptEvent(e, e.guests, "Added by text in Petty Homes HQ."));
+    if (!r?.ok) { if (r) console.error("Google Calendar: create failed", r.status); return null; }
+    return ((await r.json()) as { id: string }).id;
+  } catch (err) {
+    console.error("Google Calendar: create failed", err instanceof Error ? err.message : "unknown");
+    return null;
+  }
+}
+
+export async function removeCalendarEvent(eventId: string): Promise<boolean> {
+  try {
+    const r = await call("DELETE", `/${encodeURIComponent(eventId)}?sendUpdates=all`);
+    return !!r && (r.ok || r.status === 404 || r.status === 410);
+  } catch { return false; }
+}
+
 /** A Google API call as the shared connected account (the owner's): used for the sales sheet. */
 export async function sharedGoogle(url: string, init: RequestInit = {}): Promise<Response | null> {
   const token = await accessToken().catch(() => null);

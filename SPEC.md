@@ -448,6 +448,17 @@ scrolls with it until its last card is on screen, then stays put while the middl
   Booking a consult again (after deleting or moving on from one) restarts that consult checklist's steps timed from the
   consult that were already done or deleted, dated from the new consult; open ones just move to it, and steps timed
   from the start date don't repeat (owner request 2026-10-29).
+- **Text assistant** *(owner request 2026-10-30)*: a team member texts their HQ number from their cell in plain English
+  and Claude does it in HQ, then HQ texts back exactly what was done (the receipt is written by HQ, not Claude). It can:
+  find contacts and answer questions about them (phone, email, deal, key dates, open tasks); say what's on a day;
+  **book events** on a contact's page with a Google invite ("Jack Rotman swing by house today 10:30am"; the client is
+  invited when it's a meeting with them, plus the speaker and any teammate named) or **on the calendar alone** when no
+  contact is involved ("dentist Fri 3pm"); move or cancel appointments; add tasks; log notes, calls and texts; and
+  **text a client** (now or scheduled), which always waits for a **YES** reply. "**undo**" reverses the last thing it did
+  in the last two hours (a text already sent can't be undone). It asks rather than guesses (which Jack? what time?),
+  remembers the last 30 minutes of the conversation, logs everything in Activity, and only listens to team cells.
+  "task …", "contact …" and check-in replies keep working as before. Needs ANTHROPIC_API_KEY (same as Ask Claude); it
+  can't email, move deals or change contracts yet.
 - **Ask by text** *(owner request 2026-10-30)*: a Task or Call step with a due date can tick **Ask by text when it's
   due**. At its due time HQ texts whoever it's assigned to, on their cell (Admin → Integrations "calls ring") from their
   HQ number: 'HQ check-in for Hayley & Beau: "Consult done?" Reply YES if it's done (moves them to Consult complete), or

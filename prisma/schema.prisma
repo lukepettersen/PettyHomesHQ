@@ -714,3 +714,28 @@ model TextThread {
 
   @@index([ourNumber])
 }
+
+/// The text assistant's short memory (owner request 2026-10-30): a team member's texts to their HQ number and its replies,
+/// so a follow-up like "the second Jack" makes sense. Only the last 30 minutes are used.
+model TextAgentTurn {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String // "user" | "assistant"
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// What the text assistant did (so "undo" can reverse it) or is waiting on a YES for (texting a client).
+model TextAgentAction {
+  id        String   @id @default(cuid())
+  userId    String
+  kind      String // appt | event | moveAppt | cancelAppt | task | note | text
+  status    String // confirm | done | undone | canceled
+  summary   String
+  payload   Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}

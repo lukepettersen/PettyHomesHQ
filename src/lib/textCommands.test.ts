@@ -47,6 +47,8 @@ describe("booking a consult by text", () => {
     expect(parseConsultReply("buyer Wed", today)).toEqual({ kind: "book", type: "buyer", date: "2026-11-04", time: null });
     expect(parseConsultReply("no", today)).toEqual({ kind: "no" });
     expect(parseConsultReply("thanks!", today)).toBeNull();
+    expect(parseConsultReply("Jack Rotman swing by his house today 10:30am", today)).toBeNull();
+    expect(parseConsultReply("yes buyer consult on Wed at 7pm", today)).toEqual({ kind: "book", type: "buyer", date: "2026-11-04", time: "19:00" });
   });
 });
 

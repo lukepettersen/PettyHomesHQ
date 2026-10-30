@@ -7,8 +7,11 @@ import { textingEnabled } from "@/server/integrations";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { logActivity } from "@/server/activity";
 import { publicBase } from "@/server/twilio";
-import { COMMAND_HELP, parseTextCommand, type NewContact } from "@/lib/textCommands";
+import { COMMAND_HELP, parseTextCommand, parseYesNo, type NewContact } from "@/lib/textCommands";
 import { answerAsk } from "@/server/askByText";
+import { answerConfirm, pendingConfirm, runTextAgent, undoLast } from "@/server/textAgent";
+import { isConnected } from "@/server/integrations";
+import { isUndo } from "@/lib/textAgent";
 
 /**
  * A text from a team member's own cell (the "calls ring" cell in Admin) to their own HQ number that starts with
@@ -20,11 +23,10 @@ export async function runTextCommand(o: { from: string; to: string; body: string
   const user = (await db.user.findMany({ where: { textNumber: o.to, forwardTo: { not: null }, status: { not: "DISABLED" } }, select: { id: true, name: true, forwardTo: true } }))
     .find((u) => normalizePhone(u.forwardTo!) === normalizePhone(o.from));
   if (!user) return false;
-  // A reply to an "Ask by text" check-in (YES / NO, or a consult time; owner request 2026-10-30); with nothing asked it's a normal text.
   if (!cmd) {
-    const answer = await answerAsk(user, o.body);
-    if (!answer) return false;
-    await replyTo(o.to, user.forwardTo!, o.from, answer);
+    const reply = await notACommand(user, o.body);
+    if (!reply) return false;
+    await replyTo(o.to, user.forwardTo!, o.from, reply);
     return true;
   }
   let reply = COMMAND_HELP;
@@ -41,6 +43,22 @@ export async function runTextCommand(o: { from: string; to: string; body: string
   }
   await replyTo(o.to, user.forwardTo!, o.from, reply);
   return true;
+}
+
+/**
+ * Anything else from a team member's cell (owner request 2026-10-30): "undo"; YES / NO to a text the assistant prepared
+ * (when that's newer than any check-in); a reply to a check-in; otherwise the text assistant. Null = a normal text.
+ */
+async function notACommand(user: { id: string; name: string }, body: string): Promise<string | null> {
+  if (isUndo(body)) return undoLast(user);
+  const yn = parseYesNo(body);
+  if (yn) {
+    const [confirm, asked] = await Promise.all([pendingConfirm(user.id), db.task.findFirst({ where: { assigneeId: user.id, askState: "asked", completedAt: null, deletedAt: null }, orderBy: { askedAt: "desc" }, select: { askedAt: true } })]);
+    if (confirm && (!asked?.askedAt || confirm.createdAt > asked.askedAt)) return answerConfirm(user, confirm.id, yn === "yes");
+  }
+  const answer = await answerAsk(user, body);
+  if (answer) return answer;
+  return isConnected("claude") ? runTextAgent(user, body) : null;
 }
 
 /** The reply is a courtesy: if it can't be sent or saved, the command still counts. */

@@ -71,5 +71,8 @@ export function parseConsultReply(body: string, today: string): ConsultReply | n
   if (!date && q.due) date = q.due;
   const time = q.time ?? null;
   if (!type && !date && !time) return null;
+  // More than a few other words ("Jack swing by his house today 10:30") is something else, for the text assistant.
+  const extra = q.title.replace(/\b(seller|selling|listing|buyer|buying|consult(ation)?|meeting|appt|appointment|is|it's|its|on|at|for|the|a|we|set|booked|book|yes|yeah|yep|ok|okay)\b/gi, " ").trim().split(/\s+/).filter(Boolean);
+  if (extra.length > 2) return null;
   return { kind: "book", type, date, time };
 }
