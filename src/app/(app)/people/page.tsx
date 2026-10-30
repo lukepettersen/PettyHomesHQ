@@ -41,10 +41,11 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
             <span className="muted">{shown.length} {shown.length === 1 ? "person" : "people"}</span>
           </div>
           <div className="flex flex-1 justify-end gap-2" style={{ minWidth: 260 }}>
-            <form className="w-full max-w-xs" action="/people">
+            <form className="relative w-full max-w-sm" action="/people">
+              <svg aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
               {sp.list && <input type="hidden" name="list" value={sp.list} />}
               {sp.f && <input type="hidden" name="f" value={sp.f} />}
-              <input className="input" type="search" name="q" defaultValue={q} placeholder="Search name, phone, email, tag…" aria-label="Search people" />
+              <input className="input pl-9" type="search" name="q" defaultValue={q} placeholder="Search name, phone, email, tag…" aria-label="Search people" />
             </form>
             <Link href="/people/emails" className="btn">Mass emails</Link>
             <AddPersonButton options={options} />

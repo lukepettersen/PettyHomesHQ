@@ -141,6 +141,16 @@ Principles:
 - Created date, last contact (computed from notes, calls, texts, emails).
 
 ### 6.2 People page
+
+- **Look** *(owner-approved mockup 2026-10-30; columns, filters, collections and lists unchanged)*: compact rows with an
+  initials circle, the phone under the name, stage as a colored label, a dot on Last contact/call/text/email (green
+  within 30 days, yellow 31–90, gray older or never), a red "Due" on follow-ups that are due, tags on one line (+N),
+  light dashes for empty cells, a header row that stays put while the list scrolls, "Showing 1–100 of N", export and
+  pages at the bottom of the table, and the bulk bar floating at the bottom of the screen. Hovering a row shows
+  **Call / Text / Email**; Text and Email open the contact with that composer open (`?compose=text|email`). The search
+  box has a magnifying glass. **Filters**: added filters are chips with × (and Clear all on All people); + Add filter
+  opens a small pop-up with the same fields and conditions, a search box for long option lists, and options as pills
+  to tap ("2 picked").
 - Left: **All people**, then **collections** containing **smart lists** (saved filters).
   - Smart lists: filter builder with fields Stage, Tag, Source, Deal status, Follow-up,
     Last contact (more/less than N days), Due for a touch, Assigned to, **Has an upcoming

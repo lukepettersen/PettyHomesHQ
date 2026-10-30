@@ -43,7 +43,10 @@ export function FileTabs(p: Props) {
       window.scrollTo({ top: 0, behavior: "smooth" });
     };
     window.addEventListener(COMPOSE_EVENT, on);
-    return () => window.removeEventListener(COMPOSE_EVENT, on);
+    // Text / Email from a People list row (?compose=text|email) opens the composer straight away.
+    const want = new URLSearchParams(window.location.search).get("compose");
+    const t = want === "text" || want === "email" ? setTimeout(() => setCompose({ kind: want === "text" ? "send" : "email", n: 1 }), 0) : undefined;
+    return () => { window.removeEventListener(COMPOSE_EVENT, on); clearTimeout(t); };
   }, []);
   // A file that was just started opens in its own tab.
   const ids = active.map((f) => f.id).join(",");

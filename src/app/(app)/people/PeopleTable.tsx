@@ -8,6 +8,7 @@ import { bulkDelete, bulkUpdate } from "./actions";
 import { saveColumns } from "./listActions";
 import { Modal } from "@/components/Modal";
 import { COLUMNS, columnLabel } from "@/lib/columns";
+import { CallLink } from "@/components/CallCenter";
 
 export type Row = {
   id: string; name: string; phone: string | null; email: string | null; stage: string | null; type: string | null; company: string | null; address: string | null; mailingName: string | null; kids: string | null;
@@ -20,21 +21,31 @@ type Opt = { stages: { id: string; name: string }[]; tags: string[]; followUp: n
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const md = (mmdd: string | null) => (mmdd ? `${MON[+mmdd.slice(0, 2) - 1]} ${+mmdd.slice(3, 5)}` : null);
 const ago = (d: number | null) => (d === null ? null : d === 0 ? "Today" : `${d}d ago`);
-const dash = <span className="muted">—</span>;
+const dash = <span className="text-rabbit">—</span>;
+/** "Emily & Clayton Beck" → "EB": first name + last name. */
+const initials = (name: string) => { const w = name.replace(/[^\p{L}\s'-]/gu, " ").trim().split(/\s+/).filter(Boolean); return ((w[0]?.[0] ?? "") + (w.length > 1 ? w[w.length - 1][0] : "")).toUpperCase(); };
+// Look (owner-approved mockup 2026-10-30): stage as a colored label, a dot on last contact, a red "Due" on follow-ups.
+const STAGE_COLORS = ["bg-[#ece7f3] text-[#5b4a7a]", "bg-[#e3eef0] text-[#2f6470]", "bg-[#fbe9df] text-[#9a4f2e]", "bg-accent-soft text-accent", "bg-[#f6efd9] text-[#7a5d12]", "bg-[#f3e3e8] text-[#8a3b55]"];
+const stageColor = (name: string) => STAGE_COLORS[[...name].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7) % STAGE_COLORS.length];
+const stageChip = (name: string) => <span className={`inline-block max-w-full truncate rounded-full px-2.5 text-xs font-semibold leading-5 ${stageColor(name)}`}>{name}</span>;
+/** "12d ago" with a dot: green this month, yellow 1–3 months, gray older (or "Never"). */
+const agoDot = (d: number | null) => d === null
+  ? <span className="text-rabbit"><i aria-hidden="true" className="mr-1.5 inline-block size-1.5 rounded-full bg-misty align-middle" />Never</span>
+  : <><i aria-hidden="true" className={`mr-1.5 inline-block size-1.5 rounded-full align-middle ${d <= 30 ? "bg-[#7fa36f]" : d <= 90 ? "bg-[#d9a441]" : "bg-rabbit"}`} />{ago(d)}</>;
 /** What a column shows for a person, and the value it sorts by. */
 function cellOf(k: string, r: Row): [React.ReactNode, string | number] {
   switch (k) {
-    case "stage": return [r.stage ?? dash, r.stage ?? "~"];
+    case "stage": return [r.stage ? stageChip(r.stage) : dash, r.stage ?? "~"];
     case "type": return [r.type ?? dash, r.type ?? "~"]; // already the label (Realtor, Lender…)
     case "company": return [r.company ?? dash, r.company ?? "~"];
     case "phone": return [r.phone ?? dash, r.phone ?? "~"];
     case "email": return [r.email ?? dash, r.email ?? "~"];
-    case "lastContact": return [ago(r.lastDays) ?? <span className="muted">Never</span>, -(r.lastDays ?? 1e9)];
-    case "lastCall": return [ago(r.callDays) ?? <span className="muted">Never</span>, -(r.callDays ?? 1e9)];
-    case "lastText": return [ago(r.textDays) ?? <span className="muted">Never</span>, -(r.textDays ?? 1e9)];
-    case "lastEmail": return [ago(r.emailDays) ?? <span className="muted">Never</span>, -(r.emailDays ?? 1e9)];
-    case "followUp": return [r.followUpDays ? <span className={r.dueForTouch ? "font-semibold text-bad" : ""}>Every {r.followUpDays}d{r.dueForTouch ? " · due" : ""}</span> : dash, r.followUpDays ?? 1e9];
-    case "tags": return [<div key="t" className="flex flex-wrap gap-1">{r.tags.slice(0, 3).map((t) => <span key={t} className="chip">{t}</span>)}{r.tags.length > 3 && <span className="text-xs muted">+{r.tags.length - 3}</span>}</div>, r.tags.join(",") || "~"];
+    case "lastContact": return [agoDot(r.lastDays), -(r.lastDays ?? 1e9)];
+    case "lastCall": return [agoDot(r.callDays), -(r.callDays ?? 1e9)];
+    case "lastText": return [agoDot(r.textDays), -(r.textDays ?? 1e9)];
+    case "lastEmail": return [agoDot(r.emailDays), -(r.emailDays ?? 1e9)];
+    case "followUp": return [r.followUpDays ? <>Every {r.followUpDays}d{r.dueForTouch && <span className="ml-1.5 rounded bg-[#f7e2de] px-1.5 text-[11px] font-bold text-bad">Due</span>}</> : dash, r.followUpDays ?? 1e9];
+    case "tags": return [r.tags.length ? <div key="t" className="flex items-center gap-1 overflow-hidden" title={r.tags.join(", ")}>{r.tags.slice(0, 2).map((t) => <span key={t} className="truncate rounded-md bg-sunken px-1.5 text-xs leading-5">{t}</span>)}{r.tags.length > 2 && <span className="flex-none text-xs muted">+{r.tags.length - 2}</span>}</div> : dash, r.tags.join(",") || "~"];
     case "source": return [r.source ?? dash, r.source ?? "~"];
     case "assigned": return [r.assigned ?? dash, r.assigned ?? "~"];
     case "address": return [r.address ?? dash, r.address ?? "~"];
@@ -114,7 +125,7 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
     <select className="input w-auto" value={value} onChange={(e) => setValue(e.target.value)} aria-label="Assign to"><option value="">No one</option>{options.team.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select>
   ) : null;
   const th = (k: string, l: string) => (
-    <th key={k} aria-sort={sort === k ? "ascending" : sort === `-${k}` ? "descending" : undefined} className="relative whitespace-nowrap px-3 py-2" style={{ width: widthOf(k) }}>
+    <th key={k} aria-sort={sort === k ? "ascending" : sort === `-${k}` ? "descending" : undefined} className="sticky top-0 z-10 whitespace-nowrap border-b border-misty bg-sunken px-3 py-2" style={{ width: widthOf(k) }}>
       <button type="button" title={sort === k ? "Click to flip the order" : `Sort by ${l.toLowerCase()}`}
         className={`group inline-flex items-center gap-1 rounded px-1 -mx-1 uppercase tracking-wide hover:bg-sunken hover:text-charcoal ${sort.replace(/^-/, "") === k ? "font-bold text-charcoal" : ""}`} onClick={() => setSort(k)}>
         {l}<span aria-hidden="true" className={sort.replace(/^-/, "") === k ? "" : "opacity-0 group-hover:opacity-50"}>{sort === `-${k}` ? "↑" : "↓"}</span>
@@ -129,7 +140,7 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
     <>
       {emailing && <BulkEmail ids={ids} onClose={() => setEmailing(false)} />}
       {(ids.length > 0 || msg) && (
-        <div className="mt-3 flex flex-wrap items-center gap-1.5 rounded-lg bg-charcoal px-3 py-2 text-sm text-white">
+        <div className="fixed bottom-4 left-1/2 z-30 flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-wrap items-center gap-1.5 rounded-xl bg-charcoal px-3 py-2 text-sm text-white shadow-[0_8px_24px_rgba(0,0,0,.25)]">
           {ids.length > 0 && <b className="mr-2">{ids.length.toLocaleString()} selected</b>}
           {all && !everyone && total > rows.length && !action && <button type="button" className="rounded-md px-2 py-1 underline hover:bg-white/15" onClick={() => setSel(new Set(allIds))}>Select all {total.toLocaleString()}</button>}
           {ids.length > 0 && !action && <>
@@ -147,36 +158,58 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
           {msg && <span className="ml-2">{msg}</span>}
         </div>
       )}
-      <div className="mt-3 flex justify-end"><button type="button" className="text-sm font-semibold text-accent hover:underline" onClick={() => setEditCols(true)}>Columns</button></div>
+      <div className="mt-1 flex justify-end"><button type="button" className="inline-flex items-center gap-1 text-sm font-semibold text-accent hover:underline" onClick={() => setEditCols(true)}>
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>Columns</button></div>
       {editCols && <ColumnsModal listId={listId} columns={columns} onClose={() => setEditCols(false)} />}
-      <div className="card mt-1 overflow-x-auto">
+      <div className="card mt-1 overflow-hidden">
+      <div className="max-h-[calc(100vh-210px)] min-h-64 overflow-auto">
         <table className="text-left text-sm" style={{ tableLayout: "fixed", width: 40 + widthOf("name") + columns.reduce((n, k) => n + widthOf(k), 0), minWidth: "100%" }}>
-          <thead className="border-b border-misty text-xs uppercase tracking-wide muted">
+          <thead className="text-[11px] uppercase tracking-wider muted">
             <tr>
-              <th className="px-3 py-2" style={{ width: 40 }}><input type="checkbox" aria-label="Select all" checked={all} onChange={(e) => setSel(e.target.checked ? new Set(rows.map((r) => r.id)) : new Set())} /></th>
+              <th className="sticky top-0 z-10 border-b border-misty bg-sunken px-3 py-2" style={{ width: 40 }}><input type="checkbox" aria-label="Select all" checked={all} onChange={(e) => setSel(e.target.checked ? new Set(rows.map((r) => r.id)) : new Set())} /></th>
               {th("name", "Name")}{columns.map((k) => th(k, columnLabel(k)))}
             </tr>
           </thead>
           <tbody>
             {sorted.map((r) => (
-              <tr key={r.id} className={`border-b border-misty/60 last:border-0 hover:bg-paper ${sel.has(r.id) ? "bg-accent-soft/60" : ""}`}>
-                <td className="px-3 py-2"><input type="checkbox" aria-label={`Select ${r.name}`} checked={sel.has(r.id)} onChange={() => toggle(r.id)} /></td>
-                <td className="truncate px-3 py-2"><Link href={`/people/${r.id}?back=${encodeURIComponent(back)}&pos=${(page - 1) * 100 + sorted.indexOf(r)}`} className="link">{r.name}</Link>{r.phone && !columns.includes("phone") && <div className="text-xs muted">{r.phone}</div>}</td>
-                {columns.map((k) => <td key={k} className={`px-3 py-2 ${k === "tags" ? "" : "truncate"}`}>{cellOf(k, r)[0]}</td>)}
+              <tr key={r.id} className={`group border-b border-misty/50 last:border-0 ${sel.has(r.id) ? "bg-accent-soft/70" : "hover:bg-paper"}`}>
+                <td className="px-3 py-1.5"><input type="checkbox" aria-label={`Select ${r.name}`} checked={sel.has(r.id)} onChange={() => toggle(r.id)} /></td>
+                <td className="px-3 py-1.5">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span aria-hidden="true" className="grid size-7 flex-none place-items-center rounded-full bg-accent-soft text-[11px] font-bold text-accent">{initials(r.name)}</span>
+                    <span className="min-w-0 flex-1 leading-tight">
+                      <Link href={`/people/${r.id}?back=${encodeURIComponent(back)}&pos=${(page - 1) * 100 + sorted.indexOf(r)}`} className="link block truncate font-semibold">{r.name}</Link>
+                      {r.phone && !columns.includes("phone") && <span className="block truncate text-xs muted">{r.phone}</span>}
+                    </span>
+                    {/* Quick Call / Text / Email on hover (or keyboard focus). */}
+                    <span className="flex flex-none gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                      {r.phone && <CallLink number={r.phone} name={r.name} className="grid size-6 place-items-center rounded-md border border-misty bg-white hover:bg-sunken"><span className="sr-only">Call {r.name}</span><Icon d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" /></CallLink>}
+                      {r.phone && <Link href={`/people/${r.id}?compose=text&back=${encodeURIComponent(back)}`} title={`Text ${r.name}`} className="grid size-6 place-items-center rounded-md border border-misty bg-white hover:bg-sunken"><span className="sr-only">Text {r.name}</span><Icon d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></Link>}
+                      {r.email && <Link href={`/people/${r.id}?compose=email&back=${encodeURIComponent(back)}`} title={`Email ${r.name}`} className="grid size-6 place-items-center rounded-md border border-misty bg-white hover:bg-sunken"><span className="sr-only">Email {r.name}</span><Icon d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm18 2-10 7L2 6" /></Link>}
+                    </span>
+                  </div>
+                </td>
+                {columns.map((k) => <td key={k} className="truncate px-3 py-1.5">{cellOf(k, r)[0]}</td>)}
               </tr>
             ))}
           </tbody>
         </table>
         {rows.length === 0 && <p className="p-8 text-center muted">{emptyText}</p>}
       </div>
-      {pages > 1 && (
-        <nav aria-label="Pages" className="mt-2 flex items-center justify-center gap-3 text-sm">
-          {page > 1 ? <Link className="btn" href={href({ page: page > 2 ? String(page - 1) : null })}>‹ Previous</Link> : <span className="btn opacity-40">‹ Previous</span>}
-          <span>Page {page} of {pages} · {total.toLocaleString()} people</span>
-          {page < pages ? <Link className="btn" href={href({ page: String(page + 1) })}>Next ›</Link> : <span className="btn opacity-40">Next ›</span>}
-        </nav>
+      {rows.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 border-t border-misty px-4 py-2.5 text-sm muted">
+          <span>Showing {((page - 1) * 100 + 1).toLocaleString()}–{((page - 1) * 100 + rows.length).toLocaleString()} of {total.toLocaleString()}</span>
+          {canExport && <a href={exportHref} className="font-semibold text-accent hover:underline">Export these {total.toLocaleString()} to CSV</a>}
+          {pages > 1 && (
+            <nav aria-label="Pages" className="ml-auto flex items-center gap-2">
+              {page > 1 ? <Link className="btn py-1" href={href({ page: page > 2 ? String(page - 1) : null })}>‹ Previous</Link> : <span className="btn py-1 opacity-40">‹ Previous</span>}
+              <span>Page {page} of {pages}</span>
+              {page < pages ? <Link className="btn py-1" href={href({ page: String(page + 1) })}>Next ›</Link> : <span className="btn py-1 opacity-40">Next ›</span>}
+            </nav>
+          )}
+        </div>
       )}
-      {canExport && rows.length > 0 && <a href={exportHref} className="mt-2 inline-block text-sm font-semibold text-accent hover:underline">Export these {total.toLocaleString()} to CSV</a>}
+      </div>
     </>
   );
 }
@@ -217,4 +250,8 @@ function ColumnsModal({ listId, columns, onClose }: { listId: string | null; col
       </div>
     </Modal>
   );
+}
+
+function Icon({ d }: { d: string }) {
+  return <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
 }
