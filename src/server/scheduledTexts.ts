@@ -81,6 +81,7 @@ async function loadAutoSteps(where: { personId?: string; createdById?: string },
   if (!tasks.length) return [];
   const team = await db.user.findMany({ select: { id: true, name: true } });
   const first = (id: string | null) => team.find((u) => u.id === id)?.name.split(" ")[0] ?? "";
+  const lists = await checklistNames(tasks);
   const roles = new Map([...(await loadForm("buyer")), ...(await loadForm("seller"))].filter((s) => s.people).map((s) => [`people:${s.id}`, s.name]));
   const rows = await Promise.all(tasks.map(async (t) => {
     const auto = t.autoSend as AutoSend | null;
@@ -97,7 +98,7 @@ async function loadAutoSteps(where: { personId?: string; createdById?: string },
     return [{
       id: `task:${t.id}`, at: at?.getTime() ?? Infinity, when: at ? scheduleLabel(at) : "No date yet",
       to: toLabel(auto.to, { client: t.person?.name ?? "Client", ...Object.fromEntries(roles) }),
-      body: `Automatic ${t.kind === "email" ? "email" : "text"} from the checklist: ${t.title}\n\n${preview}`, by: from,
+      body: `Automatic ${t.kind === "email" ? "email" : "text"} from the ${lists.get(t.templateId ?? "") ?? ""} checklist: ${t.title}\n\n${preview}`.replace("the  checklist", "the checklist"), by: from,
       mine: canCancelAny || t.assigneeId === userId || first(userId).toLowerCase() === from.toLowerCase(),
       status: t.autoState === "failed" ? "failed" : "pending", error: t.autoError, personId: t.personId, auto: true,
     }];
@@ -112,13 +113,21 @@ async function loadAskSteps(personId: string, userId: string, canCancelAny: bool
     where: { personId, askKind: { not: null }, OR: [{ askState: "pending" }, { askState: null, dueDate: null }], completedAt: null, deletedAt: null },
     include: { person: { select: { name: true } }, assignee: { select: { id: true, name: true } } }, orderBy: { dueDate: "asc" }, take: 20,
   });
+  const lists = await checklistNames(tasks);
   return Promise.all(tasks.map(async (t) => {
     const at = autoSendAt({ dueDate: t.dueDate, dueTime: t.dueTime ?? "09:00", autoSend: null });
     const first = t.assignee?.name.split(" ")[0] ?? "";
     return {
       id: `ask:${t.id}`, at: at?.getTime() ?? Infinity, when: at ? scheduleLabel(at) : "Waits for its date",
-      to: `${first || "the assignee"} (cell)`, body: `Check-in text from the checklist: ${t.title}\n\n${await askBody(t)}`, by: "HQ",
+      to: `${first || "the assignee"} (cell)`, body: `Check-in text from the ${lists.get(t.templateId ?? "") ?? ""} checklist: ${t.title}\n\n${await askBody(t)}`.replace("the  checklist", "the checklist"), by: "HQ",
       mine: canCancelAny || t.assigneeId === userId, status: "pending", error: null, personId: t.personId, auto: true,
     };
   }));
+}
+
+/** Checklist names by id, so each row says which checklist it came from ("from the "Consult scheduled" checklist"). */
+async function checklistNames(tasks: { templateId: string | null }[]) {
+  const ids = [...new Set(tasks.map((t) => t.templateId).filter((x): x is string => !!x))];
+  const rows = ids.length ? await db.taskTemplate.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }) : [];
+  return new Map(rows.map((r) => [r.id, `"${r.name}"`]));
 }

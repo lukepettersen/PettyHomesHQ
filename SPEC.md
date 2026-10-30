@@ -745,7 +745,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
   alert. The **Scheduled** box is its own section at the top of the contact page's middle column, above the deal tabs
   (owner request 2026-10-30), whenever anything is set: one-off scheduled texts and emails, automatic checklist
   texts/emails, and check-in texts from "Ask by text" steps (to whom: the teammate's cell, with the question it will
-  ask; **Turn off** stops the text and keeps the step). Automatic and check-in steps still waiting for their date show
+  ask; **Turn off** stops the text and keeps the step). Each automatic or check-in row names the checklist it came from ("Automatic text from the "Consult scheduled" checklist: …"). Automatic and check-in steps still waiting for their date show
   "No date yet" / "Waits for its date" and start counting down once the date they're timed from is set. Steps added before 2026-10-30 that lost this while waiting for a date get it back once on deploy (only ones due after today start waiting to send).
 - **Appointment merge fields** *(owner request 2026-10-29)*: text and email templates can use the person's upcoming
   appointments (today's only if not started yet): {next_appointment} ("Tuesday, November 3 at 2:00pm"), its date,
