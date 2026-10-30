@@ -73,6 +73,8 @@ function stepData(t: Template, spec: Spec, ctx: Ctx, who: (first: string) => str
   const autoTime = auto && minutesOffset(s) == null ? auto.time : null;
   return {
     autoSend: auto ?? undefined, autoState: auto ? "pending" : null,
+    // "Ask by text": the assignee gets a text at its due time; replying YES checks it off (owner request 2026-10-30).
+    askState: (s.type === "task" || s.type === "call") && s.ask && spec.due ? "pending" : null,
     title: s.name, kind: s.type, phase: spec.phase, anchor: s.dir === "none" ? null : s.anchor, offsetDays: s.dir === "none" ? null : offsetOf(s),
     dueDate: spec.due ? dateFromIso(spec.due) : null, dueTime: !spec.due ? null : autoTime ? autoTime : minutesOffset(s) != null ? (ctx.times?.[s.anchor] ? timeBefore(ctx.times[s.anchor]!, minutesOffset(s)!) : null) : offsetOf(s) === 0 ? ctx.times?.[s.anchor] ?? null : null,
     offsetMinutes: minutesOffset(s), // positive = before, negative = after
@@ -123,11 +125,13 @@ export async function syncTemplateToOpen(t: Template, userId: string): Promise<{
         const autoState = !d.autoSend ? (task.autoState === "pending" ? "off" : task.autoState) : task.autoState && task.autoState !== "off" ? task.autoState : "pending";
         // A date someone set by hand (the step was detached from its timing) and who it's assigned to stay as they are.
         const handDated = !task.anchor && spec.step.dir !== "none";
-        const next = { ...d, autoSend: d.autoSend ?? task.autoSend ?? undefined, autoState, assigneeId: task.assigneeId,
+        // An ask already sent or answered stays that way; a step that stopped asking stops.
+        const askState = !d.askState ? (task.askState === "pending" ? null : task.askState) : task.askState && task.askState !== "off" ? task.askState : "pending";
+        const next = { ...d, autoSend: d.autoSend ?? task.autoSend ?? undefined, autoState, askState, assigneeId: task.assigneeId,
           ...(handDated ? { anchor: task.anchor, offsetDays: task.offsetDays, offsetMinutes: task.offsetMinutes, dueDate: task.dueDate, dueTime: task.dueTime } : {}) };
         const same = task.title === next.title && task.kind === next.kind && task.phase === next.phase && task.anchor === next.anchor && task.offsetDays === next.offsetDays && task.offsetMinutes === next.offsetMinutes
           && (task.dueDate?.getTime() ?? null) === (next.dueDate?.getTime() ?? null) && task.dueTime === next.dueTime && task.assigneeId === next.assigneeId && task.advanceStatusId === next.advanceStatusId
-          && JSON.stringify(task.autoSend ?? null) === JSON.stringify(next.autoSend ?? null) && task.autoState === next.autoState;
+          && JSON.stringify(task.autoSend ?? null) === JSON.stringify(next.autoSend ?? null) && task.autoState === next.autoState && task.askState === next.askState;
         if (same) continue;
         await tx.task.update({ where: { id: task.id }, data: { ...next, autoSend: next.autoSend === undefined ? undefined : (next.autoSend as object) } });
         out.updated++; changed = true;

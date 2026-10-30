@@ -7,7 +7,8 @@ import { textingEnabled } from "@/server/integrations";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { logActivity } from "@/server/activity";
 import { publicBase } from "@/server/twilio";
-import { COMMAND_HELP, parseTextCommand, type NewContact } from "@/lib/textCommands";
+import { COMMAND_HELP, parseTextCommand, parseYesNo, type NewContact } from "@/lib/textCommands";
+import { answerAsk } from "@/server/askByText";
 
 /**
  * A text from a team member's own cell (the "calls ring" cell in Admin) to their own HQ number that starts with
@@ -16,10 +17,18 @@ import { COMMAND_HELP, parseTextCommand, type NewContact } from "@/lib/textComma
  */
 export async function runTextCommand(o: { from: string; to: string; body: string }): Promise<boolean> {
   const cmd = parseTextCommand(o.body);
-  if (!cmd) return false;
+  const yesNo = !cmd && parseYesNo(o.body);
+  if (!cmd && !yesNo) return false;
   const user = (await db.user.findMany({ where: { textNumber: o.to, forwardTo: { not: null }, status: { not: "DISABLED" } }, select: { id: true, name: true, forwardTo: true } }))
     .find((u) => normalizePhone(u.forwardTo!) === normalizePhone(o.from));
   if (!user) return false;
+  // YES / NO answers an "Ask by text" check-in (owner request 2026-10-30); with nothing asked it's a normal text.
+  if (!cmd) {
+    const answer = await answerAsk(user, o.body);
+    if (!answer) return false;
+    await replyTo(o.to, user.forwardTo!, o.from, answer);
+    return true;
+  }
   let reply = COMMAND_HELP;
   if (cmd.kind === "task") {
     if (!cmd.words) reply = 'Add the task after "task", e.g. task call lender re Ortiz Fri 9am.';
@@ -32,12 +41,15 @@ export async function runTextCommand(o: { from: string; to: string; body: string
     try { reply = await addContact(user, cmd.contact); }
     catch { reply = "That contact didn't save. Try again, or add them in HQ."; }
   }
-  // The reply is a courtesy: if it can't be sent or saved, the command still counts.
-  if (await textingEnabled()) {
-    const r = await sendSms({ from: o.to, to: user.forwardTo!, body: reply });
-    if (r.ok) await db.textMessage.create({ data: { ourNumber: o.to, theirNumber: normalizePhone(o.from), direction: "out", body: reply, twilioSid: r.sid, status: r.status, readAt: new Date() } }).catch(() => null);
-  }
+  await replyTo(o.to, user.forwardTo!, o.from, reply);
   return true;
+}
+
+/** The reply is a courtesy: if it can't be sent or saved, the command still counts. */
+async function replyTo(ourNumber: string, cell: string, from: string, body: string) {
+  if (!(await textingEnabled())) return;
+  const r = await sendSms({ from: ourNumber, to: cell, body });
+  if (r.ok) await db.textMessage.create({ data: { ourNumber, theirNumber: normalizePhone(from), direction: "out", body, twilioSid: r.sid, status: r.status, readAt: new Date() } }).catch(() => null);
 }
 
 /** "contact Jane Smith 612-555-1234 jane@gmail.com" → a new person, unless that number or email is already in HQ. */

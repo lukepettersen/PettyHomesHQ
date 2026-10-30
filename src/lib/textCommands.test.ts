@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseTextCommand } from "./textCommands";
+import { askText, parseTextCommand, parseYesNo } from "./textCommands";
 
 describe("text commands", () => {
   it("reads task and help", () => {
@@ -22,3 +22,16 @@ describe("contact command (owner request 2026-10-27)", () => {
     expect(parseTextCommand("contacts are great")).toBeNull();
   });
 });
+
+describe("ask by text replies", () => {
+  it("reads yes and no", () => {
+    for (const y of ["Yes", "y", "YES!", "done", "Completed", "yep", "👍"]) expect(parseYesNo(y)).toBe("yes");
+    for (const n of ["No", "n", "not yet", "nope"]) expect(parseYesNo(n)).toBe("no");
+    for (const x of ["yes call me", "task call lender", "maybe"]) expect(parseYesNo(x)).toBeNull();
+  });
+  it("asks plainly", () => {
+    expect(askText({ title: "Consult done?", person: "Hayley & Beau", movesTo: "Consult complete" }))
+      .toBe('HQ check-in for Hayley & Beau: "Consult done?" Reply YES if it\'s done (moves them to Consult complete), or NO to leave it open.');
+  });
+});
+

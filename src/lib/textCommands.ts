@@ -25,3 +25,16 @@ export function parseTextCommand(body: string): TextCommand | null {
 }
 
 export const COMMAND_HELP = 'HQ commands: "task" then the task, like the Tasks box: task call lender re Ortiz Fri 9am (also tomorrow, next week, every month, #list, @alyssa). "contact" then a name, number and email adds a person: contact Jane Smith 612-555-1234 jane@gmail.com. Text "help" for this list.';
+
+/** A reply to an "Ask by text" question (owner request 2026-10-30): yes, no, or neither (then it's a normal text). */
+export function parseYesNo(body: string): "yes" | "no" | null {
+  const t = body.trim().toLowerCase().replace(/[.!\s]+$/g, "");
+  if (/^(y|yes|yep|yeah|yup|done|completed?|it did|👍|✅)$/.test(t)) return "yes";
+  if (/^(n|no|nope|not yet|nah|didn'?t happen|👎)$/.test(t)) return "no";
+  return null;
+}
+
+/** The question HQ texts: 'HQ check-in for Hayley & Beau: "Consult done?" Reply YES if it's done (moves them to Consult complete), or NO.' */
+export function askText(o: { title: string; person: string | null; movesTo: string | null }): string {
+  return `HQ check-in${o.person ? ` for ${o.person}` : ""}: "${o.title}" Reply YES if it's done${o.movesTo ? ` (moves them to ${o.movesTo})` : ""}, or NO to leave it open.`;
+}

@@ -240,6 +240,12 @@ function Editor({ t: initial, statuses, team, roles, tags, stages, today, templa
                     })()}
                   </label>
                 )}
+                {(s.type === "task" || s.type === "call") && (
+                  <label className="flex w-full items-start gap-2 rounded-md border border-dashed border-misty px-2.5 py-2 text-xs">
+                    <input type="checkbox" className="mt-0.5" checked={!!s.ask} disabled={s.dir === "none"} onChange={(e) => setStep(i, si, { ask: e.target.checked || undefined })} />
+                    <span><b>Ask by text when it&apos;s due</b> <span className="muted">{s.dir === "none" ? "(needs a due date)" : "HQ texts whoever it's assigned to (their cell, from their HQ number). Replying YES checks it off and does its \"When done\"; NO leaves it open."}</span></span>
+                  </label>
+                )}
                 {(s.type === "email" || s.type === "text") && <AutoSendFields step={s} team={team} roles={roles} field={field} onChange={(auto) => setStep(i, si, { auto })} />}
                 {s.type === "stage" && (
                   <label className="flex items-center gap-1 text-xs font-semibold muted">Change contact&apos;s stage to

@@ -345,6 +345,8 @@ model Task {
   autoSend        Json? // checklist step that sends by itself: { from, to, time } (owner request 2026-10-29)
   autoState       String? // pending | sending | sent | failed | off (turned off by someone)
   autoError       String?
+  askState      String? // "Ask by text": pending | asked | answered | off (owner request 2026-10-30)
+  askedAt       DateTime?
   completedById   String? // who checked it off (Done today, owner request 2026-10-28); empty when closed automatically
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
@@ -354,6 +356,7 @@ model Task {
   @@index([personId])
   @@index([assigneeId, completedAt])
   @@index([autoState, dueDate])
+  @@index([askState, dueDate])
   @@index([fileId])
   @@index([paId])
 }
