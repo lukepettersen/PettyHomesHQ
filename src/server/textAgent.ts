@@ -12,7 +12,7 @@ import { groupReady, textNumbersAsGroup } from "@/server/groupText";
 import { hasPermission } from "@/server/permissions";
 import { calendarHint } from "@/lib/assistant";
 import { addMinutes } from "@/lib/appointments";
-import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
+import { dateFromIso, formatPhone, isoFromDate, normalizeEmail, normalizePhone, todayCentral } from "@/lib/normalize";
 import { centralToUtc, scheduleLabel, scheduleProblem } from "@/lib/scheduledText";
 import { formatTime, longIso } from "@/lib/tasks";
 import { clip, cleanWhen } from "@/lib/textAgent";
@@ -26,7 +26,7 @@ const MODEL = "claude-opus-5-5";
 const MAX_TURNS = 8;
 const MEMORY_MIN = 30;
 
-type Me = { id: string; name: string; email: string; permissions: string[] };
+type Me = { id: string; name: string; email: string; permissions: string[]; cell: string };
 
 const SYSTEM = `You are the text assistant for the Petty Homes real estate team's CRM, called HQ. A team member texts you from their phone; you do what they ask with the tools, then reply by text.
 
@@ -38,13 +38,14 @@ People:
 Calendar:
 - book_event puts something on the calendar. With a contact, it goes on their HQ page too ("Jack Rotman swing by house today 10:30am" → person_id Jack's id, title "Swing by house"). With no contact in it ("dentist Fri 3pm", "block Thursday afternoon for MLS tour"), person_id is "".
 - If they name someone not in HQ, ask whether to put it on the calendar by itself or add them as a contact; don't do both.
+- add_contact adds someone new (find_people first so you don't add a duplicate). When they give a name and a number or email to add, add it, then go on with what they asked in the same turn (e.g. add_contact, then text_client with the new id).
 - date YYYY-MM-DD from the calendar you're given; start/end 24-hour HH:MM. No end said: leave end "" (HQ uses an hour). No time said for a meeting: ask. "All day" or a reminder with no time: start "".
 - invite_client true when it's a meeting with the client (they'll get the calendar invite); false for things you do on your own (dropping off a sign, a reminder). Only list team members in with_team when the speaker says someone joins.
 - move_event / cancel_event change an appointment; get its id from person_details or my_schedule first.
 
 Other:
 - add_task for reminders and to-dos (due today if no day is said). add_note to log what happened with a client, in the speaker's words, cleaned up, keeping every fact.
-- text_client when they want a client texted. Write the message as the speaker would (first person, casual, short). It is NOT sent until they reply YES, so call it once, then stop.
+- text_client when they want someone texted. Write the message as the speaker would (first person, casual, short), greeting them by first name. It goes as a group text that includes the speaker's own cell, and is NOT sent until they reply YES, so call it once, then stop.
 - my_schedule answers "what's on my calendar / today / tomorrow".
 - You can't send emails, move deals between stages or change contracts yet; say so if asked.
 
@@ -75,6 +76,11 @@ const tools: Anthropic.Beta.BetaTool[] = [
     }, required: ["title", "person_id", "due", "time", "assignee", "kind"], additionalProperties: false } },
   { name: "add_note", description: "Log a note, call or text on a contact's timeline.", strict: true,
     input_schema: { type: "object", properties: { person_id: str("Contact id"), kind: { type: "string", enum: ["note", "call", "text"] }, body: str("The note") }, required: ["person_id", "kind", "body"], additionalProperties: false } },
+  { name: "add_contact", description: "Add a new contact to HQ. Returns the new id (or the existing contact's, if that number or email is already in HQ).", strict: true,
+    input_schema: { type: "object", properties: {
+      name: str('Full name, like "Mason Albee"'), phone: str('Phone number, or ""'), email: str('Email, or ""'),
+      partner_type: { type: "string", enum: ["", "realtor", "lender", "title", "inspector", "tc", "attorney", "other"], description: 'Industry partner type when they say what they do (a contractor or sign installer is "other"), else ""' },
+    }, required: ["name", "phone", "email", "partner_type"], additionalProperties: false } },
   { name: "text_client", description: "Prepare a text to a contact from the speaker's HQ number. Not sent until the speaker replies YES.", strict: true,
     input_schema: { type: "object", properties: { person_id: str("Contact id"), body: str("The message"), send_date: str('YYYY-MM-DD to send later, or "" for now'), send_time: str('HH:MM to send later, or ""') }, required: ["person_id", "body", "send_date", "send_time"], additionalProperties: false } },
 ];
@@ -201,6 +207,26 @@ async function runTool(me: Me, name: string, a: Record<string, unknown>, seen: S
     return "Saved.";
   }
 
+  if (name === "add_contact") {
+    const full = s("name").replace(/\s+/g, " ").slice(0, 120);
+    const phone = normalizePhone(s("phone"));
+    const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s("email")) ? normalizeEmail(s("email")) : "";
+    if (!full) return "Not added: needs a name.";
+    if (phone && phone.length !== 10) return "Not added: that phone number doesn't look right; ask for it again.";
+    const existing = phone || email ? await db.person.findFirst({ where: { deletedAt: null, OR: [...(phone ? [{ phones: { some: { normalized: phone } } }] : []), ...(email ? [{ emails: { some: { normalized: email } } }] : [])] }, select: { id: true, name: true } }) : null;
+    if (existing) { seen.add(existing.id); return `Already in HQ as ${existing.name} (id ${existing.id}); use that.`; }
+    const type = s("partner_type");
+    const p = await db.person.create({ data: {
+      name: full, mailingName: full, createdById: me.id, assignedToId: me.id, partnerType: type || null,
+      phones: phone ? { create: [{ label: "Mobile", number: formatPhone(phone), normalized: phone, position: 0 }] } : undefined,
+      emails: email ? { create: [{ label: "", address: email, normalized: email, position: 0 }] } : undefined,
+    } });
+    seen.add(p.id);
+    await logActivity(me.id, "create", "person", p.id, `Added ${full} by text`);
+    await record(me.id, "contact", `✓ Added ${full} to HQ${phone ? ` (${formatPhone(phone)})` : ""}${email ? ` · ${email}` : ""}.`, { personId: p.id });
+    return `Added (id ${p.id}).`;
+  }
+
   if (name === "text_client") {
     if (!hasPermission(me.permissions as never, "sendTexts")) return "They aren't allowed to send texts from HQ; tell them.";
     const p = await person(s("person_id"));
@@ -214,7 +240,8 @@ async function runTool(me: Me, name: string, a: Record<string, unknown>, seen: S
       if (problem) return `Not prepared: ${problem}`;
     }
     const at = later?.time ? ` at ${scheduleLabel(centralToUtc(later.date, later.time))}` : "";
-    await record(me.id, "text", `Text ${p.name}${at}: "${body}"\nReply YES to send, or NO.`, { personId: p.id, body, date: later?.date ?? null, time: later?.time ?? null }, "confirm");
+    const group = me.cell && !p.phones.some((x) => x.normalized === me.cell) ? " + your cell" : "";
+    await record(me.id, "text", `${group ? "Group text" : "Text"} to ${p.name}${group}${at}: "${body}"\nReply YES to send, or NO.`, { personId: p.id, body, date: later?.date ?? null, time: later?.time ?? null }, "confirm");
     return "Prepared. Waiting for them to reply YES. Stop here.";
   }
   return "Unknown tool.";
@@ -227,7 +254,7 @@ export async function runTextAgent(user: { id: string; name: string }, text: str
   if (!isConnected("claude")) return 'HQ\'s assistant isn\'t connected yet (ANTHROPIC_API_KEY in Railway). You can still text "task …" or "contact …".';
   const u = await db.user.findUnique({ where: { id: user.id }, include: { role: true } });
   if (!u?.isOwner) return "Couldn't find you in HQ."; // owner only (owner decision 2026-10-30); the router checks this too
-  const me: Me = { id: u.id, name: u.name, email: u.email, permissions: u.role.permissions };
+  const me: Me = { id: u.id, name: u.name, email: u.email, permissions: u.role.permissions, cell: u.forwardTo ? normalizePhone(u.forwardTo) : "" };
   const today = isoFromDate(todayCentral());
   const nowTime = new Date().toLocaleTimeString("en-US", { timeZone: "America/Chicago", hour: "numeric", minute: "2-digit" });
   const team = await db.user.findMany({ where: { status: { not: "DISABLED" } }, select: { name: true } });
@@ -289,18 +316,22 @@ export async function answerConfirm(user: { id: string; name: string }, actionId
   const p = act.payload as { personId: string; body: string; date: string | null; time: string | null };
   const person = await db.person.findFirst({ where: { id: p.personId, deletedAt: null }, include: { phones: { orderBy: { position: "asc" } } } });
   if (!person?.phones.length) return "Not sent: they have no phone number in HQ now.";
-  const numbers = [...new Set(person.phones.map((x) => x.normalized))];
+  // Texts the assistant sends go as a group text with the owner's own cell in it (owner request 2026-10-30).
+  const theirs = [...new Set(person.phones.map((x) => x.normalized))];
+  const me = await db.user.findUnique({ where: { id: user.id }, select: { forwardTo: true } });
+  const cell = me?.forwardTo ? normalizePhone(me.forwardTo) : "";
+  const withCell = cell && !theirs.includes(cell) && (await groupReady()) ? [...theirs, cell] : theirs;
   try {
     if (p.date && p.time) {
       const sendAt = centralToUtc(p.date, p.time);
-      const s = await db.scheduledText.create({ data: { personId: person.id, numbers, body: p.body, sendAt, createdById: user.id } });
+      const s = await db.scheduledText.create({ data: { personId: person.id, numbers: withCell, body: p.body, sendAt, createdById: user.id } });
       await db.textAgentAction.update({ where: { id: act.id }, data: { payload: { ...p, scheduledId: s.id } } });
       await logActivity(user.id, "create", "scheduledText", person.id, `Scheduled a text to ${person.name} for ${scheduleLabel(sendAt)} by text`);
-      return `✓ Scheduled for ${scheduleLabel(sendAt)} to ${person.name}.`;
+      return `✓ Scheduled for ${scheduleLabel(sendAt)} to ${person.name}${withCell !== theirs ? " + your cell" : ""}.`;
     }
-    if (numbers.length > 1 && (await groupReady())) await textNumbersAsGroup(user, { numbers, body: p.body });
-    else for (const n of numbers) await sendTextAs(user, { personId: person.id, to: n, body: p.body, typed: true });
-    return `✓ Sent to ${person.name}.`;
+    if (withCell.length > 1 && (await groupReady())) await textNumbersAsGroup(user, { numbers: withCell, body: p.body });
+    else for (const n of theirs) await sendTextAs(user, { personId: person.id, to: n, body: p.body, typed: true });
+    return withCell !== theirs ? `✓ Sent as a group text to ${person.name} + your cell.` : cell && !theirs.includes(cell) ? `✓ Sent to ${person.name} (just them: group texts are off in Admin → Integrations).` : `✓ Sent to ${person.name}.`;
   } catch (e) {
     await db.textAgentAction.update({ where: { id: act.id }, data: { status: "canceled" } });
     return `Not sent: ${e instanceof UserError ? e.message : "something went wrong. Send it from their page in HQ."}`;
@@ -328,6 +359,9 @@ export async function undoLast(user: { id: string }): Promise<string> {
   } else if (act.kind === "event") {
     if (!(await removeCalendarEvent(id("eventId")))) return "Couldn't remove that calendar event. Delete it in Google Calendar.";
     what = "Removed it from your calendar.";
+  } else if (act.kind === "contact") {
+    const p = await db.person.update({ where: { id: id("personId") }, data: { deletedAt: new Date() } });
+    what = `Removed ${p.name} (in Trash for 30 days).`;
   } else if (act.kind === "task") {
     await db.task.update({ where: { id: id("taskId") }, data: { deletedAt: new Date() } });
     what = "Removed that task.";

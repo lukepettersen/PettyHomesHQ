@@ -458,7 +458,12 @@ scrolls with it until its last card is on screen, then stays put while the middl
   in the last two hours (a text already sent can't be undone). It asks rather than guesses (which Jack? what time?),
   remembers the last 30 minutes of the conversation, logs everything in Activity, and **only answers the owner's own
   cell texting the owner's HQ number** (owner decision 2026-10-30); anyone else's texts, including other team members',
-  are handled as before (their cells still get "task …", "contact …" and check-in replies).
+  are handled as before (their cells still get "task …", "contact …" and check-in replies). It can also **add a
+  contact** (name, phone, email, partner type; it checks for an existing contact with that number or email first; undo
+  moves it to Trash), then go on with the rest of the request ("yes, his number is 952-567-9827" adds Mason and prepares
+  the text). **Every text it sends for the owner is a group text that includes the owner's own cell** (owner request
+  2026-10-30), so the owner sees the conversation; the YES prompt says "Group text to Mason Albee + your cell". If group
+  texting is off in Admin, it goes to the contact alone and the receipt says so.
   "task …", "contact …" and check-in replies keep working as before. Needs ANTHROPIC_API_KEY (same as Ask Claude); it
   can't email, move deals or change contracts yet.
 - **Ask by text** *(owner request 2026-10-30)*: a Task or Call step with a due date can tick **Ask by text when it's
@@ -737,7 +742,11 @@ scrolls with it until its last card is on screen, then stays put while the middl
   STOP. A checklist step scheduled from Draft text is checked off when it sends. The contact page lists **Scheduled
   texts** (when, to whom by name, by whom, the message shortened; click it to read the whole text) with **Cancel** for the person who scheduled it or anyone allowed to
   delete records; one that couldn't send shows "Not sent" with the reason for a week, and the scheduler gets a bell
-  alert.
+  alert. The **Scheduled** box is its own section at the top of the contact page's middle column, above the deal tabs
+  (owner request 2026-10-30), whenever anything is set: one-off scheduled texts and emails, automatic checklist
+  texts/emails, and check-in texts from "Ask by text" steps (to whom: the teammate's cell, with the question it will
+  ask; **Turn off** stops the text and keeps the step). Automatic and check-in steps still waiting for their date show
+  "No date yet" / "Waits for its date" and start counting down once the date they're timed from is set.
 - **Appointment merge fields** *(owner request 2026-10-29)*: text and email templates can use the person's upcoming
   appointments (today's only if not started yet): {next_appointment} ("Tuesday, November 3 at 2:00pm"), its date,
   time, type and location, and {next_consult} (buyer or seller), {next_showing}, {next_phone_call}. Listed under

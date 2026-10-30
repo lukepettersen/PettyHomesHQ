@@ -57,6 +57,8 @@ export function FileTabs(p: Props) {
   const shown = current ? current.id : "timeline";
   return (
     <>
+      {/* Its own section at the top (owner request 2026-10-30): anything set to send later, from a deal or not. */}
+      <Scheduled rows={p.scheduled} />
       <div role="tablist" aria-label="Files and timeline" className="flex gap-1 overflow-x-auto border-b border-misty">
         {active.map((f) => (
           <button key={f.id} role="tab" type="button" aria-selected={shown === f.id} onClick={() => setTab(f.id)}
@@ -77,7 +79,6 @@ export function FileTabs(p: Props) {
                 initialSubject={compose.subject ?? ""} onSent={() => setCompose(null)} suggest={(() => { const pa = current && p.contracts.find((c) => c.fileId === current.id && c.state === "active"); return pa ? dealEmails(p.forms[pa.side], pa) : []; })()} />}
         </div>
       )}
-      <Scheduled rows={p.scheduled} />
       {current ? <FilePane key={current.id} {...p} file={current} onDeleted={() => setTab("timeline")} /> : p.timeline}
     </>
   );
@@ -230,7 +231,8 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
   );
 }
 
-/** Texts scheduled for this person that haven't gone out (or didn't send), with Cancel (owner request 2026-10-28). */
+/** Texts and emails scheduled for this person that haven't gone out (or didn't send), and checklist steps that send by
+ *  themselves, with Cancel / Turn off (owner requests 2026-10-28, 10-29). */
 function Scheduled({ rows }: { rows: ScheduledRow[] }) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -238,7 +240,7 @@ function Scheduled({ rows }: { rows: ScheduledRow[] }) {
   const [full, setFull] = useState<string[]>([]); // texts opened to read in full (owner request 2026-10-28)
   if (!rows.length) return null;
   return (
-    <section aria-label="Scheduled" className="card mt-3 px-4 py-3">
+    <section aria-label="Scheduled" className="card mb-3 px-4 py-3">
       <h3 className="text-xs font-semibold uppercase tracking-wider muted">{rows.some((x) => x.auto || x.email) ? "Scheduled texts & emails" : "Scheduled texts"}</h3>
       <ul className="mt-1 flex flex-col">
         {rows.map((x) => (

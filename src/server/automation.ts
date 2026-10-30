@@ -69,13 +69,14 @@ async function prepare(tx: Tx, t: Template, ctxIn: Ctx, userId: string) {
 function stepData(t: Template, spec: Spec, ctx: Ctx, who: (first: string) => string) {
   const s = spec.step;
   // A step set to send by itself goes out at its chosen time on the due date (owner request 2026-10-29).
-  const auto = (s.type === "text" || s.type === "email") && s.auto && spec.due ? s.auto : null;
-  const autoTime = auto && minutesOffset(s) == null ? auto.time : null;
+  // Kept even while the step waits for its date, so "Update the deals" doesn't turn it off for lack of one.
+  const auto = (s.type === "text" || s.type === "email") && s.auto ? s.auto : null;
+  const autoTime = auto && spec.due && minutesOffset(s) == null ? auto.time : null;
   return {
-    autoSend: auto ?? undefined, autoState: auto ? "pending" : null,
+    autoSend: auto ?? undefined, autoState: auto && spec.due ? "pending" : null,
     // "Ask by text": the assignee gets a text at its due time; replying YES checks it off (owner request 2026-10-30).
     askState: (s.type === "task" || s.type === "call") && s.ask && spec.due ? "pending" : null,
-    askKind: (s.type === "task" || s.type === "call") && s.ask && spec.due ? (s.ask === "consult" ? "consult" : "done") : null,
+    askKind: (s.type === "task" || s.type === "call") && s.ask ? (s.ask === "consult" ? "consult" : "done") : null, // kept while it waits for its date
     title: s.name, kind: s.type, phase: spec.phase, anchor: s.dir === "none" ? null : s.anchor, offsetDays: s.dir === "none" ? null : offsetOf(s),
     dueDate: spec.due ? dateFromIso(spec.due) : null, dueTime: !spec.due ? null : autoTime ? autoTime : minutesOffset(s) != null ? (ctx.times?.[s.anchor] ? timeBefore(ctx.times[s.anchor]!, minutesOffset(s)!) : null) : offsetOf(s) === 0 ? ctx.times?.[s.anchor] ?? null : null,
     offsetMinutes: minutesOffset(s), // positive = before, negative = after
@@ -123,11 +124,11 @@ export async function syncTemplateToOpen(t: Template, userId: string): Promise<{
         if (spec.step.type === "tags" || spec.step.type === "stage") continue;
         const d = stepData(t, spec, ctx, who);
         // A step already sent, failed or turned off keeps that state unless it stopped being automatic.
-        const autoState = !d.autoSend ? (task.autoState === "pending" ? "off" : task.autoState) : task.autoState && task.autoState !== "off" ? task.autoState : "pending";
+        const autoState = !d.autoSend ? (task.autoState === "pending" ? "off" : task.autoState) : task.autoState && task.autoState !== "off" ? task.autoState : d.autoState ?? (task.dueDate ? "pending" : null);
         // A date someone set by hand (the step was detached from its timing) and who it's assigned to stay as they are.
         const handDated = !task.anchor && spec.step.dir !== "none";
         // An ask already sent or answered stays that way; a step that stopped asking stops.
-        const askState = !d.askState ? (task.askState === "pending" ? null : task.askState) : task.askState && task.askState !== "off" ? task.askState : "pending";
+        const askState = !d.askKind ? (task.askState === "pending" ? null : task.askState) : task.askState && task.askState !== "off" ? task.askState : d.askState ?? (task.dueDate ? "pending" : null);
         const next = { ...d, autoSend: d.autoSend ?? task.autoSend ?? undefined, autoState, askState, assigneeId: task.assigneeId,
           ...(handDated ? { anchor: task.anchor, offsetDays: task.offsetDays, offsetMinutes: task.offsetMinutes, dueDate: task.dueDate, dueTime: task.dueTime } : {}) };
         const same = task.title === next.title && task.kind === next.kind && task.phase === next.phase && task.anchor === next.anchor && task.offsetDays === next.offsetDays && task.offsetMinutes === next.offsetMinutes
@@ -182,7 +183,7 @@ export async function redateContract(tx: Tx, paId: string) {
   for (const t of open) {
     const base = t.anchor === "inspAppt" ? apptDate(pa.answers) : (pa[t.anchor as keyof typeof pa] as Date | null);
     const due = base ? new Date(base.getTime() + (t.offsetDays ?? 0) * 86400000) : null;
-    if ((due?.getTime() ?? null) !== (t.dueDate?.getTime() ?? null)) { await tx.task.update({ where: { id: t.id }, data: { dueDate: due } }); moved++; }
+    if ((due?.getTime() ?? null) !== (t.dueDate?.getTime() ?? null)) { await tx.task.update({ where: { id: t.id }, data: { dueDate: due, ...autoOn(t, due) } }); moved++; }
   }
   return moved;
 }
@@ -274,9 +275,13 @@ export async function redateConsult(tx: Tx, personId: string) {
     // An automatic step keeps the send time picked for it (unless it's timed in minutes from the consult).
     const auto = t.autoSend && t.offsetMinutes == null ? (t.autoSend as { time?: string }).time ?? null : null;
     const time = auto ?? (!c?.time ? null : t.offsetMinutes != null ? timeBefore(c.time, t.offsetMinutes) : (t.offsetDays ?? 0) === 0 ? c.time : t.dueTime);
-    await tx.task.update({ where: { id: t.id }, data: { dueDate: due, dueTime: time } });
+    await tx.task.update({ where: { id: t.id }, data: { dueDate: due, dueTime: time, ...autoOn(t, due) } });
   }
 }
+
+/** An automatic or "ask by text" step that was waiting for its date starts waiting to send once it has one. */
+const autoOn = (t: { autoSend: unknown; autoState: string | null; askKind: string | null; askState: string | null }, due: Date | null) => ({
+  ...(t.autoSend && !t.autoState && due ? { autoState: "pending" } : {}), ...(t.askKind && !t.askState && due ? { askState: "pending" } : {}) });
 
 /** A consult booked again (owner request 2026-10-29): steps timed from the consult that were already done (or
  *  deleted) start over for the new one; steps timed from the start date don't repeat. Returns tasks made. */

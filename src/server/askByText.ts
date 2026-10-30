@@ -35,16 +35,20 @@ export async function sendDueAsks(now = new Date()): Promise<number> {
       if (user) await db.notification.create({ data: { toId: user.id, personId: t.personId, alert: true, text: `HQ couldn't text you about "${t.title}": add your HQ number and cell in Admin → Integrations. Check it off in HQ when it's done.` } });
       continue;
     }
-    const status = t.advanceStatusId ? await db.pipelineStatus.findUnique({ where: { id: t.advanceStatusId }, select: { name: true } }) : null;
-    const body = t.askKind === "consult"
-      ? `HQ check-in${t.person ? ` for ${t.person.name}` : ""}: did you set a consult? Reply like "buyer Wed 7pm" or "seller Thu 3:30pm" and HQ books it and sends the invite, or NO.`
-      : askText({ title: t.title, person: t.person?.name ?? null, movesTo: status?.name ?? null });
+    const body = await askBody(t);
     const r = await sendSms({ from: user.textNumber, to: user.forwardTo, body });
     if (!r.ok) { await db.task.update({ where: { id: t.id }, data: { askState: "off" } }); continue; }
     await db.textMessage.create({ data: { ourNumber: user.textNumber, theirNumber: normalizePhone(user.forwardTo), direction: "out", body, twilioSid: r.sid, status: r.status, readAt: new Date() } }).catch(() => null);
     sent++;
   }
   return sent;
+}
+
+/** The check-in text for an "Ask by text" step (also shown ahead of time in the contact's Scheduled box). */
+export async function askBody(t: { title: string; askKind: string | null; advanceStatusId: string | null; person: { name: string } | null }) {
+  if (t.askKind === "consult") return `HQ check-in${t.person ? ` for ${t.person.name}` : ""}: did you set a consult? Reply like "buyer Wed 7pm" or "seller Thu 3:30pm" and HQ books it and sends the invite, or NO.`;
+  const status = t.advanceStatusId ? await db.pipelineStatus.findUnique({ where: { id: t.advanceStatusId }, select: { name: true } }) : null;
+  return askText({ title: t.title, person: t.person?.name ?? null, movesTo: status?.name ?? null });
 }
 
 /**
