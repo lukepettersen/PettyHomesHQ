@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/server/db";
-import type { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 import { isDueForTouch } from "@/lib/filters";
 import { initials, isoFromDate, todayCentral } from "@/lib/normalize";
 import { centralDayStart } from "@/lib/texting";
@@ -45,13 +45,26 @@ export type TeamMember = { id: string; name: string; initials: string; isOwner: 
 const taskInclude = { person: { select: { name: true } }, file: { select: { kind: true } }, pa: { select: { side: true } } } as const;
 type DbTask = Prisma.TaskGetPayload<{ include: typeof taskInclude }>;
 
-/** Steps from a closed or deleted file, or an ended contract, no longer show as open tasks. */
+/** Steps from a closed or deleted file, or an ended contract, no longer show as open tasks. Neither do steps that send
+ *  by themselves while they're set to (owner request 2026-10-30: so nobody sends them twice by hand); they show in the
+ *  contact's Scheduled box and on the deal checklist, and come back as a task if they fail or are turned off. */
 export const LIVE_STEPS = {
   AND: [
     { OR: [{ fileId: null }, { file: { is: { closedAt: null, deletedAt: null } } }] },
     { OR: [{ paId: null }, { pa: { is: { state: "active", deletedAt: null } } }] },
+    { OR: [{ autoState: { in: ["failed", "off", "sent"] } }, { autoState: null, autoSend: { equals: Prisma.DbNull } }] },
   ],
 } satisfies Prisma.TaskWhereInput;
+
+/** Steps someone scheduled a text or email for (Draft → Schedule): hidden from the task lists until it sends (then
+ *  it's checked off) or is cancelled. */
+export async function scheduledStepIds(): Promise<string[]> {
+  const [texts, emails] = await Promise.all([
+    db.scheduledText.findMany({ where: { status: { in: ["pending", "sending"] }, taskId: { not: null } }, select: { taskId: true } }),
+    db.scheduledEmail.findMany({ where: { status: { in: ["pending", "sending"] }, taskId: { not: null } }, select: { taskId: true } }),
+  ]);
+  return [...new Set([...texts, ...emails].map((x) => x.taskId!).filter((x) => !x.startsWith("date:")))];
+}
 
 export function toRow(t: DbTask): TaskRow {
   return {
@@ -121,7 +134,7 @@ export async function loadTaskBoard() {
   const team = await loadTeam();
   const [lists, tasks, dateTasks, people, done] = await Promise.all([
     db.taskList.findMany({ orderBy: [{ position: "asc" }, { name: "asc" }] }),
-    db.task.findMany({ where: { completedAt: null, deletedAt: null, OR: [{ personId: null }, { person: { deletedAt: null } }], ...LIVE_STEPS }, include: taskInclude, orderBy: [{ dueDate: "asc" }, { priority: "desc" }, { dueTime: "asc" }, { title: "asc" }, { id: "asc" }] }),
+    db.task.findMany({ where: { completedAt: null, deletedAt: null, id: { notIn: await scheduledStepIds() }, OR: [{ personId: null }, { person: { deletedAt: null } }], ...LIVE_STEPS }, include: taskInclude, orderBy: [{ dueDate: "asc" }, { priority: "desc" }, { dueTime: "asc" }, { title: "asc" }, { id: "asc" }] }),
     loadDateTasks(team, today),
     db.person.findMany({ where: { deletedAt: null, followUpDays: { gt: 0 } }, select: { id: true, name: true, followUpDays: true, lastTextAt: true, touchAfter: true, assignedToId: true } }),
     // Done today (owner request 2026-10-28): tasks someone checked off since midnight Central, newest first.
@@ -157,7 +170,7 @@ export async function loadPersonTasks(personId: string) {
   const team = await loadTeam();
   // Birthday / homeiversary tasks aren't saved until checked off, so they're worked out here like on the Tasks page.
   const [tasks, dateTasks] = await Promise.all([
-    db.task.findMany({ where: { personId, completedAt: null, deletedAt: null, ...LIVE_STEPS }, include: taskInclude }),
+    db.task.findMany({ where: { personId, completedAt: null, deletedAt: null, id: { notIn: await scheduledStepIds() }, ...LIVE_STEPS }, include: taskInclude }),
     loadDateTasks(team, today, personId),
   ]);
   const rows = (await withMailTo([...tasks.map(toRow), ...dateTasks])).sort((a, b) => (a.due ?? "9999").localeCompare(b.due ?? "9999") || (a.time ?? "99").localeCompare(b.time ?? "99") || a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
