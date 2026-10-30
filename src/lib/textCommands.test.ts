@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { askText, parseTextCommand, parseYesNo } from "./textCommands";
+import { askText, parseConsultReply, parseTextCommand, parseYesNo } from "./textCommands";
 
 describe("text commands", () => {
   it("reads task and help", () => {
@@ -32,6 +32,21 @@ describe("ask by text replies", () => {
   it("asks plainly", () => {
     expect(askText({ title: "Consult done?", person: "Hayley & Beau", movesTo: "Consult complete" }))
       .toBe('HQ check-in for Hayley & Beau: "Consult done?" Reply YES if it\'s done (moves them to Consult complete), or NO to leave it open.');
+  });
+});
+
+describe("booking a consult by text", () => {
+  const today = "2026-10-30"; // a Friday
+  it("reads type, day and time", () => {
+    expect(parseConsultReply("buyer Wed 7pm", today)).toEqual({ kind: "book", type: "buyer", date: "2026-11-04", time: "19:00" });
+    expect(parseConsultReply("Seller tomorrow 10am", today)).toEqual({ kind: "book", type: "seller", date: "2026-10-31", time: "10:00" });
+    expect(parseConsultReply("11/6 6:30pm", today)).toEqual({ kind: "book", type: null, date: "2026-11-06", time: "18:30" });
+    expect(parseConsultReply("listing Nov 12 at 3", today)).toEqual({ kind: "book", type: "seller", date: "2026-11-12", time: "15:00" });
+  });
+  it("leaves out what it can't tell, and knows no", () => {
+    expect(parseConsultReply("buyer Wed", today)).toEqual({ kind: "book", type: "buyer", date: "2026-11-04", time: null });
+    expect(parseConsultReply("no", today)).toEqual({ kind: "no" });
+    expect(parseConsultReply("thanks!", today)).toBeNull();
   });
 });
 

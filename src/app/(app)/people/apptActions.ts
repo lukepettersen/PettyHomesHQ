@@ -5,10 +5,11 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
-import { redateConsult, restartConsultSteps, runTrigger } from "@/server/automation";
+import { redateConsult } from "@/server/automation";
 import { syncAppointment } from "@/server/google";
 import { loadApptTypes } from "@/server/appointments";
-import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
+import { bookAppt } from "@/server/booking";
+import { dateFromIso, isoFromDate } from "@/lib/normalize";
 import { formatTime, longIso } from "@/lib/tasks";
 import { timeBefore } from "@/lib/templates";
 
@@ -31,26 +32,7 @@ export async function bookAppointment(input: z.input<typeof bookSchema>) {
     if (!(await loadApptTypes()).some((t) => t.key === v.type)) throw new UserError("That appointment type was removed. Pick another.");
     const person = await db.person.findFirst({ where: { id: v.personId, deletedAt: null }, select: { id: true, name: true } });
     if (!person) throw new UserError("That person was deleted.");
-    const when = `${longIso(v.date)}${v.start ? ` ${formatTime(v.start)}` : ""}`;
-    const result = await db.$transaction(async (tx) => {
-      const a = await tx.appointment.create({ data: { personId: v.personId, type: v.type, title: v.title, date: dateFromIso(v.date), start: v.start, end: v.end, location: v.location, invitees: v.invitees, createdById: user.id } });
-      let tasks = 0;
-      if (v.type === "call") {
-        tasks = await runTrigger(tx, "phonecall", { personId: v.personId, start: isoFromDate(todayCentral()), dates: { phoneCall: v.date }, times: { phoneCall: v.start } }, user.id);
-        await tx.timelineEntry.create({ data: { personId: v.personId, kind: "system", body: `Phone call booked for ${when}`, authorId: user.id } });
-      }
-      if (v.type === "buyer" || v.type === "seller") {
-        // Templates that start when a consultation is booked; linked to their active file when there is one.
-        const file = await tx.clientFile.findFirst({ where: { personId: v.personId, kind: v.type === "buyer" ? "buyer" : "listing", deletedAt: null, closedAt: null }, orderBy: { createdAt: "desc" } });
-        const ctx = { personId: v.personId, fileId: file?.id ?? null, start: isoFromDate(todayCentral()), dates: { consult: v.date }, times: { consult: v.start } };
-        tasks = await runTrigger(tx, `${v.type}consult`, ctx, user.id);
-        await redateConsult(tx, v.personId);
-        tasks += await restartConsultSteps(tx, `${v.type}consult`, ctx, user.id);
-      }
-      return { id: a.id, tasks };
-    });
-    await logActivity(user.id, "create", "appointment", result.id, `Booked "${v.title}" for ${when}${result.tasks ? ` (${result.tasks} tasks)` : ""}`);
-    await syncAppointment(result.id); // Google Calendar, when connected
+    const result = await bookAppt(user.id, v);
     revalidatePath(`/people/${v.personId}`); revalidatePath("/tasks");
     return result;
   });

@@ -347,6 +347,7 @@ model Task {
   autoError       String?
   askState      String? // "Ask by text": pending | asked | answered | off (owner request 2026-10-30)
   askedAt       DateTime?
+  askKind       String? // "done" (YES checks it off) | "consult" (a reply books a consult)
   completedById   String? // who checked it off (Done today, owner request 2026-10-28); empty when closed automatically
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt

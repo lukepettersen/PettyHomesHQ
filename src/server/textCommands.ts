@@ -7,7 +7,7 @@ import { textingEnabled } from "@/server/integrations";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { logActivity } from "@/server/activity";
 import { publicBase } from "@/server/twilio";
-import { COMMAND_HELP, parseTextCommand, parseYesNo, type NewContact } from "@/lib/textCommands";
+import { COMMAND_HELP, parseTextCommand, type NewContact } from "@/lib/textCommands";
 import { answerAsk } from "@/server/askByText";
 
 /**
@@ -17,12 +17,10 @@ import { answerAsk } from "@/server/askByText";
  */
 export async function runTextCommand(o: { from: string; to: string; body: string }): Promise<boolean> {
   const cmd = parseTextCommand(o.body);
-  const yesNo = !cmd && parseYesNo(o.body);
-  if (!cmd && !yesNo) return false;
   const user = (await db.user.findMany({ where: { textNumber: o.to, forwardTo: { not: null }, status: { not: "DISABLED" } }, select: { id: true, name: true, forwardTo: true } }))
     .find((u) => normalizePhone(u.forwardTo!) === normalizePhone(o.from));
   if (!user) return false;
-  // YES / NO answers an "Ask by text" check-in (owner request 2026-10-30); with nothing asked it's a normal text.
+  // A reply to an "Ask by text" check-in (YES / NO, or a consult time; owner request 2026-10-30); with nothing asked it's a normal text.
   if (!cmd) {
     const answer = await answerAsk(user, o.body);
     if (!answer) return false;

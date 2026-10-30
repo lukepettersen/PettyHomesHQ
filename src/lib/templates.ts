@@ -13,7 +13,9 @@ export type Step = {
   addTags?: string[]; removeTags?: string[]; // "Add/remove tags" steps
   stage?: string; // "Change stage" steps: the stage name to set on the contact (owner request 2026-10-21)
   auto?: AutoSend; // text/email steps: send by itself at its time (owner request 2026-10-29)
-  ask?: boolean; // task/call steps: text the assignee at its due time; a YES reply checks it off (owner request 2026-10-30)
+  // Task/call steps: text the assignee at its due time (owner request 2026-10-30). true = "is it done?" (YES checks it
+  // off); "consult" = "did you set a consult?" (a reply like "buyer Wed 7pm" books it, then checks the step off).
+  ask?: boolean | "consult";
 };
 /**
  * A text/email step that sends by itself (owner 2026-10-29): from = a team member's first name, "" = whoever the step

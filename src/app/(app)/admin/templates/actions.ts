@@ -17,7 +17,7 @@ const stepSchema = z.object({
   anchor: z.enum(["start", "phoneCall", "consult", "finalAcceptance", "inspAppt", "inspection", "writtenStatement", "hoaRescission", "closing"]),
   cond: z.enum(["always", "hoa", "pre1978", "newc", "ws", "defect", "nodefect", "fhava", "condo"]),
   advance: z.string().max(40).optional(), message: z.string().trim().max(120).optional(), messageId: z.string().max(40).optional(), addTags: tags, removeTags: tags, stage: z.string().trim().max(60).optional(),
-  ask: z.boolean().optional(),
+  ask: z.union([z.boolean(), z.literal("consult")]).optional(),
   auto: z.object({ from: z.string().trim().max(40), to: z.array(z.string().trim().max(80)).min(1, "Pick who an automatic message goes to.").max(20), time: z.string().regex(/^([01]\d|2[0-3]):[03]0$/) }).optional(),
 });
 const templateSchema = z.object({
@@ -34,7 +34,7 @@ async function checkTrigger(trigger: string | null) {
 export async function saveTemplate(input: z.input<typeof templateSchema>) {
   return guarded("editTaskTemplates", async (user) => {
     const v = templateSchema.parse(input);
-    const t: Template = { id: v.id ?? "", name: v.name, trigger: v.trigger || null, phases: v.phases.map((p) => ({ ...p, steps: p.steps.map((s) => ({ ...s, advance: s.advance || undefined, message: s.messageId ? undefined : s.message || undefined, messageId: s.messageId || undefined, auto: s.type === "text" || s.type === "email" ? s.auto : undefined, ask: (s.type === "task" || s.type === "call") && s.ask ? true : undefined })) })) };
+    const t: Template = { id: v.id ?? "", name: v.name, trigger: v.trigger || null, phases: v.phases.map((p) => ({ ...p, steps: p.steps.map((s) => ({ ...s, advance: s.advance || undefined, message: s.messageId ? undefined : s.message || undefined, messageId: s.messageId || undefined, auto: s.type === "text" || s.type === "email" ? s.auto : undefined, ask: (s.type === "task" || s.type === "call") && s.ask ? s.ask : undefined })) })) };
     const problem = templateProblem(t);
     if (problem) throw new UserError(problem);
     await checkTrigger(t.trigger);

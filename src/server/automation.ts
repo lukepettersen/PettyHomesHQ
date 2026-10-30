@@ -75,6 +75,7 @@ function stepData(t: Template, spec: Spec, ctx: Ctx, who: (first: string) => str
     autoSend: auto ?? undefined, autoState: auto ? "pending" : null,
     // "Ask by text": the assignee gets a text at its due time; replying YES checks it off (owner request 2026-10-30).
     askState: (s.type === "task" || s.type === "call") && s.ask && spec.due ? "pending" : null,
+    askKind: (s.type === "task" || s.type === "call") && s.ask && spec.due ? (s.ask === "consult" ? "consult" : "done") : null,
     title: s.name, kind: s.type, phase: spec.phase, anchor: s.dir === "none" ? null : s.anchor, offsetDays: s.dir === "none" ? null : offsetOf(s),
     dueDate: spec.due ? dateFromIso(spec.due) : null, dueTime: !spec.due ? null : autoTime ? autoTime : minutesOffset(s) != null ? (ctx.times?.[s.anchor] ? timeBefore(ctx.times[s.anchor]!, minutesOffset(s)!) : null) : offsetOf(s) === 0 ? ctx.times?.[s.anchor] ?? null : null,
     offsetMinutes: minutesOffset(s), // positive = before, negative = after
@@ -131,7 +132,7 @@ export async function syncTemplateToOpen(t: Template, userId: string): Promise<{
           ...(handDated ? { anchor: task.anchor, offsetDays: task.offsetDays, offsetMinutes: task.offsetMinutes, dueDate: task.dueDate, dueTime: task.dueTime } : {}) };
         const same = task.title === next.title && task.kind === next.kind && task.phase === next.phase && task.anchor === next.anchor && task.offsetDays === next.offsetDays && task.offsetMinutes === next.offsetMinutes
           && (task.dueDate?.getTime() ?? null) === (next.dueDate?.getTime() ?? null) && task.dueTime === next.dueTime && task.assigneeId === next.assigneeId && task.advanceStatusId === next.advanceStatusId
-          && JSON.stringify(task.autoSend ?? null) === JSON.stringify(next.autoSend ?? null) && task.autoState === next.autoState && task.askState === next.askState;
+          && JSON.stringify(task.autoSend ?? null) === JSON.stringify(next.autoSend ?? null) && task.autoState === next.autoState && task.askState === next.askState && task.askKind === next.askKind;
         if (same) continue;
         await tx.task.update({ where: { id: task.id }, data: { ...next, autoSend: next.autoSend === undefined ? undefined : (next.autoSend as object) } });
         out.updated++; changed = true;

@@ -455,6 +455,11 @@ scrolls with it until its last card is on screen, then stays put while the middl
   deal), and HQ confirms by text; **NO** leaves it open. A reply answers that person's latest question from the last
   three days; any other text is handled as usual. No HQ number or cell: no text, a bell note, and the step stays on their
   list. Typical use: "Consult done?" 30 minutes after Consult, When done → Consult complete.
+  The step can instead ask **"Did you set a consult?"** (e.g. "Book consult?" 30 minutes after the phone call): a
+  reply like "buyer Wed 7pm", "seller tomorrow 10am", "11/6 6:30pm" or "Nov 12 at 3" books a Buyer/Seller Consult on
+  their page exactly like Book (usual length, their emails and the team invited, a seller consult at their address,
+  Google invite, the consult checklist starts), checks the step off and confirms by text. Buyer/seller comes from the
+  reply, else their one open deal; a missing day, time or type gets one question back; NO leaves it open.
 - **Updating deals already using a checklist** *(owner request 2026-10-29)*: after saving a checklist that open deals
   already use, HQ offers **Update the N deals**. Their open steps take the new name, type, phase, timing, message,
   "when done" and automatic send (re-dated from their dates); new steps are added; steps removed from the checklist, or

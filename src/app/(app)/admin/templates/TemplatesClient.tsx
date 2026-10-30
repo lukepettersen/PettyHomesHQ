@@ -243,7 +243,15 @@ function Editor({ t: initial, statuses, team, roles, tags, stages, today, templa
                 {(s.type === "task" || s.type === "call") && (
                   <label className="flex w-full items-start gap-2 rounded-md border border-dashed border-misty px-2.5 py-2 text-xs">
                     <input type="checkbox" className="mt-0.5" checked={!!s.ask} disabled={s.dir === "none"} onChange={(e) => setStep(i, si, { ask: e.target.checked || undefined })} />
-                    <span><b>Ask by text when it&apos;s due</b> <span className="muted">{s.dir === "none" ? "(needs a due date)" : "HQ texts whoever it's assigned to (their cell, from their HQ number). Replying YES checks it off and does its \"When done\"; NO leaves it open."}</span></span>
+                    <span className="flex flex-col gap-1">
+                      <span><b>Ask by text when it&apos;s due</b> <span className="muted">{s.dir === "none" ? "(needs a due date)" : "HQ texts whoever it's assigned to (their cell, from their HQ number)."}</span></span>
+                      {s.ask && (
+                        <select className={`${field} w-fit`} aria-label={`What to ask for ${s.name}`} value={s.ask === "consult" ? "consult" : "done"} onChange={(e) => setStep(i, si, { ask: e.target.value === "consult" ? "consult" : true })}>
+                          <option value="done">&quot;Is it done?&quot; YES checks it off and does its When done; NO leaves it open</option>
+                          <option value="consult">&quot;Did you set a consult?&quot; A reply like &quot;buyer Wed 7pm&quot; books it, sends the invite and checks this off</option>
+                        </select>
+                      )}
+                    </span>
                   </label>
                 )}
                 {(s.type === "email" || s.type === "text") && <AutoSendFields step={s} team={team} roles={roles} field={field} onChange={(auto) => setStep(i, si, { auto })} />}
