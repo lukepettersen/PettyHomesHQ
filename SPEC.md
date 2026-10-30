@@ -560,7 +560,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
 - Tasks sort themselves: linked to a client → Clients; repeating → Recurring; birthday or
   homeiversary → Important dates; `#list` → that list; anything else → Misc.
 - **Quick add** with natural language: "call lender re Ortiz Fri 9am", "rent check every
-  month", `#list`, `@alyssa`, today/tomorrow/weekday/next week.
+  month", `#list`, `@alyssa`, today/tomorrow/weekday/next week. A name after re/for/with links the contact only when it's obvious: the only contact with that name, or the only one that also has the next word ("for Jack and Megan" → Jack & Megan Schultz, "for Jack Rotman"). If it could be several people it links no one, keeps the words in the title and goes to Misc, and the reply says so (owner request 2026-10-30).
 - Contact names on task rows and Due for a touch highlight on hover and open the contact (owner request 2026-10-15); clicking elsewhere on a task opens its details.
 - Assignee filter: Everyone / Me / each team member; the choice is remembered on each device (owner request 2026-10-15).
 - Task details: title, due date (steps timed from a date like "Closing + 1 day" can be given their own date; then they stay put instead of moving with that date; owner request 2026-10-21), time (12-hour, 15-minute steps; the Create task pop-up has the same picker), repeat (daily, weekly, every other week, monthly, yearly; quick add understands "every other week" and "biweekly"),

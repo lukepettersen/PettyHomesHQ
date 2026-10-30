@@ -90,6 +90,7 @@ export type QuickAdd = {
   list?: string; // name typed after #
   assignee?: string; // first name typed after @ ("me" for yourself)
   personWord?: string; // word after "re" / "for" / "with"; matched to a person on the server
+  personNext?: string; // the word after it ("for Jack and Megan" → "Megan", "for Jack Schultz" → "Schultz"), to pick the right one
 };
 
 const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
@@ -125,14 +126,30 @@ export function parseQuickAdd(text: string, today: string): QuickAdd {
   }
   if ((m = take(/\s#([\w-]+)(?=\s)/))) out.list = m[1].replace(/[-_]+/g, " ");
   if ((m = take(/\s@([a-z]+)(?=\s)/i))) out.assignee = m[1].toLowerCase();
-  if ((m = s.match(/\s(?:re|for|with)\s+([a-z][a-z'-]*)(?=\s)/i))) out.personWord = m[1];
+  if ((m = s.match(/\s(?:re|for|with)\s+([a-z][a-z'-]*)(?:\s+(?:(?:and|&)\s+)?([a-z][a-z'-]*))?(?=\s)/i))) {
+    out.personWord = m[1];
+    if (m[2] && !/^(and|to|re|for|with|about|at|on|the|a|an|by|from|in)$/i.test(m[2])) out.personNext = m[2];
+  }
   out.title = s.replace(/\s+/g, " ").trim();
   return out;
 }
 
 /** Removes the "re Ortiz" part once it has been matched to a person. */
-export function stripPersonWord(title: string, word: string): string {
-  return title.replace(new RegExp(`\\s*\\b(?:re|for|with)\\s+${word.replace(/[^a-z'-]/gi, "")}\\b`, "i"), "").replace(/\s+/g, " ").trim() || title;
+export function stripPersonWord(title: string, word: string, next?: string): string {
+  const clean = (w: string) => w.replace(/[^a-z'-]/gi, "");
+  const tail = next ? `\\s+(?:(?:and|&)\\s+)?${clean(next)}` : "";
+  return title.replace(new RegExp(`\\s*\\b(?:re|for|with)\\s+${clean(word)}${tail}\\b`, "i"), "").replace(/\s+/g, " ").trim() || title;
+}
+
+/** The one contact the words point to: the only name with the first word, or the only one with both words
+ *  ("Jack & Megan Schultz" for "for Jack and Megan"). Not obvious (several match, or none) → null, and the task goes
+ *  to Misc instead of guessing (owner request 2026-10-30). `matches` says how many had the first word. */
+export function pickPerson<T extends { name: string }>(rows: T[], word: string, next?: string): { hit: T | null; usedNext: boolean; matches: number } {
+  const has = (name: string, w: string) => new RegExp(`(^|[^a-z])${w.replace(/[^a-z'-]/gi, "")}($|[^a-z])`, "i").test(name);
+  const named = rows.filter((r) => has(r.name, word));
+  const both = next ? named.filter((r) => has(r.name, next)) : [];
+  if (both.length === 1) return { hit: both[0], usedNext: true, matches: named.length };
+  return { hit: named.length === 1 ? named[0] : null, usedNext: false, matches: named.length };
 }
 
 // ---------- Important dates (SPEC.md §9) ----------

@@ -6,7 +6,7 @@ import { logActivity } from "@/server/activity";
 import { notifyAssigned } from "@/server/notifications";
 import { loadTeam } from "@/server/tasks";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
-import { categoryOf, longIso, parseQuickAdd, stripPersonWord, type Repeat } from "@/lib/tasks";
+import { categoryOf, longIso, parseQuickAdd, stripPersonWord, pickPerson, type Repeat } from "@/lib/tasks";
 
 // Quick add (Tasks box, and texts starting with "task" from a team member's cell). Callers check who's asking.
 
@@ -40,14 +40,17 @@ export async function quickAdd(user: { id: string; name: string }, v: { text: st
 
   let personId: string | null = null, personName = "";
   if (p.personWord) {
-    const hit = await db.person.findFirst({
+    const rows = await db.person.findMany({
       where: { deletedAt: null, name: { contains: p.personWord, mode: "insensitive" } },
-      orderBy: { updatedAt: "desc" }, select: { id: true, name: true },
+      orderBy: { updatedAt: "desc" }, select: { id: true, name: true }, take: 50,
     });
-    if (hit && new RegExp(`\\b${p.personWord}\\b`, "i").test(hit.name)) {
+    // "for Jack and Megan" picks "Jack & Megan Schultz" over another Jack (owner report 2026-10-30).
+    // Not obvious which one → no contact, so it lands in Misc rather than on the wrong person.
+    const { hit, usedNext, matches } = pickPerson(rows, p.personWord, p.personNext);
+    if (hit) {
       personId = hit.id; personName = hit.name;
-      title = stripPersonWord(title, p.personWord);
-    }
+      title = stripPersonWord(title, p.personWord, usedNext ? p.personNext : undefined);
+    } else if (matches > 1) notes.push(`"${p.personWord}${p.personNext ? ` ${p.personNext}` : ""}" could be ${matches} contacts, so it isn't linked to anyone; open the task to pick one`);
   }
 
   // Who it's for: an @name in the text, else the teammate whose tasks are on screen, else whoever typed it.
@@ -80,7 +83,7 @@ export async function quickAdd(user: { id: string; name: string }, v: { text: st
   refreshTasks(personId);
 
   if (v.view === "recurring" && !p.repeat) notes.push("repeats weekly (change it in the task)");
-  if (v.view === "clients" && !personId) notes.push(p.personWord ? `no one matched "${p.personWord}"` : 'use "re" and a name to link a client');
+  if (v.view === "clients" && !personId && !notes.some((n) => n.includes("could be"))) notes.push(p.personWord ? `no one matched "${p.personWord}"` : 'use "re" and a name to link a client');
   const where = await listNameFor(categoryOf(t));
   return { id: t.id, message: `Added "${title}"${forName ? ` for ${forName}` : ""} to ${where}, due ${longIso(due)}${notes.length ? `; ${notes.join("; ")}` : ""}.` };
 }

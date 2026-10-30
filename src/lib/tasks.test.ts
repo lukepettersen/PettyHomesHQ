@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { birthdayName, checklistOrder, categoryOf, dueLabel, formatTime, importantDateTasks, nextDue, parseQuickAdd, parseTime, stripPersonWord, titleCase } from "./tasks";
+import { birthdayName, checklistOrder, categoryOf, dueLabel, formatTime, importantDateTasks, nextDue, parseQuickAdd, parseTime, stripPersonWord, pickPerson, titleCase } from "./tasks";
 
 const TODAY = "2026-10-13"; // a Tuesday
 
@@ -128,5 +128,26 @@ describe("birthday card name (owner request 2026-10-27)", () => {
     expect(birthdayName("Sam & Lena Ortiz", "Mia")).toBe("Mia Ortiz");
     expect(birthdayName("Caitlin & Luke Pettersen", "")).toBe("Caitlin Pettersen");
     expect(birthdayName("Jane Smith", "Jane")).toBe("Jane Smith");
+  });
+});
+
+describe("quick add: picking the right person (owner report 2026-10-30)", () => {
+  const people = [{ name: "Jack Murphy & Shania Skrzypcak" }, { name: "Jack & Megan Schultz" }, { name: "Jack Rotman" }];
+  it('"for Jack and Megan" picks the Schultzes and strips both names', () => {
+    const p = parseQuickAdd("boulder creek house for Jack and Megan and check the search", "2026-10-30");
+    expect(p).toMatchObject({ personWord: "Jack", personNext: "Megan" });
+    const r = pickPerson(people, p.personWord!, p.personNext);
+    expect(r.hit?.name).toBe("Jack & Megan Schultz");
+    expect(stripPersonWord(p.title, p.personWord!, r.usedNext ? p.personNext : undefined)).toBe("boulder creek house and check the search");
+  });
+  it('"for Jack Rotman" uses the last name; a plain "for Jack" with several Jacks links no one', () => {
+    const p = parseQuickAdd("call for Jack Rotman tomorrow", "2026-10-30");
+    expect(pickPerson(people, p.personWord!, p.personNext).hit?.name).toBe("Jack Rotman");
+    const q = parseQuickAdd("call for Jack about the inspection", "2026-10-30");
+    expect(q.personNext).toBeUndefined();
+    // Three Jacks and nothing else to go on: not obvious, so no one (it goes to Misc).
+    expect(pickPerson(people, q.personWord!, q.personNext)).toEqual({ hit: null, usedNext: false, matches: 3 });
+    expect(pickPerson([{ name: "Jack Rotman" }, { name: "Pat Stopper" }], "jack").hit?.name).toBe("Jack Rotman");
+    expect(stripPersonWord(q.title, q.personWord!)).toBe("call about the inspection");
   });
 });
