@@ -456,7 +456,9 @@ scrolls with it until its last card is on screen, then stays put while the middl
   contact is involved ("dentist Fri 3pm"); move or cancel appointments; add tasks; log notes, calls and texts; and
   **text a client** (now or scheduled), which always waits for a **YES** reply. "**undo**" reverses the last thing it did
   in the last two hours (a text already sent can't be undone). It asks rather than guesses (which Jack? what time?),
-  remembers the last 30 minutes of the conversation, logs everything in Activity, and only listens to team cells.
+  remembers the last 30 minutes of the conversation, logs everything in Activity, and **only answers the owner's own
+  cell texting the owner's HQ number** (owner decision 2026-10-30); anyone else's texts, including other team members',
+  are handled as before (their cells still get "task …", "contact …" and check-in replies).
   "task …", "contact …" and check-in replies keep working as before. Needs ANTHROPIC_API_KEY (same as Ask Claude); it
   can't email, move deals or change contracts yet.
 - **Ask by text** *(owner request 2026-10-30)*: a Task or Call step with a due date can tick **Ask by text when it's

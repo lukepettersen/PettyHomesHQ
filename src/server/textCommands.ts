@@ -20,7 +20,7 @@ import { isUndo } from "@/lib/textAgent";
  */
 export async function runTextCommand(o: { from: string; to: string; body: string }): Promise<boolean> {
   const cmd = parseTextCommand(o.body);
-  const user = (await db.user.findMany({ where: { textNumber: o.to, forwardTo: { not: null }, status: { not: "DISABLED" } }, select: { id: true, name: true, forwardTo: true } }))
+  const user = (await db.user.findMany({ where: { textNumber: o.to, forwardTo: { not: null }, status: { not: "DISABLED" } }, select: { id: true, name: true, forwardTo: true, isOwner: true } }))
     .find((u) => normalizePhone(u.forwardTo!) === normalizePhone(o.from));
   if (!user) return false;
   if (!cmd) {
@@ -49,16 +49,18 @@ export async function runTextCommand(o: { from: string; to: string; body: string
  * Anything else from a team member's cell (owner request 2026-10-30): "undo"; YES / NO to a text the assistant prepared
  * (when that's newer than any check-in); a reply to a check-in; otherwise the text assistant. Null = a normal text.
  */
-async function notACommand(user: { id: string; name: string }, body: string): Promise<string | null> {
-  if (isUndo(body)) return undoLast(user);
+async function notACommand(user: { id: string; name: string; isOwner: boolean }, body: string): Promise<string | null> {
+  // The text assistant (and its YES / undo) answers only the owner's own cell (owner decision 2026-10-30); other team
+  // members' cells still get "task …", "contact …" and check-in replies.
+  if (user.isOwner && isUndo(body)) return undoLast(user);
   const yn = parseYesNo(body);
-  if (yn) {
+  if (yn && user.isOwner) {
     const [confirm, asked] = await Promise.all([pendingConfirm(user.id), db.task.findFirst({ where: { assigneeId: user.id, askState: "asked", completedAt: null, deletedAt: null }, orderBy: { askedAt: "desc" }, select: { askedAt: true } })]);
     if (confirm && (!asked?.askedAt || confirm.createdAt > asked.askedAt)) return answerConfirm(user, confirm.id, yn === "yes");
   }
   const answer = await answerAsk(user, body);
   if (answer) return answer;
-  return isConnected("claude") ? runTextAgent(user, body) : null;
+  return user.isOwner && isConnected("claude") ? runTextAgent(user, body) : null;
 }
 
 /** The reply is a courtesy: if it can't be sent or saved, the command still counts. */

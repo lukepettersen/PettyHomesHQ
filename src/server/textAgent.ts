@@ -226,7 +226,7 @@ const minutesBetween = (a: string, b: string) => { const [h1, m1] = a.split(":")
 export async function runTextAgent(user: { id: string; name: string }, text: string): Promise<string> {
   if (!isConnected("claude")) return 'HQ\'s assistant isn\'t connected yet (ANTHROPIC_API_KEY in Railway). You can still text "task …" or "contact …".';
   const u = await db.user.findUnique({ where: { id: user.id }, include: { role: true } });
-  if (!u) return "Couldn't find you in HQ.";
+  if (!u?.isOwner) return "Couldn't find you in HQ."; // owner only (owner decision 2026-10-30); the router checks this too
   const me: Me = { id: u.id, name: u.name, email: u.email, permissions: u.role.permissions };
   const today = isoFromDate(todayCentral());
   const nowTime = new Date().toLocaleTimeString("en-US", { timeZone: "America/Chicago", hour: "numeric", minute: "2-digit" });
