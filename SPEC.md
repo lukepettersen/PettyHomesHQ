@@ -429,7 +429,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
 - **Anchor dates:** Start date, Phone call, Consult (the booked buyer/seller consultation, else
   the file's consult date), Final Acceptance, Inspection appointment (the purchase agreement's appointment date; owner
   request 2026-10-27), Inspection deadline, Written Statement, HOA Rescission,
-  Closing. Steps can also be due **5, 10, 15, 30 or 60 minutes before or after** the phone call
+  Closing. Steps can also be due **5 to 180 minutes before or after** (5, 10, 15, 30, 45, 60, 90, 120, 150 or 180; up to 3 hours added 2026-10-30; never past 11:59pm that day) the phone call
   or consult; they move with it. Steps timed from a date that isn't set yet **wait for it**; when
   the date is set or changes, the step's due date updates.
 - **Conditions:** Always, HOA property, Built before 1978, New construction, Written statement included *(owner request 2026-10-20; not marked N/A on the contract)*, YES / NO material defect clause *(the contract's "Material defect clause?" answer; blank counts as no)*, FHA/VA loan,

@@ -66,7 +66,7 @@ const DAY = 86400000;
 const addDays = (iso: string, n: number) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * DAY).toISOString().slice(0, 10);
 /** "Minutes before/after" works for anchors that have a time of day (the booked phone call or consult). */
 export const minutesOffset = (s: Pick<Step, "dir" | "minutes">) => (s.dir === "minutesBefore" ? s.minutes ?? 15 : s.dir === "minutesAfter" ? -(s.minutes ?? 15) : null);
-export const MINUTE_OPTIONS = [5, 10, 15, 30, 60];
+export const MINUTE_OPTIONS = [5, 10, 15, 30, 45, 60, 90, 120, 150, 180]; // up to 3 hours (owner request 2026-10-30)
 export const TIMED_ANCHORS: Anchor[] = ["phoneCall", "consult"];
 /** "14:00" minus 15 minutes → "13:45"; a negative number counts forward (minutes after). Stays within the day. */
 export function timeBefore(time: string, minutes: number): string {
@@ -120,7 +120,7 @@ export function templateProblem(t: Template): string | null {
       if (s.days < 0 || s.days > 730) return `"${s.name}": use 0 to 730 days.`;
       const byMinutes = s.dir === "minutesBefore" || s.dir === "minutesAfter";
       if (byMinutes && !TIMED_ANCHORS.includes(s.anchor)) return `"${s.name}": minutes before/after only works with the Phone call or Consult (they have a time).`;
-      if (byMinutes && !MINUTE_OPTIONS.includes(s.minutes ?? 0)) return `"${s.name}": pick 5, 10, 15, 30 or 60 minutes.`;
+      if (byMinutes && !MINUTE_OPTIONS.includes(s.minutes ?? 0)) return `"${s.name}": pick between 5 and 180 minutes.`;
     }
   }
   return null;
