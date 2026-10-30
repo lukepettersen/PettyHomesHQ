@@ -7,6 +7,8 @@ import { DEFAULT_ROLES } from "../src/server/permissions";
 import { DEFAULT_FORMS, upgradeNotesAnswers, upgradeNotesForm, type Answers, type PaSection } from "../src/lib/pa";
 import { STARTER_TEMPLATES } from "./starterTemplates";
 import { defaultFileForm } from "../src/lib/files";
+import { todayCentral } from "../src/lib/normalize";
+import type { Phase } from "../src/lib/templates";
 
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
 
@@ -89,6 +91,23 @@ async function main() {
   if (!(await db.appSetting.findUnique({ where: { key: "tasks.autoTimeFix" } }))) {
     await db.$executeRaw`UPDATE "Task" SET "dueTime" = "autoSend"->>'time' WHERE "autoState" = 'pending' AND "offsetMinutes" IS NULL AND "completedAt" IS NULL AND "autoSend"->>'time' IS NOT NULL AND "dueTime" IS DISTINCT FROM "autoSend"->>'time'`;
     await db.appSetting.create({ data: { key: "tasks.autoTimeFix", value: true } });
+  }
+  // One-time fix (2026-10-30): checklist steps added while still waiting for their date lost their automatic send /
+  // check-in text. Give them back from the checklist; only steps due after today (or not dated yet) start waiting
+  // to send, so nothing old goes out by surprise.
+  if (!(await db.appSetting.findUnique({ where: { key: "tasks.waitingStepsFix" } }))) {
+    const steps = new Map((await db.taskTemplate.findMany()).flatMap((t) => (Array.isArray(t.phases) ? (t.phases as unknown as Phase[]) : []).flatMap((ph) => ph.steps.map((st) => [`${t.id}|${st.id}`, st] as const))));
+    const today = todayCentral();
+    for (const t of await db.task.findMany({ where: { templateId: { not: null }, stepId: { not: null }, completedAt: null, deletedAt: null } })) {
+      const st = steps.get(`${t.templateId}|${t.stepId}`);
+      if (!st) continue;
+      const fresh = !t.dueDate || t.dueDate > today;
+      const data: Record<string, unknown> = {};
+      if ((st.type === "task" || st.type === "call") && st.ask && !t.askKind) Object.assign(data, { askKind: st.ask === "consult" ? "consult" : "done", askState: t.dueDate && fresh ? "pending" : null });
+      if ((st.type === "text" || st.type === "email") && st.auto && !t.autoSend && !t.autoState) Object.assign(data, { autoSend: st.auto as object, autoState: t.dueDate && fresh ? "pending" : null });
+      if (Object.keys(data).length) await db.task.update({ where: { id: t.id }, data });
+    }
+    await db.appSetting.create({ data: { key: "tasks.waitingStepsFix", value: true } });
   }
   // Buyer and listing forms, once, shown at the same statuses as before they were editable.
   for (const kind of ["buyer", "listing"] as const) {

@@ -19,6 +19,9 @@ type Draft = { kind: "email" | "text"; templateId: string | null; stepMessage: s
 /** Draft email / Draft text: the filled-in template to review, then copy or open in the email app. */
 export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () => void }) {
   const [d, setD] = useState<Draft | null>(null);
+  // "Larger" (owner request 2026-10-30): a wide box with a tall message to read the whole email; remembered on this computer.
+  const [big, setBig] = useState(() => { try { return typeof window !== "undefined" && localStorage.getItem("draft.big") === "1"; } catch { return false; } });
+  const setBigAndSave = (v: boolean) => { setBig(v); try { localStorage.setItem("draft.big", v ? "1" : "0"); } catch { /* not saved */ } };
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
@@ -80,7 +83,8 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
   };
   const mailto = d && d.kind === "email" ? `mailto:${toAll.join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(toPlain(body))}` : "";
   return (
-    <Modal title={d?.kind === "text" ? "Draft text" : "Draft email"} onClose={onClose} wide>
+    <Modal title={d?.kind === "text" ? "Draft text" : "Draft email"} onClose={onClose} wide full={big}
+      extra={<button type="button" className="text-sm font-semibold text-accent hover:underline" aria-pressed={big} onClick={() => setBigAndSave(!big)}>{big ? "Smaller" : "Larger"}</button>}>
       {!d && !error && <p className="text-sm muted">Filling in the template…</p>}
       {d && (
         <div className="flex flex-col gap-3">
@@ -116,12 +120,12 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
             <div className="label">Message
               <div>
                 <FormatBar box={box} value={body} onChange={setBody} />
-                <textarea ref={box} aria-label="Message" className="input min-h-56 rounded-t-none font-normal" value={body} onChange={(e) => { setBody(e.target.value); slash.track(); }} {...slashProps} />
+                <textarea ref={box} aria-label="Message" className={`input ${big ? "min-h-[60vh]" : "min-h-56"} rounded-t-none font-normal`} value={body} onChange={(e) => { setBody(e.target.value); slash.track(); }} {...slashProps} />
                 {slash.menu}
                 <EmailPreview body={body} />
               </div>
             </div>
-          ) : <div className="label">Message<textarea ref={box} aria-label="Message" className="input min-h-56 font-normal" value={body} onChange={(e) => { setBody(e.target.value); slash.track(); }} {...slashProps} />{slash.menu}</div>}
+          ) : <div className="label">Message<textarea ref={box} aria-label="Message" className={`input ${big ? "min-h-[60vh]" : "min-h-56"} font-normal`} value={body} onChange={(e) => { setBody(e.target.value); slash.track(); }} {...slashProps} />{slash.menu}</div>}
           {canSend && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={signature} onChange={(e) => setSignature(e.target.checked)} /> Add my Gmail signature</label>}
           {d.missing.length > 0 && <p className="text-sm text-[#9a6400]">Not filled in (nothing on file): {d.missing.join(", ")}. Check the message before sending.</p>}
           <p className="text-xs muted">{d.kind === "email" ? (canSend ? `Send email sends it from ${d.sendsFrom}, puts it on the timeline and checks off this task.` : "Gmail isn't connected, so HQ can't send it. Open it in your email app, or copy it. An Admin can connect Gmail in Admin → Integrations.") : canText ? "Send text sends it from your business number, puts it on the timeline and checks off this task." : `${d.textBlocked ? `${d.textBlocked} ` : ""}Copy it and send it from your phone, then check off the task.`}</p>

@@ -746,7 +746,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
   (owner request 2026-10-30), whenever anything is set: one-off scheduled texts and emails, automatic checklist
   texts/emails, and check-in texts from "Ask by text" steps (to whom: the teammate's cell, with the question it will
   ask; **Turn off** stops the text and keeps the step). Automatic and check-in steps still waiting for their date show
-  "No date yet" / "Waits for its date" and start counting down once the date they're timed from is set.
+  "No date yet" / "Waits for its date" and start counting down once the date they're timed from is set. Steps added before 2026-10-30 that lost this while waiting for a date get it back once on deploy (only ones due after today start waiting to send).
 - **Appointment merge fields** *(owner request 2026-10-29)*: text and email templates can use the person's upcoming
   appointments (today's only if not started yet): {next_appointment} ("Tuesday, November 3 at 2:00pm"), its date,
   time, type and location, and {next_consult} (buyer or seller), {next_showing}, {next_phone_call}. Listed under
@@ -822,7 +822,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
   Calendar and Gmail send. Timeline has an **Email** tab (To: the person's addresses as
   checkboxes, optional template with merge fields, Subject, Message, **Send email**, one click;
   owner request 2026-10-27, only mass emails ask twice). **Preview** under the message (email box and Draft email) shows it as
-  it will look: images, clickable images and links, bold, lists *(owner request 2026-10-27)*. Task **Draft email** has **Send email** too, which also checks off the
+  it will look: images, clickable images and links, bold, lists *(owner request 2026-10-27)*. Draft email / Draft text has **Larger** next to × (owner request 2026-10-30): a wide box with a tall message so the whole email shows; **Smaller** goes back, and the choice is remembered on that computer. Task **Draft email** has **Send email** too, which also checks off the
   task. Mail goes from the connected account, lands in its Sent folder and shows on the
   timeline (filter: Emails). **+ Add** puts another contact's email or a typed address on it too *(owner
   request 2026-10-20)*; other contacts it went to get it on their timeline as well.
