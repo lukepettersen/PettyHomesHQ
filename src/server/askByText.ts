@@ -18,8 +18,9 @@ import { calendarConnection } from "@/server/google";
 // Sent by the same minute timer as scheduled texts (/api/cron/scheduled-texts).
 
 export async function sendDueAsks(now = new Date()): Promise<number> {
-  if (!(await textingEnabled())) return 0;
   const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+  // Texting off: a check-in that's due can't go out, so it becomes a normal task (it's hidden from the lists until then).
+  if (!(await textingEnabled())) { await db.task.updateMany({ where: { askState: "pending", dueDate: { lt: tomorrow }, completedAt: null }, data: { askState: "off" } }); return 0; }
   const due = (await db.task.findMany({
     where: { askState: "pending", completedAt: null, deletedAt: null, dueDate: { lte: tomorrow } },
     include: { person: { select: { name: true } } }, orderBy: { dueDate: "asc" }, take: 50,

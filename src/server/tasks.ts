@@ -46,13 +46,15 @@ const taskInclude = { person: { select: { name: true } }, file: { select: { kind
 type DbTask = Prisma.TaskGetPayload<{ include: typeof taskInclude }>;
 
 /** Steps from a closed or deleted file, or an ended contract, no longer show as open tasks. Neither do steps that send
- *  by themselves while they're set to (owner request 2026-10-30: so nobody sends them twice by hand); they show in the
+ *  by themselves (or text a check-in) while they're set to (owner request 2026-10-30: so nobody sends them twice by hand); they show in the
  *  contact's Scheduled box and on the deal checklist, and come back as a task if they fail or are turned off. */
 export const LIVE_STEPS = {
   AND: [
     { OR: [{ fileId: null }, { file: { is: { closedAt: null, deletedAt: null } } }] },
     { OR: [{ paId: null }, { pa: { is: { state: "active", deletedAt: null } } }] },
     { OR: [{ autoState: { in: ["failed", "off", "sent"] } }, { autoState: null, autoSend: { equals: Prisma.DbNull } }] },
+    // Same for an "Ask by text" check-in until it's texted; once asked (or turned off) it's a task again.
+    { OR: [{ askState: { in: ["asked", "answered", "off"] } }, { askState: null, askKind: null }] },
   ],
 } satisfies Prisma.TaskWhereInput;
 
