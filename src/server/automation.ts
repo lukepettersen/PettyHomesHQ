@@ -124,11 +124,11 @@ export async function syncTemplateToOpen(t: Template, userId: string): Promise<{
         if (spec.step.type === "tags" || spec.step.type === "stage") continue;
         const d = stepData(t, spec, ctx, who);
         // A step already sent, failed or turned off keeps that state unless it stopped being automatic.
-        const autoState = !d.autoSend ? (task.autoState === "pending" ? "off" : task.autoState) : task.autoState && task.autoState !== "off" ? task.autoState : d.autoState ?? (task.dueDate ? "pending" : null);
+        const autoState = !d.autoSend ? (task.autoState === "pending" ? "off" : task.autoState) : task.autoState ? task.autoState : d.autoState ?? (task.dueDate ? "pending" : null); // Turn off sticks (owner 2026-10-30)
         // A date someone set by hand (the step was detached from its timing) and who it's assigned to stay as they are.
         const handDated = !task.anchor && spec.step.dir !== "none";
         // An ask already sent or answered stays that way; a step that stopped asking stops.
-        const askState = !d.askKind ? (task.askState === "pending" ? null : task.askState) : task.askState && task.askState !== "off" ? task.askState : d.askState ?? (task.dueDate ? "pending" : null);
+        const askState = !d.askKind ? (task.askState === "pending" ? null : task.askState) : task.askState ? task.askState : d.askState ?? (task.dueDate ? "pending" : null);
         const next = { ...d, autoSend: d.autoSend ?? task.autoSend ?? undefined, autoState, askState, assigneeId: task.assigneeId,
           ...(handDated ? { anchor: task.anchor, offsetDays: task.offsetDays, offsetMinutes: task.offsetMinutes, dueDate: task.dueDate, dueTime: task.dueTime } : {}) };
         const same = task.title === next.title && task.kind === next.kind && task.phase === next.phase && task.anchor === next.anchor && task.offsetDays === next.offsetDays && task.offsetMinutes === next.offsetMinutes
