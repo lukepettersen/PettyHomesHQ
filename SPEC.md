@@ -451,7 +451,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
 - **Text assistant** *(owner request 2026-10-30)*: a team member texts their HQ number from their cell in plain English
   and Claude does it in HQ, then HQ texts back exactly what was done (the receipt is written by HQ, not Claude). It can:
   find contacts and answer questions about them (phone, email, deal, key dates, open tasks); say what's on a day;
-  **book events** on a contact's page with a Google invite ("Jack Rotman swing by house today 10:30am"; the client is
+  **book events** on a contact's page with a Google invite ("Jack Rotman swing by house today 10:30am" → "Rotman - Swing by house", named like every appointment with the last name(s) first, owner request 2026-10-30; the client is
   invited when it's a meeting with them, plus the speaker and any teammate named) or **on the calendar alone** when no
   contact is involved ("dentist Fri 3pm"); move or cancel appointments; add tasks; log notes, calls and texts; and
   **text a client** (now or scheduled), which always waits for a **YES** reply. "**undo**" reverses the last thing it did

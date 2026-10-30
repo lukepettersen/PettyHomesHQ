@@ -11,7 +11,7 @@ import { sendTextAs } from "@/server/texting";
 import { groupReady, textNumbersAsGroup } from "@/server/groupText";
 import { hasPermission } from "@/server/permissions";
 import { calendarHint } from "@/lib/assistant";
-import { addMinutes } from "@/lib/appointments";
+import { addMinutes, defaultTitle } from "@/lib/appointments";
 import { dateFromIso, formatPhone, isoFromDate, normalizeEmail, normalizePhone, todayCentral } from "@/lib/normalize";
 import { centralToUtc, scheduleLabel, scheduleProblem } from "@/lib/scheduledText";
 import { formatTime, longIso } from "@/lib/tasks";
@@ -61,7 +61,7 @@ const tools: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: { date: str("YYYY-MM-DD") }, required: ["date"], additionalProperties: false } },
   { name: "book_event", description: "Put an event on the calendar, on a contact's page when person_id is set.", strict: true,
     input_schema: { type: "object", properties: {
-      person_id: str('Contact id, or "" for an event that is not about a contact'), title: str("Short title, like \"Swing by house\" (no name needed when on a contact)"),
+      person_id: str('Contact id, or "" for an event that is not about a contact'), title: str("Short title, like \"Swing by house\" (no name: HQ adds their last name)"),
       date: str("YYYY-MM-DD"), start: str('HH:MM 24-hour, or "" for all day'), end: str('HH:MM 24-hour, or ""'), location: str('Address or place, or ""'),
       invite_client: { type: "boolean", description: "Send the contact a calendar invite" }, with_team: { type: "array", items: { type: "string" }, description: "First names of teammates joining (besides the speaker)" },
     }, required: ["person_id", "title", "date", "start", "end", "location", "invite_client", "with_team"], additionalProperties: false } },
@@ -144,10 +144,13 @@ async function runTool(me: Me, name: string, a: Record<string, unknown>, seen: S
     if (pid) {
       const p = await person(pid);
       if (!p) return "Unknown contact id: use find_people first.";
-      const r = await bookAppt(me.id, { personId: p.id, type: "other", title, date: w.date, start: w.time, end, location: s("location").slice(0, 300),
+      // Named like every other appointment: "Schultz - Swing by" (owner request 2026-10-30).
+      const prefix = defaultTitle(p.name, "other");
+      const named = (title.toLowerCase().startsWith(prefix.toLowerCase()) ? title : `${prefix}${title}`).slice(0, 120);
+      const r = await bookAppt(me.id, { personId: p.id, type: "other", title: named, date: w.date, start: w.time, end, location: s("location").slice(0, 300),
         invitees: [...(a.invite_client === true ? p.emails.map((e) => e.address) : []), me.name, ...joining.map((u) => u.name)] });
       const invite = (await calendarConnection()) ? (a.invite_client === true && p.emails.length ? " Invite sent to them." : " On your calendar.") : "";
-      await record(me.id, "appt", `✓ Booked "${title}" with ${p.name}, ${when(w.date, w.time, end)}.${invite}`, { appointmentId: r.id });
+      await record(me.id, "appt", `✓ Booked "${named}" with ${p.name}, ${when(w.date, w.time, end)}.${invite}`, { appointmentId: r.id });
       return `Booked (appointment id ${r.id}).`;
     }
     const id = await addCalendarEvent({ title, date: w.date, start: w.time, end, location: s("location").slice(0, 300), guests: [{ email: me.email, name: me.name }, ...joining] });
