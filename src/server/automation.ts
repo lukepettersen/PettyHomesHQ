@@ -3,7 +3,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
 import { logActivity } from "@/server/activity";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
-import { CONTRACT_ANCHORS, condMet, expand, minutesOffset, offsetOf, timeBefore, type Anchor, type Facts, type Phase, type Template } from "@/lib/templates";
+import { CONTRACT_ANCHORS, SIDE_CONDS, condMet, expand, minutesOffset, offsetOf, timeBefore, type Anchor, type Facts, type Phase, type Template } from "@/lib/templates";
 
 // Task templates in action (SPEC.md §8): start checklists on triggers, re-date steps when contract
 // dates change, and apply "Add/remove tags" steps.
@@ -23,7 +23,8 @@ export async function loadTemplates(tx: Tx = db): Promise<Template[]> {
 /** Starts every template for a trigger. A file only gets each template once. Returns the number of tasks made. */
 export async function runTrigger(tx: Tx, trigger: string, ctx: Ctx, userId: string): Promise<number> {
   // "anyconsult" templates start for a buyer or a seller consultation.
-  const templates = (await loadTemplates(tx)).filter((t) => t.trigger === trigger || (t.trigger === "anyconsult" && (trigger === "buyerconsult" || trigger === "sellerconsult")));
+  const templates = (await loadTemplates(tx)).filter((t) => t.trigger === trigger || (t.trigger === "anyconsult" && (trigger === "buyerconsult" || trigger === "sellerconsult"))
+    || (t.trigger === "closed:any" && trigger.startsWith("closed:")));
   let n = 0;
   for (const t of templates) n += await applyTemplate(tx, t, ctx, userId, { once: true });
   return n;
@@ -36,9 +37,13 @@ export async function applyTemplate(tx: Tx, t: Template, ctxIn: Ctx, userId: str
     if (already) return 0;
   }
   const { ctx, who, specs } = await prepare(tx, t, ctxIn, userId);
+  // "When any contract closes": someone who sells and buys gets each shared step once. A step this person already got
+  // from this checklist in the last 90 days is skipped (owner request 2026-10-31).
+  const had = t.trigger === "closed:any" ? new Set((await tx.task.findMany({ where: { templateId: t.id, personId: ctx.personId, createdAt: { gte: new Date(Date.now() - 90 * 86400000) } }, select: { stepId: true } })).map((x) => x.stepId)) : null;
   let n = 0;
   for (const spec of specs) {
     const s = spec.step;
+    if (had?.has(s.id)) continue;
     if (s.type === "tags") { await applyTags(tx, ctx.personId, s.addTags ?? [], s.removeTags ?? []); continue; }
     if (s.type === "stage") { await applyStage(tx, ctx.personId, s.stage ?? "", t.name); continue; }
     await tx.task.create({ data: { ...stepData(t, spec, ctx, who), personId: ctx.personId, fileId: ctx.fileId ?? null, paId: ctx.paId ?? null, templateId: t.id, stepId: s.id, createdById: userId } });
@@ -109,7 +114,8 @@ export async function syncTemplateToOpen(t: Template, userId: string): Promise<{
         start: isoFromDate(todayCentral(all[0]?.createdAt ?? new Date())), // the day this checklist started for them
         dates: { ...(pa ? contractAnchors(pa) : {}), ...(call ? { phoneCall: isoFromDate(call.date) } : {}) },
         times: call?.start ? { phoneCall: call.start } : {},
-        facts: pa ? factsOf(pa.answers, pa.writtenStatementNA) : file ? factsOf(file.info) : {},
+        // Post-close steps aren't tied to the contract, so its side and dates aren't known here: keep what's there.
+        facts: pa ? { ...factsOf(pa.answers, pa.writtenStatementNA), side: pa.side as "buyer" | "seller" } : file ? factsOf(file.info) : { side: "any" },
       };
       const { ctx, who, specs } = await prepare(tx, t, ctxIn, userId);
       const applies = new Map(specs.map((x) => [x.step.id, x]));
@@ -126,7 +132,7 @@ export async function syncTemplateToOpen(t: Template, userId: string): Promise<{
         // A step already sent, failed or turned off keeps that state unless it stopped being automatic.
         const autoState = !d.autoSend ? (task.autoState === "pending" ? "off" : task.autoState) : task.autoState ? task.autoState : d.autoState ?? (task.dueDate ? "pending" : null); // Turn off sticks (owner 2026-10-30)
         // A date someone set by hand (the step was detached from its timing) and who it's assigned to stay as they are.
-        const handDated = !task.anchor && spec.step.dir !== "none";
+        const handDated = (!task.anchor && spec.step.dir !== "none") || (!pa && CONTRACT_ANCHORS.includes(task.anchor as Anchor));
         // An ask already sent or answered stays that way; a step that stopped asking stops.
         const askState = !d.askKind ? (task.askState === "pending" ? null : task.askState) : task.askState ? task.askState : d.askState ?? (task.dueDate ? "pending" : null);
         const next = { ...d, autoSend: d.autoSend ?? task.autoSend ?? undefined, autoState, askState, assigneeId: task.assigneeId,
@@ -142,6 +148,7 @@ export async function syncTemplateToOpen(t: Template, userId: string): Promise<{
       const seen = new Set(all.map((x) => x.stepId));
       for (const spec of specs) {
         if (seen.has(spec.step.id) || spec.step.type === "tags" || spec.step.type === "stage") continue;
+        if (ctxIn.facts?.side === "any" && SIDE_CONDS.includes(spec.step.cond)) continue; // side unknown: don't add a side-only step
         await tx.task.create({ data: { ...stepData(t, spec, ctx, who), personId: ctx.personId, fileId: ctx.fileId ?? null, paId: ctx.paId ?? null, templateId: t.id, stepId: spec.step.id, createdById: userId } });
         out.added++; changed = true;
       }

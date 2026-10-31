@@ -446,7 +446,11 @@ scrolls with it until its last card is on screen, then stays put while the middl
   Condo/townhome. *(Later: Lead source is…, for the Stacie Rihl referral step.)*
 - **Triggers:** when a buyer/listing moves to a status; when a buyer-side or seller-side PA
   is added; **when a contract goes pending** (each side; fired by Mark pending, steps timed from that day or the
-  contract dates, owner request 2026-10-29); when a contract closes (each side);
+  contract dates, owner request 2026-10-29); when a contract closes (each side, or **either side**: "When any contract
+  closes (buyer or seller)", owner request 2026-10-31, with "Only when" **Buyer side** / **Seller side** for the steps
+  that belong to one side; a step this person already got from that checklist in the last 90 days is skipped, so a
+  client who sells and buys gets shared steps like birthdays and past-client tags once; post-close steps keep their
+  dates on "Update the open deals" and no side-only step is added there, since the side isn't known after closing);
   *Editing a contract* re-checks "Only when" conditions (owner request 2026-10-29): if a changed answer (material
   defect, HOA, financing, year built, written statement…) flips a step's condition, open steps that no longer apply
   go to Trash (automatic sends turned off) and steps that now apply are added. Done steps stay. **when a phone call is booked**; **when a

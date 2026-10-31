@@ -115,6 +115,7 @@ function Editor({ t: initial, statuses, team, roles, tags, stages, today, templa
                 <option value="pending:seller">When a seller-side contract goes pending</option>
                 <option value="closed:buyer">When a buyer-side contract closes</option>
                 <option value="closed:seller">When a seller-side contract closes</option>
+                <option value="closed:any">When any contract closes (buyer or seller)</option>
               </optgroup>
               <optgroup label="Appointments">
                 <option value="phonecall">When a phone call is booked</option>

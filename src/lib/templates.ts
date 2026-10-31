@@ -2,7 +2,7 @@
 
 export type StepType = "task" | "call" | "text" | "email" | "tags" | "stage";
 export type Anchor = "start" | "phoneCall" | "consult" | "finalAcceptance" | "inspAppt" | "inspection" | "writtenStatement" | "hoaRescission" | "closing";
-export type Cond = "always" | "hoa" | "pre1978" | "newc" | "ws" | "defect" | "nodefect" | "fhava" | "condo";
+export type Cond = "always" | "hoa" | "pre1978" | "newc" | "ws" | "defect" | "nodefect" | "fhava" | "condo" | "buyerside" | "sellerside";
 export type Step = {
   id: string; name: string; assignee: string; // team member first name; "" = the person's assignee
   type: StepType; days: number; dir: "before" | "on" | "after" | "none" | "minutesBefore" | "minutesAfter"; anchor: Anchor; cond: Cond;
@@ -27,13 +27,15 @@ export type Phase = { id: string; name: string; steps: Step[] };
 export type Template = { id: string; name: string; trigger: string | null; folder?: string; phases: Phase[] };
 
 export const ANCHORS: [Anchor, string][] = [["start", "Start date"], ["phoneCall", "Phone call"], ["consult", "Consult"], ["finalAcceptance", "Final Acceptance"], ["inspAppt", "Inspection appointment"], ["inspection", "Inspection deadline"], ["writtenStatement", "Written Statement"], ["hoaRescission", "HOA Rescission"], ["closing", "Closing"]];
-export const CONDS: [Cond, string][] = [["always", "Always"], ["hoa", "HOA property"], ["pre1978", "Built before 1978"], ["newc", "New construction"], ["ws", "Written statement included"], ["defect", "YES material defect clause"], ["nodefect", "NO material defect clause"], ["fhava", "FHA / VA loan"], ["condo", "Condo / townhome"]];
+export const CONDS: [Cond, string][] = [["always", "Always"], ["hoa", "HOA property"], ["pre1978", "Built before 1978"], ["newc", "New construction"], ["ws", "Written statement included"], ["defect", "YES material defect clause"], ["nodefect", "NO material defect clause"], ["fhava", "FHA / VA loan"], ["condo", "Condo / townhome"], ["buyerside", "Buyer side"], ["sellerside", "Seller side"]];
+/** "Only when" choices about which side the contract is on (owner request 2026-10-31). */
+export const SIDE_CONDS: Cond[] = ["buyerside", "sellerside"];
 export const STEP_TYPES: [StepType, string][] = [["task", "Task"], ["call", "Call"], ["email", "Email"], ["text", "Text"], ["tags", "Add/remove tags"], ["stage", "Change stage"]];
 // inspAppt: the purchase agreement's "Inspection appointment" date (owner request 2026-10-27); inspection is the deadline.
 export const CONTRACT_ANCHORS: Anchor[] = ["finalAcceptance", "inspAppt", "inspection", "writtenStatement", "hoaRescission", "closing"];
 export const anchorLabel = (a: string) => ANCHORS.find(([k]) => k === a)?.[1] ?? a;
 
-/** Triggers: "status:<id>", "pa:buyer", "pa:seller", "pending:buyer", "pending:seller", "closed:buyer", "closed:seller", "phonecall", "buyerconsult", "sellerconsult", "anyconsult" (either), or none. */
+/** Triggers: "status:<id>", "pa:buyer", "pa:seller", "pending:buyer", "pending:seller", "closed:buyer", "closed:seller", "closed:any" (either side), "phonecall", "buyerconsult", "sellerconsult", "anyconsult" (either), or none. */
 export function triggerLabel(trigger: string | null, statuses: { id: string; kind: string; name: string }[]): string {
   if (!trigger) return "Apply by hand";
   if (trigger.startsWith("status:")) {
@@ -42,12 +44,14 @@ export function triggerLabel(trigger: string | null, statuses: { id: string; kin
   }
   return ({ "pa:buyer": "When a buyer-side purchase agreement is added", "pa:seller": "When a seller-side purchase agreement is added",
     "pending:buyer": "When a buyer-side contract goes pending", "pending:seller": "When a seller-side contract goes pending",
-    "closed:buyer": "When a buyer-side contract closes", "closed:seller": "When a seller-side contract closes", phonecall: "When a phone call is booked",
+    "closed:buyer": "When a buyer-side contract closes", "closed:seller": "When a seller-side contract closes", "closed:any": "When any contract closes (buyer or seller)", phonecall: "When a phone call is booked",
     buyerconsult: "When a Buyer consult is booked", sellerconsult: "When a Seller consult is booked", anyconsult: "When a Buyer consult or Seller consult is booked", offer: "When an offer is submitted (every offer)" } as Record<string, string>)[trigger] ?? trigger;
 }
 
 /** Facts that conditions read: from the contract, or the listing file. */
-export type Facts = { hoa?: string; year?: string; newc?: string; fin?: string; ptype?: string; ws?: string; defect?: string };
+// side: the contract's side; "any" when it can't be known later (Update the open deals on post-close steps), which keeps
+// steps that are already there.
+export type Facts = { hoa?: string; year?: string; newc?: string; fin?: string; ptype?: string; ws?: string; defect?: string; side?: "buyer" | "seller" | "any" };
 export function condMet(cond: Cond, f: Facts): boolean {
   switch (cond) {
     case "hoa": return f.hoa === "Yes";
@@ -58,6 +62,8 @@ export function condMet(cond: Cond, f: Facts): boolean {
     case "ws": return f.ws !== "No"; // the contract has a written statement (not marked N/A); owner request 2026-10-20
     case "fhava": return f.fin === "FHA" || f.fin === "VA";
     case "condo": return f.ptype === "Condo" || f.ptype === "Townhome";
+    case "buyerside": return f.side === "buyer" || f.side === "any";
+    case "sellerside": return f.side === "seller" || f.side === "any";
     default: return true;
   }
 }

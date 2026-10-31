@@ -8,14 +8,14 @@ import { logActivity } from "@/server/activity";
 import { templateProblem, type Phase, type Template } from "@/lib/templates";
 import { openUses, syncTemplateToOpen } from "@/server/automation";
 
-const FIXED_TRIGGERS = ["pa:buyer", "pa:seller", "pending:buyer", "pending:seller", "closed:buyer", "closed:seller", "phonecall", "buyerconsult", "sellerconsult", "anyconsult", "offer"];
+const FIXED_TRIGGERS = ["pa:buyer", "pa:seller", "pending:buyer", "pending:seller", "closed:buyer", "closed:seller", "closed:any", "phonecall", "buyerconsult", "sellerconsult", "anyconsult", "offer"];
 const tags = z.array(z.string().trim().min(1).max(60)).max(20).optional();
 const stepSchema = z.object({
   id: z.string().regex(/^[\w-]{1,40}$/), name: z.string().trim().max(160), assignee: z.string().trim().max(40),
   type: z.enum(["task", "call", "text", "email", "tags", "stage"]), days: z.number().int().min(0).max(730),
   dir: z.enum(["before", "on", "after", "none", "minutesBefore", "minutesAfter"]), minutes: z.number().int().optional(),
   anchor: z.enum(["start", "phoneCall", "consult", "finalAcceptance", "inspAppt", "inspection", "writtenStatement", "hoaRescission", "closing"]),
-  cond: z.enum(["always", "hoa", "pre1978", "newc", "ws", "defect", "nodefect", "fhava", "condo"]),
+  cond: z.enum(["always", "hoa", "pre1978", "newc", "ws", "defect", "nodefect", "fhava", "condo", "buyerside", "sellerside"]),
   advance: z.string().max(40).optional(), message: z.string().trim().max(120).optional(), messageId: z.string().max(40).optional(), addTags: tags, removeTags: tags, stage: z.string().trim().max(60).optional(),
   ask: z.union([z.boolean(), z.literal("consult")]).optional(),
   auto: z.object({ from: z.string().trim().max(40), to: z.array(z.string().trim().max(80)).min(1, "Pick who an automatic message goes to.").max(20), time: z.string().regex(/^([01]\d|2[0-3]):[03]0$/) }).optional(),

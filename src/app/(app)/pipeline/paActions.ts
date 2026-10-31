@@ -180,7 +180,7 @@ export async function markClosed(paId: string) {
       // The contract's own open steps are done; the post-close template starts.
       await tx.task.updateMany({ where: { paId: pa.id, completedAt: null, deletedAt: null }, data: { completedAt: new Date() } });
       // Post-close tasks belong to the person, not the closed file, so they stay visible.
-      await runTrigger(tx, `closed:${pa.side}`, { personId: pa.file.personId, fileId: null, paId: null, start: isoFromDate(closedOn), dates: contractAnchors(pa), facts: factsOf(pa.answers, pa.writtenStatementNA) }, user.id);
+      await runTrigger(tx, `closed:${pa.side}`, { personId: pa.file.personId, fileId: null, paId: null, start: isoFromDate(closedOn), dates: contractAnchors(pa), facts: { ...factsOf(pa.answers, pa.writtenStatementNA), side: pa.side as "buyer" | "seller" } }, user.id);
     });
     await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Marked closed: ${pa.address} for ${pa.file.person.name}`);
     await syncContract(pa.id);

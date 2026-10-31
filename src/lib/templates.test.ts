@@ -77,3 +77,14 @@ describe("inspection appointment anchor (owner request 2026-10-27)", () => {
     expect(dueFor(step, { inspection: "2026-11-06" })).toBeNull();
   });
 });
+
+describe("Only when: buyer side / seller side (owner request 2026-10-31)", () => {
+  it("matches the contract's side; an unknown side keeps both", () => {
+    expect(condMet("buyerside", { side: "buyer" })).toBe(true);
+    expect(condMet("buyerside", { side: "seller" })).toBe(false);
+    expect(condMet("sellerside", { side: "seller" })).toBe(true);
+    expect(condMet("sellerside", {})).toBe(false);
+    expect(condMet("buyerside", { side: "any" })).toBe(true);
+    expect(triggerLabel("closed:any", [])).toBe("When any contract closes (buyer or seller)");
+  });
+});
