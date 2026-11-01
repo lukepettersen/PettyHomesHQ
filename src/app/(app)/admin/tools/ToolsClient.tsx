@@ -10,6 +10,7 @@ type Row = { name: string; url: string };
 export function ToolsClient({ tools }: { tools: Row[] }) {
   const t = useRows(tools, (rows) => saveTools(rows));
   const [draft, setDraft] = useState<Row>({ name: "", url: "" });
+  const typed = !!draft.name.trim() && !!draft.url.trim();
   return (
     <section className="card">
       <ul>
@@ -31,7 +32,9 @@ export function ToolsClient({ tools }: { tools: Row[] }) {
         <input aria-label="New tool link" placeholder="Link, e.g. https://…" className="input min-w-[220px] flex-1" value={draft.url} onChange={(e) => setDraft({ ...draft, url: e.target.value })} />
         <button className="btn">+ Add tool</button>
       </form>
-      <SaveBar dirty={t.dirty} pending={t.pending} error={t.error} onDiscard={t.discard} onSave={t.save} />
+      {/* A tool typed in the boxes above counts even if "+ Add tool" wasn't clicked (owner report 2026-11-01). */}
+      <SaveBar dirty={t.dirty || typed} pending={t.pending} error={t.error} onDiscard={() => { t.discard(); setDraft({ name: "", url: "" }); }}
+        onSave={() => t.save(typed ? [{ name: draft.name.trim(), url: draft.url.trim() }] : [], () => setDraft({ name: "", url: "" }))} />
     </section>
   );
 }

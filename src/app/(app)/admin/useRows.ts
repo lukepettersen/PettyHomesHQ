@@ -19,6 +19,7 @@ export function useRows<T>(initial: T[], save: (rows: T[]) => Promise<Result>) {
     remove: (i: number) => setRows((r) => r.filter((_, j) => j !== i)),
     add: (row: T) => setRows((r) => [...r, row]),
     discard: () => { setRows(initial); setError(""); },
-    save: () => start(async () => { setError(""); const r = await save(rows); if (!r.ok) setError(r.error); else router.refresh(); }),
+    // `extra`: a row typed into an "add" box but not added yet, saved too (owner report 2026-11-01).
+    save: (extra?: T[] | unknown, onSaved?: () => void) => start(async () => { setError(""); const all = [...rows, ...(Array.isArray(extra) ? (extra as T[]) : [])]; const r = await save(all); if (!r.ok) setError(r.error); else { setRows(all); onSaved?.(); router.refresh(); } }),
   };
 }
