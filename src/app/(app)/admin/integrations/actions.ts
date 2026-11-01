@@ -12,6 +12,16 @@ import { applyGroupTexting } from "@/server/groupText";
 import { toE164 } from "@/lib/texting";
 import { SHEET_KEY } from "@/server/salesSheet";
 import { parseSheetLink } from "@/lib/salesSheet";
+import { newLeadKey } from "@/server/leads";
+
+/** Admin → Integrations → Website leads → New link: the old link stops working (the website needs the new one). */
+export async function renewLeadLink() {
+  return guarded("manageUsers", async (user) => {
+    await newLeadKey();
+    await logActivity(user.id, "update", "setting", null, "Made a new website lead link (the old one stopped working)");
+    revalidatePath("/admin/integrations");
+  });
+}
 
 /** Admin → Integrations → Texting on/off: pause or resume sending. */
 export async function setTexting(on: boolean) {

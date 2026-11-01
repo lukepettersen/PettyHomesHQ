@@ -124,6 +124,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 - Owner's sales Google Sheet: `src/lib/salesSheet.ts` (row building, tested), `src/server/salesSheet.ts` (`syncSalesRow` from paActions; Sheets API via `sharedGoogle`), Admin → Integrations `SalesSheetControls.tsx`
 - Address lookup: `src/server/places.ts` (Google Places API (New), key server-side), `/api/address` + `/api/address/details`, `src/components/AddressInput.tsx` (contact Address, PA and file `address` fields)
 - Social post descriptions on deals: `src/lib/social.ts` (slots; tested), `ClientFile.social` JSON, `saveSocialPost` in `pipeline/actions.ts`, `people/[id]/SocialPosts.tsx`
+- Website leads: `src/lib/leads.ts` (Elementor webhook fields, note; tested), `src/server/leads.ts` (secret link key in AppSetting `leads.key`, `receiveLead`), public `src/app/api/leads/` (key-checked), Admin → Integrations `WebsiteLeads.tsx`, trigger `lead:website`
 - `src/lib/customFields.ts` — custom field types and value cleaning
 - Owner setup and ops runbook: `docs/ops.md`
 

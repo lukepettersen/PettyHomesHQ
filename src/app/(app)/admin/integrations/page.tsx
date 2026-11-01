@@ -12,6 +12,8 @@ import { calendarConnection, GMAIL_READ_SCOPE, GMAIL_SEND_SCOPE, hasScope, SHEET
 import { salesSheet } from "@/server/salesSheet";
 import { requireUser } from "@/server/auth";
 import { SalesSheetControls } from "./SalesSheetControls";
+import { WebsiteLeads } from "./WebsiteLeads";
+import { leadLink } from "@/server/leads";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +78,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ g
           </section>
         ))}
       </div>
-      <p className="mt-4 text-xs muted">Coming later: a website lead form that sends WordPress sign-ups straight into HQ.</p>
+      <WebsiteLeads link={await leadLink()} />
     </>
   );
 }

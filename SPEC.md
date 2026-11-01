@@ -937,13 +937,24 @@ Sections (left menu, older wording below):
   Boss, File storage, Ask Claude, later website lead form).
 - All Admin edits use the unsaved-changes Save / Discard bar.
 
+### Website leads *(owner request 2026-11-01; FUB ends 2026-11-30)*
+
+- The WordPress site (Elementor Pro form) sends each submission to HQ by the form's **Webhook** action, at a private
+  link shown in **Admin → Integrations → Website leads** (Copy link; **New link** makes a fresh one and the old one stops
+  working, two-step). The link has a long random code; it can only add leads and reads nothing.
+- A lead whose phone or email is already in HQ gets a timeline note ("Website lead form", what they wrote, other
+  answers, the page). Anyone new is added with Source **Website**, stage **Lead**, assigned to the owner, with that note,
+  and checklists set to start **"When a website lead comes in"** begin (the replacement for FUB's "Website Sign Up").
+- The owner gets a bell alert (pop-up) and a text to their cell from their HQ number with the name, phone/email, the
+  message and a link to the contact. Form contents aren't logged.
+- Switch-over: add the Webhook in Elementor → send a test → remove Follow Up Boss from the form.
+
 ## 14. Later phases (not in v1)
 
 - **Automatic sending** of email/text steps with a per-step mode: Send automatically /
   Draft for review / Task only. Same safety rules as §11.
 - **Drips:** Zillow Showcase (11 emails), Open House follow-ups (12), website welcome email.
-- **Lead intake:** website sign-up form on WordPress posting to HQ; Zillow lead email
-  capture.
+- **Lead intake:** Zillow lead email capture. *(The website form is built: §13 Website leads.)*
 - **AI assistant (optional):** read an uploaded PA PDF to fill the PA form; personalize
   drafts; suggest replies; summarize history. Drafts only, human approves.
 - Weekly report emails to the owner; production report (closed volume and commission by
@@ -1049,7 +1060,6 @@ merge. Each phase is usable on its own.
 None right now. New ones get added here.
 
 **Parked ideas** *(owner, 2026-10-28: tabled for later; nothing built yet)*:
-- Lead intake: Zillow / website / open house lead emails become contacts automatically (needed before cancelling FUB).
 - Follow-up sequences that send texts/emails on a schedule and stop on reply (like FUB Action Plans; needs the worker).
 - Merge duplicate contacts (possible-duplicates list + Merge).
 - Business dashboard (closed/pending, volume, commission for those allowed, pipeline value, lead source results, yearly
