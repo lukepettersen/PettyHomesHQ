@@ -14,6 +14,11 @@ describe("website leads from the Elementor form (owner request 2026-11-01)", () 
     expect(l).toMatchObject({ name: "Sam Ortiz", email: "sam@x.com", phone: "", page: "https://lukepettersen.com/" });
     expect(l.extras).toEqual([]);
   });
+  it("finds the phone and email by their look when the fields have no labels", () => {
+    const l = readLead({ name: "Pat Lee", field_3f2a: "(612) 555-0101", field_9c1: "Pat@Ex.com", field_7: "on", "Remote IP": "1.2.3.4" });
+    expect(l).toMatchObject({ name: "Pat Lee", phone: "(612) 555-0101", email: "pat@ex.com" });
+    expect(l.extras).toEqual([["field_7", "on"]]);
+  });
   it("drops an email that isn't one", () => {
     expect(readLead({ Name: "A", Email: "nope" }).email).toBe("");
   });

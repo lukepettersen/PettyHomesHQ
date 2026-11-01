@@ -38,10 +38,14 @@ export function readLead(raw: Record<string, string>): Lead {
   const phone = pick(/phone|cell|mobile|tel/i).slice(0, 40);
   const page = pick(/page.?url|page_url|referr?er|^url$/i).slice(0, 500);
   const message = pick(/message|comment|question|notes?$|how can|help|details/i).slice(0, 4000);
+  // Fields with no label arrive by their code ("field_3f2a"): fall back to what the value looks like.
+  const byValue = (ok: (v: string) => boolean) => { const hit = Object.entries(f).find(([k, v]) => !used.has(k) && !META.test(k.trim()) && ok(v.trim())); if (!hit) return ""; used.add(hit[0]); return hit[1].trim(); };
+  const email2 = email || byValue((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)).toLowerCase();
+  const phone2 = phone || byValue((v) => /^[\d\s().+-]{10,20}$/.test(v) && /^1?\d{10}$/.test(v.replace(/\D/g, "")));
   const extras = Object.entries(f)
     .filter(([k, v]) => v.trim() && !used.has(k) && !META.test(k.trim()))
     .slice(0, 20).map(([k, v]) => [k.slice(0, 60), v.trim().slice(0, 500)] as [string, string]);
-  return { name, email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "", phone, message, page, extras };
+  return { name, email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email2) ? email2 : "", phone: phone2, message, page, extras };
 }
 
 /** The note on their timeline: what they wrote, any other answers, and the page they were on. */
