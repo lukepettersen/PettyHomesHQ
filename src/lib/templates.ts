@@ -1,7 +1,7 @@
 // Task templates and automations (SPEC.md §8). Pure, unit tested in templates.test.ts.
 
 export type StepType = "task" | "call" | "text" | "email" | "tags" | "stage";
-export type Anchor = "start" | "phoneCall" | "consult" | "finalAcceptance" | "inspAppt" | "inspection" | "writtenStatement" | "hoaRescission" | "closing";
+export type Anchor = "start" | "phoneCall" | "consult" | "showing" | "showingEnd" | "finalAcceptance" | "inspAppt" | "inspection" | "writtenStatement" | "hoaRescission" | "closing";
 export type Cond = "always" | "hoa" | "pre1978" | "newc" | "ws" | "defect" | "nodefect" | "fhava" | "condo" | "buyerside" | "sellerside";
 export type Step = {
   id: string; name: string; assignee: string; // team member first name; "" = the person's assignee
@@ -16,6 +16,9 @@ export type Step = {
   // Task/call steps: text the assignee at its due time (owner request 2026-10-30). true = "is it done?" (YES checks it
   // off); "consult" = "did you set a consult?" (a reply like "buyer Wed 7pm" books it, then checks the step off).
   ask?: boolean | "consult";
+  // Text/email steps on a showing (owner request 2026-11-01): use the listing's own template (its name has the showing's
+  // house number, street and "Showing"); messageId is the fallback when there isn't one.
+  matchListing?: boolean;
 };
 /**
  * A text/email step that sends by itself (owner 2026-10-29): from = a team member's first name, "" = whoever the step
@@ -26,7 +29,7 @@ export type AutoSend = { from: string; to: string[]; time: string };
 export type Phase = { id: string; name: string; steps: Step[] };
 export type Template = { id: string; name: string; trigger: string | null; folder?: string; phases: Phase[] };
 
-export const ANCHORS: [Anchor, string][] = [["start", "Start date"], ["phoneCall", "Phone call"], ["consult", "Consult"], ["finalAcceptance", "Final Acceptance"], ["inspAppt", "Inspection appointment"], ["inspection", "Inspection deadline"], ["writtenStatement", "Written Statement"], ["hoaRescission", "HOA Rescission"], ["closing", "Closing"]];
+export const ANCHORS: [Anchor, string][] = [["start", "Start date"], ["phoneCall", "Phone call"], ["consult", "Consult"], ["showing", "Showing"], ["showingEnd", "Showing ends"], ["finalAcceptance", "Final Acceptance"], ["inspAppt", "Inspection appointment"], ["inspection", "Inspection deadline"], ["writtenStatement", "Written Statement"], ["hoaRescission", "HOA Rescission"], ["closing", "Closing"]];
 export const CONDS: [Cond, string][] = [["always", "Always"], ["hoa", "HOA property"], ["pre1978", "Built before 1978"], ["newc", "New construction"], ["ws", "Written statement included"], ["defect", "YES material defect clause"], ["nodefect", "NO material defect clause"], ["fhava", "FHA / VA loan"], ["condo", "Condo / townhome"], ["buyerside", "Buyer side"], ["sellerside", "Seller side"]];
 /** "Only when" choices about which side the contract is on (owner request 2026-10-31). */
 export const SIDE_CONDS: Cond[] = ["buyerside", "sellerside"];
@@ -44,7 +47,7 @@ export function triggerLabel(trigger: string | null, statuses: { id: string; kin
   }
   return ({ "pa:buyer": "When a buyer-side purchase agreement is added", "pa:seller": "When a seller-side purchase agreement is added",
     "pending:buyer": "When a buyer-side contract goes pending", "pending:seller": "When a seller-side contract goes pending",
-    "closed:buyer": "When a buyer-side contract closes", "closed:seller": "When a seller-side contract closes", "closed:any": "When any contract closes (buyer or seller)", "lead:website": "When a website lead comes in", phonecall: "When a phone call is booked",
+    "closed:buyer": "When a buyer-side contract closes", "closed:seller": "When a seller-side contract closes", "closed:any": "When any contract closes (buyer or seller)", "showing:confirmed": "When a showing is confirmed on one of our listings (ShowingTime)", "lead:website": "When a website lead comes in", phonecall: "When a phone call is booked",
     buyerconsult: "When a Buyer consult is booked", sellerconsult: "When a Seller consult is booked", anyconsult: "When a Buyer consult or Seller consult is booked", offer: "When an offer is submitted (every offer)" } as Record<string, string>)[trigger] ?? trigger;
 }
 
@@ -73,7 +76,7 @@ const addDays = (iso: string, n: number) => new Date(Date.parse(`${iso}T00:00:00
 /** "Minutes before/after" works for anchors that have a time of day (the booked phone call or consult). */
 export const minutesOffset = (s: Pick<Step, "dir" | "minutes">) => (s.dir === "minutesBefore" ? s.minutes ?? 15 : s.dir === "minutesAfter" ? -(s.minutes ?? 15) : null);
 export const MINUTE_OPTIONS = [5, 10, 15, 30, 45, 60, 90, 120, 150, 180]; // up to 3 hours (owner request 2026-10-30)
-export const TIMED_ANCHORS: Anchor[] = ["phoneCall", "consult"];
+export const TIMED_ANCHORS: Anchor[] = ["phoneCall", "consult", "showing", "showingEnd"];
 /** "14:00" minus 15 minutes → "13:45"; a negative number counts forward (minutes after). Stays within the day. */
 export function timeBefore(time: string, minutes: number): string {
   const [h, m] = time.split(":").map(Number);
@@ -125,7 +128,7 @@ export function templateProblem(t: Template): string | null {
       if (s.type === "stage" && !s.stage) return `"${s.name}" needs a stage to change to.`;
       if (s.days < 0 || s.days > 730) return `"${s.name}": use 0 to 730 days.`;
       const byMinutes = s.dir === "minutesBefore" || s.dir === "minutesAfter";
-      if (byMinutes && !TIMED_ANCHORS.includes(s.anchor)) return `"${s.name}": minutes before/after only works with the Phone call or Consult (they have a time).`;
+      if (byMinutes && !TIMED_ANCHORS.includes(s.anchor)) return `"${s.name}": minutes before/after only works with the Phone call, Consult or Showing (they have a time).`;
       if (byMinutes && !MINUTE_OPTIONS.includes(s.minutes ?? 0)) return `"${s.name}": pick between 5 and 180 minutes.`;
     }
   }

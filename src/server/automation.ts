@@ -9,7 +9,7 @@ import { CONTRACT_ANCHORS, SIDE_CONDS, condMet, expand, minutesOffset, offsetOf,
 // dates change, and apply "Add/remove tags" steps.
 
 type Tx = Prisma.TransactionClient | typeof db;
-export type Ctx = { personId: string; fileId?: string | null; paId?: string | null; start: string; dates?: Partial<Record<Anchor, string | null>>; facts?: Facts;
+export type Ctx = { personId: string; fileId?: string | null; paId?: string | null; showingId?: string | null; start: string; dates?: Partial<Record<Anchor, string | null>>; facts?: Facts;
   /** Time of day for steps on the day of an anchor, e.g. the booked call's time on "Hold phone call" (SPEC.md §17). */
   times?: Partial<Record<Anchor, string | null>> };
 
@@ -46,7 +46,7 @@ export async function applyTemplate(tx: Tx, t: Template, ctxIn: Ctx, userId: str
     if (had?.has(s.id)) continue;
     if (s.type === "tags") { await applyTags(tx, ctx.personId, s.addTags ?? [], s.removeTags ?? []); continue; }
     if (s.type === "stage") { await applyStage(tx, ctx.personId, s.stage ?? "", t.name); continue; }
-    await tx.task.create({ data: { ...stepData(t, spec, ctx, who), personId: ctx.personId, fileId: ctx.fileId ?? null, paId: ctx.paId ?? null, templateId: t.id, stepId: s.id, createdById: userId } });
+    await tx.task.create({ data: { ...stepData(t, spec, ctx, who), personId: ctx.personId, fileId: ctx.fileId ?? null, paId: ctx.paId ?? null, showingId: ctx.showingId ?? null, templateId: t.id, stepId: s.id, createdById: userId } });
     n++;
   }
   return n;
@@ -97,12 +97,15 @@ function stepData(t: Template, spec: Spec, ctx: Ctx, who: (first: string) => str
  */
 export async function syncTemplateToOpen(t: Template, userId: string): Promise<{ deals: number; updated: number; added: number; removed: number }> {
   const out = { deals: 0, updated: 0, added: 0, removed: 0 };
-  const open = await db.task.findMany({ where: { templateId: t.id, completedAt: null, deletedAt: null, personId: { not: null }, person: { deletedAt: null } }, select: { personId: true, fileId: true, paId: true } });
-  const groups = [...new Map(open.map((g) => [`${g.personId}|${g.fileId ?? ""}|${g.paId ?? ""}`, g])).values()];
+  const open = await db.task.findMany({ where: { templateId: t.id, completedAt: null, deletedAt: null, personId: { not: null }, person: { deletedAt: null } }, select: { personId: true, fileId: true, paId: true, showingId: true } });
+  const groups = [...new Map(open.map((g) => [`${g.personId}|${g.fileId ?? ""}|${g.paId ?? ""}|${g.showingId ?? ""}`, g])).values()];
   const stepIds = new Set(t.phases.flatMap((p) => p.steps.map((x) => x.id)));
   for (const g of groups) {
     await db.$transaction(async (tx) => {
-      const where = { templateId: t.id, personId: g.personId!, fileId: g.fileId, paId: g.paId };
+      const where = { templateId: t.id, personId: g.personId!, fileId: g.fileId, paId: g.paId, showingId: g.showingId };
+      // A showing's steps are timed from that showing (owner request 2026-11-01); a cancelled one is left alone.
+      const showing = g.showingId ? await tx.showing.findUnique({ where: { id: g.showingId } }) : null;
+      if (g.showingId && (!showing || showing.status !== "confirmed")) return;
       const all = await tx.task.findMany({ where, orderBy: { createdAt: "asc" } });
       if (g.fileId && !(await tx.clientFile.findFirst({ where: { id: g.fileId, deletedAt: null, closedAt: null }, select: { id: true } }))) return;
       const pa = g.paId ? await tx.purchaseAgreement.findUnique({ where: { id: g.paId } }) : null;
@@ -110,10 +113,10 @@ export async function syncTemplateToOpen(t: Template, userId: string): Promise<{
       const call = t.phases.some((p) => p.steps.some((x) => x.anchor === "phoneCall"))
         ? await tx.appointment.findFirst({ where: { personId: g.personId!, type: "call", deletedAt: null }, orderBy: [{ date: "desc" }, { createdAt: "desc" }] }) : null;
       const ctxIn: Ctx = {
-        personId: g.personId!, fileId: g.fileId, paId: g.paId,
+        personId: g.personId!, fileId: g.fileId, paId: g.paId, showingId: g.showingId,
         start: isoFromDate(todayCentral(all[0]?.createdAt ?? new Date())), // the day this checklist started for them
-        dates: { ...(pa ? contractAnchors(pa) : {}), ...(call ? { phoneCall: isoFromDate(call.date) } : {}) },
-        times: call?.start ? { phoneCall: call.start } : {},
+        dates: { ...(pa ? contractAnchors(pa) : {}), ...(call ? { phoneCall: isoFromDate(call.date) } : {}), ...(showing ? { showing: isoFromDate(showing.date), showingEnd: isoFromDate(showing.date) } : {}) },
+        times: { ...(call?.start ? { phoneCall: call.start } : {}), ...(showing ? { showing: showing.start, showingEnd: showing.end ?? showing.start } : {}) },
         // Post-close steps aren't tied to the contract, so its side and dates aren't known here: keep what's there.
         facts: pa ? { ...factsOf(pa.answers, pa.writtenStatementNA), side: pa.side as "buyer" | "seller" } : file ? factsOf(file.info) : { side: "any" },
       };
@@ -149,7 +152,7 @@ export async function syncTemplateToOpen(t: Template, userId: string): Promise<{
       for (const spec of specs) {
         if (seen.has(spec.step.id) || spec.step.type === "tags" || spec.step.type === "stage") continue;
         if (ctxIn.facts?.side === "any" && SIDE_CONDS.includes(spec.step.cond)) continue; // side unknown: don't add a side-only step
-        await tx.task.create({ data: { ...stepData(t, spec, ctx, who), personId: ctx.personId, fileId: ctx.fileId ?? null, paId: ctx.paId ?? null, templateId: t.id, stepId: spec.step.id, createdById: userId } });
+        await tx.task.create({ data: { ...stepData(t, spec, ctx, who), personId: ctx.personId, fileId: ctx.fileId ?? null, paId: ctx.paId ?? null, showingId: ctx.showingId ?? null, templateId: t.id, stepId: spec.step.id, createdById: userId } });
         out.added++; changed = true;
       }
       if (changed) out.deals++;
@@ -160,7 +163,7 @@ export async function syncTemplateToOpen(t: Template, userId: string): Promise<{
 
 /** How many people/deals currently have open steps from a checklist (for "Update the N open deals"). */
 export async function openUses(templateId: string): Promise<number> {
-  const rows = await db.task.findMany({ where: { templateId, completedAt: null, deletedAt: null, personId: { not: null }, person: { deletedAt: null } }, select: { personId: true, fileId: true, paId: true }, distinct: ["personId", "fileId", "paId"] });
+  const rows = await db.task.findMany({ where: { templateId, completedAt: null, deletedAt: null, personId: { not: null }, person: { deletedAt: null } }, select: { personId: true, fileId: true, paId: true, showingId: true }, distinct: ["personId", "fileId", "paId", "showingId"] });
   return rows.length;
 }
 

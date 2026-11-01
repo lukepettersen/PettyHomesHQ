@@ -125,6 +125,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 - Address lookup: `src/server/places.ts` (Google Places API (New), key server-side), `/api/address` + `/api/address/details`, `src/components/AddressInput.tsx` (contact Address, PA and file `address` fields)
 - Social post descriptions on deals: `src/lib/social.ts` (slots; tested), `ClientFile.social` JSON, `saveSocialPost` in `pipeline/actions.ts`, `people/[id]/SocialPosts.tsx`
 - Website leads: `src/lib/leads.ts` (Elementor webhook fields, note; tested), `src/server/leads.ts` (secret link key in AppSetting `leads.key`, `receiveLead`), public `src/app/api/leads/` (key-checked), Admin → Integrations `WebsiteLeads.tsx`, trigger `lead:website`
+- Showings from ShowingTime: `src/lib/showingTime.ts` (email parsing, `streetKey`, `pickListingTemplate`; tested), `src/server/showings.ts` (`onShowingEmail` from `syncSince` in `src/server/google.ts`, `loadShowings`), model `Showing` + `Task.showingId`, trigger `showing:confirmed`, anchors `showing`/`showingEnd`, step `matchListing` (used in `autoMessage`), `people/[id]/ShowingsCard.tsx`; Gmail also synced by the minute timer
 - `src/lib/customFields.ts` — custom field types and value cleaning
 - Owner setup and ops runbook: `docs/ops.md`
 

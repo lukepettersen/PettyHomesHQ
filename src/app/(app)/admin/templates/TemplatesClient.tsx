@@ -117,6 +117,7 @@ function Editor({ t: initial, statuses, team, roles, tags, stages, today, templa
                 <option value="closed:seller">When a seller-side contract closes</option>
                 <option value="closed:any">When any contract closes (buyer or seller)</option>
                 <option value="lead:website">When a website lead comes in</option>
+                <option value="showing:confirmed">When a showing is confirmed on one of our listings (ShowingTime)</option>
               </optgroup>
               <optgroup label="Appointments">
                 <option value="phonecall">When a phone call is booked</option>
@@ -242,6 +243,12 @@ function Editor({ t: initial, statuses, team, roles, tags, stages, today, templa
                     })()}
                   </label>
                 )}
+                {(s.type === "email" || s.type === "text") && (t.trigger === "showing:confirmed" || s.matchListing) && (
+                  <label className="flex items-center gap-1.5 text-xs" title="Its name has the showing's house number and street and the word Showing, like &quot;SPC 8841 Nicollet Buyer Agent Showing Text&quot;. The template picked above is used when there isn't one.">
+                    <input type="checkbox" checked={!!s.matchListing} onChange={(e) => setStep(i, si, { matchListing: e.target.checked || undefined })} />
+                    Use the listing&apos;s own template (matched by address){s.matchListing ? "; the one above if none" : ""}
+                  </label>
+                )}
                 {(s.type === "task" || s.type === "call") && (
                   <label className="flex w-full items-start gap-2 rounded-md border border-dashed border-misty px-2.5 py-2 text-xs">
                     <input type="checkbox" className="mt-0.5" checked={!!s.ask} disabled={s.dir === "none"} onChange={(e) => setStep(i, si, { ask: e.target.checked || undefined })} />
@@ -341,7 +348,7 @@ function AutoSendFields({ step, team, roles, field, onChange }: { step: Step; te
             <b className="muted">to</b>
             {opts.map(([k, l]) => <label key={k} className="flex items-center gap-1"><input type="checkbox" checked={a.to.includes(k)} onChange={(e) => toggle(k, e.target.checked)} /> {l}</label>)}
           </span>
-          {!step.messageId && !step.message && <span className="text-xs text-bad">Pick a message template above, or it can&apos;t send.</span>}
+          {!step.messageId && !step.message && !step.matchListing && <span className="text-xs text-bad">Pick a message template above, or it can&apos;t send.</span>}
         </>
       )}
     </div>

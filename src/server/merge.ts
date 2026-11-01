@@ -28,7 +28,7 @@ export async function loadMergeForms(): Promise<{ group: string; sections: PaSec
  * file), the team and the signed-in user. Every form question is a key; empty ones are "". Commission/BAC
  * fill in only with "See commissions".
  */
-export async function mergeFor(user: SessionUser, personId: string | null, where: { paId?: string | null; fileId?: string | null } = {}) {
+export async function mergeFor(user: SessionUser, personId: string | null, where: { paId?: string | null; fileId?: string | null; showingId?: string | null } = {}) {
   const p = personId ? await db.person.findFirst({ where: { id: personId, deletedAt: null }, include: { emails: { orderBy: { position: "asc" }, take: 1 }, phones: { orderBy: { position: "asc" }, take: 1 } } }) : null;
   const ctx: MergeCtx = { personName: p?.name ?? "", mailingName: p?.mailingName, email: p?.emails[0]?.address, phone: p?.phones[0]?.number, homeAddress: p?.address };
   const canComm = hasPermission(user.permissions, "seeCommissions");
@@ -53,6 +53,8 @@ export async function mergeFor(user: SessionUser, personId: string | null, where
     } else if (file) Object.assign(ctx, { address: file.address, price: file.price, lender: obj(file.info).lender ?? null });
   }
   if (p) ctx.appts = await upcomingAppts(p.id);
+  const sh = where.showingId ? await db.showing.findUnique({ where: { id: where.showingId }, include: { agent: { select: { company: true } } } }) : null;
+  if (sh) ctx.showing = { address: sh.address, date: isoFromDate(sh.date), start: sh.start, end: sh.end, company: sh.agent.company ?? "" };
   const team = await db.user.findMany({ where: { status: { not: "DISABLED" } }, orderBy: { isOwner: "desc" } });
   ctx.agentName = team.find((t) => t.isOwner)?.name ?? "";
   ctx.assistantName = team.find((t) => !t.isOwner)?.name ?? "";

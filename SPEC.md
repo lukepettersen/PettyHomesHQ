@@ -651,6 +651,29 @@ scrolls with it until its last card is on screen, then stays put while the middl
 - *Later:* booking a call for someone who already has one upcoming becomes **Reschedule
   call** *(decided, §17)*.
 
+### Showings from ShowingTime *(owner request 2026-11-01)*
+
+- HQ reads ShowingTime's emails in the Gmail it already syncs (now also on the app's own minute timer, at most every 3
+  minutes, so it works when nobody has HQ open). Only **"SHOWING CONFIRMED | …"** (someone showing one of our
+  listings, "Presented by" a team member) starts anything. "YOUR SHOWING CONFIRMED" (a showing we booked for a buyer),
+  walk-throughs, agent previews, appraisals and feedback emails are ignored.
+- The buyer's agent is found by email or mobile; if they aren't in HQ they're added (Realtor, their company, mobile and
+  office phones, email, stage Industry Partners). The showing is saved on the agent (address, MLS ID, date, start–end,
+  the seller when the listing contact is in HQ, "Total # of Showings") with a timeline note, and checklists that start
+  **"When a showing is confirmed on one of our listings (ShowingTime)"** run on the agent, but only for showings still
+  ahead. The same email in two inboxes is read once (ShowingTime's confirmation number).
+- Checklist timing can be minutes before/after **Showing** or **Showing ends**. A text/email step can tick **"Use the
+  listing's own template (matched by address)"**: the text template whose name has the showing's house number, first
+  street word and "Showing" (not "Feedback"), like "SPC 8841 Nicollet Buyer Agent Showing Text"; other templates for
+  the listing ("MLS Favorite") are skipped; the step's picked template is the fallback. Automatic sends go to "Client(s)",
+  which on these steps is the agent. Merge fields: {showing_address}, {showing_date}, {showing_time},
+  {showing_agent_company}.
+- **SHOWING CANCELLED** turns that showing's texts off (steps to Trash) and marks it Cancelled. **SHOWING RESCHEDULED** is
+  a request: the old time's texts are turned off and it shows "Moved"; the new time starts fresh when its "SHOWING
+  CONFIRMED" arrives.
+- The agent's contact page has a **Showings** card (address, day and time, Confirmed / Shown / Cancelled / Moved, the
+  seller linked, "Showing N on this listing").
+
 ## 11. Messages (texting) — built, off until Twilio is connected
 
 - **Send text → + Add:** send the same text to another contact or a typed number too; each gets their own

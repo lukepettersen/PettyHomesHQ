@@ -168,6 +168,8 @@ model Person {
   notifications Notification[]
   files         ClientFile[]
   appointments  Appointment[]
+  showings      Showing[]       @relation("ShowingAgent")
+  sellerShowings Showing[]      @relation("ShowingSeller")
   documents     Document[]
   partnerOn     PaPartner[]
   texts         TextMessage[]
@@ -322,6 +324,7 @@ model Task {
   listId          String?
   list            TaskList?          @relation(fields: [listId], references: [id], onDelete: SetNull)
   personId        String?
+  showingId       String? // a showing on our listing (ShowingTime) this step is about; anchors "showing" / "showingEnd"
   person          Person?            @relation(fields: [personId], references: [id], onDelete: Cascade)
   assigneeId      String?
   assignee        User?              @relation("TaskAssignee", fields: [assigneeId], references: [id])
@@ -738,4 +741,26 @@ model TextAgentAction {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+/// A showing on one of our listings, from ShowingTime's emails (owner request 2026-11-01). On the buyer's agent's
+/// contact; its checklist steps carry showingId.
+model Showing {
+  id          String   @id @default(cuid())
+  key         String   @unique // ShowingTime's confirmation number, else address|date|start
+  agentId     String
+  agent       Person   @relation("ShowingAgent", fields: [agentId], references: [id], onDelete: Cascade)
+  sellerId    String?
+  seller      Person?  @relation("ShowingSeller", fields: [sellerId], references: [id], onDelete: SetNull)
+  address     String
+  mlsId       String?
+  date        DateTime @db.Date
+  start       String // "12:30"
+  end         String?
+  status      String   @default("confirmed") // confirmed | cancelled | rescheduled
+  total       Int? // "Total # of Showings" on this listing, from the email
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([agentId])
 }

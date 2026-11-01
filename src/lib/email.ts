@@ -97,6 +97,11 @@ function findPart(p: Part, type: string): string | null {
   return null;
 }
 /** The readable text of a Gmail message, without the quoted earlier messages below it, at most 4,000 characters. */
+/** The whole email as text, nothing cut (for reading ShowingTime emails, which are long). */
+export function messageFullText(payload: Part): string {
+  return findPart(payload, "text/plain") ?? htmlToText(findPart(payload, "text/html") ?? "");
+}
+
 export function messageText(payload: Part): string {
   const raw = findPart(payload, "text/plain") ?? htmlToText(findPart(payload, "text/html") ?? "");
   const lines = raw.replace(/\r\n/g, "\n").split("\n");

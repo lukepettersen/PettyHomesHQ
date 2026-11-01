@@ -1,4 +1,5 @@
 import "server-only";
+import { pickListingTemplate } from "@/lib/showingTime";
 import { db } from "@/server/db";
 import { UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
@@ -30,13 +31,16 @@ export const autoSendAt = (t: { dueDate: Date | null; dueTime: string | null; au
 
 /** The step's message template filled in for its person and deal, as the sender (null when no template is picked).
  *  Same lookup as Draft text/email: the template picked, else one named like the step's old typed name. */
-export async function autoMessage(t: { templateId: string | null; stepId: string | null; kind: string; personId: string | null; paId: string | null; fileId: string | null }, su: SessionUser) {
+export async function autoMessage(t: { templateId: string | null; stepId: string | null; kind: string; personId: string | null; paId: string | null; fileId: string | null; showingId?: string | null }, su: SessionUser) {
   const tpl = t.templateId ? await db.taskTemplate.findUnique({ where: { id: t.templateId } }) : null;
   const step = (Array.isArray(tpl?.phases) ? (tpl!.phases as unknown as Phase[]) : []).flatMap((p) => p.steps).find((s) => s.id === t.stepId);
-  const msg = step?.messageId ? await db.messageTemplate.findUnique({ where: { id: step.messageId } })
-    : step?.message ? await db.messageTemplate.findFirst({ where: { kind: t.kind, name: { equals: step.message, mode: "insensitive" } } }) : null;
+  // A showing step can use the listing's own template, found by the showing's address (owner request 2026-11-01).
+  const showing = step?.matchListing && t.showingId ? await db.showing.findUnique({ where: { id: t.showingId }, select: { address: true } }) : null;
+  const own = showing ? pickListingTemplate(await db.messageTemplate.findMany({ where: { kind: t.kind }, orderBy: { name: "asc" } }), showing.address) : null;
+  const msg = own ?? (step?.messageId ? await db.messageTemplate.findUnique({ where: { id: step.messageId } })
+    : step?.message ? await db.messageTemplate.findFirst({ where: { kind: t.kind, name: { equals: step.message, mode: "insensitive" } } }) : null);
   if (!msg) return null;
-  const { values, label } = await mergeFor(su, t.personId, { paId: t.paId, fileId: t.fileId });
+  const { values, label } = await mergeFor(su, t.personId, { paId: t.paId, fileId: t.fileId, showingId: t.showingId });
   return { body: fill(msg.body, values), subject: fill(msg.subject, values), label };
 }
 

@@ -15,6 +15,7 @@ export const MERGE_FIELDS: [string, string][] = [
   ["next_appointment", "Next appointment (day and time)"], ["next_appointment_date", "Next appointment date"], ["next_appointment_time", "Next appointment time"],
   ["next_appointment_type", "Next appointment type"], ["next_appointment_place", "Next appointment location"],
   ["next_consult", "Next consult (buyer or seller)"], ["next_showing", "Next showing"], ["next_phone_call", "Next phone call"],
+  ["showing_address", "Showing address"], ["showing_date", "Showing date"], ["showing_time", "Showing time"], ["showing_agent_company", "Showing agent's company"],
   ["agent_name", "Luke's full name"], ["agent_first_name", "Luke's first name"], ["assistant_name", "Assistant's name"], ["my_name", "Your name"], ["my_first_name", "Your first name"],
 ];
 
@@ -28,6 +29,8 @@ export type MergeCtx = {
   /** Their upcoming appointments, soonest first (owner request 2026-10-29). */
   appts?: { type: string; label: string; date: string; start: string | null; location: string }[];
   extra?: Record<string, string>; // answers from the contract and file, already formatted (formValues)
+  /** The showing a ShowingTime step is about (owner request 2026-11-01). */
+  showing?: { address: string; date: string; start: string; end: string | null; company: string } | null;
 };
 
 const MON = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -71,6 +74,8 @@ export function mergeValues(c: MergeCtx): Record<string, string> {
     next_appointment: when(next), next_appointment_date: next ? longDate(next.date) : "", next_appointment_time: next?.start ? clock(next.start) : "",
     next_appointment_type: next?.label ?? "", next_appointment_place: next?.location ?? "",
     next_consult: when(ap.find((a) => a.type === "buyer" || a.type === "seller")), next_showing: when(ap.find((a) => a.type === "showing")), next_phone_call: when(ap.find((a) => a.type === "call")),
+    showing_address: c.showing?.address.replace(/,\s*MN\s*\d{5}$/, "") ?? "", showing_date: c.showing ? longDate(c.showing.date) : "",
+    showing_time: c.showing ? `${clock(c.showing.start)}${c.showing.end ? `–${clock(c.showing.end)}` : ""}` : "", showing_agent_company: c.showing?.company ?? "",
   });
   // Form answers fill in everything else; the built-in fields win when they have a value.
   const out = { ...c.extra };
@@ -94,13 +99,14 @@ export const mergeKey = (k: string) => ALIAS[k] ?? k.replace(/([a-z0-9])([A-Z])/
 
 export type MergeField = { key: string; label: string; group: string };
 const APPTS = ["next_appointment", "next_appointment_date", "next_appointment_time", "next_appointment_type", "next_appointment_place", "next_consult", "next_showing", "next_phone_call"];
+const SHOWING = ["showing_address", "showing_date", "showing_time", "showing_agent_company"];
 const CLIENT = ["first_name", "last_name", "full_name", "mailing_name"], TEAM = ["agent_name", "agent_first_name", "assistant_name", "my_name"];
 const labelOf = (k: string) => MERGE_FIELDS.find(([x]) => x === k)![1];
 
 /** Every merge field, grouped: client, each form's questions (first form to ask wins), then the team. */
 export function formMergeFields(forms: { group: string; sections: PaSection[] }[]): MergeField[] {
   const out: MergeField[] = CLIENT.map((key) => ({ key, label: labelOf(key), group: "Client" }));
-  const seen = new Set([...CLIENT, ...TEAM, ...APPTS]);
+  const seen = new Set([...CLIENT, ...TEAM, ...APPTS, ...SHOWING]);
   const add = (f: MergeField) => { if (!seen.has(f.key)) { seen.add(f.key); out.push(f); } };
   for (const { group, sections } of forms) for (const s of sections) for (const q of s.fields) {
     add({ key: mergeKey(q.key), label: s.people ? `${s.name} · ${q.label}` : q.label, group });
@@ -108,6 +114,7 @@ export function formMergeFields(forms: { group: string; sections: PaSection[] }[
   }
   for (const [key, label] of MERGE_FIELDS) add({ key, label, group: "Contract" }); // built-ins a form no longer asks
   for (const key of APPTS) out.push({ key, label: labelOf(key), group: "Appointments" });
+  for (const key of SHOWING) out.push({ key, label: labelOf(key), group: "Showing (ShowingTime)" });
   for (const key of TEAM) out.push({ key, label: labelOf(key), group: "Team" });
   return out;
 }

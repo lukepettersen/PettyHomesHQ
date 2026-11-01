@@ -5,7 +5,7 @@ import { isoFromDate } from "@/lib/normalize";
 import { contractEvents } from "@/lib/contractInvites";
 import { inviteContext, loadInviteRules } from "@/server/contractInvites";
 import { apptEvent, contractKey, inviteeEmails, type GEvent } from "@/lib/calendar";
-import { addressesIn, buildMime, messageText, buildMimeRaw, type Attachment } from "@/lib/email";
+import { addressesIn, buildMime, messageFullText, messageText, buildMimeRaw, type Attachment } from "@/lib/email";
 import { splitCouple } from "@/lib/normalize";
 
 // Google Calendar (SPEC.md §12). Off until configured: every call here quietly does nothing when Google
@@ -313,6 +313,8 @@ async function syncSince(fromMs: number, accountEmail: string, accountUserId: st
     const h = (n: string) => m.payload?.headers?.find((x) => x.name.toLowerCase() === n)?.value ?? "";
     const from = addressesIn(h("from")), to = addressesIn(`${h("to")}, ${h("cc")}`);
     const outbound = from.some((a) => team.has(a));
+    // ShowingTime emails about showings on our listings (owner request 2026-11-01). Never stops the sync.
+    if (from.some((a) => a.endsWith("@showingtime.com"))) await (await import("@/server/showings")).onShowingEmail(id, h("subject"), messageFullText(m.payload ?? {}), new Date(Number(m.internalDate) || Date.now())).catch((e) => console.error("ShowingTime email:", e instanceof Error ? e.name : "error"));
     const theirs = [...from, ...to].filter((a) => !team.has(a));
     if (!theirs.length) continue;
     const matches = await db.email.findMany({ where: { normalized: { in: theirs }, person: { deletedAt: null } }, select: { personId: true, normalized: true } });
