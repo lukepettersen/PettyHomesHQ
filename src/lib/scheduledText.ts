@@ -12,6 +12,11 @@ export function centralToUtc(date: string, time: string): Date {
 }
 
 export const SEND_FROM = "08:00", SEND_UNTIL = "20:00";
+/** Is it quiet hours (before 8:00am or after 8:00pm Central)? Automatic texts wait until 8am (owner 2026-11-01). */
+export function quietNow(now = new Date()): boolean {
+  const hm = now.toLocaleTimeString("en-GB", { timeZone: "America/Chicago", hour: "2-digit", minute: "2-digit", hour12: false });
+  return hm < SEND_FROM || hm > SEND_UNTIL;
+}
 /** Times on the half hour from 8:00am to 8:00pm (owner: 30-minute steps). */
 export const SCHEDULE_TIMES = Array.from({ length: 25 }, (_, i) => `${String(8 + Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`);
 

@@ -12,7 +12,7 @@ import { loadForm } from "@/server/pa";
 import { fill } from "@/lib/merge";
 import { toPlain } from "@/lib/email";
 import { isoFromDate, normalizePhone } from "@/lib/normalize";
-import { centralToUtc } from "@/lib/scheduledText";
+import { centralToUtc, quietNow } from "@/lib/scheduledText";
 import { partnerFromAnswers } from "@/lib/partners";
 import { resolveRecipients, type DealPersonContact } from "@/lib/autoSend";
 import type { AutoSend, Phase } from "@/lib/templates";
@@ -53,11 +53,14 @@ export async function autoSender(t: { autoSend: unknown; assigneeId: string | nu
 }
 
 export async function sendDueAutoTasks(now = new Date()): Promise<number> {
+  const quiet = quietNow(now);
   const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
   const due = (await db.task.findMany({
     where: { autoState: "pending", completedAt: null, deletedAt: null, dueDate: { lte: today }, kind: { in: ["text", "email"] } },
     orderBy: { dueDate: "asc" }, take: 50,
-  })).filter((t) => (autoSendAt(t)?.getTime() ?? Infinity) <= now.getTime()).slice(0, 20);
+  })).filter((t) => (autoSendAt(t)?.getTime() ?? Infinity) <= now.getTime())
+    // Texts wait out quiet hours (8pm–8am Central) and go at 8am; emails go any time.
+    .filter((t) => t.kind !== "text" || !quiet).slice(0, 20);
   let sent = 0;
   for (const t of due) {
     const claim = await db.task.updateMany({ where: { id: t.id, autoState: "pending", completedAt: null }, data: { autoState: "sending" } });

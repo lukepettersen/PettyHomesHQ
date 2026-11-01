@@ -19,3 +19,13 @@ describe("scheduled texts", () => {
   it("offers half hours from 8am to 8pm", () => { expect(SCHEDULE_TIMES[0]).toBe("08:00"); expect(SCHEDULE_TIMES[1]).toBe("08:30"); expect(SCHEDULE_TIMES.at(-1)).toBe("20:00"); });
   it("labels the time in Central", () => { expect(scheduleLabel(new Date("2026-10-30T14:15:00Z"))).toBe("Fri Oct 30 at 9:15am"); });
 });
+
+describe("quiet hours for automatic texts (owner 2026-11-01)", () => {
+  it("is quiet before 8am and after 8pm Central", async () => {
+    const { quietNow } = await import("./scheduledText");
+    expect(quietNow(new Date("2026-11-03T13:59:00Z"))).toBe(true); // 7:59am CST
+    expect(quietNow(new Date("2026-11-03T14:00:00Z"))).toBe(false); // 8:00am
+    expect(quietNow(new Date("2026-11-04T02:00:00Z"))).toBe(false); // 8:00pm
+    expect(quietNow(new Date("2026-11-04T02:01:00Z"))).toBe(true); // 8:01pm
+  });
+});

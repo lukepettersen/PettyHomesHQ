@@ -807,7 +807,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
   on the timeline (texts to two or more numbers go as one group text when group texting is on; texts still respect
   STOP, quiet hours and the daily limit). Anyone with nothing on file is skipped and noted on the step. It doesn't
   send (and the step stays open to do by hand, the sender and assignee get a bell alert) when no template is picked,
-  a merge field the template needs is blank, or nobody has a number/email. Upcoming automatic steps show on the
+  a merge field the template needs is blank, or nobody has a number/email. Automatic **texts** wait out quiet hours (before 8am / after 8pm Central) and go at 8am; emails go any time (owner 2026-11-01). Upcoming automatic steps show on the
   contact page's Scheduled list (and texts in the sender's Messages → Scheduled) with **Turn off**, which keeps the
   step as a normal one to do by hand; clicking one shows the message it will send, filled in for that person now (with
   any details still missing). An automatic step always keeps its picked time, even when the consult or call it's timed
