@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { createCollection, deleteCollection, deleteSmartList, duplicateSmartList, renameCollection, renameSmartList, saveSidebarOrder } from "./listActions";
 
 type L = { id: string; name: string; count: number };
@@ -18,6 +18,12 @@ export function Sidebar({ collections, currentId, total }: { collections: C[]; c
   const [drag, setDrag] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
   const [error, setError] = useState("");
+  // Phones (owner report 2026-11-01): the lists fold into one "List: …" button above the people, so picking one shows
+  // the people right away; dragging is off on touch screens (it swallowed taps), ⋯ menus still reorder.
+  const [phoneOpen, setPhoneOpen] = useState(false);
+  const [canDrag, setCanDrag] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setCanDrag(window.matchMedia("(pointer: fine)").matches), 0); return () => clearTimeout(t); }, []);
+  const currentName = collections.flatMap((c) => c.lists).find((l) => l.id === currentId)?.name ?? "All people";
   const [, start] = useTransition();
   const router = useRouter();
   // Keep local order in sync when the server sends new data.
@@ -64,7 +70,7 @@ export function Sidebar({ collections, currentId, total }: { collections: C[]; c
     }
   }
   const dnd = (key: string, draggable = true) => ({
-    draggable, onDragStart: (e: React.DragEvent) => { setDrag(key); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", key); },
+    draggable: draggable && canDrag, onDragStart: (e: React.DragEvent) => { setDrag(key); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", key); },
     onDragOver: (e: React.DragEvent) => { if (drag && drag !== key) { e.preventDefault(); setOver(key); } },
     onDragLeave: () => setOver((o) => (o === key ? null : o)),
     onDrop: (e: React.DragEvent) => { e.preventDefault(); onDrop(key); setDrag(null); setOver(null); },
@@ -74,7 +80,14 @@ export function Sidebar({ collections, currentId, total }: { collections: C[]; c
 
   return (
     <aside className="md:sticky md:top-3 md:self-start" aria-label="Smart lists">
-      <Link href="/people" className={`flex justify-between rounded-md px-2.5 py-1.5 text-sm ${!currentId ? "bg-accent-soft font-bold text-accent" : "hover:bg-sunken"}`}>
+      <button type="button" aria-expanded={phoneOpen} onClick={() => setPhoneOpen(!phoneOpen)}
+        className="flex w-full items-center justify-between rounded-lg border border-misty bg-white px-3 py-2.5 text-left md:hidden">
+        <span className="min-w-0 truncate"><span className="text-sm muted">List: </span><b>{currentName}</b></span>
+        <span aria-hidden="true" className={`ml-2 text-xs muted transition-transform ${phoneOpen ? "rotate-180" : ""}`}>▼</span>
+      </button>
+      <div className={`${phoneOpen ? "mt-2 rounded-lg border border-misty bg-white p-2" : "hidden"} md:mt-0 md:block md:border-0 md:bg-transparent md:p-0`}
+        onClick={(e) => { if ((e.target as HTMLElement).closest("a")) setPhoneOpen(false); }}>
+      <Link href="/people" className={`flex justify-between rounded-md px-2.5 py-2.5 text-sm md:py-1.5 ${!currentId ? "bg-accent-soft font-bold text-accent" : "hover:bg-sunken"}`}>
         <span>All people</span><span className="muted">{total}</span>
       </Link>
       {cols.map((c, ci) => {
@@ -89,7 +102,7 @@ export function Sidebar({ collections, currentId, total }: { collections: C[]; c
                 </form>
               ) : (
                 <button type="button" aria-expanded={isOpen} onClick={() => { const n = new Set(open); if (isOpen) n.delete(c.id); else n.add(c.id); setOpen(n); }}
-                  className="flex flex-1 items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm font-bold hover:bg-sunken">
+                  className="flex flex-1 items-center gap-1.5 rounded-md px-2 py-2.5 text-left text-sm font-bold hover:bg-sunken md:py-1.5">
                   <span aria-hidden="true" className={`text-[10px] muted transition-transform ${isOpen ? "rotate-90" : ""}`}>▶</span>{c.name}
                 </button>
               )}
@@ -116,11 +129,11 @@ export function Sidebar({ collections, currentId, total }: { collections: C[]; c
                             <button className="btn px-2">Save</button>
                           </form>
                         ) : (
-                          <Link href={`/people?list=${l.id}`} draggable={false} className={`flex flex-1 justify-between rounded-md px-2.5 py-1.5 text-sm ${l.id === currentId ? "bg-accent-soft font-bold text-accent" : "hover:bg-sunken"}`}>
+                          <Link href={`/people?list=${l.id}`} draggable={false} className={`flex flex-1 justify-between rounded-md px-2.5 py-2.5 text-sm md:py-1.5 ${l.id === currentId ? "bg-accent-soft font-bold text-accent" : "hover:bg-sunken"}`}>
                             <span>{l.name}</span><span className="muted">{l.count}</span>
                           </Link>
                         )}
-                        <button type="button" aria-label={`Options for ${l.name}`} className="rounded px-1.5 py-1 muted opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-sunken hover:text-charcoal" onClick={() => setMenu(menu === lk ? null : lk)}>⋯</button>
+                        <button type="button" aria-label={`Options for ${l.name}`} className="rounded px-2 py-2 muted hover:bg-sunken hover:text-charcoal md:px-1.5 md:py-1 md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100" onClick={() => setMenu(menu === lk ? null : lk)}>⋯</button>
                       </div>
                       {menu === lk && (
                         <div className="my-1 ml-2 flex flex-wrap items-center gap-1 rounded-lg border border-misty bg-white p-1.5">
@@ -151,8 +164,9 @@ export function Sidebar({ collections, currentId, total }: { collections: C[]; c
         onClick={() => run(() => createCollection("New collection"), (r) => { const id = (r as { ok: true; data?: { id: string } }).data?.id; if (id) setRenaming({ key: `c:${id}`, value: "New collection" }); })}>
         + New collection
       </button>
-      <p className="mt-2 px-2.5 text-xs muted">Drag lists and collections to reorder or move them, or use ⋯.</p>
+      <p className="mt-2 px-2.5 text-xs muted">{canDrag ? "Drag lists and collections to reorder or move them, or use ⋯." : "Use ⋯ to rename, reorder or move lists."}</p>
       {error && <p role="alert" className="mt-2 px-2.5 text-sm text-bad">{error}</p>}
+      </div>
     </aside>
   );
 }

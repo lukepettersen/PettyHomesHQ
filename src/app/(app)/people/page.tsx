@@ -40,8 +40,8 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
             <h1 className="text-2xl font-extrabold">{current?.name ?? (sp.new ? "New smart list" : "All people")}</h1>
             <span className="muted">{shown.length} {shown.length === 1 ? "person" : "people"}</span>
           </div>
-          <div className="flex flex-1 justify-end gap-2" style={{ minWidth: 260 }}>
-            <form className="relative w-full max-w-sm" action="/people">
+          <div className="flex flex-1 flex-wrap justify-end gap-2" style={{ minWidth: 260 }}>
+            <form className="relative w-full basis-full sm:max-w-sm sm:basis-auto" action="/people">
               <svg aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
               {sp.list && <input type="hidden" name="list" value={sp.list} />}
               {sp.f && <input type="hidden" name="f" value={sp.f} />}

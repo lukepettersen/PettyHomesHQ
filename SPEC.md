@@ -151,6 +151,9 @@ Principles:
   box has a magnifying glass. **Filters**: added filters are chips with × (and Clear all on All people); + Add filter
   opens a small pop-up with the same fields and conditions, a search box for long option lists, and options as pills
   to tap ("2 picked").
+- **On a phone** *(owner report 2026-11-01)*: collections and lists fold into one "List: <name> ▼" button above the
+  people; picking a list closes it and shows that list. Rows are bigger to tap, ⋯ is always visible, and drag to
+  reorder is off on touch screens (⋯ → ↑/↓/Move to… instead). The search box gets its own row.
 - Left: **All people**, then **collections** containing **smart lists** (saved filters).
   - Smart lists: filter builder with fields Stage, Tag, Source, Deal status, Follow-up,
     Last contact (more/less than N days), Due for a touch, Assigned to, **Has an upcoming
