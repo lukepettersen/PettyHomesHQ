@@ -2,8 +2,8 @@
 // Dates are ISO "YYYY-MM-DD" strings for Central-time calendar days.
 import { splitCouple } from "@/lib/normalize";
 
-export type Repeat = "DAILY" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "YEARLY";
-export const REPEATS: [Repeat, string][] = [["DAILY", "Daily"], ["WEEKLY", "Weekly"], ["BIWEEKLY", "Every other week"], ["MONTHLY", "Monthly"], ["YEARLY", "Yearly"]];
+export type Repeat = "DAILY" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY";
+export const REPEATS: [Repeat, string][] = [["DAILY", "Daily"], ["WEEKLY", "Weekly"], ["BIWEEKLY", "Every other week"], ["MONTHLY", "Monthly"], ["QUARTERLY", "Quarterly"], ["YEARLY", "Yearly"]]; // Quarterly: every 3 months (owner request 2026-11-01)
 export const repeatLabel = (r: string | null | undefined) => REPEATS.find(([k]) => k === r)?.[1] ?? "";
 
 export const PRIORITIES = ["None", "Low", "Medium", "High"];
@@ -44,6 +44,7 @@ export function nextDue(iso: string, repeat: Repeat): string {
     case "WEEKLY": return addDays(iso, 7);
     case "BIWEEKLY": return addDays(iso, 14);
     case "MONTHLY": return addMonths(iso, 1);
+    case "QUARTERLY": return addMonths(iso, 3);
     case "YEARLY": return addMonths(iso, 12);
   }
 }
@@ -106,6 +107,7 @@ export function parseQuickAdd(text: string, today: string): QuickAdd {
   let m: RegExpMatchArray | null;
 
   if (take(/\s(every\s+(other|2|two)\s+weeks?|bi-?weekly)(?=\s)/i)) out.repeat = "BIWEEKLY";
+  else if (take(/\s(every\s+(quarter|3\s+months|three\s+months)|quarterly)(?=\s)/i)) out.repeat = "QUARTERLY";
   else if ((m = take(/\s(every\s+(day|week|month|year)|daily|weekly|monthly|yearly)(?=\s)/i))) {
     const w = (m[2] ?? m[1]).toLowerCase();
     out.repeat = w.startsWith("da") ? "DAILY" : w.startsWith("w") ? "WEEKLY" : w.startsWith("m") ? "MONTHLY" : "YEARLY";

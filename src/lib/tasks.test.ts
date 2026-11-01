@@ -151,3 +151,11 @@ describe("quick add: picking the right person (owner report 2026-10-30)", () => 
     expect(stripPersonWord(q.title, q.personWord!)).toBe("call about the inspection");
   });
 });
+
+describe("quarterly repeat (owner request 2026-11-01)", () => {
+  it("repeats every 3 months and quick add understands it", () => {
+    expect(nextDue("2026-11-01", "QUARTERLY")).toBe("2027-02-01");
+    expect(parseQuickAdd("submit MN wage report quarterly", "2026-11-01").repeat).toBe("QUARTERLY");
+    expect(parseQuickAdd("pay estimated taxes every quarter", "2026-11-01").repeat).toBe("QUARTERLY");
+  });
+});
