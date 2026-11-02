@@ -17,6 +17,7 @@ export const MERGE_FIELDS: [string, string][] = [
   ["next_consult", "Next consult (buyer or seller)"], ["next_showing", "Next showing"], ["next_phone_call", "Next phone call"],
   ["showing_address", "Showing address"], ["showing_date", "Showing date"], ["showing_time", "Showing time"], ["showing_agent_company", "Showing agent's company"],
   ["agent_name", "Luke's full name"], ["agent_first_name", "Luke's first name"], ["assistant_name", "Assistant's name"], ["my_name", "Your name"], ["my_first_name", "Your first name"],
+  ["hq_link", "Link to this contact in HQ (team only)"],
 ];
 
 export type MergeCtx = {
@@ -26,6 +27,8 @@ export type MergeCtx = {
   dates?: Partial<Record<"finalAcceptance" | "inspection" | "writtenStatement" | "closing", string | null>>;
   inspAppt?: string | null; lender?: string | null; titleCompany?: string | null;
   agentName?: string; assistantName?: string; myName?: string;
+  /** The contact's page in HQ, for messages to the team (owner request 2026-11-02); only teammates can open it. */
+  hqLink?: string;
   /** Their upcoming appointments, soonest first (owner request 2026-10-29). */
   appts?: { type: string; label: string; date: string; start: string | null; location: string }[];
   extra?: Record<string, string>; // answers from the contract and file, already formatted (formValues)
@@ -57,7 +60,7 @@ export function mergeValues(c: MergeCtx): Record<string, string> {
   const home = (c.homeAddress ?? "").split(",").map((x) => x.trim());
   const base: Record<string, string> = {
     primary_first_name: firsts[0] ?? "", partner_first_name: firsts[1] ?? "",
-    email: c.email ?? "", phone: c.phone ?? "", street: home[0] ?? "", city: home[1] ?? "", my_first_name: (c.myName ?? "").split(/\s+/)[0],
+    email: c.email ?? "", phone: c.phone ?? "", street: home[0] ?? "", city: home[1] ?? "", my_first_name: (c.myName ?? "").split(/\s+/)[0], hq_link: c.hqLink ?? "",
     first_name: first, last_name: last, full_name: c.personName, mailing_name: c.mailingName || c.personName,
     address: c.address ?? "", price: c.price ? `$${c.price.toLocaleString("en-US")}` : "",
     final_acceptance_date: d.finalAcceptance ? longDate(d.finalAcceptance) : "", inspection_date: d.inspection ? longDate(d.inspection) : "",
@@ -102,7 +105,7 @@ const APPTS = ["next_appointment", "next_appointment_date", "next_appointment_ti
 const SHOWING = ["showing_address", "showing_date", "showing_time", "showing_agent_company"];
 // Client details sit under Client, "Your first name" under Team (owner report 2026-11-02: phone and email were under "Contract").
 const CLIENT = ["first_name", "last_name", "full_name", "mailing_name", "primary_first_name", "partner_first_name", "phone", "email", "street", "city"];
-const TEAM = ["agent_name", "agent_first_name", "assistant_name", "my_name", "my_first_name"];
+const TEAM = ["agent_name", "agent_first_name", "assistant_name", "my_name", "my_first_name", "hq_link"];
 const labelOf = (k: string) => MERGE_FIELDS.find(([x]) => x === k)![1];
 
 /** Every merge field, grouped: client, each form's questions (first form to ask wins), then the team. */
@@ -154,7 +157,7 @@ export function fill(text: string, values: Record<string, string>): { text: stri
 
 /** Sample values for the template preview in Admin. */
 export const SAMPLE: MergeCtx = {
-  personName: "Sam & Lena Ortiz", address: "2215 Hillside Ave, Edina", price: 389000,
+  personName: "Sam & Lena Ortiz", address: "2215 Hillside Ave, Edina", price: 389000, hqLink: "https://hq.pettyhomes.com/people/sample",
   dates: { finalAcceptance: "2026-10-01", inspection: "2026-10-20", writtenStatement: "2026-11-01", closing: "2026-11-20" },
   inspAppt: "2026-10-16T10:00", appts: [{ type: "buyer", label: "Buyer Consult", date: "2026-10-14", start: "14:00", location: "Petty Homes office" }], lender: "Pat Lee", titleCompany: "Edina Title", agentName: "Luke Pettersen", assistantName: "Alyssa Chakiton", myName: "Alyssa Chakiton",
   extra: { earnest_money: "$5,000", seller_contributions: "$3,000", commission: "2.7%", bac: "$695", commission_amount: "$10,503", financing: "Conventional",

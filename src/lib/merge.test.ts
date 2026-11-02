@@ -64,3 +64,11 @@ describe("appointment merge fields", () => {
   });
 });
 
+
+describe("hq_link (owner request 2026-11-02)", () => {
+  it("fills the contact's HQ page and is listed under Team", async () => {
+    const { mergeValues, formMergeFields } = await import("./merge");
+    expect(mergeValues({ personName: "Sam Ortiz", hqLink: "https://hq.example/people/p1" }).hq_link).toBe("https://hq.example/people/p1");
+    expect(formMergeFields([]).find((f) => f.key === "hq_link")?.group).toBe("Team");
+  });
+});

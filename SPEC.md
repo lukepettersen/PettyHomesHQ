@@ -831,6 +831,9 @@ scrolls with it until its last card is on screen, then stays put while the middl
   appointments (today's only if not started yet): {next_appointment} ("Tuesday, November 3 at 2:00pm"), its date,
   time, type and location, and {next_consult} (buyer or seller), {next_showing}, {next_phone_call}. Listed under
   "Appointments" in the merge field picker.
+- **{hq_link}** *(owner request 2026-11-02)*: "Link to this contact in HQ (team only)", under Team: the contact's page in
+  HQ, for texts/emails to teammates (e.g. an automatic step that tells Alyssa about a new lead). Only signed-in
+  teammates can open it. Client phone, email, street, city and first names are listed under Client.
 - **Scheduled emails** *(owner request 2026-10-29)*: **Schedule** sits next to Send email (contact page and Draft email
   on checklist steps), with the same calendar date and 30-minute times as texts. It goes out from the scheduler's Gmail
   within a minute of that time (same minute timer), with its recipients, signature choice and attachments, goes on the
