@@ -11,7 +11,14 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const got = Buffer.from(req.headers.get("x-cron-key") ?? ""), want = Buffer.from(cronKey());
   if (got.length !== want.length || !timingSafeEqual(got, want)) return Response.json({ error: "Not allowed" }, { status: 403 });
-  // Gmail is read here too (at most every 3 minutes), so ShowingTime emails are handled even when nobody has HQ open (owner request 2026-11-01).
-  const gmail = await syncGmail().catch(() => 0);
-  return Response.json({ sent: await sendDueTexts(), auto: await sendDueAutoTasks(), emails: await sendDueEmails(), asks: await sendDueAsks(), gmail });
+  // Each job runs on its own, so one that fails or is slow can't hold up the others (owner report 2026-11-02:
+  // a same-day call's email waited). Sends go first; Gmail is read last (at most every 3 minutes), so ShowingTime
+  // emails are handled even when nobody has HQ open (owner request 2026-11-01).
+  const run = async (name: string, job: () => Promise<number>) => {
+    try { return await job(); } catch (e) { console.error(`Minute timer: ${name} failed:`, e instanceof Error ? e.message : "unknown error"); return 0; }
+  };
+  const sent = await run("scheduled texts", sendDueTexts), auto = await run("automatic steps", () => sendDueAutoTasks());
+  const emails = await run("scheduled emails", sendDueEmails), asks = await run("check-in texts", sendDueAsks);
+  const gmail = await run("Gmail", syncGmail);
+  return Response.json({ sent, auto, emails, asks, gmail });
 }

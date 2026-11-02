@@ -96,7 +96,7 @@ async function loadAutoSteps(where: { personId?: string; createdById?: string },
     const preview = !msg ? "No message template is picked for this step yet (Admin → Checklists)."
       : `${t.kind === "email" ? `Subject: ${msg.subject.text}\n\n` : ""}${msg.body.text}${missing.length ? `\n\n⚠️ Not filled in yet: ${missing.join(", ")}. It won't send until they are.` : ""}`;
     return [{
-      id: `task:${t.id}`, at: at?.getTime() ?? Infinity, when: at ? scheduleLabel(at) : "No date yet",
+      id: `task:${t.id}`, at: at?.getTime() ?? Infinity, when: !at ? "No date yet" : t.autoState === "pending" && at.getTime() <= Date.now() ? "Sending now" : t.autoState === "sending" ? "Sending now" : scheduleLabel(at),
       to: toLabel(auto.to, { client: t.person?.name ?? "Client", ...Object.fromEntries(roles) }),
       body: `Automatic ${t.kind === "email" ? "email" : "text"} from the ${lists.get(t.templateId ?? "") ?? ""} checklist: ${t.title}\n\n${preview}`.replace("the  checklist", "the checklist"), by: from,
       mine: canCancelAny || t.assigneeId === userId || first(userId).toLowerCase() === from.toLowerCase(),
