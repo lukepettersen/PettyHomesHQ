@@ -206,3 +206,16 @@ export async function saveTools(input: z.input<typeof toolRow>[]) {
     revalidatePath("/", "layout");
   });
 }
+
+/** Kinds of mass email people can unsubscribe from one at a time (owner request 2026-11-02). */
+export async function saveEmailKinds(input: string[]) {
+  return guarded("editMessageTemplates", async (user) => {
+    const { cleanKinds } = await import("@/lib/bulkEmail");
+    const { EMAIL_KINDS_KEY } = await import("@/server/emailKinds");
+    const kinds = cleanKinds(z.array(z.string().max(60)).max(20).parse(input));
+    if (!kinds.length) throw new UserError("Keep at least one kind of email.");
+    await db.appSetting.upsert({ where: { key: EMAIL_KINDS_KEY }, update: { value: kinds }, create: { key: EMAIL_KINDS_KEY, value: kinds } });
+    await logActivity(user.id, "update", "emailKinds", null, `Mass email kinds: ${kinds.join(", ")}`);
+    revalidatePath("/admin/email-templates");
+  });
+}

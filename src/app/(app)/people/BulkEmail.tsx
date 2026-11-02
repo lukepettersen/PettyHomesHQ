@@ -7,14 +7,14 @@ import { FormatBar } from "@/components/FormatBar";
 import { TemplateSearch } from "@/components/TemplateSearch";
 import { AttachFiles, type Attached } from "@/components/AttachFiles";
 import { toHtml } from "@/lib/email";
-import { prepareBulkEmail, previewBulkEmail, sendBulkEmailBatch } from "./bulkEmailActions";
+import { bulkEmailStatus, prepareBulkEmail, previewBulkEmail, startBulkEmail, stopBulkEmail } from "./bulkEmailActions";
 
-type Prep = { recipients: { personId: string; name: string }[]; skipped: { noEmail: number; optedOut: number }; sendsFrom: string | null; address: string; templates: { id: string; name: string; subject: string; body: string }[] };
-const BATCH = 5;
+type Prep = { recipients: { personId: string; name: string }[]; skipped: { noEmail: number; optedOut: number }; sendsFrom: string | null; kinds: string[]; address: string; templates: { id: string; name: string; subject: string; body: string }[] };
 
 /**
  * People → select → Email (SPEC.md §6.2): a template or your own words with merge fields, a preview as one
- * person gets it, then one email each from your Gmail, a few at a time with a progress bar.
+ * person gets it, then one email each from your Gmail. HQ sends them in the background (about 40 a minute), so this
+ * can be closed; the progress bar just watches (owner report 2026-11-02).
  */
 export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: () => void }) {
   const router = useRouter();
@@ -24,18 +24,19 @@ export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: ()
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [address, setAddress] = useState("");
+  const [kind, setKind] = useState(""); // what kind of email: people unsubscribed from just this kind are skipped
   const [signature, setSignature] = useState(true);
   const [files, setFiles] = useState<Attached[]>([]);
   const [preview, setPreview] = useState<{ name: string; subject: string; body: string; missing: string[] } | null>(null);
   const [confirm, setConfirm] = useState(false);
-  const [progress, setProgress] = useState<{ done: number; sent: number; skipped: number; waiting: boolean; failed: { name: string; error: string }[]; finished: boolean } | null>(null);
+  const [progress, setProgress] = useState<{ total: number; done: number; sent: number; skipped: number; waiting: boolean; failed: { name: string; error: string }[]; finished: boolean; stopped: boolean } | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const stop = useRef(false);
   const box = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    prepareBulkEmail({ ids }).then((r) => { if (!r.ok) setError(r.error); else { setPrep(r.data!); setAddress(r.data!.address); } });
-  }, [ids]);
+    prepareBulkEmail({ ids, kind }).then((r) => { if (!r.ok) setError(r.error); else { setPrep(r.data!); setAddress((a) => a || r.data!.address); } });
+  }, [ids, kind]);
 
   const pick = (id: string) => {
     setTemplateId(id); setPreview(null); setConfirm(false);
@@ -50,40 +51,33 @@ export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: ()
   };
   const send = async () => {
     if (!confirm) { setConfirm(true); return; }
-    setConfirm(false); setError(""); stop.current = false;
-    const list = prep!.recipients.map((r) => r.personId);
-    const batch = crypto.randomUUID();
-    let state = { done: 0, sent: 0, skipped: 0, waiting: false, failed: [] as { name: string; error: string }[], finished: false };
-    setProgress(state);
-    const queue = [...list];
-    let pauses = 0;
-    while (queue.length && !stop.current) {
-      const chunk = queue.splice(0, BATCH);
-      const r = await sendBulkEmailBatch({ personIds: chunk, subject, body, address, signature, batch, attachments: files });
-      if (!r.ok) { setError(r.error); break; }
-      const retry = r.data!.retry ?? [];
-      state = { ...state, done: list.length - queue.length - retry.length, sent: state.sent + r.data!.sent, skipped: state.skipped + (r.data!.skipped ?? 0), failed: [...state.failed, ...r.data!.failed] };
-      setProgress(state);
-      if (r.data!.failed.some((f) => /isn't connected|didn't let HQ in/i.test(f.error))) break;
-      if (retry.length) {
-        // Gmail's per-minute limit: wait a minute and carry on with the rest (owner 2026-10-27).
-        if (++pauses > 6) { state = { ...state, failed: [...state.failed, { name: `${retry.length + queue.length} people`, error: "Gmail kept saying slow down. Send it again later; anyone who already got it is skipped." }] }; break; }
-        queue.unshift(...retry);
-        setProgress({ ...state, waiting: true });
-        await new Promise((ok) => setTimeout(ok, 65000));
-        setProgress((p) => (p ? { ...p, waiting: false } : p));
-        continue;
-      }
-      // About 50 a minute, under Gmail's per-minute limit; no pause when everyone in the group was skipped.
-      if (r.data!.sent || r.data!.failed.length) await new Promise((ok) => setTimeout(ok, 6000));
-    }
-    setProgress({ ...state, finished: true });
-    router.refresh();
+    setConfirm(false); setError("");
+    const r = await startBulkEmail({ personIds: prep!.recipients.map((x) => x.personId), subject, body, address, signature, kind, attachments: files });
+    if (!r.ok) { setError(r.error); return; }
+    setJobId(r.data!.id);
+    setProgress({ total: r.data!.total, done: 0, sent: 0, skipped: 0, waiting: false, failed: [], finished: false, stopped: false });
   };
+  // Watches the send every few seconds while this is open.
+  useEffect(() => {
+    if (!jobId) return;
+    let live = true;
+    const look = async () => {
+      const r = await bulkEmailStatus(jobId);
+      if (!live) return;
+      if (!r.ok) { setError(r.error); return; }
+      const d = r.data!;
+      setProgress({ total: d.total, done: d.done, sent: d.sent, skipped: d.skipped, waiting: d.waiting, failed: d.failed, finished: d.state !== "sending", stopped: d.state === "stopped" });
+      if (d.error && d.state === "stopped" && d.error !== "Stopped.") setError(d.error);
+      if (d.state !== "sending") { router.refresh(); return; }
+      setTimeout(look, 4000);
+    };
+    look();
+    return () => { live = false; };
+  }, [jobId, router]);
 
   const n = prep?.recipients.length ?? 0;
   return (
-    <Modal title="Email these people" onClose={progress && !progress.finished ? () => {} : onClose} wide>
+    <Modal title="Email these people" onClose={onClose} wide>
       {!prep && !error && <p className="text-sm muted">Checking who can get it…</p>}
       {prep && !prep.sendsFrom && <p className="rounded-md bg-sunken px-3 py-2 text-sm">Gmail isn&apos;t connected. An Admin can connect it in Admin → Integrations (Connect Google).</p>}
       {prep && prep.sendsFrom && !progress && (
@@ -92,6 +86,12 @@ export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: ()
             <b>{n.toLocaleString()} {n === 1 ? "person" : "people"}</b> will get their own email from {prep.sendsFrom}.
             {(prep.skipped.noEmail > 0 || prep.skipped.optedOut > 0) && <span className="muted"> Skipped: {[prep.skipped.noEmail && `${prep.skipped.noEmail} with no email`, prep.skipped.optedOut && `${prep.skipped.optedOut} unsubscribed or bounced`].filter(Boolean).join(", ")}.</span>}
           </p>
+          <label className="label">What kind of email is this?
+            <select className="input" value={kind} onChange={(e) => { setKind(e.target.value); setConfirm(false); }}>
+              <option value="">Pick one…</option>{prep.kinds.map((k) => <option key={k} value={k}>{k}</option>)}
+            </select>
+            <span className="text-xs font-normal muted">People who unsubscribed from just this kind are skipped; the unsubscribe link lets them pick which kinds they don&apos;t want.</span>
+          </label>
           <label className="label">Template<TemplateSearch templates={prep.templates} value={templateId} onPick={pick} noneLabel="No email templates yet" /></label>
           <label className="label">Subject<input className="input" value={subject} onChange={(e) => { setSubject(e.target.value); setPreview(null); setConfirm(false); }} /></label>
           <div className="label">Message
@@ -120,7 +120,7 @@ export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: ()
           <div className="flex flex-wrap justify-end gap-2">
             <button type="button" className="btn" onClick={onClose}>Cancel</button>
             <button type="button" className="btn" disabled={!n || !subject.trim() || !body.trim()} onClick={showPreview}>Preview</button>
-            <button type="button" className="btn btn-primary" disabled={!n || !subject.trim() || !body.trim() || address.trim().length < 8} onClick={send} onBlur={() => setConfirm(false)}>
+            <button type="button" className="btn btn-primary" disabled={!n || !kind || !subject.trim() || !body.trim() || address.trim().length < 8} onClick={send} onBlur={() => setConfirm(false)}>
               {confirm ? `Click again to send ${n.toLocaleString()} emails` : `Send to ${n.toLocaleString()}`}
             </button>
           </div>
@@ -128,11 +128,14 @@ export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: ()
       )}
       {progress && (
         <div className="flex flex-col gap-3">
-          <div className="h-3 overflow-hidden rounded-full bg-sunken" role="progressbar" aria-valuemin={0} aria-valuemax={n} aria-valuenow={progress.done}>
-            <div className="h-full bg-accent transition-all" style={{ width: `${n ? (progress.done / n) * 100 : 0}%` }} />
+          <div className="h-3 overflow-hidden rounded-full bg-sunken" role="progressbar" aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.done}>
+            <div className="h-full bg-accent transition-all" style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }} />
           </div>
-          <p className="text-sm" aria-live="polite">{progress.finished ? `Done. Sent ${progress.sent.toLocaleString()} of ${n.toLocaleString()}.` : progress.waiting ? `Gmail asked HQ to slow down. Waiting a minute, then sending the rest… (${progress.done.toLocaleString()} of ${n.toLocaleString()}). Keep this page open.` : `Sending… ${progress.done.toLocaleString()} of ${n.toLocaleString()}. Keep this page open.`}
+          <p className="text-sm" aria-live="polite">{progress.finished ? `${progress.stopped ? "Stopped" : "Done"}. Sent ${progress.sent.toLocaleString()} of ${progress.total.toLocaleString()}.`
+            : progress.waiting ? `Gmail asked HQ to slow down. Waiting a minute, then sending the rest… (${progress.done.toLocaleString()} of ${progress.total.toLocaleString()})`
+            : `Sending… ${progress.done.toLocaleString()} of ${progress.total.toLocaleString()} (about 40 a minute).`}
             {progress.skipped > 0 && ` ${progress.skipped.toLocaleString()} already got this mass email in the last 24 hours, so they were skipped.`}</p>
+          {!progress.finished && <p className="text-sm muted">You can close this. HQ keeps sending in the background, even if you close the page; People → Mass emails shows how it&apos;s going.</p>}
           {progress.failed.length > 0 && (
             <details className="text-sm"><summary className="cursor-pointer text-bad">{progress.failed.length} didn&apos;t send</summary>
               <ul className="mt-1 list-disc pl-5">{progress.failed.map((f, i) => <li key={i}>{f.name}: {f.error}</li>)}</ul>
@@ -140,8 +143,8 @@ export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: ()
           )}
           {error && <p role="alert" className="text-sm text-bad">{error}</p>}
           <div className="flex justify-end gap-2">
-            {!progress.finished && <button type="button" className="btn" onClick={() => { stop.current = true; }}>Stop</button>}
-            {progress.finished && <button type="button" className="btn btn-primary" onClick={onClose}>Close</button>}
+            {!progress.finished && jobId && <button type="button" className="btn" onClick={async () => { const r = await stopBulkEmail(jobId); if (!r.ok) setError(r.error); }}>Stop sending</button>}
+            <button type="button" className="btn btn-primary" onClick={onClose}>Close</button>
           </div>
         </div>
       )}

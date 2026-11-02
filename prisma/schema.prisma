@@ -764,3 +764,30 @@ model Showing {
 
   @@index([agentId])
 }
+
+/// A mass email being sent in the background by the minute timer (owner report 2026-11-02: a send from the browser
+/// stopped at 55 of 241 when HQ restarted). One row per send; recipients are worked through a group at a time.
+model BulkEmailJob {
+  id          String    @id @default(cuid())
+  userId      String // who it sends as (their Gmail)
+  kind        String // the kind of mass email, for unsubscribe choices
+  subject     String
+  body        String
+  address     String // business mailing address in the footer
+  signature   Boolean   @default(true)
+  batch       String // EmailTrack batch, for open counts
+  attachments Json      @default("[]")
+  personIds   Json // everyone it's for, in order
+  doneIds     Json      @default("[]") // handled so far (sent, skipped or failed)
+  sent        Int       @default(0)
+  skipped     Int       @default(0) // already got it in the last 24 hours
+  failed      Json      @default("[]") // [{ name, error }]
+  state       String    @default("sending") // sending | done | stopped
+  error       String?
+  waitUntil   DateTime? // Gmail asked to slow down
+  lockedUntil DateTime? // a timer tick is working on it
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([state])
+}

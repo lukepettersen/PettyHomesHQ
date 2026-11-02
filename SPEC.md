@@ -212,16 +212,21 @@ Principles:
 - Bulk actions on selected rows (Add tag; **Remove tag** picks from the existing tags, and both say how many people
   changed, owner request 2026-10-27): Add tag, Change stage, Set follow-up, Assign, Export,
   Delete, **Email** *(owner request 2026-10-20)*.
-- **Mass email (Email):** up to 1,000 people at a time. Pick a template or write it (merge fields fill in
-  for each person), preview as the first person gets it, then **Send to N** (two-step). Each person gets
-  their own email from the connected Gmail (never CC/BCC), a few at a time with a progress bar and Stop
-  (about 50 a minute; when Gmail says slow down, HQ waits a minute and carries on; sending the same mass email
-  again within 24 hours skips everyone who already got it, so a stopped send can simply be re-sent; owner request
-  2026-10-27);
-  it goes on their timeline. Skipped: no email address, or tagged Email Unsubscribed, Unsubscribed or
-  Bounced. Every email ends with the business mailing address (asked once, remembered) and an
-  **Unsubscribe** link: a public page with an Unsubscribe button (so link scanners can't trigger it) that
-  tags them **Email Unsubscribed** (texting isn't affected) and notes it on their timeline.
+- **Mass email (Email):** up to 1,000 people at a time. Pick **what kind of email it is** (owner request 2026-11-02;
+  the kinds are edited in Admin → Email templates, default Monthly newsletter, Events & invites, Market updates), pick a
+  template or write it (merge fields fill in for each person), preview as the first person gets it, then **Send to N**
+  (two-step). Each person gets their own email from the connected Gmail (never CC/BCC). **HQ sends it in the
+  background** (owner report 2026-11-02: a send from the browser stopped at 55 of 241 when HQ restarted): about 40 a
+  minute on the minute timer, so the box, the page or the computer can be closed and an update doesn't stop it; the box
+  shows progress and **Stop sending**, and People → Mass emails shows sends still going. When Gmail says slow down, HQ
+  waits a minute and carries on; sending the same mass email again within 24 hours skips everyone who already got it
+  (owner request 2026-10-27).
+  It goes on their timeline. Skipped: no email address, tagged Email Unsubscribed, Unsubscribed or Bounced, or
+  unsubscribed from **this kind** ("Unsubscribed: <kind>"). Every email ends with the business mailing address (asked
+  once, remembered) and an **Unsubscribe** link: a public page where they tick the kinds they don't want (the kind of
+  the email they came from starts ticked) or **All emails from Petty Homes**, then press Unsubscribe (so link scanners
+  can't trigger it). All tags them **Email Unsubscribed**; a kind tags them "Unsubscribed: <kind>" (texting isn't
+  affected either way), noted on their timeline. People who unsubscribed before 2026-11-02 stay unsubscribed from all.
 - **Attachments** *(owner request 2026-10-21)*: **📎 Attach file** on mass emails and the timeline Email
   tab (PDFs, Word/Excel, images; up to 5 files, 20 MB total). Files upload once to the private file
   storage and go with each email; the timeline notes the file names. Needs File storage connected.

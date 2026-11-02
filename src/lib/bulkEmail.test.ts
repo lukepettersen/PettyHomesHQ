@@ -23,3 +23,17 @@ describe("mass email", () => {
     expect(bulkFooter(" 123 Main St, Edina, MN ", "https://hq/u")).toBe("\n\n---\nPetty Homes LLC · 123 Main St, Edina, MN\nDon't want these emails? [Unsubscribe](https://hq/u)");
   });
 });
+
+describe("unsubscribe by kind (owner request 2026-11-02)", () => {
+  it("skips people unsubscribed from this kind or from everything, not other kinds", async () => {
+    const { pickRecipients, kindTag, cleanKinds } = await import("./bulkEmail");
+    const people = [
+      { id: "a", name: "A", emails: ["a@x.com"], tags: [kindTag("Monthly newsletter")] },
+      { id: "b", name: "B", emails: ["b@x.com"], tags: ["Email Unsubscribed"] },
+      { id: "c", name: "C", emails: ["c@x.com"], tags: [] },
+    ];
+    expect(pickRecipients(people, "Events & invites").send.map((r) => r.personId)).toEqual(["a", "c"]);
+    expect(pickRecipients(people, "Monthly newsletter").send.map((r) => r.personId)).toEqual(["c"]);
+    expect(cleanKinds([" Events  &  invites ", "events & invites", "", 5, "Newsletter"])).toEqual(["Events & invites", "Newsletter"]);
+  });
+});
