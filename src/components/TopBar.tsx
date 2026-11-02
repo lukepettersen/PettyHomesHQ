@@ -15,7 +15,7 @@ export function TopBar({ name, tools, canEditTools, bell, texts, claude, owner =
     <header className="flex flex-wrap items-center gap-x-4 bg-moss px-4 text-misty xl:gap-x-6">
       <Link href="/people" className="flex items-center gap-2 py-3 text-white">
         <Logo />
-        <span className="font-extrabold tracking-wide whitespace-nowrap">PETTY HOMES <span className="rounded bg-misty px-1.5 text-xs text-charcoal">HQ</span></span>
+        <span className="font-extrabold tracking-wide whitespace-nowrap"><span className="hidden sm:inline">PETTY HOMES </span><span className="rounded bg-misty px-1.5 text-xs text-charcoal">HQ</span></span>
       </Link>
       <Suspense fallback={<nav aria-label="Main" className="flex-1" />}><NavLinks tools={tools} canEditTools={canEditTools} texts={texts} owner={owner} order={order} /></Suspense>
       <SearchBox />

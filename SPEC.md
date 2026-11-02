@@ -85,7 +85,7 @@ Principles:
 ## 5. App layout (all pages)
 
 - **Top bar:** logo + "Petty Homes HQ", then tabs in this order:
-  **Whiteboard (owner only) · Tasks · Messages · People · Pipeline · Tools ▾ · Admin** (owner 2026-11-02; the order is set in Admin → Top bar, for everyone), and a notification **bell** on
+  **Whiteboard (owner only) · Tasks · Messages · People · Pipeline · Tools ▾ · Admin** (owner 2026-11-02; the order is set in Admin → Top bar, for everyone). On a phone the first four tabs share the width (Whiteboard shows as "Board") and the rest (plus the Tools links) are under **More ▾**; the header shows just the logo and "HQ" so search, mic, bell and Sign out fit beside it, and a notification **bell** on
   the right.
 - **Search on phones** *(owner request 2026-10-19)*: a magnifier in the top bar opens a full-width
   search bar (recent contacts first, results as you type).
