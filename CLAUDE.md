@@ -126,6 +126,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 - Social post descriptions on deals: `src/lib/social.ts` (slots; tested), `ClientFile.social` JSON, `saveSocialPost` in `pipeline/actions.ts`, `people/[id]/SocialPosts.tsx`
 - Website leads: `src/lib/leads.ts` (Elementor webhook fields, note; tested), `src/server/leads.ts` (secret link key in AppSetting `leads.key`, `receiveLead`), public `src/app/api/leads/` (key-checked), Admin → Integrations `WebsiteLeads.tsx`, trigger `lead:website`
 - Showings from ShowingTime: `src/lib/showingTime.ts` (email parsing, `streetKey`, `pickListingTemplate`; tested), `src/server/showings.ts` (`onShowingEmail` from `syncSince` in `src/server/google.ts`, `loadShowings`), model `Showing` + `Task.showingId`, trigger `showing:confirmed`, anchors `showing`/`showingEnd`, step `matchListing` (used in `autoMessage`), `people/[id]/ShowingsCard.tsx`; Gmail also synced by the minute timer
+- Whiteboard (owner only): `src/lib/whiteboard.ts` (items, `cleanBoard`, `placeNew`; tested), `src/server/whiteboard.ts`, `src/app/(app)/whiteboard/` (page, `WhiteboardApp.tsx`, `saveBoard`); top bar order `src/lib/nav.ts` (tested, AppSetting `nav.order`), `NavLinks.tsx`, Admin → Top bar `admin/topbar/`
 - `src/lib/customFields.ts` — custom field types and value cleaning
 - Owner setup and ops runbook: `docs/ops.md`
 

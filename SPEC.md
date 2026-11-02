@@ -85,7 +85,7 @@ Principles:
 ## 5. App layout (all pages)
 
 - **Top bar:** logo + "Petty Homes HQ", then tabs in this order:
-  **People · Tasks · Messages · Pipeline · Tools ▾ · Admin**, and a notification **bell** on
+  **Whiteboard (owner only) · Tasks · Messages · People · Pipeline · Tools ▾ · Admin** (owner 2026-11-02; the order is set in Admin → Top bar, for everyone), and a notification **bell** on
   the right.
 - **Search on phones** *(owner request 2026-10-19)*: a magnifier in the top bar opens a full-width
   search bar (recent contacts first, results as you type).
@@ -117,6 +117,15 @@ Principles:
   the name "HQ", and opens full screen (web app manifest + Apple touch icon). The icon opens the page you were on
   when you added it, e.g. Tasks (owner request 2026-10-26). Tasks remembers its view (Today, Upcoming, a list) and
   Everyone / Me / teammate on each device, so it reopens exactly as it was left (owner request 2026-10-27).
+
+### Whiteboard *(owner request 2026-11-02; owner only)*
+
+- A private board for the owner (others don't see the tab; the page sends them to Tasks). **+ Sticky note** in 5
+  colors (a color swatch recolors the selected note), **+ Text** for big marker-style writing, **+ Person** searches HQ
+  and puts the name on the board as writing that opens their contact. Click to type; drag (a note's top bar, or the
+  ⠿ grip on text and names) to move; drag a note's corner to resize; A−/A+ resize selected text or names; × twice
+  removes. New items go in the first open spot on screen. It saves itself as you work (AppSetting
+  "whiteboard:<userId>", up to 300 items); stats from the MASTER FILE are left for later.
 
 ## 6. People
 

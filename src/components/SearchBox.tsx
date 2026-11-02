@@ -74,7 +74,7 @@ export function SearchBox() {
           else if (e.key === "Enter") { e.preventDefault(); go(open ? shown[active] : undefined); }
           else if (e.key === "Escape") setOpen(false);
         }}
-        className="w-full min-w-0 flex-1 rounded-md border border-white/20 bg-white/10 px-3 py-2 text-base text-white placeholder:text-misty/70 outline-none focus:bg-white focus:text-charcoal md:w-56 md:py-1.5 md:text-sm lg:w-72" />
+        className="w-full min-w-0 flex-1 rounded-md border border-white/20 bg-white/10 px-3 py-2 text-base text-white placeholder:text-misty/70 outline-none focus:bg-white focus:text-charcoal md:w-48 md:py-1.5 md:text-sm xl:w-56 2xl:w-72" />
       {mobile && <button type="button" className="px-1 text-sm font-semibold text-white md:hidden" onClick={() => { setMobile(false); setOpen(false); }}>Cancel</button>}
       {open && !searching && recent.length > 0 && <p className="absolute left-3 right-3 top-full z-50 mt-1 rounded-t-lg md:left-auto md:right-0 md:w-80 border border-b-0 border-misty bg-white px-3 pt-2 text-xs font-semibold uppercase tracking-wide muted">Recent</p>}
       {open && (searching || recent.length > 0) && (

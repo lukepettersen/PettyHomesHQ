@@ -1,0 +1,25 @@
+import { describe, expect, it } from "vitest";
+import { BOARD, cleanBoard, NOTE_COLORS, placeNew } from "./whiteboard";
+
+describe("whiteboard (owner request 2026-11-02)", () => {
+  it("keeps items on the board with sensible sizes and colors", () => {
+    const out = cleanBoard([
+      { id: "a", kind: "note", x: -50, y: 99999, w: 5000, h: 10, color: "red", text: "Call 10 past clients" },
+      { id: "b", kind: "text", x: 10.4, y: 20.6, size: 500, text: "2026: 40 homes" },
+      { id: "c", kind: "person", x: 5, y: 5, text: "Sam & Lena Ortiz", personId: "p1", color: "#fff" },
+    ]);
+    expect(out[0]).toEqual({ id: "a", kind: "note", text: "Call 10 past clients", x: 0, y: BOARD.h - 30, w: 700, h: 80, color: NOTE_COLORS[0] });
+    expect(out[1]).toEqual({ id: "b", kind: "text", text: "2026: 40 homes", x: 10, y: 21, size: 120 });
+    expect(out[2]).toEqual({ id: "c", kind: "person", text: "Sam & Lena Ortiz", x: 5, y: 5, size: 30, personId: "p1" });
+  });
+  it("refuses junk", () => {
+    expect(() => cleanBoard([{ id: "x", kind: "drawing", x: 0, y: 0 }])).toThrow();
+    expect(() => cleanBoard(new Array(301).fill({ id: "a", kind: "text", x: 0, y: 0 }))).toThrow();
+  });
+  it("puts new items in the first open spot on screen", () => {
+    expect(placeNew({ left: 0, top: 0 }, [])).toEqual({ x: 40, y: 40 });
+    const note = { kind: "note" as const, x: 40, y: 40, w: 220, h: 160, text: "" };
+    expect(placeNew({ left: 0, top: 0 }, [note])).toEqual({ x: 300, y: 40 });
+    expect(placeNew({ left: 500, top: 300 }, [note])).toEqual({ x: 540, y: 340 });
+  });
+});
