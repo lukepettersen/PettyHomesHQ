@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { useDropdown } from "@/components/useDropdown";
 import { markAllNotificationsRead, markNotificationRead } from "@/app/notificationActions";
 import type { BellItem } from "@/server/notifications";
+import { alertHeading } from "@/lib/alerts";
 
 type Bell = { unread: number; items: BellItem[] };
 
@@ -13,8 +14,8 @@ type Bell = { unread: number; items: BellItem[] };
 const seen = () => { try { return new Set<string>(JSON.parse(localStorage.getItem("hq-alerts-seen") ?? "[]")); } catch { return new Set<string>(); } };
 const markSeen = (ids: string[]) => { try { localStorage.setItem("hq-alerts-seen", JSON.stringify([...seen(), ...ids].slice(-200))); } catch { /* private window */ } };
 
-// Texts and missed calls open the conversation in Messages; offers open the contact.
-const heading = (n: BellItem) => (!n.link?.startsWith("/messages") ? "New offer submitted" : n.text.startsWith("Missed call") ? "Missed call" : "New text");
+// Each alert's title (website lead, offer, text, missed call…); texts and missed calls open Messages, the rest the contact.
+const heading = (n: BellItem) => alertHeading(n);
 
 /** @mentions for the signed-in user: unread count, Mark all read, click to open the person. */
 export function Bell({ initial }: { initial: Bell }) {
