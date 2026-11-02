@@ -340,7 +340,7 @@ function AutoSendFields({ step, team, roles, field, onChange }: { step: Step; te
       {a && (
         <>
           <span className="flex flex-wrap items-center gap-2 text-xs font-semibold muted">
-            {!timed && <label className="flex items-center gap-1">at<select className={field} value={a.time} onChange={(e) => onChange({ ...a, time: e.target.value })}>{HALF_HOURS.map((t) => <option key={t} value={t}>{clock(t)}</option>)}</select>on the due date</label>}
+            {!timed && <label className="flex items-center gap-1">at<select className={field} value={a.time} onChange={(e) => onChange({ ...a, time: e.target.value })}><option value="now">Right away</option>{HALF_HOURS.map((t) => <option key={t} value={t}>{clock(t)}</option>)}</select>{a.time === "now" ? <span title="As soon as the checklist starts when the step is due that day; on a later day, at 8:00am. Texts still wait out quiet hours (8pm–8am).">on the due date (8:00am if later)</span> : "on the due date"}</label>}
             {timed && <span>at the step&apos;s time ({step.minutes} min {step.dir === "minutesBefore" ? "before" : "after"})</span>}
             <label className="flex items-center gap-1">from<select className={field} value={a.from} onChange={(e) => onChange({ ...a, from: e.target.value })}><option value="">Whoever the step is assigned to</option>{team.map((t) => <option key={t} value={t}>{t}</option>)}</select></label>
           </span>

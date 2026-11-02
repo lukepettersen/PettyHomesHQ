@@ -88,3 +88,13 @@ describe("Only when: buyer side / seller side (owner request 2026-10-31)", () =>
     expect(triggerLabel("closed:any", [])).toBe("When any contract closes (buyer or seller)");
   });
 });
+
+describe("autoClock (Right away, owner request 2026-11-02)", () => {
+  it("uses the picked time, or now today, or 8:00am on a later day", async () => {
+    const { autoClock } = await import("./templates");
+    expect(autoClock("09:00", "2026-11-02", "2026-11-02", "09:23")).toBe("09:00");
+    expect(autoClock("now", "2026-11-02", "2026-11-02", "09:23")).toBe("09:23");
+    expect(autoClock("now", "2026-11-01", "2026-11-02", "09:23")).toBe("09:23");
+    expect(autoClock("now", "2026-11-04", "2026-11-02", "09:23")).toBe("08:00");
+  });
+});

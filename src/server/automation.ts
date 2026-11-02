@@ -3,7 +3,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
 import { logActivity } from "@/server/activity";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
-import { CONTRACT_ANCHORS, SIDE_CONDS, condMet, expand, minutesOffset, offsetOf, timeBefore, type Anchor, type Facts, type Phase, type Template } from "@/lib/templates";
+import { CONTRACT_ANCHORS, SEND_NOW, SIDE_CONDS, autoClock, condMet, expand, minutesOffset, offsetOf, timeBefore, type Anchor, type Facts, type Phase, type Template } from "@/lib/templates";
 
 // Task templates in action (SPEC.md §8): start checklists on triggers, re-date steps when contract
 // dates change, and apply "Add/remove tags" steps.
@@ -12,6 +12,10 @@ type Tx = Prisma.TransactionClient | typeof db;
 export type Ctx = { personId: string; fileId?: string | null; paId?: string | null; showingId?: string | null; start: string; dates?: Partial<Record<Anchor, string | null>>; facts?: Facts;
   /** Time of day for steps on the day of an anchor, e.g. the booked call's time on "Hold phone call" (SPEC.md §17). */
   times?: Partial<Record<Anchor, string | null>> };
+
+/** The current time in Central, "HH:MM". */
+const nowCentral = () => new Date().toLocaleTimeString("en-GB", { timeZone: "America/Chicago", hour: "2-digit", minute: "2-digit", hour12: false });
+const autoTimeFor = (time: string, due: string) => autoClock(time, due, isoFromDate(todayCentral()), nowCentral());
 
 const phasesOf = (v: unknown) => (Array.isArray(v) ? (v as Phase[]) : []);
 
@@ -76,7 +80,7 @@ function stepData(t: Template, spec: Spec, ctx: Ctx, who: (first: string) => str
   // A step set to send by itself goes out at its chosen time on the due date (owner request 2026-10-29).
   // Kept even while the step waits for its date, so "Update the deals" doesn't turn it off for lack of one.
   const auto = (s.type === "text" || s.type === "email") && s.auto ? s.auto : null;
-  const autoTime = auto && spec.due && minutesOffset(s) == null ? auto.time : null;
+  const autoTime = auto && spec.due && minutesOffset(s) == null ? autoTimeFor(auto.time, spec.due) : null;
   return {
     autoSend: auto ?? undefined, autoState: auto && spec.due ? "pending" : null,
     // "Ask by text": the assignee gets a text at its due time; replying YES checks it off (owner request 2026-10-30).
@@ -139,7 +143,9 @@ export async function syncTemplateToOpen(t: Template, userId: string): Promise<{
         // An ask already sent or answered stays that way; a step that stopped asking stops.
         const askState = !d.askKind ? (task.askState === "pending" ? null : task.askState) : task.askState ? task.askState : d.askState ?? (task.dueDate ? "pending" : null);
         const next = { ...d, autoSend: d.autoSend ?? task.autoSend ?? undefined, autoState, askState, assigneeId: task.assigneeId,
-          ...(handDated ? { anchor: task.anchor, offsetDays: task.offsetDays, offsetMinutes: task.offsetMinutes, dueDate: task.dueDate, dueTime: task.dueTime } : {}) };
+          ...(handDated ? { anchor: task.anchor, offsetDays: task.offsetDays, offsetMinutes: task.offsetMinutes, dueDate: task.dueDate, dueTime: task.dueTime } : {}),
+          // "Right away" keeps the time it got when it started, so editing the checklist doesn't keep moving it.
+          ...(d.autoSend?.time === SEND_NOW && task.dueTime && (task.dueDate?.getTime() ?? null) === (d.dueDate?.getTime() ?? null) ? { dueTime: task.dueTime } : {}) };
         const same = task.title === next.title && task.kind === next.kind && task.phase === next.phase && task.anchor === next.anchor && task.offsetDays === next.offsetDays && task.offsetMinutes === next.offsetMinutes
           && (task.dueDate?.getTime() ?? null) === (next.dueDate?.getTime() ?? null) && task.dueTime === next.dueTime && task.assigneeId === next.assigneeId && task.advanceStatusId === next.advanceStatusId
           && JSON.stringify(task.autoSend ?? null) === JSON.stringify(next.autoSend ?? null) && task.autoState === next.autoState && task.askState === next.askState && task.askKind === next.askKind;
@@ -283,7 +289,8 @@ export async function redateConsult(tx: Tx, personId: string) {
     const c = await consultFor(tx, personId, t.fileId);
     const due = c ? new Date(dateFromIso(c.date).getTime() + (t.offsetDays ?? 0) * 86400000) : null;
     // An automatic step keeps the send time picked for it (unless it's timed in minutes from the consult).
-    const auto = t.autoSend && t.offsetMinutes == null ? (t.autoSend as { time?: string }).time ?? null : null;
+    const picked = t.autoSend && t.offsetMinutes == null ? (t.autoSend as { time?: string }).time ?? null : null;
+    const auto = picked && due ? autoTimeFor(picked, isoFromDate(due)) : picked === SEND_NOW ? null : picked;
     const time = auto ?? (!c?.time ? null : t.offsetMinutes != null ? timeBefore(c.time, t.offsetMinutes) : (t.offsetDays ?? 0) === 0 ? c.time : t.dueTime);
     await tx.task.update({ where: { id: t.id }, data: { dueDate: due, dueTime: time, ...autoOn(t, due) } });
   }

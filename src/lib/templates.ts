@@ -23,9 +23,16 @@ export type Step = {
 /**
  * A text/email step that sends by itself (owner 2026-10-29): from = a team member's first name, "" = whoever the step
  * is assigned to; to = "client", "people:<PA people section id>" (lender, title, agents) and "team:<first name>";
- * time = "HH:MM" Central on the due date (steps timed in minutes from an appointment use that time instead).
+ * time = "HH:MM" Central on the due date (steps timed in minutes from an appointment use that time instead), or
+ * "now" = right away (owner request 2026-11-02): as soon as the step starts when it's due today, else 8:00am on its day.
  */
 export type AutoSend = { from: string; to: string[]; time: string };
+export const SEND_NOW = "now";
+/** The clock time an automatic step goes out on its due date; "now" becomes the current time today (or a past date), 8:00am on a later day. */
+export function autoClock(time: string, dueIso: string, todayIso: string, nowHHMM: string): string {
+  if (time !== SEND_NOW) return time;
+  return dueIso <= todayIso ? nowHHMM : "08:00";
+}
 export type Phase = { id: string; name: string; steps: Step[] };
 export type Template = { id: string; name: string; trigger: string | null; folder?: string; phases: Phase[] };
 

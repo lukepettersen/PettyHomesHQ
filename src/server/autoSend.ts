@@ -27,7 +27,7 @@ const asAuto = (v: unknown): AutoSend | null => (v && typeof v === "object" && A
 
 /** When an automatic step goes out: its due date at its due time (Central), 9:00am if it somehow has none. */
 export const autoSendAt = (t: { dueDate: Date | null; dueTime: string | null; autoSend: unknown }) =>
-  t.dueDate ? centralToUtc(isoFromDate(t.dueDate), t.dueTime ?? asAuto(t.autoSend)?.time ?? "09:00") : null;
+  t.dueDate ? centralToUtc(isoFromDate(t.dueDate), t.dueTime ?? (asAuto(t.autoSend)?.time === "now" ? "00:00" : asAuto(t.autoSend)?.time) ?? "09:00") : null;
 
 /** The step's message template filled in for its person and deal, as the sender (null when no template is picked).
  *  Same lookup as Draft text/email: the template picked, else one named like the step's old typed name. */
