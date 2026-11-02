@@ -162,7 +162,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
                     {m.kind === "missed_call" ? (
                       <p className="self-center rounded-full bg-[#f9e1de] px-3 py-1 text-xs font-semibold text-bad">Missed call · {clock(m.at)}</p>
                     ) : (
-                      <div className={`flex max-w-[80%] flex-col ${m.direction === "out" ? "items-end self-end" : "items-start self-start"}`}>
+                      <div className={`flex min-w-0 max-w-[80%] flex-col ${m.direction === "out" ? "items-end self-end" : "items-start self-start"}`}>
                         {m.from && <span className="px-1 text-[11px] font-semibold muted">{m.from}</span>}
                         {!!m.photos?.length && (
                           <span className={`flex flex-wrap gap-1 ${m.direction === "out" ? "justify-end" : ""}`}>
@@ -174,7 +174,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
                             ))}
                           </span>
                         )}
-                        {!(m.photos?.length && m.body === PHOTO_ONLY) && <p className={`whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm max-md:rounded-[20px] max-md:text-[16px] ${m.direction === "out" ? "bg-accent text-white max-md:bg-[#0b84fe]" : "bg-sunken max-md:bg-[#e9e9eb]"}`}>{m.body}</p>}
+                        {!(m.photos?.length && m.body === PHOTO_ONLY) && <p className={`max-w-full whitespace-pre-wrap [overflow-wrap:anywhere] rounded-2xl px-3 py-2 text-sm max-md:rounded-[20px] max-md:text-[16px] ${m.direction === "out" ? "bg-accent text-white max-md:bg-[#0b84fe]" : "bg-sunken max-md:bg-[#e9e9eb]"}`}>{m.body}</p>}
                         {!!m.reactions?.length && <span className="-mt-2 rounded-full border border-misty bg-white px-1.5 text-sm shadow-sm" aria-label={`Reactions: ${m.reactions.join(" ")}`}>{[...new Set(m.reactions)].join("")}{m.reactions.length > new Set(m.reactions).size ? ` ${m.reactions.length}` : ""}</span>}
                         <span className={`flex items-center gap-1 px-1 text-[11px] muted ${m.direction === "out" ? "flex-row-reverse" : ""}`}>
                           {!composer.blocked && m.body !== PHOTO_ONLY && <ReactButton id={m.id} out={m.direction === "out"} mine={m.mine ?? []} onDone={() => router.refresh()} />}

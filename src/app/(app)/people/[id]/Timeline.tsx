@@ -253,7 +253,7 @@ function TimelineItem({ items, personName, team, editing, setEditing, onChanged,
           {editing === e.id ? <EditEntry entry={e} onDone={() => { setEditing(null); onChanged(); }} />
             : e.kind === "email" ? <EmailText text={body} />
             : items.length > 1 && open ? <Bubbles items={[...items].reverse()} personName={personName} team={team} editing={editing} setEditing={setEditing} onChanged={onChanged} />
-            : <div className="whitespace-pre-wrap break-words">{splitMentions(body, team).map((part, i) => part.mention ? <mark key={i} className="rounded bg-accent-soft px-0.5 font-semibold text-accent">{part.text}</mark> : part.text)}</div>}
+            : <div className="whitespace-pre-wrap [overflow-wrap:anywhere]">{splitMentions(body, team).map((part, i) => part.mention ? <mark key={i} className="rounded bg-accent-soft px-0.5 font-semibold text-accent">{part.text}</mark> : part.text)}</div>}
           {e.audio && <audio controls preload="none" src={e.audio} className="mt-1 w-full max-w-sm" aria-label="Call recording" />}
         </div>
         {items.length > 1 && <button type="button" className="mt-2 text-sm font-semibold text-accent hover:underline" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Show only the latest" : `View ${items.length - 1} more text message${items.length === 2 ? "" : "s"}`}</button>}
@@ -277,7 +277,7 @@ function Bubbles({ items, personName, team, editing, setEditing, onChanged }: { 
         return (
           <div key={m.id} className={`flex max-w-[85%] flex-col ${mine ? "items-end self-end" : "items-start self-start"}`}>
             {editing === m.id ? <EditEntry entry={m} onDone={() => { setEditing(null); onChanged(); }} /> : (
-              <p className={`whitespace-pre-wrap break-words rounded-2xl px-3 py-1.5 ${mine ? "bg-accent text-white" : "bg-sunken"}`}>
+              <p className={`max-w-full whitespace-pre-wrap [overflow-wrap:anywhere] rounded-2xl px-3 py-1.5 ${mine ? "bg-accent text-white" : "bg-sunken"}`}>
                 {splitMentions(m.body, team).map((part, i) => part.mention ? <b key={i}>{part.text}</b> : part.text)}
               </p>
             )}
