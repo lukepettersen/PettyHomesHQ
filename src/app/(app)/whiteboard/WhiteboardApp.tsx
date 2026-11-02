@@ -19,6 +19,14 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
   const [picking, setPicking] = useState(false);
   const [fresh, setFresh] = useState<string | null>(null); // just added: the cursor goes in it
   const scroller = useRef<HTMLDivElement>(null);
+  // The board fills the rest of the screen, never scrolls; zooming the browser out gives it more room (owner 2026-11-02).
+  const page = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    const fit = () => { const top = page.current?.getBoundingClientRect().top ?? 0; setHeight(Math.max(320, window.innerHeight - top)); };
+    fit(); window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, []);
   const first = useRef(true);
 
   // Saves a moment after the last change.
@@ -42,7 +50,9 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
     const target = e.currentTarget as HTMLElement; target.setPointerCapture(e.pointerId);
     const move = (ev: PointerEvent) => {
       const dx = ev.clientX - sx, dy = ev.clientY - sy;
-      if (mode === "move") patch(id, { x: Math.max(0, Math.min(BOARD.w - 40, ox + dx)), y: Math.max(0, Math.min(BOARD.h - 30, oy + dy)) });
+      // Kept on the visible board (it's the size of the screen; owner 2026-11-02).
+      const maxX = (scroller.current?.clientWidth ?? BOARD.w) - 40, maxY = (scroller.current?.clientHeight ?? BOARD.h) - 30;
+      if (mode === "move") patch(id, { x: Math.max(0, Math.min(maxX, ox + dx)), y: Math.max(0, Math.min(maxY, oy + dy)) });
       else patch(id, { w: Math.max(120, Math.min(700, ox + dx)), h: Math.max(80, Math.min(700, oy + dy)) });
     };
     const up = () => { target.removeEventListener("pointermove", move); target.removeEventListener("pointerup", up); };
@@ -59,7 +69,7 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
   );
 
   return (
-    <div className="flex h-[calc(100dvh-64px)] flex-col px-4 pb-4 pt-3">
+    <div ref={page} className="flex flex-col px-4 pb-4 pt-3" style={{ height }}>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <h1 className="mr-2 text-2xl font-extrabold">Whiteboard</h1>
         <span className="flex items-center gap-1.5 rounded-lg border border-misty bg-white px-2.5 py-1.5 text-sm font-semibold">
@@ -83,8 +93,8 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
           {status === "saving" ? "Saving…" : status === "error" ? "Couldn't save. Check your connection." : "Saved ✓ · only you can see this"}
         </span>
       </div>
-      <div ref={scroller} className="min-h-0 flex-1 overflow-auto rounded-2xl border border-misty bg-white shadow-[inset_0_0_0_10px_#f6f4f1]" onPointerDown={(e) => { if (!(e.target as HTMLElement).closest("[data-item]")) setSel(null); }}>
-        <div className={`relative ${hand.className}`} style={{ width: BOARD.w, height: BOARD.h, backgroundImage: "radial-gradient(#e7e2da 1px, transparent 1px)", backgroundSize: "22px 22px" }}>
+      <div ref={scroller} className="relative min-h-0 flex-1 overflow-hidden rounded-2xl border border-misty bg-white shadow-[inset_0_0_0_10px_#f6f4f1]" onPointerDown={(e) => { if (!(e.target as HTMLElement).closest("[data-item]")) setSel(null); }}>
+        <div className={`absolute inset-0 ${hand.className}`} style={{ backgroundImage: "radial-gradient(#e7e2da 1px, transparent 1px)", backgroundSize: "22px 22px" }}>
           {items.length === 0 && <p className="absolute left-10 top-10 font-sans text-sm muted">Empty board. Add a sticky note, some text or a person with the buttons above.</p>}
           {items.map((i) => {
             const on = sel === i.id;

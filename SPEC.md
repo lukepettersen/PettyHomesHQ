@@ -124,7 +124,7 @@ Principles:
   colors (a color swatch recolors the selected note), **+ Text** for big marker-style writing, **+ Person** searches HQ
   and puts the name on the board as writing that opens their contact. Click to type; drag (a note's top bar, or the
   ⠿ grip on text and names) to move; drag a note's corner to resize; A−/A+ resize selected text or names; × twice
-  removes. New items go in the first open spot on screen. It saves itself as you work (AppSetting
+  removes. New items go in the first open spot on screen. The board is exactly the size of the screen and never scrolls; zooming the browser out gives it more room (items keep their size, so they look smaller), owner 2026-11-02. It saves itself as you work (AppSetting
   "whiteboard:<userId>", up to 300 items); stats from the MASTER FILE are left for later.
 
 ## 6. People
