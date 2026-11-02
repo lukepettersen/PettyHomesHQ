@@ -23,6 +23,14 @@ describe("whiteboard (owner request 2026-11-02)", () => {
     expect(pp.align).toBeUndefined();
     expect(boxOf(t)).toEqual({ x: 0, y: 0, w: 600, h: 30 });
   });
+  it("keeps groups of two or more", () => {
+    const out = cleanBoard([
+      { id: "a", kind: "text", x: 0, y: 0, text: "A Buyers", group: "g1" },
+      { id: "b", kind: "person", x: 0, y: 50, text: "Sam", personId: "p1", group: "g1" },
+      { id: "c", kind: "text", x: 0, y: 0, text: "alone", group: "g2" },
+    ]);
+    expect(out.map((i) => i.group)).toEqual(["g1", "g1", undefined]);
+  });
   it("refuses junk", () => {
     expect(() => cleanBoard([{ id: "x", kind: "drawing", x: 0, y: 0 }])).toThrow();
     expect(() => cleanBoard(new Array(301).fill({ id: "a", kind: "text", x: 0, y: 0 }))).toThrow();

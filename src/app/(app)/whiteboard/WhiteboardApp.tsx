@@ -74,10 +74,18 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
   const removeIds = (ids: string[]) => { setItems((list) => list.filter((i) => !ids.includes(i.id))); setPicked([]); setConfirm(null); };
   const remove = (id: string) => { if (confirm !== id) { setConfirm(id); return; } removeIds([id]); };
   /** A click picks one; ⌘/Ctrl/Shift-click adds or removes it from what's picked. */
+  /** An item and everything grouped with it. */
+  const members = (id: string) => { const g = items.find((i) => i.id === id)?.group; return g ? items.filter((i) => i.group === g).map((i) => i.id) : [id]; };
+  const withGroups = (ids: string[]) => [...new Set(ids.flatMap(members))];
   const pick = (id: string, e: React.PointerEvent | React.FocusEvent) => {
     const add = "metaKey" in e && (e.metaKey || e.ctrlKey || e.shiftKey);
-    setPicked((p) => (add ? (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]) : p.includes(id) ? p : [id]));
+    const alone = "altKey" in e && e.altKey; // ⌥ (Option): just this one, even inside a group
+    const mine = alone ? [id] : members(id);
+    setPicked((p) => (add ? (p.includes(id) ? p.filter((x) => !mine.includes(x)) : [...new Set([...p, ...mine])]) : alone ? [id] : p.includes(id) ? p : mine));
   };
+  const group = () => { const g = newId(); setItems((list) => list.map((i) => (picked.includes(i.id) ? { ...i, group: g } : i))); };
+  const ungroup = () => setItems((list) => list.map((i) => (picked.includes(i.id) ? { ...i, group: undefined } : i)));
+  const pickedGroup = sel.length > 1 && sel[0].group && sel.every((i) => i.group === sel[0].group) && items.filter((i) => i.group === sel[0].group).length === sel.length;
 
   // Delete removes everything picked (asks once); Escape unpicks. Not while typing in a note or text.
   useEffect(() => {
@@ -103,8 +111,8 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
     if (wait && el.closest("textarea") === document.activeElement && el.closest("textarea")) return; // already typing: drag selects words
     if (!wait) { e.preventDefault(); e.stopPropagation(); }
     const multi = e.metaKey || e.ctrlKey || e.shiftKey;
-    const group = mode === "move" && picked.includes(id) && !multi ? picked : [id];
-    if (!picked.includes(id) || multi) pick(id, e);
+    const group = mode === "size" || e.altKey ? [id] : picked.includes(id) && !multi ? picked : members(id);
+    if (!picked.includes(id) || multi || e.altKey) pick(id, e);
     if (multi && wait) return; // ⌘-click only picks
     const start = items.filter((i) => group.includes(i.id)).map((i) => { const b = boxOf(i); return { id: i.id, x: i.x, y: i.y, w: b.w, h: b.h, kind: i.kind }; });
     const sx = e.clientX, sy = e.clientY;
@@ -156,7 +164,7 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
       const L = Math.min(cur.x0, cur.x1), R = Math.max(cur.x0, cur.x1), T = Math.min(cur.y0, cur.y1), B = Math.max(cur.y0, cur.y1);
       if (R - L < 4 && B - T < 4) return;
       const hit = items.filter((i) => { const b = boxOf(i); return b.x < R && b.x + b.w > L && b.y < B && b.y + b.h > T; }).map((i) => i.id);
-      setPicked([...new Set([...keep, ...hit])]);
+      setPicked(withGroups([...keep, ...hit]));
     };
     target.addEventListener("pointermove", move); target.addEventListener("pointerup", up);
   };
@@ -199,13 +207,6 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
               className={`px-2.5 py-1.5 hover:bg-sunken disabled:opacity-40 aria-pressed:bg-sunken ${n ? "border-l border-misty" : ""}`}><AlignIcon a={a} /></button>
           ))}
         </span>
-        {picked.length > 1 && (
-          <span className="flex items-center gap-2 text-sm">
-            <b>{picked.length} picked</b>
-            <button type="button" className={`rounded-md px-2 py-1 font-semibold ${confirm === "many" ? "bg-bad text-white" : "text-bad hover:bg-sunken"}`} onClick={() => (confirm === "many" ? removeIds(picked) : setConfirm("many"))}>{confirm === "many" ? `Click again to remove ${picked.length}` : "Remove"}</button>
-            <button type="button" className="muted hover:underline" onClick={() => { setPicked([]); setConfirm(null); }}>Unpick</button>
-          </span>
-        )}
         <span className="ml-auto flex items-center gap-2">
           <span className={`text-xs ${status === "error" ? "font-semibold text-bad" : "muted"}`} role="status">
             {status === "saving" ? "Saving…" : status === "error" ? "Couldn't save. Check your connection." : dirty ? <b className="text-charcoal">Unsaved changes</b> : <>Saved ✓ · only you can see this<span className="hidden xl:inline"> · ⌘-click or drag a box to pick several</span></>}
@@ -252,6 +253,17 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
           })}
           {box && <div aria-hidden="true" className="pointer-events-none absolute border border-dashed border-coral bg-coral/10" style={{ left: Math.min(box.x0, box.x1), top: Math.min(box.y0, box.y1), width: Math.abs(box.x1 - box.x0), height: Math.abs(box.y1 - box.y0) }} />}
         </div>
+        {/* Floats over the board so picking doesn't push the board down mid-click. */}
+        {picked.length > 1 && (
+          <span className="absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-misty bg-white px-3 py-1 font-sans text-sm shadow-md">
+            <b>{picked.length} picked</b>
+            {pickedGroup
+              ? <button type="button" className="rounded-md px-2 py-1 font-semibold hover:bg-sunken" onClick={ungroup} title="They'll move on their own again">Ungroup</button>
+              : <button type="button" className="rounded-md border border-misty bg-white px-2 py-1 font-semibold hover:bg-sunken" onClick={group} title="Keep these together: clicking or dragging one grabs them all">Group</button>}
+            <button type="button" className={`rounded-md px-2 py-1 font-semibold ${confirm === "many" ? "bg-bad text-white" : "text-bad hover:bg-sunken"}`} onClick={() => (confirm === "many" ? removeIds(picked) : setConfirm("many"))}>{confirm === "many" ? `Click again to remove ${picked.length}` : "Remove"}</button>
+            <button type="button" className="muted hover:underline" onClick={() => { setPicked([]); setConfirm(null); }}>Unpick</button>
+          </span>
+        )}
       </div>
     </div>
   );

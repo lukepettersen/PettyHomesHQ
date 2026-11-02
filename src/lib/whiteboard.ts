@@ -15,6 +15,7 @@ const itemSchema = z.object({
   align: z.enum(["left", "center", "right"]).optional(), // notes and text (owner request 2026-11-02)
   text: z.string().max(2000).default(""),
   personId: z.string().max(40).optional(),
+  group: z.string().max(40).optional(), // items grouped for good move and pick together (owner request 2026-11-02)
 });
 export type BoardItem = z.infer<typeof itemSchema>;
 
@@ -22,8 +23,10 @@ const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, M
 
 /** What gets saved: known kinds only, kept on the board, sensible sizes, a picked color. At most 300 items. */
 export function cleanBoard(raw: unknown): BoardItem[] {
-  const list = z.array(z.unknown()).max(300).parse(raw);
-  return list.map((r) => itemSchema.parse(r)).map((i) => ({
+  const list = z.array(z.unknown()).max(300).parse(raw).map((r) => itemSchema.parse(r));
+  const count = new Map<string, number>();
+  list.forEach((i) => i.group && count.set(i.group, (count.get(i.group) ?? 0) + 1));
+  return list.map((i) => ({
     id: i.id, kind: i.kind, text: i.text,
     x: clamp(i.x, 0, BOARD.w - 40), y: clamp(i.y, 0, BOARD.h - 30),
     ...(i.kind === "note" ? { w: clamp(i.w ?? 220, 120, 700), h: clamp(i.h ?? 160, 80, 700), color: NOTE_COLORS.includes(i.color as never) ? i.color : NOTE_COLORS[0] } : {}),
@@ -32,6 +35,7 @@ export function cleanBoard(raw: unknown): BoardItem[] {
     ...(i.kind === "text" && i.w && i.h ? { w: clamp(i.w, 60, BOARD.w), h: clamp(i.h, 30, BOARD.h) } : {}),
     ...(i.kind !== "person" && i.align && i.align !== "left" ? { align: i.align } : {}),
     ...(i.kind === "person" && i.personId ? { personId: i.personId } : {}),
+    ...(i.group && (count.get(i.group) ?? 0) > 1 ? { group: i.group } : {}), // a group of one is no group
   }));
 }
 
