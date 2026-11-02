@@ -5,7 +5,7 @@ import { UserError } from "@/server/safe";
 import { isConnected } from "@/server/integrations";
 import { logActivity } from "@/server/activity";
 import { bookAppt } from "@/server/booking";
-import { callChanged, redateConsult } from "@/server/automation";
+import { callChanged, consultChanged, redateConsult } from "@/server/automation";
 import { addCalendarEvent, calendarConnection, removeCalendarEvent, syncAppointment } from "@/server/google";
 import { sendTextAs } from "@/server/texting";
 import { groupReady, textNumbersAsGroup } from "@/server/groupText";
@@ -166,8 +166,8 @@ async function runTool(me: Me, name: string, a: Record<string, unknown>, seen: S
     const before = { date: isoFromDate(appt.date), start: appt.start, end: appt.end };
     if (name === "cancel_event") {
       await db.appointment.update({ where: { id: appt.id }, data: { deletedAt: new Date() } });
-      if (appt.type === "buyer" || appt.type === "seller") await redateConsult(db, appt.personId);
-      const removed = appt.type === "call" ? await callChanged(db, appt.personId, me.id) : [];
+      const removed = appt.type === "call" ? await callChanged(db, appt.personId, me.id)
+        : appt.type === "buyer" || appt.type === "seller" ? await consultChanged(db, appt.personId, me.id) : [];
       await syncAppointment(appt.id);
       await logActivity(me.id, "delete", "appointment", appt.id, `Deleted appointment "${appt.title}" by text`);
       await record(me.id, "cancelAppt", `✓ Cancelled "${appt.title}" with ${appt.person.name} (${when(before.date, before.start)}).${removed.length ? ` Removed ${removed.length} checklist step${removed.length === 1 ? "" : "s"} for it.` : ""}`, { appointmentId: appt.id, removed });
@@ -352,8 +352,9 @@ export async function undoLast(user: { id: string }): Promise<string> {
   let what = "";
   if (act.kind === "appt" || act.kind === "cancelAppt") {
     const appt = await db.appointment.update({ where: { id: id("appointmentId") }, data: { deletedAt: act.kind === "appt" ? new Date() : null } });
-    if (appt.type === "buyer" || appt.type === "seller") await redateConsult(db, appt.personId);
-    if (appt.type === "call") await callChanged(db, appt.personId, user.id, act.kind === "cancelAppt" && Array.isArray(p.removed) ? (p.removed as string[]) : []);
+    const back = act.kind === "cancelAppt" && Array.isArray(p.removed) ? (p.removed as string[]) : [];
+    if (appt.type === "buyer" || appt.type === "seller") await consultChanged(db, appt.personId, user.id, back);
+    if (appt.type === "call") await callChanged(db, appt.personId, user.id, back);
     await syncAppointment(appt.id);
     what = act.kind === "appt" ? `Removed "${appt.title}".` : `Put "${appt.title}" back.`;
   } else if (act.kind === "moveAppt") {

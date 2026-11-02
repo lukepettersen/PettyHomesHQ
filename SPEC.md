@@ -678,6 +678,10 @@ scrolls with it until its last card is on screen, then stays put while the middl
   that haven't happened yet (timed from the call or from a "Phone call booked" checklist), including scheduled
   automatic texts/emails; done and sent ones stay. "undo" by text puts them back. Changes made directly in Google
   Calendar don't come back to HQ; move or cancel the call in HQ.
+- **Cancelling a buyer/seller consult** works the same way *(owner report 2026-11-02)*: with no other consult left, the
+  steps from "a consult is booked" checklists that haven't happened yet are removed (automatic texts/emails and check-in
+  texts included; done and sent ones stay) and other consult-timed steps wait for a date; with another consult on,
+  they move to it. "undo" by text puts them back. A deal started for the consult stays.
 - **Buyer/Seller Consult** for someone without that file offers "Also start a
   buyer/listing at Consult scheduled" and opens that form with the consult date filled in.
 - **From the contract:** inspection appointment, inspection deadline (11:59pm), Written

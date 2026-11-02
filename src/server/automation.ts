@@ -323,6 +323,28 @@ export async function callChanged(tx: Tx, personId: string, userId: string | nul
   return [];
 }
 
+/**
+ * A buyer/seller consult was cancelled or put back (owner report 2026-11-02, like phone calls). With another consult
+ * still on, steps timed from the consult move to it. With none left, the steps from "a consult is booked" checklists
+ * that haven't happened yet are removed (done and sent ones stay) and the other consult-timed steps wait for a date.
+ * `restore` puts back steps an earlier cancel removed (undo by text). Returns the ids removed.
+ */
+export async function consultChanged(tx: Tx, personId: string, userId: string | null, restore: string[] = []): Promise<string[]> {
+  if (restore.length) await tx.task.updateMany({ where: { id: { in: restore }, personId }, data: { deletedAt: null } });
+  const left = await tx.appointment.findFirst({ where: { personId, type: { in: ["buyer", "seller"] }, deletedAt: null }, select: { id: true } });
+  let gone: { id: string; title: string }[] = [];
+  if (!left) {
+    const ids = (await loadTemplates(tx)).filter((t) => t.trigger === "buyerconsult" || t.trigger === "sellerconsult" || t.trigger === "anyconsult").map((t) => t.id);
+    gone = ids.length ? await tx.task.findMany({ where: { personId, completedAt: null, deletedAt: null, templateId: { in: ids } }, select: { id: true, title: true } }) : [];
+    if (gone.length) {
+      await tx.task.updateMany({ where: { id: { in: gone.map((t) => t.id) } }, data: { deletedAt: new Date() } });
+      if (userId) await logActivity(userId, "delete", "task", null, `Consult cancelled: removed ${gone.length} step${gone.length === 1 ? "" : "s"} (${gone.map((t) => t.title).join(", ").slice(0, 300)})`);
+    }
+  }
+  await redateConsult(tx, personId);
+  return gone.map((t) => t.id);
+}
+
 /** An automatic or "ask by text" step that was waiting for its date starts waiting to send once it has one. */
 const autoOn = (t: { autoSend: unknown; autoState: string | null; askKind: string | null; askState: string | null }, due: Date | null) => ({
   ...(t.autoSend && !t.autoState && due ? { autoState: "pending" } : {}), ...(t.askKind && !t.askState && due ? { askState: "pending" } : {}) });

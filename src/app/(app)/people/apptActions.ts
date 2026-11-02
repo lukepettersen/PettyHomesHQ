@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
-import { callChanged, redateConsult } from "@/server/automation";
+import { callChanged, consultChanged, redateConsult } from "@/server/automation";
 import { syncAppointment } from "@/server/google";
 import { loadApptTypes } from "@/server/appointments";
 import { bookAppt } from "@/server/booking";
@@ -40,7 +40,7 @@ export async function bookAppointment(input: z.input<typeof bookSchema>) {
 export async function deleteAppointment(id: string) {
   return guarded(null, async (user) => {
     const a = await db.appointment.update({ where: { id: z.string().min(1).max(40).parse(id), deletedAt: null }, data: { deletedAt: new Date() } });
-    if (a.type === "buyer" || a.type === "seller") await redateConsult(db, a.personId);
+    if (a.type === "buyer" || a.type === "seller") await consultChanged(db, a.personId, user.id);
     if (a.type === "call") await callChanged(db, a.personId, user.id);
     await logActivity(user.id, "delete", "appointment", a.id, `Deleted appointment "${a.title}"`);
     await syncAppointment(a.id);
