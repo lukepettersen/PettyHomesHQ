@@ -129,7 +129,7 @@ Principles:
   or by dragging a box on an empty spot, then move them together (they keep their layout), resize, recolor, align, or
   remove them (Delete key or Remove, asked twice); Escape unpicks. New items go in the first open spot on screen. The
   board is exactly the size of the screen and never scrolls; zooming the browser out gives it more room (items keep
-  their size, so they look smaller), owner 2026-11-02. Changes save only with **Save** (or ⌘S); "Unsaved changes" shows
+  their size, so they look smaller), owner 2026-11-02. It is the same board on the computer and the phone; a smaller screen shrinks the whole board so everything placed on the computer still shows (owner 2026-11-02). Changes save only with **Save** (or ⌘S); "Unsaved changes" shows
   until then, **Cancel** goes back to the last save, and leaving the page with unsaved changes asks first (AppSetting
   "whiteboard:<userId>", up to 300 items); stats from the MASTER FILE are left for later.
 

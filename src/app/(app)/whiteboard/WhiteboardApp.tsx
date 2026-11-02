@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Caveat } from "next/font/google";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BOARD, boxOf, NOTE_COLORS, placeNew, type BoardItem } from "@/lib/whiteboard";
 import { saveBoard } from "./actions";
 
@@ -22,6 +22,23 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
   const [fresh, setFresh] = useState<string | null>(null); // just added: the cursor goes in it
   const [box, setBox] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
+  // A smaller screen (a phone) shrinks the board so everything placed on the computer still shows (owner 2026-11-02).
+  const [area, setArea] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    const el = scroller.current; if (!el) return;
+    const ro = new ResizeObserver(() => setArea({ w: el.clientWidth, h: el.clientHeight }));
+    ro.observe(el); return () => ro.disconnect();
+  }, []);
+  const [frozen, setFrozen] = useState<number | null>(null); // held still while dragging so the board doesn't jump
+  const layer = useRef<HTMLDivElement>(null);
+  const [extent, setExtent] = useState({ w: 0, h: 0 }); // how far right and down the items actually reach
+  useLayoutEffect(() => {
+    if (frozen != null || !layer.current) return;
+    let w = 0, h = 0;
+    layer.current.querySelectorAll<HTMLElement>("[data-item]").forEach((el) => { w = Math.max(w, el.offsetLeft + el.offsetWidth); h = Math.max(h, el.offsetTop + el.offsetHeight); });
+    setExtent((e) => (e.w === w && e.h === h ? e : { w, h }));
+  }, [items, frozen]);
+  const scale = frozen ?? fitScale(extent, area);
   // The board fills the rest of the screen, never scrolls; zooming the browser out gives it more room (owner 2026-11-02).
   const page = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number | undefined>(undefined);
@@ -50,7 +67,7 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
   }, [dirty]);
 
   const patch = (id: string, p: Partial<BoardItem>) => setItems((list) => list.map((i) => (i.id === id ? { ...i, ...p } : i)));
-  const view = () => ({ left: 0, top: 0, w: scroller.current?.clientWidth, h: scroller.current?.clientHeight });
+  const view = () => ({ left: 0, top: 0, w: area.w / scale || undefined, h: area.h / scale || undefined });
   const add = (i: Omit<BoardItem, "id" | "x" | "y">) => { const id = newId(); setItems((list) => [...list, { ...i, id, ...placeNew(view(), list, i.kind === "note" ? { w: i.w ?? 220, h: i.h ?? 160 } : { w: 320, h: (i.size ?? 36) * 1.5 }) }]); setPicked([id]); setFresh(id); };
   const sel = items.filter((i) => picked.includes(i.id));
   const notes = sel.filter((i) => i.kind === "note"), words = sel.filter((i) => i.kind !== "note"), aligned = sel.filter((i) => i.kind !== "person");
@@ -92,10 +109,11 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
     const start = items.filter((i) => group.includes(i.id)).map((i) => { const b = boxOf(i); return { id: i.id, x: i.x, y: i.y, w: b.w, h: b.h, kind: i.kind }; });
     const sx = e.clientX, sy = e.clientY;
     let moving = !wait;
+    const k = scale; setFrozen(k);
     const move = (ev: PointerEvent) => {
-      let dx = ev.clientX - sx, dy = ev.clientY - sy;
+      let dx = (ev.clientX - sx) / k, dy = (ev.clientY - sy) / k;
       if (!moving) {
-        if (Math.hypot(dx, dy) < 5) return;
+        if (Math.hypot(dx * k, dy * k) < 5) return;
         moving = true;
         (document.activeElement as HTMLElement | null)?.blur(); window.getSelection()?.removeAllRanges();
         document.body.style.userSelect = "none";
@@ -108,14 +126,14 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
         return;
       }
       // The whole group stays on the visible board, keeping its layout (it's the size of the screen; owner 2026-11-02).
-      const W = (scroller.current?.clientWidth ?? BOARD.w) - 40, H = (scroller.current?.clientHeight ?? BOARD.h) - 30;
+      const W = (area.w ? area.w / k : BOARD.w) - 40, H = (area.h ? area.h / k : BOARD.h) - 30;
       dx = Math.max(-Math.min(...start.map((s) => s.x)), Math.min(W - Math.max(...start.map((s) => s.x)), dx));
       dy = Math.max(-Math.min(...start.map((s) => s.y)), Math.min(H - Math.max(...start.map((s) => s.y)), dy));
       setItems((list) => list.map((i) => { const s = start.find((x) => x.id === i.id); return s ? { ...i, x: s.x + dx, y: s.y + dy } : i; }));
     };
     const up = () => {
       window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up);
-      document.body.style.userSelect = "";
+      document.body.style.userSelect = ""; setFrozen(null);
       // A drag that ends on a name shouldn't also open it.
       if (moving && wait) { const stop = (c: MouseEvent) => { c.preventDefault(); c.stopPropagation(); }; window.addEventListener("click", stop, { capture: true, once: true }); setTimeout(() => window.removeEventListener("click", stop, { capture: true }), 0); }
     };
@@ -127,12 +145,12 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
   const boxStart = (e: React.PointerEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest("[data-item]")) return;
     const r = e.currentTarget.getBoundingClientRect(), keep = e.metaKey || e.ctrlKey || e.shiftKey ? picked : [];
-    const x0 = e.clientX - r.left, y0 = e.clientY - r.top;
+    const k = scale, x0 = (e.clientX - r.left) / k, y0 = (e.clientY - r.top) / k;
     if (!keep.length) setPicked([]);
     setConfirm(null);
     const target = e.currentTarget; target.setPointerCapture(e.pointerId);
     let cur = { x0, y0, x1: x0, y1: y0 };
-    const move = (ev: PointerEvent) => { cur = { x0, y0, x1: ev.clientX - r.left, y1: ev.clientY - r.top }; setBox(cur); };
+    const move = (ev: PointerEvent) => { cur = { x0, y0, x1: (ev.clientX - r.left) / k, y1: (ev.clientY - r.top) / k }; setBox(cur); };
     const up = () => {
       target.removeEventListener("pointermove", move); target.removeEventListener("pointerup", up); setBox(null);
       const L = Math.min(cur.x0, cur.x1), R = Math.max(cur.x0, cur.x1), T = Math.min(cur.y0, cur.y1), B = Math.max(cur.y0, cur.y1);
@@ -197,7 +215,8 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
         </span>
       </div>
       <div ref={scroller} className="relative min-h-0 flex-1 overflow-hidden rounded-2xl border border-misty bg-white shadow-[inset_0_0_0_10px_#f6f4f1]">
-        <div className={`absolute inset-0 touch-none ${hand.className}`} onPointerDown={boxStart} style={{ backgroundImage: "radial-gradient(#e7e2da 1px, transparent 1px)", backgroundSize: "22px 22px" }}>
+        <div ref={layer} className={`absolute left-0 top-0 origin-top-left touch-none ${hand.className}`} onPointerDown={boxStart}
+          style={{ width: area.w ? area.w / scale : "100%", height: area.h ? area.h / scale : "100%", transform: scale < 1 ? `scale(${scale})` : undefined, backgroundImage: "radial-gradient(#e7e2da 1px, transparent 1px)", backgroundSize: "22px 22px" }}>
           {items.length === 0 && <p className="absolute left-10 top-10 font-sans text-sm muted">Empty board. Add a sticky note, some text or a person with the buttons above.</p>}
           {items.map((i) => {
             if (i.kind === "note") return (
@@ -245,6 +264,12 @@ function AlignIcon({ a }: { a: "left" | "center" | "right" }) {
       {rows.map((w, n) => <rect key={n} x={a === "left" ? 1 : a === "right" ? 15 - w : (16 - w) / 2} y={1 + n * 5} width={w} height="2" rx="1" fill="currentColor" />)}
     </svg>
   );
+}
+
+/** How much to shrink the board so every item fits the space (never bigger than life, down to a sixth). */
+function fitScale(extent: { w: number; h: number }, area: { w: number; h: number }) {
+  if (!area.w || !area.h || !extent.w) return 1;
+  return Math.max(0.16, Math.min(1, area.w / (extent.w + 24), area.h / (extent.h + 24)));
 }
 
 /** Search HQ for a person; picking one puts their name on the board. */
