@@ -83,8 +83,16 @@ export function richSegments(text: string): Rich[] {
 }
 /** The words without the formatting markers (for sizing). */
 export const plainText = (text: string) => richSegments(text).map((s) => s.t).join("");
-/** Turns a marker on or off around the selected words (or puts a pair at the cursor). Returns the new text and selection. */
+/** Turns a marker on or off around the selected words (or puts a pair at the cursor). Returns the new text and selection.
+ *  Spaces and line breaks at the edges of the selection stay outside the markers, and a selection over several lines
+ *  marks each line (owner report 2026-11-02: a selected heading plus its line break came out as raw **__). */
 export function toggleMark(text: string, start: number, end: number, mark: "**" | "*" | "__") {
+  while (start < end && /\s/.test(text[start])) start++;
+  while (end > start && /\s/.test(text[end - 1])) end--;
+  if (text.slice(start, end).includes("\n")) {
+    const out = toggleAll(text.slice(start, end), mark);
+    return { text: text.slice(0, start) + out + text.slice(end), start, end: start + out.length };
+  }
   const n = mark.length;
   if (start >= n && text.slice(start - n, start) === mark && text.slice(end, end + n) === mark && !(mark === "*" && (text[start - n - 1] === "*" || text[end + n] === "*")))
     return { text: text.slice(0, start - n) + text.slice(start, end) + text.slice(end + n), start: start - n, end: end - n };
@@ -93,7 +101,7 @@ export function toggleMark(text: string, start: number, end: number, mark: "**" 
 /** The whole item on or off (the B / I / U buttons with items picked, not typing), line by line (after any list mark). */
 export function toggleAll(text: string, mark: "**" | "*" | "__") {
   const n = mark.length;
-  const parts = text.split("\n").map((l) => { const m = l.match(/^(• |\d+\. )/)?.[0] ?? ""; return { m, w: l.slice(m.length) }; });
+  const parts = text.split("\n").map((l) => { const m = l.match(/^(• |\d+[.)] )/)?.[0] ?? ""; return { m, w: l.slice(m.length) }; });
   const wrapped = (w: string) => w.length >= 2 * n && w.startsWith(mark) && w.endsWith(mark);
   const off = parts.filter((p) => p.w.trim()).every((p) => wrapped(p.w));
   return parts.map(({ m, w }) => (!w.trim() ? m + w : off ? m + w.slice(n, -n) : wrapped(w) ? m + w : `${m}${mark}${w}${mark}`)).join("\n");
@@ -101,7 +109,7 @@ export function toggleAll(text: string, mark: "**" | "*" | "__") {
 
 /** Bullet and numbered lists (owner request 2026-11-02): lines that start with "• " or "1. ". */
 export const BULLET = "• ";
-const NUM = /^(\d+)\. /;
+const NUM = /^(\d+)[.)] /; // "1. " or "1) "
 export const listMark = (line: string) => (line.startsWith(BULLET) ? BULLET : line.match(NUM)?.[0] ?? null);
 /** Turns the lines the selection touches into a list, or back to plain lines when they all already are one. */
 export function toggleList(text: string, start: number, end: number, kind: "bullet" | "number") {
@@ -119,7 +127,7 @@ export function listEnter(text: string, pos: number) {
   const a = text.lastIndexOf("\n", pos - 1) + 1, line = text.slice(a, pos), mark = listMark(line);
   if (!mark) return null;
   if (line === mark) return { text: text.slice(0, a) + text.slice(pos), pos: a }; // empty item: end the list
-  const next = mark === BULLET ? BULLET : `${+mark.match(NUM)![1] + 1}. `;
+  const next = mark === BULLET ? BULLET : `${+mark.match(NUM)![1] + 1}${mark.trim().slice(-1)} `;
   const ins = `\n${next}`;
   return { text: text.slice(0, pos) + ins + text.slice(pos), pos: pos + ins.length };
 }

@@ -342,17 +342,22 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
   );
 }
 
-/** Words with their bold / italic / underline. Marker text (already bold) gets a heavier stroke for bold. */
+/** Words with their bold / italic / underline, then list lines. The whole text is read at once, so formatting that
+ *  spans a line break still shows. Marker text (already bold) gets a heavier stroke for bold. */
 function RichText({ text, heavy = false }: { text: string; heavy?: boolean }) {
-  const words = (t: string) => richSegments(t).map((s, n) => (
+  type Seg = ReturnType<typeof richSegments>[number];
+  const lines: Seg[][] = [[]];
+  for (const seg of richSegments(text)) seg.t.split("\n").forEach((t, n) => { if (n) lines.push([]); if (t) lines[lines.length - 1].push({ ...seg, t }); });
+  const words = (segs: Seg[]) => segs.map((s, n) => (
     <span key={n} className={`${s.b ? (heavy ? "[-webkit-text-stroke:0.035em_currentColor]" : "font-bold") : ""} ${s.i ? "italic" : ""} ${s.u ? "underline decoration-2 underline-offset-4" : ""}`}>{s.t}</span>
   ));
-  // List lines ("• " or "1. ") hang so wrapped words line up under the first word.
-  return <>{text.split("\n").map((line, n) => {
-    const mark = listMark(line);
-    return mark
-      ? <span key={n} className="flex"><span className="flex-none pr-[0.3em]">{mark.trim()}</span><span className="min-w-0">{words(line.slice(mark.length))}</span></span>
-      : <span key={n} className="block min-h-[1.25em]">{words(line)}</span>;
+  // List lines ("• ", "1. " or "1) ") hang so wrapped words line up under the first word.
+  return <>{lines.map((segs, n) => {
+    const mark = listMark(segs.map((x) => x.t).join(""));
+    if (!mark) return <span key={n} className="block min-h-[1.25em]">{words(segs)}</span>;
+    let cut = mark.length;
+    const rest = segs.map((x) => { const take = Math.min(cut, x.t.length); cut -= take; return { ...x, t: x.t.slice(take) }; }).filter((x) => x.t);
+    return <span key={n} className="flex"><span className="flex-none pr-[0.3em]">{mark.trim()}</span><span className="min-w-0">{words(rest)}</span></span>;
   })}</>;
 }
 

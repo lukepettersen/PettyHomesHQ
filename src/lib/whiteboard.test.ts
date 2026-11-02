@@ -80,3 +80,19 @@ describe("lists (owner request 2026-11-02)", () => {
     expect(listEnter("Plain", 5)).toBeNull();
   });
 });
+
+describe("formatting edge cases (owner report 2026-11-02)", () => {
+  it("keeps line breaks outside the markers and marks each line", async () => {
+    const { toggleMark, richSegments } = await import("./whiteboard");
+    expect(toggleMark("Luke Morning Cadence\n1) Look", 0, 21, "**").text).toBe("**Luke Morning Cadence**\n1) Look");
+    expect(toggleMark("A\nB", 0, 3, "__").text).toBe("__A__\n__B__");
+    // Markers that already span a line break still read as formatting.
+    expect(richSegments("**__Luke__**\nx").filter((x) => x.b && x.u).map((x) => x.t)).toEqual(["Luke"]);
+    expect(richSegments("**__Luke\n__**").some((x) => x.t.includes("*"))).toBe(false);
+  });
+  it("knows 1) lists", async () => {
+    const { listEnter, listMark } = await import("./whiteboard");
+    expect(listMark("1) Look at the day")).toBe("1) ");
+    expect(listEnter("1) Look", 7)).toEqual({ text: "1) Look\n2) ", pos: 11 });
+  });
+});
