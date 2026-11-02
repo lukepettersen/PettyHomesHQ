@@ -104,7 +104,7 @@ export function TextComposer({ personId, phones, phoneLabels = {}, templates, fr
   const count = body.length > 160 ? `${body.length} characters (${Math.ceil(body.length / 153)} texts)` : `${body.length}/160`;
   const buttons = (
     <span className="flex flex-wrap items-center justify-end gap-2">
-      {compact && <span className="w-48"><TemplateSearch templates={templates} value={templateId} disabled={pending} onPick={pick} emptyLabel="Template" noneLabel="No text templates yet" /></span>}
+      {compact && <span className="w-48 max-md:hidden"><TemplateSearch templates={templates} value={templateId} disabled={pending} onPick={pick} emptyLabel="Template" noneLabel="No text templates yet" /></span>}
       <TextPhotoButton photos={photos} onChange={setPhotos} disabled={pending} />
       <EmojiButton box={box} value={body} onChange={setBody} />
       {body && <button type="button" className="btn" disabled={pending} onClick={() => { setBody(""); setTemplateId(""); setMissing([]); }}>Clear</button>}
@@ -121,7 +121,7 @@ export function TextComposer({ personId, phones, phoneLabels = {}, templates, fr
       {/* Messages: a one-line box that grows as you type (up to about 6 lines), tools beside it (owner request 2026-10-28). */}
       <div className={compact ? "flex flex-wrap items-end gap-2" : ""}>
         <div className={`relative ${compact ? "min-w-[240px] flex-1" : ""}`}>
-          <textarea ref={box} aria-label="Text message" placeholder={compact ? "Write your text… (type / for a template)" : "Write a text, or type / and a template name"} className={`input w-full font-normal ${compact ? "max-h-40 min-h-[40px] resize-none py-2" : "min-h-24"}`} rows={compact ? 1 : undefined} value={body} maxLength={MAX_TEXT}
+          <textarea ref={box} aria-label="Text message" placeholder={compact ? "Write your text… (type / for a template)" : "Write a text, or type / and a template name"} className={`input w-full font-normal ${compact ? "max-h-40 min-h-[40px] resize-none py-2 max-md:rounded-[20px] max-md:text-[16px]" : "min-h-24"}`} rows={compact ? 1 : undefined} value={body} maxLength={MAX_TEXT}
             onChange={(e) => { setBody(e.target.value); slash.track(); if (compact) { e.target.style.height = "auto"; e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`; } }} onKeyDown={onKey} onKeyUp={slash.track} onClick={slash.track} />
           {slash.menu}
         </div>
@@ -129,7 +129,8 @@ export function TextComposer({ personId, phones, phoneLabels = {}, templates, fr
       </div>
       <TextPhotoPreviews photos={photos} onChange={setPhotos} />
       {missing.length > 0 && <p className="text-sm text-[#9a6400]">Not filled in (nothing on file): {missing.join(", ")}. Check the text before sending.</p>}
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* Phone (owner request 2026-11-02): Messages keeps just the message box and one row of buttons; "/" still finds templates. */}
+      <div className={`flex flex-wrap items-center justify-between gap-2 ${compact ? "max-md:hidden" : ""}`}>
         <span className="flex flex-wrap items-center gap-x-2 text-xs muted">From your number {from ? formatPhone(from) : ""} · {count}
           {compact && <AddRecipient mode="phone" exclude={[...phones, ...extras.map((x) => x.value)]} onAdd={(x) => setExtras([...extras, x])} />}
         </span>

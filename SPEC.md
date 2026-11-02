@@ -160,6 +160,11 @@ Principles:
   box has a magnifying glass. **Filters**: added filters are chips with × (and Clear all on All people); + Add filter
   opens a small pop-up with the same fields and conditions, a search box for long option lists, and options as pills
   to tap ("2 picked").
+- **Messages on a phone** *(owner request 2026-11-02)*: like iPhone Messages: a folder menu (Inbox / Unread /
+  Scheduled / Archived) and a compose button at the top, a big title, a rounded search, conversations with a blue dot
+  for unread, two-line previews and ›. A conversation opens full screen with ‹ back, the person in the middle (tap for
+  their contact), Call and ⋯ (Archive, Delete); blue and gray bubbles; the message box is one rounded line with the
+  buttons under it (type "/" for a template).
 - **People list on a phone** *(owner report 2026-11-02)*: cards instead of the table: full name, phone, then up to four
   of the list's columns as a short line; Call and Text buttons on each card; **Select** shows checkboxes for the bulk
   bar, which is one swipeable row. Columns is computer-only. **Tasks on a phone**: the list buttons are one even,

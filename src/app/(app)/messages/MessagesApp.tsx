@@ -60,7 +60,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
   return (
     <div className={`mx-auto grid max-w-[1600px] grid-cols-1 gap-3 px-4 py-4 md:h-[calc(100dvh-80px)] md:grid-cols-[190px_320px_minmax(0,1fr)] ${open && threadPeople.length ? "xl:grid-cols-[190px_300px_minmax(0,1fr)_260px]" : ""}`}>
       {/* Folders on the left like FUB (owner/assistant request 2026-10-28): Inbox, Unread, Scheduled, Archived. */}
-      <nav aria-label="Folders" className={`card flex flex-col gap-1 p-3 ${open ? "max-md:hidden" : ""}`}>
+      <nav aria-label="Folders" className="card flex flex-col gap-1 p-3 max-md:hidden">
         <div className="mb-1 flex items-center justify-between gap-2">
           <h1 className="text-xl font-extrabold">Messages</h1>
         </div>
@@ -77,23 +77,40 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
           </button>
         ))}
       </nav>
-      <section aria-label="Conversations" className={`card flex min-h-0 flex-col overflow-hidden ${open ? "max-md:hidden" : ""}`}>
-        <div className="flex flex-col gap-2 border-b border-misty p-3">
+      <section aria-label="Conversations" className={`card flex min-h-0 flex-col overflow-hidden max-md:-mx-4 max-md:-mt-4 max-md:rounded-none max-md:border-0 max-md:bg-paper max-md:shadow-none ${open ? "max-md:hidden" : ""}`}>
+        {/* Phone (owner request 2026-11-02): like iPhone Messages — folder menu, big title, compose; conversations first. */}
+        <div className="flex items-center justify-between px-4 pt-3 md:hidden">
+          <select aria-label="Folder" className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold shadow-sm" value={tab} onChange={(e) => setTab(e.target.value as typeof tab)}>
+            <option value="all">Inbox</option><option value="unread">Unread{unreadThreads ? ` (${unreadThreads})` : ""}</option><option value="scheduled">Scheduled</option><option value="archived">Archived</option>
+          </select>
+          <button type="button" aria-label={starting ? "Cancel new message" : "New message"} onClick={() => setStarting(!starting)}
+            className="grid size-10 place-items-center rounded-full bg-white text-accent shadow-sm">{starting ? "✕" : <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>}</button>
+        </div>
+        <div className="px-4 pb-1 pt-2 md:hidden">
+          <h1 className="text-[32px] font-extrabold leading-tight">{tab === "all" ? "Messages" : tab === "unread" ? "Unread" : tab === "scheduled" ? "Scheduled" : "Archived"}</h1>
+          {lines.length > 1 && (
+            <select aria-label="Whose texts" className="-ml-1 bg-transparent text-sm font-semibold text-accent" value={line.userId} onChange={(e) => router.push(href(null, e.target.value))}>
+              {lines.map((l) => <option key={l.userId} value={l.userId}>{l.name.split(" ")[0]}&apos;s texts</option>)}
+            </select>
+          )}
+        </div>
+        <div className="flex flex-col gap-2 border-b border-misty p-3 max-md:border-0 max-md:px-4 max-md:pt-1">
           {starting && <NewMessage templates={composer.templates} groupsOn={groupsOn} blocked={composer.blocked} onPick={(n) => { setStarting(false); router.push(href(n)); }} />}
-          <input className="input w-full" type="search" aria-label="Search conversations" placeholder="Search name or number" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="input w-full max-md:rounded-full max-md:border-0 max-md:bg-[#ebe6df] max-md:px-4" type="search" aria-label="Search conversations" placeholder="Search name or number" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         {tab === "scheduled" ? <ScheduledList rows={scheduled} q={q} onChanged={() => router.refresh()} /> : shown.length ? (
-          <ul className="min-h-0 flex-1 overflow-y-auto max-md:max-h-[70vh]">
+          <ul className="min-h-0 flex-1 overflow-y-auto">
             {shown.map((t) => (
               <li key={t.number}>
                 <Link href={href(t.number)} aria-current={t.number === open ? "true" : undefined}
-                  className={`grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-x-2.5 border-t border-misty px-3 py-2.5 first:border-0 hover:bg-sunken ${t.number === open ? "bg-accent-soft" : ""}`}>
+                  className={`grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-x-2.5 border-t border-misty px-3 py-2.5 first:border-0 hover:bg-sunken max-md:relative max-md:grid-cols-[48px_minmax(0,1fr)_auto] max-md:gap-x-3 max-md:border-0 max-md:py-3 max-md:pl-6 max-md:pr-4 ${t.number === open ? "bg-accent-soft" : ""}`}>
+                  {t.unread > 0 && <span aria-hidden="true" className="absolute left-2 top-1/2 size-2.5 -translate-y-1/2 rounded-full bg-[#0b84fe] md:hidden" />}
                   <Avatar name={t.name} group={!!t.group} missed={t.lastKind === "missed_call"} />
-                  <span className="min-w-0">
-                    <span className={`block truncate ${t.unread ? "font-extrabold" : "font-semibold"}`}>{t.name}</span>
-                    <span className={`block truncate text-sm ${t.lastKind === "missed_call" ? "text-bad" : t.unread ? "text-charcoal" : "muted"}`}>{t.lastDir === "out" ? "You: " : ""}{t.last}</span>
+                  <span className="min-w-0 max-md:border-b max-md:border-misty max-md:pb-3">
+                    <span className={`block truncate ${t.unread ? "font-extrabold" : "font-semibold"} max-md:text-[17px]`}>{t.name}</span>
+                    <span className={`block truncate text-sm max-md:line-clamp-2 max-md:whitespace-normal max-md:text-[15px] ${t.lastKind === "missed_call" ? "text-bad" : t.unread ? "text-charcoal" : "muted"}`}>{t.lastDir === "out" ? "You: " : ""}{t.last}</span>
                   </span>
-                  <span className="flex flex-col items-end gap-1 self-start"><span className="text-xs muted">{when(t.at)}</span>{t.unread > 0 && <span className="rounded-full bg-coral px-1.5 text-xs font-bold text-white">{t.unread}</span>}</span>
+                  <span className="flex flex-col items-end gap-1 self-start"><span className="text-xs muted max-md:text-sm">{when(t.at)}<span aria-hidden="true" className="ml-1.5 md:hidden">›</span></span>{t.unread > 0 && <span className="rounded-full bg-coral px-1.5 text-xs font-bold text-white max-md:hidden">{t.unread}</span>}</span>
                 </Link>
               </li>
             ))}
@@ -101,14 +118,26 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
         ) : <p className="p-4 text-sm muted">{tab === "archived" && !q.trim() ? "Nothing archived. Click Archive on a conversation when you're done with it." : tab === "unread" && !q.trim() ? "All caught up. No unread texts or missed calls." : threads.length ? "No conversations match." : `No texts yet on ${formatPhone(line.number)}. Click + New message to text a contact.`}</p>}
       </section>
 
-      <section aria-label="Conversation" className={`card flex min-h-[60vh] flex-col overflow-hidden md:min-h-0 ${open ? "" : "max-md:hidden"}`}>
+      <section aria-label="Conversation" className={`card flex min-h-[60vh] flex-col overflow-hidden md:min-h-0 max-md:fixed max-md:inset-0 max-md:z-40 max-md:min-h-0 max-md:rounded-none max-md:border-0 ${open ? "" : "max-md:hidden"}`}>
         {!open ? <p className="m-auto p-6 text-sm muted">Pick a conversation.</p> : (
           <>
-            <header className="flex flex-wrap items-center justify-between gap-2 border-b border-misty px-3 py-2.5">
+            <header className="flex items-center gap-2 border-b border-misty bg-white/95 px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur md:hidden">
+              <Link href={href(null)} aria-label="Back to messages" className="flex items-center px-1 text-[17px] text-[#0b84fe]"><span aria-hidden="true" className="text-3xl leading-none">‹</span></Link>
+              <div className="flex min-w-0 flex-1 flex-col items-center">
+                {!group && <Avatar name={person?.name ?? formatPhone(open)} />}
+                {group ? <b className="truncate text-xs">{group.members.map((m) => m.name.split(" ")[0]).join(", ")} ›</b>
+                  : person ? <Link href={`/people/${person.id}`} className="max-w-full truncate text-xs font-semibold">{person.name} ›</Link> : <b className="text-xs">{formatPhone(open)}</b>}
+              </div>
+              {!group ? <CallLink className="grid size-10 place-items-center text-[#0b84fe]" number={`+1${open}`} name={person?.name}><span className="sr-only">Call</span><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" /></svg></CallLink> : <span className="size-10" />}
+              <MoreMenu>
+                <ArchiveThread ourNumber={line.number} number={open} archived={!!current?.archived} onDone={(a) => router.push(a ? href(null) : href(open))} />
+                <DeleteThread ourNumber={line.number} number={open} onDone={() => router.push(href(null))} />
+              </MoreMenu>
+            </header>
+            <header className="flex flex-wrap items-center justify-between gap-2 border-b border-misty px-3 py-2.5 max-md:hidden">
               <div className="flex min-w-0 items-center gap-2.5">
                 {!group && <Avatar name={person?.name ?? formatPhone(open)} />}
                 <div className="min-w-0">
-                <Link href={href(null)} className="text-sm muted md:hidden">‹ Messages</Link>
                 {group ? (
                   <>
                     <b className="block text-lg font-extrabold">Group text</b>
@@ -124,7 +153,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
               </span>
             </header>
             {!person && !group && <Unknown number={open} onDone={() => router.refresh()} />}
-            <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-3 max-md:max-h-[60vh]">
+            <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-3 max-md:bg-white">
               {conversation.map((m, i) => {
                 const newDay = i === 0 || day(conversation[i - 1].at) !== day(m.at);
                 return (
@@ -145,7 +174,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
                             ))}
                           </span>
                         )}
-                        {!(m.photos?.length && m.body === PHOTO_ONLY) && <p className={`whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${m.direction === "out" ? "bg-accent text-white" : "bg-sunken"}`}>{m.body}</p>}
+                        {!(m.photos?.length && m.body === PHOTO_ONLY) && <p className={`whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm max-md:rounded-[20px] max-md:text-[16px] ${m.direction === "out" ? "bg-accent text-white max-md:bg-[#0b84fe]" : "bg-sunken max-md:bg-[#e9e9eb]"}`}>{m.body}</p>}
                         {!!m.reactions?.length && <span className="-mt-2 rounded-full border border-misty bg-white px-1.5 text-sm shadow-sm" aria-label={`Reactions: ${m.reactions.join(" ")}`}>{[...new Set(m.reactions)].join("")}{m.reactions.length > new Set(m.reactions).size ? ` ${m.reactions.length}` : ""}</span>}
                         <span className={`flex items-center gap-1 px-1 text-[11px] muted ${m.direction === "out" ? "flex-row-reverse" : ""}`}>
                           {!composer.blocked && m.body !== PHOTO_ONLY && <ReactButton id={m.id} out={m.direction === "out"} mine={m.mine ?? []} onDone={() => router.refresh()} />}
@@ -159,7 +188,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
               })}
               <div ref={end} />
             </div>
-            <div className="border-t border-misty bg-white px-3 py-2.5">
+            <div className="border-t border-misty bg-white px-3 py-2.5 max-md:pb-[max(0.625rem,env(safe-area-inset-bottom))]">
               {group ? <GroupComposer key={open} sid={open} members={group.members.map((m) => m.digits)} templates={composer.templates} blocked={composer.blocked ?? (groupsOn ? null : "Group texting is off (Admin → Integrations), so HQ can't reply to the group.")} from={composer.from} onSent={() => router.refresh()} />
                 : <TextComposer key={open} personId={person?.id ?? null} phones={[open]} compact {...composer} />}
             </div>
