@@ -12,6 +12,7 @@ const itemSchema = z.object({
   w: z.number().finite().optional(), h: z.number().finite().optional(),
   color: z.string().optional(),
   size: z.number().finite().optional(), // text and names: font size
+  align: z.enum(["left", "center", "right"]).optional(), // notes and text (owner request 2026-11-02)
   text: z.string().max(2000).default(""),
   personId: z.string().max(40).optional(),
 });
@@ -27,6 +28,9 @@ export function cleanBoard(raw: unknown): BoardItem[] {
     x: clamp(i.x, 0, BOARD.w - 40), y: clamp(i.y, 0, BOARD.h - 30),
     ...(i.kind === "note" ? { w: clamp(i.w ?? 220, 120, 700), h: clamp(i.h ?? 160, 80, 700), color: NOTE_COLORS.includes(i.color as never) ? i.color : NOTE_COLORS[0] } : {}),
     ...(i.kind !== "note" ? { size: clamp(i.size ?? (i.kind === "text" ? 40 : 30), 16, 120) } : {}),
+    // A text box the owner has reshaped keeps its width and height; otherwise it fits its words.
+    ...(i.kind === "text" && i.w && i.h ? { w: clamp(i.w, 60, BOARD.w), h: clamp(i.h, 30, BOARD.h) } : {}),
+    ...(i.kind !== "person" && i.align && i.align !== "left" ? { align: i.align } : {}),
     ...(i.kind === "person" && i.personId ? { personId: i.personId } : {}),
   }));
 }
@@ -34,6 +38,7 @@ export function cleanBoard(raw: unknown): BoardItem[] {
 /** Roughly how much room an item takes (notes have a size; text and names grow with their words). */
 export function boxOf(i: Pick<BoardItem, "kind" | "x" | "y" | "w" | "h" | "size" | "text">) {
   if (i.kind === "note") return { x: i.x, y: i.y, w: i.w ?? 220, h: i.h ?? 160 };
+  if (i.kind === "text" && i.w && i.h) return { x: i.x, y: i.y, w: i.w, h: i.h };
   const size = i.size ?? 36, lines = (i.text || "Type here").split("\n");
   return { x: i.x, y: i.y, w: Math.max(4, ...lines.map((l) => l.length)) * size * 0.55 + size, h: lines.length * size * 1.3 };
 }

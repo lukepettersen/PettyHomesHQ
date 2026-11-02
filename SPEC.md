@@ -122,9 +122,15 @@ Principles:
 
 - A private board for the owner (others don't see the tab; the page sends them to Tasks). **+ Sticky note** in 5
   colors (a color swatch recolors the selected note), **+ Text** for big marker-style writing, **+ Person** searches HQ
-  and puts the name on the board as writing that opens their contact. Click to type; drag (a note's top bar, or the
-  ⠿ grip on text and names) to move; drag a note's corner to resize; A−/A+ resize selected text or names; × twice
-  removes. New items go in the first open spot on screen. The board is exactly the size of the screen and never scrolls; zooming the browser out gives it more room (items keep their size, so they look smaller), owner 2026-11-02. It saves itself as you work (AppSetting
+  and puts the name on the board as writing that opens their contact. Click to type (or open a name); press and drag
+  a name, text or note itself (or its ⠿ grip / top bar) to move it, and a plain click still types or opens; drag the
+  corner square to reshape a note or a text box (text wraps inside it); left / center / right buttons line up the words
+  in picked notes and text; A−/A+ resize selected text or names; × twice removes. **Pick several** with ⌘/Ctrl/Shift-click
+  or by dragging a box on an empty spot, then move them together (they keep their layout), resize, recolor, align, or
+  remove them (Delete key or Remove, asked twice); Escape unpicks. New items go in the first open spot on screen. The
+  board is exactly the size of the screen and never scrolls; zooming the browser out gives it more room (items keep
+  their size, so they look smaller), owner 2026-11-02. Changes save only with **Save** (or ⌘S); "Unsaved changes" shows
+  until then, **Cancel** goes back to the last save, and leaving the page with unsaved changes asks first (AppSetting
   "whiteboard:<userId>", up to 300 items); stats from the MASTER FILE are left for later.
 
 ## 6. People

@@ -3,21 +3,24 @@
 import Link from "next/link";
 import { Caveat } from "next/font/google";
 import { useEffect, useRef, useState } from "react";
-import { BOARD, NOTE_COLORS, placeNew, type BoardItem } from "@/lib/whiteboard";
+import { BOARD, boxOf, NOTE_COLORS, placeNew, type BoardItem } from "@/lib/whiteboard";
 import { saveBoard } from "./actions";
 
 const hand = Caveat({ subsets: ["latin"], weight: ["500", "700"] });
 const newId = () => Math.random().toString(36).slice(2, 10);
 type Hit = { id: string; name: string; stage: string };
 
-/** The owner's whiteboard (owner request 2026-11-02): sticky notes, marker text and people, dragged anywhere; saves itself. */
+/** The owner's whiteboard (owner request 2026-11-02): sticky notes, marker text and people, dragged anywhere; saves itself.
+ *  Several can be picked at once (⌘/Ctrl/Shift-click, or drag a box on an empty spot) to move, resize, recolor or delete
+ *  together, keeping how they're laid out. */
 export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
   const [items, setItems] = useState(initial);
-  const [sel, setSel] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [confirm, setConfirm] = useState<string | null>(null); // an item id, or "many" for Delete on several
   const [status, setStatus] = useState<"saved" | "saving" | "error">("saved");
   const [picking, setPicking] = useState(false);
   const [fresh, setFresh] = useState<string | null>(null); // just added: the cursor goes in it
+  const [box, setBox] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   // The board fills the rest of the screen, never scrolls; zooming the browser out gives it more room (owner 2026-11-02).
   const page = useRef<HTMLDivElement>(null);
@@ -27,47 +30,128 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
     fit(); window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
   }, []);
-  const first = useRef(true);
-
-  // Saves a moment after the last change.
+  // Saves only when the owner clicks Save (or ⌘S); Cancel goes back to the last save (owner request 2026-11-02).
+  const [saved, setSaved] = useState(initial);
+  const dirty = items !== saved;
+  const save = async () => {
+    if (!dirty || status === "saving") return;
+    setStatus("saving"); const now = items; const r = await saveBoard(now);
+    if (r.ok) setSaved(now);
+    setStatus(r.ok ? "saved" : "error");
+  };
+  const cancel = () => { setItems(saved); setPicked([]); setConfirm(null); setStatus("saved"); };
+  const saveRef = useRef(save);
+  useEffect(() => { saveRef.current = save; });
   useEffect(() => {
-    if (first.current) { first.current = false; return; }
-    const t = setTimeout(async () => { setStatus("saving"); const r = await saveBoard(items); setStatus(r.ok ? "saved" : "error"); }, 800);
-    return () => clearTimeout(t);
-  }, [items]);
+    if (!dirty) return;
+    const leave = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener("beforeunload", leave);
+    return () => window.removeEventListener("beforeunload", leave);
+  }, [dirty]);
 
   const patch = (id: string, p: Partial<BoardItem>) => setItems((list) => list.map((i) => (i.id === id ? { ...i, ...p } : i)));
-  const view = () => ({ left: scroller.current?.scrollLeft ?? 0, top: scroller.current?.scrollTop ?? 0, w: scroller.current?.clientWidth, h: scroller.current?.clientHeight });
-  const add = (i: Omit<BoardItem, "id" | "x" | "y">) => { const id = newId(); setItems((list) => [...list, { ...i, id, ...placeNew(view(), list, i.kind === "note" ? { w: i.w ?? 220, h: i.h ?? 160 } : { w: 320, h: (i.size ?? 36) * 1.5 }) }]); setSel(id); setFresh(id); };
-  const selected = items.find((i) => i.id === sel);
-  const remove = (id: string) => { if (confirm !== id) { setConfirm(id); return; } setItems((list) => list.filter((i) => i.id !== id)); setConfirm(null); setSel(null); };
+  const view = () => ({ left: 0, top: 0, w: scroller.current?.clientWidth, h: scroller.current?.clientHeight });
+  const add = (i: Omit<BoardItem, "id" | "x" | "y">) => { const id = newId(); setItems((list) => [...list, { ...i, id, ...placeNew(view(), list, i.kind === "note" ? { w: i.w ?? 220, h: i.h ?? 160 } : { w: 320, h: (i.size ?? 36) * 1.5 }) }]); setPicked([id]); setFresh(id); };
+  const sel = items.filter((i) => picked.includes(i.id));
+  const notes = sel.filter((i) => i.kind === "note"), words = sel.filter((i) => i.kind !== "note"), aligned = sel.filter((i) => i.kind !== "person");
+  const removeIds = (ids: string[]) => { setItems((list) => list.filter((i) => !ids.includes(i.id))); setPicked([]); setConfirm(null); };
+  const remove = (id: string) => { if (confirm !== id) { setConfirm(id); return; } removeIds([id]); };
+  /** A click picks one; ⌘/Ctrl/Shift-click adds or removes it from what's picked. */
+  const pick = (id: string, e: React.PointerEvent | React.FocusEvent) => {
+    const add = "metaKey" in e && (e.metaKey || e.ctrlKey || e.shiftKey);
+    setPicked((p) => (add ? (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]) : p.includes(id) ? p : [id]));
+  };
 
-  /** Dragging by the grip (or a note's top bar) moves it; the corner resizes a note. */
-  const drag = (id: string, mode: "move" | "size") => (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest("button")) return; // the × on a note's top strip is a button, not a drag (owner report 2026-11-02)
-    e.preventDefault(); e.stopPropagation(); setSel(id);
-    const it = items.find((i) => i.id === id); if (!it) return;
-    const sx = e.clientX, sy = e.clientY, ox = mode === "move" ? it.x : it.w ?? 220, oy = mode === "move" ? it.y : it.h ?? 160;
-    const target = e.currentTarget as HTMLElement; target.setPointerCapture(e.pointerId);
-    const move = (ev: PointerEvent) => {
-      const dx = ev.clientX - sx, dy = ev.clientY - sy;
-      // Kept on the visible board (it's the size of the screen; owner 2026-11-02).
-      const maxX = (scroller.current?.clientWidth ?? BOARD.w) - 40, maxY = (scroller.current?.clientHeight ?? BOARD.h) - 30;
-      if (mode === "move") patch(id, { x: Math.max(0, Math.min(maxX, ox + dx)), y: Math.max(0, Math.min(maxY, oy + dy)) });
-      else patch(id, { w: Math.max(120, Math.min(700, ox + dx)), h: Math.max(80, Math.min(700, oy + dy)) });
+  // Delete removes everything picked (asks once); Escape unpicks. Not while typing in a note or text.
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      const typing = (e.target as HTMLElement).closest("textarea, input");
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") { e.preventDefault(); void saveRef.current(); return; }
+      if (e.key === "Escape") { setPicked([]); setConfirm(null); (document.activeElement as HTMLElement | null)?.blur(); return; }
+      if (typing || !picked.length || (e.key !== "Delete" && e.key !== "Backspace")) return;
+      e.preventDefault();
+      if (confirm !== "many") { setConfirm("many"); return; }
+      removeIds(picked);
     };
-    const up = () => { target.removeEventListener("pointermove", move); target.removeEventListener("pointerup", up); };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [picked, confirm]);
+
+  /** Moves an item, and everything else picked with it, keeping their layout; the corner resizes a note.
+   *  From the grip (or a note's top bar) it moves at once; from the name, text or note itself it waits for a small move,
+   *  so a plain click still opens the name or puts the cursor in the text (owner request 2026-11-02). */
+  const startMove = (id: string, e: React.PointerEvent, mode: "move" | "size", wait: boolean) => {
+    const el = e.target as HTMLElement;
+    if (el.closest("button")) return; // the × is a button, not a drag (owner report 2026-11-02)
+    if (wait && el.closest("textarea") === document.activeElement && el.closest("textarea")) return; // already typing: drag selects words
+    if (!wait) { e.preventDefault(); e.stopPropagation(); }
+    const multi = e.metaKey || e.ctrlKey || e.shiftKey;
+    const group = mode === "move" && picked.includes(id) && !multi ? picked : [id];
+    if (!picked.includes(id) || multi) pick(id, e);
+    if (multi && wait) return; // ⌘-click only picks
+    const start = items.filter((i) => group.includes(i.id)).map((i) => { const b = boxOf(i); return { id: i.id, x: i.x, y: i.y, w: b.w, h: b.h, kind: i.kind }; });
+    const sx = e.clientX, sy = e.clientY;
+    let moving = !wait;
+    const move = (ev: PointerEvent) => {
+      let dx = ev.clientX - sx, dy = ev.clientY - sy;
+      if (!moving) {
+        if (Math.hypot(dx, dy) < 5) return;
+        moving = true;
+        (document.activeElement as HTMLElement | null)?.blur(); window.getSelection()?.removeAllRanges();
+        document.body.style.userSelect = "none";
+      }
+      ev.preventDefault();
+      if (mode === "size") {
+        const s0 = start[0];
+        if (s0.kind === "note") patch(id, { w: Math.max(120, Math.min(700, s0.w + dx)), h: Math.max(80, Math.min(700, s0.h + dy)) });
+        else patch(id, { w: Math.round(Math.max(60, s0.w + dx)), h: Math.round(Math.max(30, s0.h + dy)) }); // a text box: the words wrap inside it
+        return;
+      }
+      // The whole group stays on the visible board, keeping its layout (it's the size of the screen; owner 2026-11-02).
+      const W = (scroller.current?.clientWidth ?? BOARD.w) - 40, H = (scroller.current?.clientHeight ?? BOARD.h) - 30;
+      dx = Math.max(-Math.min(...start.map((s) => s.x)), Math.min(W - Math.max(...start.map((s) => s.x)), dx));
+      dy = Math.max(-Math.min(...start.map((s) => s.y)), Math.min(H - Math.max(...start.map((s) => s.y)), dy));
+      setItems((list) => list.map((i) => { const s = start.find((x) => x.id === i.id); return s ? { ...i, x: s.x + dx, y: s.y + dy } : i; }));
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up);
+      document.body.style.userSelect = "";
+      // A drag that ends on a name shouldn't also open it.
+      if (moving && wait) { const stop = (c: MouseEvent) => { c.preventDefault(); c.stopPropagation(); }; window.addEventListener("click", stop, { capture: true, once: true }); setTimeout(() => window.removeEventListener("click", stop, { capture: true }), 0); }
+    };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up); window.addEventListener("pointercancel", up);
+  };
+  const drag = (id: string, mode: "move" | "size") => (e: React.PointerEvent) => startMove(id, e, mode, false);
+  const grab = (id: string) => (e: React.PointerEvent) => startMove(id, e, "move", true);
+  /** Dragging on an empty spot draws a box; what it touches gets picked. */
+  const boxStart = (e: React.PointerEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest("[data-item]")) return;
+    const r = e.currentTarget.getBoundingClientRect(), keep = e.metaKey || e.ctrlKey || e.shiftKey ? picked : [];
+    const x0 = e.clientX - r.left, y0 = e.clientY - r.top;
+    if (!keep.length) setPicked([]);
+    setConfirm(null);
+    const target = e.currentTarget; target.setPointerCapture(e.pointerId);
+    let cur = { x0, y0, x1: x0, y1: y0 };
+    const move = (ev: PointerEvent) => { cur = { x0, y0, x1: ev.clientX - r.left, y1: ev.clientY - r.top }; setBox(cur); };
+    const up = () => {
+      target.removeEventListener("pointermove", move); target.removeEventListener("pointerup", up); setBox(null);
+      const L = Math.min(cur.x0, cur.x1), R = Math.max(cur.x0, cur.x1), T = Math.min(cur.y0, cur.y1), B = Math.max(cur.y0, cur.y1);
+      if (R - L < 4 && B - T < 4) return;
+      const hit = items.filter((i) => { const b = boxOf(i); return b.x < R && b.x + b.w > L && b.y < B && b.y + b.h > T; }).map((i) => i.id);
+      setPicked([...new Set([...keep, ...hit])]);
+    };
     target.addEventListener("pointermove", move); target.addEventListener("pointerup", up);
   };
-  const resizeText = (d: number) => { if (selected && selected.kind !== "note") patch(selected.id, { size: Math.max(16, Math.min(120, (selected.size ?? 36) + d)) }); };
+  const resizeText = (d: number) => setItems((list) => list.map((i) => (picked.includes(i.id) && i.kind !== "note" ? { ...i, size: Math.max(16, Math.min(120, (i.size ?? 36) + d)) } : i)));
   const grip = (id: string) => (
     <span role="button" tabIndex={-1} aria-label="Drag to move" title="Drag to move" onPointerDown={drag(id, "move")}
-      className="absolute -left-6 top-1 hidden cursor-move touch-none select-none rounded px-1 text-sm text-muted group-hover:block group-focus-within:block">⠿</span>
+      className={`absolute -left-6 top-1 cursor-move touch-none select-none rounded px-1 text-sm text-muted group-hover:block group-focus-within:block ${picked.includes(id) ? "block" : "hidden"}`}>⠿</span>
   );
   const x = (id: string, cls = "") => (
     <button type="button" aria-label={confirm === id ? "Click again to remove" : "Remove"} onClick={() => remove(id)} onBlur={() => setConfirm((c) => (c === id ? null : c))}
       className={`rounded px-1.5 text-sm leading-5 ${confirm === id ? "bg-bad text-xs font-bold text-white" : "text-black/45 hover:bg-black/5 hover:text-bad"} ${cls}`}>{confirm === id ? "Remove?" : "×"}</button>
   );
+  const ring = (id: string) => (picked.includes(id) ? "outline-2 outline-offset-4 outline-dashed outline-coral" : "");
 
   return (
     <div ref={page} className="flex flex-col px-4 pb-4 pt-3" style={{ height }}>
@@ -76,9 +160,9 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
         <span className="flex items-center gap-1.5 rounded-lg border border-misty bg-white px-2.5 py-1.5 text-sm font-semibold">
           <button type="button" className="hover:underline" onClick={() => add({ kind: "note", text: "", color: NOTE_COLORS[0], w: 220, h: 160 })}>+ Sticky note</button>
           {NOTE_COLORS.map((c, n) => (
-            <button key={c} type="button" title={selected?.kind === "note" ? "Change this note's color" : "Add a note in this color"} aria-label={`${selected?.kind === "note" ? "Color" : "Add note"} ${n + 1}`}
-              onClick={() => (selected?.kind === "note" ? patch(selected.id, { color: c }) : add({ kind: "note", text: "", color: c, w: 220, h: 160 }))}
-              className={`size-4 rounded border ${selected?.kind === "note" && selected.color === c ? "border-charcoal ring-1 ring-charcoal" : "border-black/10"}`} style={{ background: c }} />
+            <button key={c} type="button" title={notes.length ? `Change the color of ${notes.length === 1 ? "this note" : `these ${notes.length} notes`}` : "Add a note in this color"} aria-label={`${notes.length ? "Color" : "Add note"} ${n + 1}`}
+              onClick={() => (notes.length ? setItems((list) => list.map((i) => (picked.includes(i.id) && i.kind === "note" ? { ...i, color: c } : i))) : add({ kind: "note", text: "", color: c, w: 220, h: 160 }))}
+              className={`size-4 rounded border ${notes.length && notes.every((i) => i.color === c) ? "border-charcoal ring-1 ring-charcoal" : "border-black/10"}`} style={{ background: c }} />
           ))}
         </span>
         <button type="button" className="btn" onClick={() => add({ kind: "text", text: "", size: 40 })}>+ Text</button>
@@ -87,49 +171,79 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
           {picking && <PersonPicker onPick={(h) => { add({ kind: "person", text: h.name, personId: h.id, size: 30 }); setPicking(false); }} onClose={() => setPicking(false)} />}
         </span>
         <span className="flex overflow-hidden rounded-lg border border-misty bg-white text-sm font-semibold">
-          <button type="button" className="px-2.5 py-1.5 hover:bg-sunken disabled:opacity-40" disabled={!selected || selected.kind === "note"} onClick={() => resizeText(-4)} aria-label="Smaller">A−</button>
-          <button type="button" className="border-l border-misty px-2.5 py-1.5 hover:bg-sunken disabled:opacity-40" disabled={!selected || selected.kind === "note"} onClick={() => resizeText(4)} aria-label="Bigger">A+</button>
+          <button type="button" className="px-2.5 py-1.5 hover:bg-sunken disabled:opacity-40" disabled={!words.length} onClick={() => resizeText(-4)} aria-label="Smaller">A−</button>
+          <button type="button" className="border-l border-misty px-2.5 py-1.5 hover:bg-sunken disabled:opacity-40" disabled={!words.length} onClick={() => resizeText(4)} aria-label="Bigger">A+</button>
         </span>
-        <span className={`ml-auto text-xs ${status === "error" ? "font-semibold text-bad" : "muted"}`} role="status">
-          {status === "saving" ? "Saving…" : status === "error" ? "Couldn't save. Check your connection." : "Saved ✓ · only you can see this"}
+        <span className="flex overflow-hidden rounded-lg border border-misty bg-white text-sm font-semibold" role="group" aria-label="Line up the words">
+          {(["left", "center", "right"] as const).map((a, n) => (
+            <button key={a} type="button" disabled={!aligned.length} onClick={() => setItems((list) => list.map((i) => (picked.includes(i.id) && i.kind !== "person" ? { ...i, align: a } : i)))}
+              aria-label={`Align ${a}`} title={`Align ${a}`} aria-pressed={aligned.length > 0 && aligned.every((i) => (i.align ?? "left") === a)}
+              className={`px-2.5 py-1.5 hover:bg-sunken disabled:opacity-40 aria-pressed:bg-sunken ${n ? "border-l border-misty" : ""}`}><AlignIcon a={a} /></button>
+          ))}
+        </span>
+        {picked.length > 1 && (
+          <span className="flex items-center gap-2 text-sm">
+            <b>{picked.length} picked</b>
+            <button type="button" className={`rounded-md px-2 py-1 font-semibold ${confirm === "many" ? "bg-bad text-white" : "text-bad hover:bg-sunken"}`} onClick={() => (confirm === "many" ? removeIds(picked) : setConfirm("many"))}>{confirm === "many" ? `Click again to remove ${picked.length}` : "Remove"}</button>
+            <button type="button" className="muted hover:underline" onClick={() => { setPicked([]); setConfirm(null); }}>Unpick</button>
+          </span>
+        )}
+        <span className="ml-auto flex items-center gap-2">
+          <span className={`text-xs ${status === "error" ? "font-semibold text-bad" : "muted"}`} role="status">
+            {status === "saving" ? "Saving…" : status === "error" ? "Couldn't save. Check your connection." : dirty ? <b className="text-charcoal">Unsaved changes</b> : <>Saved ✓ · only you can see this<span className="hidden xl:inline"> · ⌘-click or drag a box to pick several</span></>}
+          </span>
+          {dirty && <button type="button" className="btn" onClick={cancel} disabled={status === "saving"}>Cancel</button>}
+          <button type="button" className="btn btn-primary" onClick={save} disabled={!dirty || status === "saving"} title="Save (⌘S)">Save</button>
         </span>
       </div>
-      <div ref={scroller} className="relative min-h-0 flex-1 overflow-hidden rounded-2xl border border-misty bg-white shadow-[inset_0_0_0_10px_#f6f4f1]" onPointerDown={(e) => { if (!(e.target as HTMLElement).closest("[data-item]")) setSel(null); }}>
-        <div className={`absolute inset-0 ${hand.className}`} style={{ backgroundImage: "radial-gradient(#e7e2da 1px, transparent 1px)", backgroundSize: "22px 22px" }}>
+      <div ref={scroller} className="relative min-h-0 flex-1 overflow-hidden rounded-2xl border border-misty bg-white shadow-[inset_0_0_0_10px_#f6f4f1]">
+        <div className={`absolute inset-0 touch-none ${hand.className}`} onPointerDown={boxStart} style={{ backgroundImage: "radial-gradient(#e7e2da 1px, transparent 1px)", backgroundSize: "22px 22px" }}>
           {items.length === 0 && <p className="absolute left-10 top-10 font-sans text-sm muted">Empty board. Add a sticky note, some text or a person with the buttons above.</p>}
           {items.map((i) => {
-            const on = sel === i.id;
             if (i.kind === "note") return (
-              <div key={i.id} data-item onPointerDown={() => setSel(i.id)} className={`absolute flex flex-col rounded shadow-[0_6px_14px_rgba(56,50,50,.15)] ${on ? "outline-2 outline-offset-4 outline-dashed outline-coral" : ""}`}
+              <div key={i.id} data-item onPointerDown={grab(i.id)} className={`absolute flex flex-col rounded shadow-[0_6px_14px_rgba(56,50,50,.15)] ${ring(i.id)}`}
                 style={{ left: i.x, top: i.y, width: i.w, height: i.h, background: i.color }}>
                 <div onPointerDown={drag(i.id, "move")} title="Drag to move" className="flex h-5 flex-none cursor-move touch-none items-center justify-end px-1">{x(i.id, "font-sans")}</div>
-                <textarea aria-label="Sticky note" autoFocus={fresh === i.id} value={i.text} placeholder="Type…" onChange={(e) => patch(i.id, { text: e.target.value })} onFocus={() => setSel(i.id)}
-                  className="min-h-0 flex-1 resize-none bg-transparent px-3 pb-3 text-[24px] leading-tight text-charcoal outline-none placeholder:text-black/30" />
+                <textarea aria-label="Sticky note" autoFocus={fresh === i.id} value={i.text} placeholder="Type…" onChange={(e) => patch(i.id, { text: e.target.value })}
+                  style={{ textAlign: i.align ?? "left" }} className="min-h-0 flex-1 resize-none bg-transparent px-3 pb-3 text-[24px] leading-tight text-charcoal outline-none placeholder:text-black/30" />
                 <span onPointerDown={drag(i.id, "size")} aria-hidden="true" className="absolute -bottom-1.5 -right-1.5 size-3.5 cursor-nwse-resize touch-none rounded-sm border-2 border-coral bg-white" />
               </div>
             );
             const size = i.size ?? 36;
             if (i.kind === "person") return (
-              <div key={i.id} data-item onPointerDown={() => setSel(i.id)} className={`group absolute flex items-center gap-1 ${on ? "outline-2 outline-offset-4 outline-dashed outline-coral" : ""}`} style={{ left: i.x, top: i.y }}>
+              <div key={i.id} data-item onPointerDown={grab(i.id)} className={`group absolute flex items-center gap-1 ${ring(i.id)}`} style={{ left: i.x, top: i.y }}>
                 {grip(i.id)}
-                <Link href={`/people/${i.personId}`} draggable={false} className="whitespace-nowrap text-[#2f5d8a] underline decoration-1 underline-offset-4" style={{ fontSize: size }}>{i.text}</Link>
+                <Link href={`/people/${i.personId}`} draggable={false} onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey) e.preventDefault(); }} className="cursor-pointer select-none whitespace-nowrap text-[#2f5d8a] underline decoration-1 underline-offset-4" style={{ fontSize: size }}>{i.text}</Link>
                 <span className="hidden font-sans group-hover:inline">{x(i.id)}</span>
               </div>
             );
-            const lines = (i.text || "Type here").split("\n");
+            const lines = (i.text || "Type here").split("\n"), shaped = !!(i.w && i.h);
             return (
-              <div key={i.id} data-item onPointerDown={() => setSel(i.id)} className={`group absolute ${on ? "outline-2 outline-offset-4 outline-dashed outline-coral" : ""}`} style={{ left: i.x, top: i.y }}>
+              <div key={i.id} data-item onPointerDown={grab(i.id)} className={`group absolute ${ring(i.id)}`} style={{ left: i.x, top: i.y }}>
                 {grip(i.id)}
-                <textarea aria-label="Text" autoFocus={fresh === i.id} value={i.text} placeholder="Type here" rows={lines.length} onChange={(e) => patch(i.id, { text: e.target.value })} onFocus={() => setSel(i.id)}
-                  className="resize-none overflow-hidden bg-transparent font-bold leading-tight text-[#2f5d8a] outline-none placeholder:text-[#2f5d8a]/40"
-                  style={{ fontSize: size, width: `${Math.max(4, ...lines.map((l) => l.length)) * 0.55 + 1}em` }} />
+                <textarea aria-label="Text" autoFocus={fresh === i.id} value={i.text} placeholder="Type here" rows={lines.length} onChange={(e) => patch(i.id, { text: e.target.value })}
+                  className={`block resize-none bg-transparent font-bold leading-tight text-[#2f5d8a] outline-none placeholder:text-[#2f5d8a]/40 ${shaped ? "overflow-y-auto" : "overflow-hidden"}`}
+                  style={{ fontSize: size, textAlign: i.align ?? "left", ...(shaped ? { width: i.w, height: i.h } : { width: `${Math.max(4, ...lines.map((l) => l.length)) * 0.55 + 1}em` }) }} />
                 <span className="absolute -right-6 top-0 hidden font-sans group-hover:block">{x(i.id)}</span>
+                {/* Drag the corner to reshape the box; the words wrap to fit (owner request 2026-11-02). */}
+                <span onPointerDown={drag(i.id, "size")} aria-hidden="true" title="Drag to reshape"
+                  className={`absolute -bottom-1.5 -right-1.5 size-3.5 cursor-nwse-resize touch-none rounded-sm border-2 border-coral bg-white group-hover:block ${picked.includes(i.id) ? "block" : "hidden"}`} />
               </div>
             );
           })}
+          {box && <div aria-hidden="true" className="pointer-events-none absolute border border-dashed border-coral bg-coral/10" style={{ left: Math.min(box.x0, box.x1), top: Math.min(box.y0, box.y1), width: Math.abs(box.x1 - box.x0), height: Math.abs(box.y1 - box.y0) }} />}
         </div>
       </div>
     </div>
+  );
+}
+
+function AlignIcon({ a }: { a: "left" | "center" | "right" }) {
+  const rows = [14, 9, 12];
+  return (
+    <svg width="16" height="14" viewBox="0 0 16 14" aria-hidden="true" className="inline-block">
+      {rows.map((w, n) => <rect key={n} x={a === "left" ? 1 : a === "right" ? 15 - w : (16 - w) / 2} y={1 + n * 5} width={w} height="2" rx="1" fill="currentColor" />)}
+    </svg>
   );
 }
 

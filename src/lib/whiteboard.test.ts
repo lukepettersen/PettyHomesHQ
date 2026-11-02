@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BOARD, cleanBoard, NOTE_COLORS, placeNew } from "./whiteboard";
+import { BOARD, boxOf, cleanBoard, NOTE_COLORS, placeNew } from "./whiteboard";
 
 describe("whiteboard (owner request 2026-11-02)", () => {
   it("keeps items on the board with sensible sizes and colors", () => {
@@ -11,6 +11,17 @@ describe("whiteboard (owner request 2026-11-02)", () => {
     expect(out[0]).toEqual({ id: "a", kind: "note", text: "Call 10 past clients", x: 0, y: BOARD.h - 30, w: 700, h: 80, color: NOTE_COLORS[0] });
     expect(out[1]).toEqual({ id: "b", kind: "text", text: "2026: 40 homes", x: 10, y: 21, size: 120 });
     expect(out[2]).toEqual({ id: "c", kind: "person", text: "Sam & Lena Ortiz", x: 5, y: 5, size: 30, personId: "p1" });
+  });
+  it("keeps a reshaped text box and its alignment", () => {
+    const [t, n, pp] = cleanBoard([
+      { id: "t", kind: "text", x: 0, y: 0, w: 600.4, h: 10, align: "center", text: "2027 Current Clients" },
+      { id: "n", kind: "note", x: 0, y: 0, align: "left", text: "" },
+      { id: "p", kind: "person", x: 0, y: 0, align: "right", text: "Sam" },
+    ]);
+    expect(t).toEqual({ id: "t", kind: "text", text: "2027 Current Clients", x: 0, y: 0, size: 40, w: 600, h: 30, align: "center" });
+    expect(n.align).toBeUndefined();
+    expect(pp.align).toBeUndefined();
+    expect(boxOf(t)).toEqual({ x: 0, y: 0, w: 600, h: 30 });
   });
   it("refuses junk", () => {
     expect(() => cleanBoard([{ id: "x", kind: "drawing", x: 0, y: 0 }])).toThrow();
