@@ -44,6 +44,7 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
 
   /** Dragging by the grip (or a note's top bar) moves it; the corner resizes a note. */
   const drag = (id: string, mode: "move" | "size") => (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest("button")) return; // the × on a note's top strip is a button, not a drag (owner report 2026-11-02)
     e.preventDefault(); e.stopPropagation(); setSel(id);
     const it = items.find((i) => i.id === id); if (!it) return;
     const sx = e.clientX, sy = e.clientY, ox = mode === "move" ? it.x : it.w ?? 220, oy = mode === "move" ? it.y : it.h ?? 160;
@@ -65,7 +66,7 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
   );
   const x = (id: string, cls = "") => (
     <button type="button" aria-label={confirm === id ? "Click again to remove" : "Remove"} onClick={() => remove(id)} onBlur={() => setConfirm((c) => (c === id ? null : c))}
-      className={`rounded px-1 text-xs ${confirm === id ? "bg-bad font-bold text-white" : "text-black/40 hover:text-bad"} ${cls}`}>{confirm === id ? "Remove?" : "×"}</button>
+      className={`rounded px-1.5 text-sm leading-5 ${confirm === id ? "bg-bad text-xs font-bold text-white" : "text-black/45 hover:bg-black/5 hover:text-bad"} ${cls}`}>{confirm === id ? "Remove?" : "×"}</button>
   );
 
   return (
