@@ -5,6 +5,7 @@ import { isoFromDate, todayCentral } from "@/lib/normalize";
 import { toPaView, ucColumn } from "@/lib/pa";
 import { partnerLabel } from "@/lib/partners";
 import { parseColumns } from "@/lib/columns";
+import { LIVE_STEPS } from "@/server/tasks";
 
 export type PersonRow = PersonFacts & {
   id: string;
@@ -18,6 +19,8 @@ export type PersonRow = PersonFacts & {
   /** Every phone (digits), email, address and mailing name, for search. */
   contactText: string;
   company: string | null;
+  /** Their soonest open task (owner request 2026-11-02, "Next task" column): title and due date "YYYY-MM-DD" or null. */
+  nextTask: { title: string; due: string | null } | null;
 };
 
 /** Everyone not in Trash, flattened for the People table and smart lists. */
@@ -43,6 +46,11 @@ export async function loadPeopleRows(): Promise<PersonRow[]> {
   const lastBy = new Map<string, Date>();
   for (const g of await db.timelineEntry.groupBy({ by: ["personId", "kind"], where: { deletedAt: null, kind: { in: ["call", "text", "email"] } }, _max: { createdAt: true } }))
     if (g._max.createdAt) lastBy.set(`${g.personId}:${g.kind}`, g._max.createdAt);
+  // Each person's next open task: soonest due first, undated after (automatic sends still waiting aren't tasks).
+  const nextTask = new Map<string, { title: string; due: string | null }>();
+  for (const t of await db.task.findMany({ where: { personId: { not: null }, completedAt: null, deletedAt: null, ...LIVE_STEPS }, select: { personId: true, title: true, dueDate: true },
+    orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }, { dueTime: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }] }))
+    if (!nextTask.has(t.personId!)) nextTask.set(t.personId!, { title: t.title, due: t.dueDate ? isoFromDate(t.dueDate) : null });
   const mmdd = (d: Date) => d.toISOString().slice(5, 10);
   // Where each open deal sits: its stage, or its Under Contract column once there's an active purchase agreement.
   const ucCols = await db.pipelineStatus.findMany({ where: { kind: "uc" }, orderBy: { position: "asc" }, select: { name: true, untilDate: true } });
@@ -69,7 +77,7 @@ export async function loadPeopleRows(): Promise<PersonRow[]> {
       pipeline: p.files.map(where).filter((x): x is string => !!x),
     };
     return {
-      ...facts, id: p.id, name: p.name, company: p.company, address: p.address, mailingName: p.mailingName, kids: p.kids, phone: p.phones[0]?.number ?? null, email: p.emails[0]?.address ?? null, dueForTouch: isDueForTouch(facts),
+      ...facts, id: p.id, name: p.name, company: p.company, address: p.address, mailingName: p.mailingName, kids: p.kids, phone: p.phones[0]?.number ?? null, email: p.emails[0]?.address ?? null, dueForTouch: isDueForTouch(facts), nextTask: nextTask.get(p.id) ?? null,
       contactText: [...p.phones.map((x) => x.normalized), ...p.emails.map((x) => x.normalized), p.address ?? "", ...p.addresses.map((a) => a.value), p.mailingName ?? "", p.kids ?? ""].join(" ").toLowerCase(),
     };
   });
@@ -134,6 +142,7 @@ export function sortRows(rows: PersonRow[], sortIn = "name"): PersonRow[] {
       case "tags": return r.tags.join(",").toLowerCase() || "~";
       case "assigned": return (r.assignedTo ?? "~").toLowerCase();
       case "homeiversary": return r.homeiversary ?? "~";
+      case "nextTask": return r.nextTask ? r.nextTask.due ?? "9999-12-31" : "~"; // soonest first, undated after, none last
       case "stage": case "type": case "company": case "phone": case "email": case "source": case "address": case "mailingName": case "kids":
         return ((r as unknown as Record<string, string | null>)[sort] ?? "~").toLowerCase();
       default: return r.name.toLowerCase();

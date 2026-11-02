@@ -200,7 +200,7 @@ Principles:
   - **Columns** *(2026-10-14)*: each smart list (and All people) picks and orders its columns
     from Stage, Type, Company, Phone, Email, Last contact/call/text/email, Follow up, Tags,
     Source, Assigned to, Address, Mailing name, Next birthday, Homeiversary, Added. Click a
-    column header to sort; click it again to flip the order (A–Z then Z–A, newest then oldest; blanks stay last; owner 2026-10-29). Drag a header's right edge (a thin divider that turns coral) left or right to resize it, e.g. to fit full names (double-click resets); widths are
+    column header to sort (a **Next task** column, owner request 2026-11-02, shows each person's soonest open task with Overdue / Today / its date, and sorts soonest first); click it again to flip the order (A–Z then Z–A, newest then oldest; blanks stay last; owner 2026-10-29). Drag a header's right edge (a thin divider that turns coral) left or right to resize it, e.g. to fit full names (double-click resets); widths are
     remembered per list in that browser.
   - Change filters, then Save changes / Save as new list / Reset.
   - *(2026-10-14)* Lists show **100 people per page** (Previous / Next); sorting is by column

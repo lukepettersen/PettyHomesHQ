@@ -5,7 +5,7 @@ import { applyFilters, loadOptions, PAGE_SIZE, queryPeople } from "@/server/peop
 import { daysUntil } from "@/lib/filters";
 import { parseColumns } from "@/lib/columns";
 import { db } from "@/server/db";
-import { daysAgo } from "@/lib/normalize";
+import { daysAgo, isoFromDate, todayCentral } from "@/lib/normalize";
 import { AddPersonButton } from "./AddPersonButton";
 import { Sidebar } from "./Sidebar";
 import { FilterBar } from "./FilterBar";
@@ -64,6 +64,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
             lastDays: daysAgo(r.lastContactAt), callDays: daysAgo(r.lastCallAt ?? null), textDays: daysAgo(r.lastTextAt ?? null), emailDays: daysAgo(r.lastEmailAt ?? null),
             created: iso(r.createdAt), birthdayIn: r.birthdays?.length ? Math.min(...r.birthdays.map((b) => daysUntil(b))) : null,
             birthday: r.birthdays?.length ? [...r.birthdays].sort((a, b) => daysUntil(a) - daysUntil(b))[0] : null, homeiversary: r.homeiversary ?? null,
+            nextTask: r.nextTask, today: isoFromDate(todayCentral()),
           }))}
           options={{ stages: options.stages, tags: options.tags, followUp: options.followUp, team: options.team }}
           canDelete={hasPermission(user.permissions, "deleteRecords")} canExport={hasPermission(user.permissions, "exportData")}

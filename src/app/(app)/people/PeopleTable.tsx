@@ -15,6 +15,7 @@ export type Row = {
   assigned: string | null; source: string | null; tags: string[]; followUpDays: number | null; dueForTouch: boolean;
   lastDays: number | null; callDays: number | null; textDays: number | null; emailDays: number | null; created: string | null;
   birthdayIn: number | null; birthday: string | null; homeiversary: string | null;
+  nextTask: { title: string; due: string | null } | null; today: string;
 };
 type Opt = { stages: { id: string; name: string }[]; tags: string[]; followUp: number[]; team: { id: string; name: string }[] };
 
@@ -53,6 +54,11 @@ function cellOf(k: string, r: Row): [React.ReactNode, string | number] {
     case "kids": return [r.kids ?? dash, r.kids ?? "~"];
     case "birthday": return [r.birthday ? <>{md(r.birthday)}{r.birthdayIn !== null && r.birthdayIn <= 14 ? <span className="text-xs text-accent"> · in {r.birthdayIn}d</span> : null}</> : dash, r.birthdayIn ?? 1e9];
     case "homeiversary": return [md(r.homeiversary) ?? dash, r.homeiversary ?? "~"];
+    case "nextTask": {
+      const t = r.nextTask; if (!t) return [dash, "~"];
+      const when = !t.due ? null : t.due === r.today ? "Today" : t.due < r.today ? "Overdue" : md(t.due.slice(5));
+      return [<span key="n" className="block truncate" title={t.title}>{when && <span className={`mr-1.5 text-xs font-semibold ${t.due! < r.today ? "text-bad" : t.due === r.today ? "text-accent" : "muted"}`}>{when}</span>}{t.title}</span>, t.due ?? "9999"];
+    }
     case "created": return [r.created ? new Date(r.created).toLocaleDateString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", year: "numeric" }) : dash, r.created ? -Date.parse(r.created) : 0];
     default: return [dash, "~"];
   }
