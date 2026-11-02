@@ -6,10 +6,12 @@ import { applyFilters, loadCollections, loadPeopleRows, searchRows } from "@/ser
 import { parseFilters } from "@/lib/filters";
 import { isoFromDate } from "@/lib/normalize";
 import { toCsv } from "@/lib/csv";
+import { splitAddress } from "@/lib/addresses";
 
 export const dynamic = "force-dynamic";
 
-/** CSV of people: selected ids, or the current list/filters/search. Needs "Export data". */
+/** CSV of people: selected ids, or the current list/filters/search. Needs "Export data".
+ *  `mail=1` gives a direct-mail list instead: mailing name and mailing address in parts, only people with an address. */
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   const user = session?.user;
@@ -29,10 +31,19 @@ export async function GET(req: Request) {
     where: { id: { in: ids }, deletedAt: null }, orderBy: { name: "asc" },
     include: { stage: true, source: true, assignedTo: true, phones: { orderBy: { position: "asc" } }, emails: { orderBy: { position: "asc" } }, tags: { include: { tag: true } }, dates: true },
   });
+  if (url.searchParams.get("mail") === "1") {
+    const mail = people.filter((p) => p.address?.trim());
+    const csv = toCsv([
+      ["Mailing name", "Street", "City", "State", "ZIP", "Full mailing address", "Name"],
+      ...mail.map((p) => { const a = splitAddress(p.address); return [p.mailingName || p.name, a.street, a.city, a.state, a.zip, p.address ?? "", p.name]; }),
+    ]);
+    await db.activityLog.create({ data: { userId: user.id, action: "export", entity: "person", summary: `Exported a mailing list of ${mail.length} people (${people.length - mail.length} without an address left out)` } });
+    return new Response(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="pettyhomes-mailing-list-${new Date().toISOString().slice(0, 10)}.csv"`, "Cache-Control": "no-store" } });
+  }
   const csv = toCsv([
-    ["Name", "Mailing name", "Stage", "Phones", "Emails", "Address", "Tags", "Source", "Referred by", "Assigned to", "Follow-up (days)", "Last contact", "Birthdays", "Homeiversary"],
+    ["Name", "Mailing name", "Stage", "Phones", "Emails", "Mailing address", "Street", "City", "State", "ZIP", "Tags", "Source", "Referred by", "Assigned to", "Follow-up (days)", "Last contact", "Birthdays", "Homeiversary"],
     ...people.map((p) => [
-      p.name, p.mailingName ?? "", p.stage?.name ?? "", p.phones.map((x) => x.number).join("; "), p.emails.map((x) => x.address).join("; "), p.address ?? "",
+      p.name, p.mailingName ?? "", p.stage?.name ?? "", p.phones.map((x) => x.number).join("; "), p.emails.map((x) => x.address).join("; "), p.address ?? "", ...Object.values(splitAddress(p.address)),
       p.tags.map((t) => t.tag.name).join("; "), p.source?.name ?? "", p.referredBy ?? "", p.assignedTo?.name ?? "", p.followUpDays ? String(p.followUpDays) : "",
       p.lastContactAt ? isoFromDate(p.lastContactAt) : "",
       p.dates.filter((d) => d.kind === "birthday").map((d) => `${d.whose ? d.whose + " " : ""}${isoFromDate(d.date)}`).join("; "),

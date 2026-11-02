@@ -76,7 +76,9 @@ Principles:
   an Admin; then permanently removed.
 - **Backups:** nightly database backup kept 30 days, plus a nightly export to the owner's
   Google Drive once Google is connected. Restore steps documented in `docs/ops.md`.
-- **Export:** Admin can download all people, files and tasks as CSV anytime.
+- **Export:** Admin can download all people, files and tasks as CSV anytime. The People export splits the mailing address into Street, City, State and ZIP; **Mailing list** (next to "Export
+  these … to CSV" and in the bulk bar) downloads just mailing name + mailing address in parts for direct mail, leaving out
+  people without an address (owner request 2026-11-02). The "Address" column is labelled "Mailing address".
 - Uploaded files are private; links expire.
 - HQ doesn't store SSNs, bank account or wiring details.
 - Google access asks for the smallest scopes needed (see §12).
@@ -194,7 +196,7 @@ Principles:
   - **Columns** *(2026-10-14)*: each smart list (and All people) picks and orders its columns
     from Stage, Type, Company, Phone, Email, Last contact/call/text/email, Follow up, Tags,
     Source, Assigned to, Address, Mailing name, Next birthday, Homeiversary, Added. Click a
-    column header to sort; click it again to flip the order (A–Z then Z–A, newest then oldest; blanks stay last; owner 2026-10-29). Drag a header's right edge to resize it (double-click resets); widths are
+    column header to sort; click it again to flip the order (A–Z then Z–A, newest then oldest; blanks stay last; owner 2026-10-29). Drag a header's right edge (a thin divider that turns coral) left or right to resize it, e.g. to fit full names (double-click resets); widths are
     remembered per list in that browser.
   - Change filters, then Save changes / Save as new list / Reset.
   - *(2026-10-14)* Lists show **100 people per page** (Previous / Next); sorting is by column

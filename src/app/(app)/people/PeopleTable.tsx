@@ -131,9 +131,9 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
         className={`group inline-flex items-center gap-1 rounded px-1 -mx-1 uppercase tracking-wide hover:bg-sunken hover:text-charcoal ${sort.replace(/^-/, "") === k ? "font-bold text-charcoal" : ""}`} onClick={() => setSort(k)}>
         {l}<span aria-hidden="true" className={sort.replace(/^-/, "") === k ? "" : "opacity-0 group-hover:opacity-50"}>{sort === `-${k}` ? "↑" : "↓"}</span>
       </button>
-      <span role="separator" aria-orientation="vertical" aria-label={`Resize ${l}`} title="Drag to resize; double-click to reset" onPointerDown={(e) => startResize(k, e)}
+      <span role="separator" aria-orientation="vertical" aria-label={`Resize ${l}`} title="Drag left or right to resize; double-click to reset" onPointerDown={(e) => startResize(k, e)}
         onDoubleClick={() => setWidths((w) => { const n = { ...w }; delete n[k]; try { localStorage.setItem(widthKey, JSON.stringify(n)); } catch { /* private window */ } return n; })}
-        className="absolute right-0 top-1 bottom-1 w-2 cursor-col-resize border-r-2 border-transparent hover:border-rabbit" />
+        className="absolute -right-1 top-0 bottom-0 z-10 flex w-3 cursor-col-resize justify-center after:my-1.5 after:w-px after:bg-misty hover:after:w-0.5 hover:after:bg-coral" />
     </th>
   );
 
@@ -150,6 +150,7 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
             ))}
             <button type="button" className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" onClick={() => { setEmailing(true); setMsg(""); }}>Email</button>
             {canExport && <a className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" href={`/api/export/people?ids=${ids.join(",")}`}>Export</a>}
+            {canExport && <a className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" title="Mailing name and mailing address for direct mail" href={`/api/export/people?mail=1&ids=${ids.join(",")}`}>Mailing list</a>}
             {canDelete && <button type="button" className="rounded-md bg-white/15 px-2.5 py-1 font-semibold text-red-200 hover:bg-white/25" disabled={pending}
               onClick={() => { if (!confirm) { setConfirm(true); return; } start(async () => { const r = await bulkDelete(ids); if (!r.ok) setMsg(r.error); else { setMsg(`Moved ${r.data?.count} to Trash.`); setSel(new Set()); setConfirm(false); router.refresh(); } }); }}>
               {confirm ? `Click again to delete ${ids.length}` : "Delete"}</button>}
@@ -228,7 +229,8 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
       {rows.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 border-t border-misty px-4 py-2.5 text-sm muted">
           <span>Showing {((page - 1) * 100 + 1).toLocaleString()}–{((page - 1) * 100 + rows.length).toLocaleString()} of {total.toLocaleString()}</span>
-          {canExport && <a href={exportHref} className="font-semibold text-accent hover:underline">Export these {total.toLocaleString()} to CSV</a>}
+          {canExport && <span className="flex flex-wrap gap-x-3"><a href={exportHref} className="font-semibold text-accent hover:underline">Export these {total.toLocaleString()} to CSV</a>
+            <a href={`${exportHref}&mail=1`} title="Mailing name and mailing address (street, city, state, ZIP) for direct mail; people without an address are left out" className="font-semibold text-accent hover:underline">Mailing list</a></span>}
           {pages > 1 && (
             <nav aria-label="Pages" className="ml-auto flex items-center gap-2">
               {page > 1 ? <Link className="btn py-1" href={href({ page: page > 2 ? String(page - 1) : null })}>‹ Previous</Link> : <span className="btn py-1 opacity-40">‹ Previous</span>}

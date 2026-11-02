@@ -12,3 +12,27 @@ export function cleanAddresses(rows: AddressRow[]): { rows: (AddressRow & { posi
   const out = kept.map((r, i) => ({ ...r, mailing: i === marked, position: i }));
   return { rows: out, primary: out.find((r) => r.mailing)?.value ?? out[0]?.value ?? null };
 }
+
+/**
+ * Splits an address into the parts a direct-mail list needs (owner request 2026-11-02):
+ * "2215 Hillside Ave, Apt 4, Edina, MN 55436, USA" → street "2215 Hillside Ave, Apt 4", city "Edina", state "MN", zip "55436".
+ * When it can't tell (no commas, no state), everything stays in street so nothing is lost.
+ */
+export function splitAddress(raw: string | null | undefined): { street: string; city: string; state: string; zip: string } {
+  const parts = (raw ?? "").split(",").map((p) => p.trim()).filter(Boolean);
+  if (parts.length && /^(usa|us|united states( of america)?)$/i.test(parts[parts.length - 1])) parts.pop();
+  const empty = { street: parts.join(", "), city: "", state: "", zip: "" };
+  if (parts.length < 2) return empty;
+  let last = parts[parts.length - 1];
+  // "Edina MN 55436" with no comma before the state: split the city off the end.
+  const m = last.match(/^(?:(.*?)\s+)?([A-Za-z]{2})\.?(?:\s+(\d{5}(?:-\d{4})?))?$/);
+  if (!m) {
+    const zipOnly = last.match(/^(\d{5}(?:-\d{4})?)$/);
+    if (zipOnly && parts.length >= 3) { parts.pop(); last = parts[parts.length - 1]; const s = last.match(/^([A-Za-z]{2})$/); if (s) return { street: parts.slice(0, -2).join(", "), city: parts[parts.length - 2], state: s[1].toUpperCase(), zip: zipOnly[1] }; }
+    return empty;
+  }
+  const [, cityInLast, state, zip = ""] = m;
+  if (cityInLast) return { street: parts.slice(0, -1).join(", "), city: cityInLast, state: state.toUpperCase(), zip };
+  if (parts.length < 3) return empty;
+  return { street: parts.slice(0, -2).join(", "), city: parts[parts.length - 2], state: state.toUpperCase(), zip };
+}
