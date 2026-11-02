@@ -167,8 +167,8 @@ Principles:
   buttons under it (type "/" for a template).
 - **People list on a phone** *(owner report 2026-11-02)*: cards instead of the table: full name, phone, then up to four
   of the list's columns as a short line; Call and Text buttons on each card; **Select** shows checkboxes for the bulk
-  bar, which is one swipeable row. Columns is computer-only. **Tasks on a phone**: the list buttons are one even,
-  swipeable row (no scroll bar); Edit columns is computer-only. Background drops of the in-browser phone line no longer
+  bar, which is one swipeable row. Columns is computer-only. **Tasks on a phone**: one "List: <name> <count> ▼" button
+  opens every list with its count (and + New list) instead of a row to swipe; Edit columns is computer-only. Background drops of the in-browser phone line no longer
   show a pop-up (they reconnect on their own; still logged in Admin → Integrations).
 - **On a phone** *(owner report 2026-11-01)*: collections and lists fold into one "List: <name> ▼" button above the
   people; picking a list closes it and shows that list. Rows are bigger to tap, ⋯ is always visible, and drag to

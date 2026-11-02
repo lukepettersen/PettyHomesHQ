@@ -273,7 +273,9 @@ export function TasksApp(p: Props) {
 
   return (
     <div className={`mx-auto grid max-w-[1800px] grid-cols-1 items-start gap-5 px-4 py-4 lg:grid-cols-[210px_minmax(0,1fr)] ${selected ? "xl:grid-cols-[210px_minmax(0,1fr)_340px]" : ""}`}>
-      <nav aria-label="Task lists" className="flex flex-col gap-3.5 lg:sticky lg:top-3 max-lg:-mx-4 max-lg:flex-row max-lg:gap-1.5 max-lg:overflow-x-auto max-lg:px-4 max-lg:pb-1 max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden">
+      <ListPicker current={title(view)} count={openCount(view)} late={lateCount(view)} onNew={() => setNewList("")}
+        items={[["today", "Today"], ["upcoming", "Upcoming"], ...p.lists.map((l) => [keyOf(l), l.name] as [string, string])].map(([k, l]) => ({ key: k, label: l, count: openCount(k), late: lateCount(k), on: view === k }))} onPick={go} />
+      <nav aria-label="Task lists" className={`flex flex-col gap-3.5 lg:sticky lg:top-3 ${newList !== null ? "max-lg:block" : "max-lg:hidden"}`}>
         <ul className="flex flex-col gap-px max-lg:flex-row max-lg:gap-1.5">{navItem("today", "Today")}{navItem("upcoming", "Upcoming")}</ul>
         <div>
           <h2 className="mb-1 flex items-center justify-between px-2.5 text-[11px] font-semibold tracking-wider uppercase muted max-lg:hidden">
@@ -432,5 +434,31 @@ function DoneToday({ rows, team, onChanged, notify }: { rows: DoneRow[]; team: T
         </ul>
       )}
     </section>
+  );
+}
+
+/** Phone (owner report 2026-11-02): "List: Today 10 ▾" opens every list with its count, instead of a row to swipe. */
+function ListPicker({ current, count, late, items, onPick, onNew }: { current: string; count: number; late: number; items: { key: string; label: string; count: number; late: number; on: boolean }[]; onPick: (k: string) => void; onNew: () => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="lg:hidden">
+      <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="flex w-full items-center justify-between rounded-lg border border-misty bg-white px-3 py-2.5 text-left">
+        <span className="min-w-0 truncate"><span className="text-sm muted">List: </span><b>{current}</b>{count > 0 && <span className={`ml-2 text-sm ${late ? "font-semibold text-bad" : "muted"}`}>{count}</span>}</span>
+        <span aria-hidden="true" className={`ml-2 text-xs muted transition-transform ${open ? "rotate-180" : ""}`}>▼</span>
+      </button>
+      {open && (
+        <ul className="mt-2 rounded-lg border border-misty bg-white p-1.5">
+          {items.map((i) => (
+            <li key={i.key}>
+              <button type="button" onClick={() => { onPick(i.key); setOpen(false); }}
+                className={`flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left ${i.on ? "bg-accent-soft font-semibold text-accent" : "hover:bg-sunken"}`}>
+                <span>{i.label}</span><span className={`text-sm tabular-nums ${i.late ? "font-semibold text-bad" : "muted"}`} title={i.late ? `${i.late} overdue` : undefined}>{i.count || ""}</span>
+              </button>
+            </li>
+          ))}
+          <li><button type="button" onClick={() => { onNew(); setOpen(false); }} className="w-full rounded-md px-3 py-2.5 text-left font-semibold text-accent hover:bg-sunken">+ New list</button></li>
+        </ul>
+      )}
+    </div>
   );
 }
