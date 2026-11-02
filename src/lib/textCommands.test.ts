@@ -52,3 +52,12 @@ describe("booking a consult by text", () => {
   });
 });
 
+
+describe("consult reply in pieces (owner report 2026-11-02)", () => {
+  it("reads the new reply together with the earlier one", async () => {
+    const { parseConsultReply } = await import("./textCommands");
+    const today = "2026-11-02"; // a Monday
+    expect(parseConsultReply("Yes for friday at 4:30pm", today)).toMatchObject({ kind: "book", type: null, date: "2026-11-06", time: "16:30" });
+    expect(parseConsultReply("Buyer Yes for friday at 4:30pm", today)).toMatchObject({ kind: "book", type: "buyer", date: "2026-11-06", time: "16:30" });
+  });
+});

@@ -528,7 +528,10 @@ scrolls with it until its last card is on screen, then stays put while the middl
   reply like "buyer Wed 7pm", "seller tomorrow 10am", "11/6 6:30pm" or "Nov 12 at 3" books a Buyer/Seller Consult on
   their page exactly like Book (usual length, their emails and the team invited, a seller consult at their address,
   Google invite, the consult checklist starts), checks the step off and confirms by text. Buyer/seller comes from the
-  reply, else their one open deal; a missing day, time or type gets one question back; NO leaves it open.
+  reply, else their one open deal; a missing day, time or type gets one question back, and the next reply only needs
+  what was missing (it's read together with the earlier one, owner report 2026-11-02); NO leaves it open. Someone with no
+  open deal of that kind gets one started at **Consult scheduled** (else the first stage) with the consult date filled
+  in, tagged Buyer/Seller, and that stage's checklist starts, the same as + Add buyer (owner request 2026-11-02).
 - **Updating deals already using a checklist** *(owner request 2026-10-29)*: after saving a checklist that open deals
   already use, HQ offers **Update the N deals**. Their open steps take the new name, type, phase, timing, message,
   "when done" and automatic send (re-dated from their dates); new steps are added; steps removed from the checklist, or

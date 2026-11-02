@@ -91,9 +91,10 @@ const HOW = 'Reply like "buyer Wed 7pm" or "seller Thu 3:30pm", or NO.';
  * their page, just like Book (calendar invite to them and the team, the consult checklist starts), then checks the step
  * off. Anything missing gets one question back instead of a guess.
  */
-async function answerConsult(user: { id: string }, t: { id: string; title: string; personId: string | null; fileId: string | null; person: { id: string; name: string; address: string | null; emails: { address: string }[] } | null }, body: string): Promise<string | null> {
+async function answerConsult(user: { id: string }, t: { id: string; title: string; personId: string | null; fileId: string | null; askReply: string | null; person: { id: string; name: string; address: string | null; emails: { address: string }[] } | null }, body: string): Promise<string | null> {
   const today = isoFromDate(todayCentral());
-  const r = parseConsultReply(body, today);
+  // A reply only needs what the last one was missing: "friday 4:30pm", then "buyer" (owner report 2026-11-02).
+  const r = parseConsultReply(t.askReply ? `${body} ${t.askReply}` : body, today) ?? parseConsultReply(body, today);
   if (!r) return parseYesNo(body) === "yes" ? `Great, when is it? ${HOW}` : null; // anything else is a normal text
   const who = t.person ? ` for ${t.person.name}` : "";
   if (r.kind === "no") {
@@ -104,19 +105,20 @@ async function answerConsult(user: { id: string }, t: { id: string; title: strin
   // Buyer or seller: what they said, else the one kind of open deal they have.
   const kinds = [...new Set((await db.clientFile.findMany({ where: { personId: t.person.id, deletedAt: null, closedAt: null }, select: { kind: true } })).map((f) => f.kind))];
   const type = r.type ?? (kinds.length === 1 ? (kinds[0] === "listing" ? "seller" : "buyer") : null);
-  if (!type) return `Is it a buyer or seller consult? ${HOW}`;
-  if (!r.date || !r.time) return `What ${!r.date && !r.time ? "day and time" : !r.date ? "day" : "time"}? ${HOW}`;
+  const keep = () => db.task.update({ where: { id: t.id }, data: { askReply: [body, t.askReply].filter(Boolean).join(" ").slice(0, 200) } });
+  if (!type) { await keep(); return `Is it a buyer or seller consult?${r.date && r.time ? "" : ` ${HOW}`}`; }
+  if (!r.date || !r.time) { await keep(); return `What ${!r.date && !r.time ? "day and time" : !r.date ? "day" : "time"}? ${HOW}`; }
   if (r.date < today) return `That day has passed. ${HOW}`;
   const types = await loadApptTypes();
   const mins = types.find((x) => x.key === type)?.mins ?? 60;
   const team = await db.user.findMany({ where: { status: { not: "DISABLED" } }, orderBy: [{ isOwner: "desc" }, { name: "asc" }], select: { name: true } });
   // Same defaults as the Book button: their emails and the team invited; a seller consult is at their address.
   const end = addMinutes(r.time, mins);
-  await bookAppt(user.id, {
+  const booked = await bookAppt(user.id, {
     personId: t.person.id, type, title: defaultTitle(t.person.name, type, types), date: r.date, start: r.time, end,
-    location: type === "seller" ? t.person.address ?? "" : "", invitees: [...t.person.emails.map((e) => e.address), ...team.map((u) => u.name)],
+    location: type === "seller" ? t.person.address ?? "" : "", invitees: [...t.person.emails.map((e) => e.address), ...team.map((u) => u.name)], startFile: true,
   });
   const done = await checkOff(user, t);
   const invite = (await calendarConnection()) ? " Invite sent." : "";
-  return `✓ Booked ${apptLabel(type, types)}${who}, ${longIso(r.date)} ${formatTime(r.time)}–${formatTime(end)}.${invite}${done.moved ? ` Moved them to ${done.moved}.` : ""}`;
+  return `✓ Booked ${apptLabel(type, types)}${who}, ${longIso(r.date)} ${formatTime(r.time)}–${formatTime(end)}.${invite}${booked.started ? ` Started a ${booked.started === "buyer" ? "buyer" : "listing"} at Consult scheduled.` : ""}${done.moved ? ` Moved them to ${done.moved}.` : ""}`;
 }
