@@ -32,7 +32,11 @@ export async function suggestAddresses(input: string, session: string): Promise<
 /** Google's refusal in plain words for the Admin setting it up. */
 export function plainProblem(status: number, message: string): string {
   if (/API key not valid|API_KEY_INVALID/i.test(message)) return "Google says the key isn't valid. Check GOOGLE_MAPS_API_KEY in Railway (no spaces).";
-  if (/has not been used|is disabled|SERVICE_DISABLED/i.test(message)) return "Places API (New) isn't turned on for this key's project. Enable it in Google Cloud → APIs & Services → Library.";
+  if (/has not been used|is disabled|SERVICE_DISABLED/i.test(message)) {
+    // Google names the key's project by number, which shows when it's turned on in a different project (owner report 2026-11-02).
+    const proj = message.match(/project (\d+)/)?.[1];
+    return `Places API (New) isn't turned on for this key's project${proj ? ` (project number ${proj}). Turn it on there: https://console.cloud.google.com/apis/library/places.googleapis.com?project=${proj}` : ". Enable it in Google Cloud → APIs & Services → Library."}`;
+  }
   if (/billing/i.test(message)) return "Google needs billing turned on for this project (Google Cloud → Billing).";
   if (/referer|not authorized|API_KEY_.*BLOCKED|restricted/i.test(message)) return "The key's restrictions block HQ. In Google Cloud → Credentials, set Application restrictions to None and allow Places API (New).";
   return `Google said no (${status})${message ? `: ${message.slice(0, 160)}` : ""}.`;

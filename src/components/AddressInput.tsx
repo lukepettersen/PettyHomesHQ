@@ -41,7 +41,8 @@ export function AddressInput({ value, onChange, placeholder = "Street, city", la
           else if (e.key === "Enter") { e.preventDefault(); void pick(hits[active]); }
           else if (e.key === "Escape") setOpen(false);
         }} />
-      {problem && <p role="status" className="mt-1 text-xs text-bad">Address lookup: {problem}</p>}
+      {problem && <p role="status" className="mt-1 text-xs text-bad">Address lookup: {problem.split(/(https:\/\/\S+)/).map((part, n) => (n % 2
+        ? <a key={n} href={part} target="_blank" rel="noopener noreferrer" className="font-semibold underline">Open that project in Google Cloud</a> : part))}</p>}
       {open && (
         <ul id={listId} role="listbox" className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-lg border border-misty bg-white py-1 shadow-xl">
           {hits.map((h, i) => (
