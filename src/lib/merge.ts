@@ -100,7 +100,9 @@ export const mergeKey = (k: string) => ALIAS[k] ?? k.replace(/([a-z0-9])([A-Z])/
 export type MergeField = { key: string; label: string; group: string };
 const APPTS = ["next_appointment", "next_appointment_date", "next_appointment_time", "next_appointment_type", "next_appointment_place", "next_consult", "next_showing", "next_phone_call"];
 const SHOWING = ["showing_address", "showing_date", "showing_time", "showing_agent_company"];
-const CLIENT = ["first_name", "last_name", "full_name", "mailing_name"], TEAM = ["agent_name", "agent_first_name", "assistant_name", "my_name"];
+// Client details sit under Client, "Your first name" under Team (owner report 2026-11-02: phone and email were under "Contract").
+const CLIENT = ["first_name", "last_name", "full_name", "mailing_name", "primary_first_name", "partner_first_name", "phone", "email", "street", "city"];
+const TEAM = ["agent_name", "agent_first_name", "assistant_name", "my_name", "my_first_name"];
 const labelOf = (k: string) => MERGE_FIELDS.find(([x]) => x === k)![1];
 
 /** Every merge field, grouped: client, each form's questions (first form to ask wins), then the team. */
