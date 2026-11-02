@@ -5,7 +5,7 @@ import { UserError } from "@/server/safe";
 import { isConnected } from "@/server/integrations";
 import { logActivity } from "@/server/activity";
 import { bookAppt } from "@/server/booking";
-import { redateConsult } from "@/server/automation";
+import { callChanged, redateConsult } from "@/server/automation";
 import { addCalendarEvent, calendarConnection, removeCalendarEvent, syncAppointment } from "@/server/google";
 import { sendTextAs } from "@/server/texting";
 import { groupReady, textNumbersAsGroup } from "@/server/groupText";
@@ -167,9 +167,10 @@ async function runTool(me: Me, name: string, a: Record<string, unknown>, seen: S
     if (name === "cancel_event") {
       await db.appointment.update({ where: { id: appt.id }, data: { deletedAt: new Date() } });
       if (appt.type === "buyer" || appt.type === "seller") await redateConsult(db, appt.personId);
+      const removed = appt.type === "call" ? await callChanged(db, appt.personId, me.id) : [];
       await syncAppointment(appt.id);
       await logActivity(me.id, "delete", "appointment", appt.id, `Deleted appointment "${appt.title}" by text`);
-      await record(me.id, "cancelAppt", `✓ Cancelled "${appt.title}" with ${appt.person.name} (${when(before.date, before.start)}).`, { appointmentId: appt.id });
+      await record(me.id, "cancelAppt", `✓ Cancelled "${appt.title}" with ${appt.person.name} (${when(before.date, before.start)}).${removed.length ? ` Removed ${removed.length} checklist step${removed.length === 1 ? "" : "s"} for it.` : ""}`, { appointmentId: appt.id, removed });
       return "Cancelled.";
     }
     const w = cleanWhen(a.date, a.start);
@@ -177,6 +178,7 @@ async function runTool(me: Me, name: string, a: Record<string, unknown>, seen: S
     const end = w.time ? (cleanWhen(a.date, a.end)?.time ?? (appt.start && appt.end ? addMinutes(w.time, minutesBetween(appt.start, appt.end)) : addMinutes(w.time, 60))) : null;
     await db.appointment.update({ where: { id: appt.id }, data: { date: dateFromIso(w.date), start: w.time, end } });
     if (appt.type === "buyer" || appt.type === "seller") await redateConsult(db, appt.personId);
+    if (appt.type === "call") await callChanged(db, appt.personId, me.id);
     await syncAppointment(appt.id);
     await logActivity(me.id, "update", "appointment", appt.id, `Moved "${appt.title}" to ${when(w.date, w.time)} by text`);
     await record(me.id, "moveAppt", `✓ Moved "${appt.title}" with ${appt.person.name} to ${when(w.date, w.time, end)}.`, { appointmentId: appt.id, before });
@@ -351,12 +353,14 @@ export async function undoLast(user: { id: string }): Promise<string> {
   if (act.kind === "appt" || act.kind === "cancelAppt") {
     const appt = await db.appointment.update({ where: { id: id("appointmentId") }, data: { deletedAt: act.kind === "appt" ? new Date() : null } });
     if (appt.type === "buyer" || appt.type === "seller") await redateConsult(db, appt.personId);
+    if (appt.type === "call") await callChanged(db, appt.personId, user.id, act.kind === "cancelAppt" && Array.isArray(p.removed) ? (p.removed as string[]) : []);
     await syncAppointment(appt.id);
     what = act.kind === "appt" ? `Removed "${appt.title}".` : `Put "${appt.title}" back.`;
   } else if (act.kind === "moveAppt") {
     const b = p.before as { date: string; start: string | null; end: string | null };
     const appt = await db.appointment.update({ where: { id: id("appointmentId") }, data: { date: dateFromIso(b.date), start: b.start, end: b.end } });
     if (appt.type === "buyer" || appt.type === "seller") await redateConsult(db, appt.personId);
+    if (appt.type === "call") await callChanged(db, appt.personId, user.id);
     await syncAppointment(appt.id);
     what = `Moved "${appt.title}" back to ${when(b.date, b.start)}.`;
   } else if (act.kind === "event") {

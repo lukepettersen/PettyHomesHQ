@@ -662,6 +662,12 @@ scrolls with it until its last card is on screen, then stays put while the middl
   (default: initial phone call scheduled email today; call reminder text and hold phone call
   on the call day; schedule consult the day after) and logs it on the timeline. Can also be
   booked from Add person.
+- **Moving or cancelling a phone call** *(owner request 2026-11-02)*, in HQ or by text to the HQ number: moving it
+  re-times the open steps timed from the call (minutes-before reminders move with it; automatic sends keep their
+  picked time on the new day). Cancelling it, when the person has no other call, removes the call's checklist steps
+  that haven't happened yet (timed from the call or from a "Phone call booked" checklist), including scheduled
+  automatic texts/emails; done and sent ones stay. "undo" by text puts them back. Changes made directly in Google
+  Calendar don't come back to HQ; move or cancel the call in HQ.
 - **Buyer/Seller Consult** for someone without that file offers "Also start a
   buyer/listing at Consult scheduled" and opens that form with the consult date filled in.
 - **From the contract:** inspection appointment, inspection deadline (11:59pm), Written

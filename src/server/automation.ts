@@ -289,6 +289,33 @@ export async function redateConsult(tx: Tx, personId: string) {
   }
 }
 
+/**
+ * A phone call was moved, cancelled or put back (owner request 2026-11-02). Open steps timed from the call follow the
+ * person's latest call that's still on; with no call left, the call's checklist steps that haven't happened yet
+ * (timed from the call, or from a "Phone call booked" checklist) are removed. Done and sent steps stay.
+ * `restore` puts back steps an earlier cancel removed (undo by text). Returns the ids of steps removed.
+ */
+export async function callChanged(tx: Tx, personId: string, userId: string | null, restore: string[] = []): Promise<string[]> {
+  if (restore.length) await tx.task.updateMany({ where: { id: { in: restore }, personId }, data: { deletedAt: null } });
+  const call = await tx.appointment.findFirst({ where: { personId, type: "call", deletedAt: null }, orderBy: [{ date: "desc" }, { createdAt: "desc" }] });
+  if (!call) {
+    const ids = (await loadTemplates(tx)).filter((t) => t.trigger === "phonecall").map((t) => t.id);
+    const gone = await tx.task.findMany({ where: { personId, completedAt: null, deletedAt: null, OR: [{ anchor: "phoneCall" }, { templateId: { in: ids } }] }, select: { id: true, title: true } });
+    if (!gone.length) return [];
+    await tx.task.updateMany({ where: { id: { in: gone.map((t) => t.id) } }, data: { deletedAt: new Date() } });
+    if (userId) await logActivity(userId, "delete", "task", null, `Phone call cancelled: removed ${gone.length} step${gone.length === 1 ? "" : "s"} (${gone.map((t) => t.title).join(", ").slice(0, 300)})`);
+    return gone.map((t) => t.id);
+  }
+  const open = await tx.task.findMany({ where: { personId, anchor: "phoneCall", completedAt: null, deletedAt: null } });
+  for (const t of open) {
+    const due = new Date(call.date.getTime() + (t.offsetDays ?? 0) * 86400000);
+    // Minutes before the call move with it; a step on the call's day takes its time; an automatic step keeps the send time picked for it.
+    const time = t.offsetMinutes != null ? (call.start ? timeBefore(call.start, t.offsetMinutes) : null) : (t.offsetDays ?? 0) === 0 && t.dueTime && !t.autoSend ? call.start : t.dueTime;
+    await tx.task.update({ where: { id: t.id }, data: { dueDate: due, dueTime: time, ...autoOn(t, due) } });
+  }
+  return [];
+}
+
 /** An automatic or "ask by text" step that was waiting for its date starts waiting to send once it has one. */
 const autoOn = (t: { autoSend: unknown; autoState: string | null; askKind: string | null; askState: string | null }, due: Date | null) => ({
   ...(t.autoSend && !t.autoState && due ? { autoState: "pending" } : {}), ...(t.askKind && !t.askState && due ? { askState: "pending" } : {}) });

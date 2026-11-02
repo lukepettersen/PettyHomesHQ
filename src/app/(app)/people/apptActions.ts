@@ -5,13 +5,12 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
-import { redateConsult } from "@/server/automation";
+import { callChanged, redateConsult } from "@/server/automation";
 import { syncAppointment } from "@/server/google";
 import { loadApptTypes } from "@/server/appointments";
 import { bookAppt } from "@/server/booking";
 import { dateFromIso, isoFromDate } from "@/lib/normalize";
 import { formatTime, longIso } from "@/lib/tasks";
-import { timeBefore } from "@/lib/templates";
 
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Pick a time").nullable();
 const bookSchema = z.object({
@@ -42,9 +41,10 @@ export async function deleteAppointment(id: string) {
   return guarded(null, async (user) => {
     const a = await db.appointment.update({ where: { id: z.string().min(1).max(40).parse(id), deletedAt: null }, data: { deletedAt: new Date() } });
     if (a.type === "buyer" || a.type === "seller") await redateConsult(db, a.personId);
+    if (a.type === "call") await callChanged(db, a.personId, user.id);
     await logActivity(user.id, "delete", "appointment", a.id, `Deleted appointment "${a.title}"`);
     await syncAppointment(a.id);
-    revalidatePath(`/people/${a.personId}`);
+    revalidatePath(`/people/${a.personId}`); revalidatePath("/tasks");
   });
 }
 
@@ -60,10 +60,7 @@ export async function updateAppointment(input: z.input<typeof editSchema>) {
     const a = await db.appointment.update({ where: { id: v.id }, data: { title: v.title, date: dateFromIso(v.date), start: v.start, end: v.end, location: v.location, invitees: v.invitees } });
     const moved = isoFromDate(before.date) !== v.date || before.start !== v.start;
     // A moved call re-dates the open steps timed from it.
-    if (moved && a.type === "call") {
-      const open = await db.task.findMany({ where: { personId: a.personId, anchor: "phoneCall", completedAt: null, deletedAt: null } });
-      for (const t of open) await db.task.update({ where: { id: t.id }, data: { dueDate: new Date(dateFromIso(v.date).getTime() + (t.offsetDays ?? 0) * 86400000), ...(t.offsetMinutes != null ? { dueTime: v.start ? timeBefore(v.start, t.offsetMinutes) : null } : t.offsetDays === 0 && t.dueTime && !t.autoSend ? { dueTime: v.start } : {}) } });
-    }
+    if (moved && a.type === "call") await callChanged(db, a.personId, user.id);
     if (moved && (a.type === "buyer" || a.type === "seller")) await redateConsult(db, a.personId);
     await syncAppointment(a.id);
     await logActivity(user.id, "update", "appointment", a.id, `Updated appointment "${a.title}"${moved ? ` (now ${longIso(v.date)}${v.start ? ` ${formatTime(v.start)}` : ""})` : ""}`);
