@@ -188,7 +188,8 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
               })}
               <div ref={end} />
             </div>
-            <div className="border-t border-misty bg-white px-3 py-2.5 max-md:pb-[max(0.625rem,env(safe-area-inset-bottom))]">
+            {/* Phone: room under the buttons for the iPhone's home bar (owner report 2026-11-02). */}
+            <div className="border-t border-misty bg-white px-3 py-2.5 max-md:pb-9">
               {group ? <GroupComposer key={open} sid={open} members={group.members.map((m) => m.digits)} templates={composer.templates} blocked={composer.blocked ?? (groupsOn ? null : "Group texting is off (Admin → Integrations), so HQ can't reply to the group.")} from={composer.from} onSent={() => router.refresh()} />
                 : <TextComposer key={open} personId={person?.id ?? null} phones={[open]} compact {...composer} />}
             </div>
