@@ -69,6 +69,7 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
   // Click a column to sort by it; click it again to flip the order (owner request 2026-10-29).
   const setSort = (k: string) => { const next = sort === k ? `-${k}` : k; router.push(href({ sort: next === "name" ? null : next, page: null })); };
   const [editCols, setEditCols] = useState(false);
+  const [selecting, setSelecting] = useState(false); // phone: checkboxes only after "Select"
   // Column widths: drag a header's right edge. Remembered per list in this browser.
   const widthKey = `hq-colw-${listId ?? "all"}`;
   const [widths, setWidths] = useState<Record<string, number>>({});
@@ -140,7 +141,7 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
     <>
       {emailing && <BulkEmail ids={ids} onClose={() => setEmailing(false)} />}
       {(ids.length > 0 || msg) && (
-        <div className="fixed bottom-4 left-1/2 z-30 flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-wrap items-center gap-1.5 rounded-xl bg-charcoal px-3 py-2 text-sm text-white shadow-[0_8px_24px_rgba(0,0,0,.25)]">
+        <div className="fixed bottom-4 left-1/2 z-30 flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-nowrap items-center gap-1.5 overflow-x-auto whitespace-nowrap rounded-xl md:flex-wrap md:whitespace-normal bg-charcoal px-3 py-2 text-sm text-white shadow-[0_8px_24px_rgba(0,0,0,.25)]">
           {ids.length > 0 && <b className="mr-2">{ids.length.toLocaleString()} selected</b>}
           {all && !everyone && total > rows.length && !action && <button type="button" className="rounded-md px-2 py-1 underline hover:bg-white/15" onClick={() => setSel(new Set(allIds))}>Select all {total.toLocaleString()}</button>}
           {ids.length > 0 && !action && <>
@@ -158,11 +159,39 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
           {msg && <span className="ml-2">{msg}</span>}
         </div>
       )}
-      <div className="mt-1 flex justify-end"><button type="button" className="inline-flex items-center gap-1 text-sm font-semibold text-accent hover:underline" onClick={() => setEditCols(true)}>
+      <div className="mt-1 hidden justify-end md:flex"><button type="button" className="inline-flex items-center gap-1 text-sm font-semibold text-accent hover:underline" onClick={() => setEditCols(true)}>
         <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>Columns</button></div>
       {editCols && <ColumnsModal listId={listId} columns={columns} onClose={() => setEditCols(false)} />}
-      <div className="card mt-1 overflow-hidden">
-      <div className="max-h-[calc(100vh-210px)] min-h-64 overflow-auto">
+      <div className="card mt-3 overflow-hidden md:mt-1">
+      {/* Phone (owner report 2026-11-02): a list of cards instead of the table; the list's own columns show as a short
+          line under each name, Call / Text stay visible, and Select shows checkboxes for the bulk bar. */}
+      {rows.length > 0 && (
+        <div className="flex items-center justify-between border-b border-misty bg-sunken px-3 py-2 text-xs muted md:hidden">
+          <span>Sorted by {sort.replace(/^-/, "") === "name" ? "name" : columnLabel(sort.replace(/^-/, "")).toLowerCase()}{sort.startsWith("-") ? " (reversed)" : ""}</span>
+          <button type="button" className="font-semibold text-accent" onClick={() => { setSelecting(!selecting); if (selecting) setSel(new Set()); }}>{selecting ? "Done" : "Select"}</button>
+        </div>
+      )}
+      <ul className="md:hidden">
+        {sorted.map((r) => {
+          const bits = columns.filter((k) => k !== "phone").map((k) => [k, cellOf(k, r)[0]] as const).filter(([, v]) => v !== dash).slice(0, 4);
+          return (
+            <li key={r.id} className={`flex items-start gap-3 border-b border-misty/50 px-3 py-3 last:border-0 ${sel.has(r.id) ? "bg-accent-soft/70" : ""}`}>
+              {selecting && <input type="checkbox" className="mt-2.5 size-5 flex-none" aria-label={`Select ${r.name}`} checked={sel.has(r.id)} onChange={() => toggle(r.id)} />}
+              <span aria-hidden="true" className="mt-0.5 grid size-9 flex-none place-items-center rounded-full bg-accent-soft text-xs font-bold text-accent">{initials(r.name)}</span>
+              <Link href={`/people/${r.id}?back=${encodeURIComponent(back)}&pos=${(page - 1) * 100 + sorted.indexOf(r)}`} className="min-w-0 flex-1">
+                <span className="block font-semibold leading-snug text-accent">{r.name}</span>
+                {r.phone && <span className="block text-sm muted">{r.phone}</span>}
+                {bits.length > 0 && <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">{bits.map(([k, v]) => <span key={k} className="whitespace-nowrap">{v}</span>)}</span>}
+              </Link>
+              <span className="flex flex-none gap-1.5">
+                {r.phone && <CallLink number={r.phone} name={r.name} className="grid size-9 place-items-center rounded-lg border border-misty bg-white"><span className="sr-only">Call {r.name}</span><Icon d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" /></CallLink>}
+                {r.phone && <Link href={`/people/${r.id}?compose=text&back=${encodeURIComponent(back)}`} className="grid size-9 place-items-center rounded-lg border border-misty bg-white"><span className="sr-only">Text {r.name}</span><Icon d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></Link>}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="hidden max-h-[calc(100vh-210px)] min-h-64 overflow-auto md:block">
         <table className="text-left text-sm" style={{ tableLayout: "fixed", width: 40 + widthOf("name") + columns.reduce((n, k) => n + widthOf(k), 0), minWidth: "100%" }}>
           <thead className="text-[11px] uppercase tracking-wider muted">
             <tr>
@@ -194,8 +223,8 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
             ))}
           </tbody>
         </table>
-        {rows.length === 0 && <p className="p-8 text-center muted">{emptyText}</p>}
       </div>
+      {rows.length === 0 && <p className="p-8 text-center muted">{emptyText}</p>}
       {rows.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 border-t border-misty px-4 py-2.5 text-sm muted">
           <span>Showing {((page - 1) * 100 + 1).toLocaleString()}–{((page - 1) * 100 + rows.length).toLocaleString()} of {total.toLocaleString()}</span>

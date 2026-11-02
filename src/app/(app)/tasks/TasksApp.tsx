@@ -263,7 +263,7 @@ export function TasksApp(p: Props) {
     return (
       <li key={k}>
         <button type="button" aria-current={view === k ? "true" : undefined} onClick={() => go(k)}
-          className={`flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left whitespace-nowrap max-lg:rounded-full max-lg:border max-lg:border-misty max-lg:bg-white ${view === k ? "bg-accent-soft font-semibold text-accent max-lg:bg-accent-soft" : "hover:bg-sunken"}`}>
+          className={`flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left whitespace-nowrap max-lg:gap-1.5 max-lg:rounded-full max-lg:border max-lg:border-misty max-lg:bg-white max-lg:px-3 max-lg:py-1 max-lg:text-sm ${view === k ? "bg-accent-soft font-semibold text-accent max-lg:border-accent/40 max-lg:bg-accent-soft" : "hover:bg-sunken"}`}>
           <span>{label}</span>
           <span className={`text-xs tabular-nums ${late ? "font-semibold text-bad" : "muted"}`} title={late ? `${late} overdue` : undefined}>{n || ""}</span>
         </button>
@@ -273,7 +273,7 @@ export function TasksApp(p: Props) {
 
   return (
     <div className={`mx-auto grid max-w-[1800px] grid-cols-1 items-start gap-5 px-4 py-4 lg:grid-cols-[210px_minmax(0,1fr)] ${selected ? "xl:grid-cols-[210px_minmax(0,1fr)_340px]" : ""}`}>
-      <nav aria-label="Task lists" className="flex flex-col gap-3.5 lg:sticky lg:top-3 max-lg:flex-row max-lg:overflow-x-auto">
+      <nav aria-label="Task lists" className="flex flex-col gap-3.5 lg:sticky lg:top-3 max-lg:-mx-4 max-lg:flex-row max-lg:gap-1.5 max-lg:overflow-x-auto max-lg:px-4 max-lg:pb-1 max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden">
         <ul className="flex flex-col gap-px max-lg:flex-row max-lg:gap-1.5">{navItem("today", "Today")}{navItem("upcoming", "Upcoming")}</ul>
         <div>
           <h2 className="mb-1 flex items-center justify-between px-2.5 text-[11px] font-semibold tracking-wider uppercase muted max-lg:hidden">
@@ -289,7 +289,7 @@ export function TasksApp(p: Props) {
                   <button type="button" className="btn btn-primary" onClick={saveNewList}>Add</button>
                 </span>
               ) : (
-                <button type="button" className="w-full rounded-md px-2.5 py-1.5 text-left font-semibold whitespace-nowrap text-accent hover:bg-sunken" onClick={() => setNewList("")}>+ New list</button>
+                <button type="button" className="w-full rounded-md px-2.5 py-1.5 text-left font-semibold whitespace-nowrap text-accent hover:bg-sunken max-lg:px-3 max-lg:py-1 max-lg:text-sm" onClick={() => setNewList("")}>+ New list</button>
               )}
             </li>
           </ul>
@@ -310,7 +310,7 @@ export function TasksApp(p: Props) {
                   setRenaming(null); setToast("List renamed."); refresh();
                 })}>Save</button>
               </span>
-            ) : <h1 className="text-2xl font-extrabold sm:text-[28px]">{title(view)}</h1>}
+            ) : <h1 className="text-xl font-extrabold sm:text-[28px]">{title(view)}</h1>}
             <p className="text-sm muted">{view === "today" ? `${longIso(p.today)} · overdue items are marked in red` : SUBTITLE[view] ?? "Your list"}</p>
             {currentList && renaming === null && (
               <span className="mt-0.5 flex flex-wrap items-center gap-3 text-sm">
@@ -334,10 +334,10 @@ export function TasksApp(p: Props) {
           </div>
           {view !== "touch" && (
             <span className="flex flex-wrap items-center gap-2">
-              {view === "today" && <button type="button" className="btn" onClick={() => { if (guard()) { setArranging(true); setSelId(null); } }}>Edit columns</button>}
+              {view === "today" && <button type="button" className="btn max-lg:hidden" onClick={() => { if (guard()) { setArranging(true); setSelId(null); } }}>Edit columns</button>}
               <label className="flex items-center gap-1.5 text-sm font-semibold">
                 <span className="sr-only">Assigned to</span>
-                <select className="input w-auto font-semibold" value={who} onChange={(e) => setWho(e.target.value)}>
+                <select className="input w-auto font-semibold max-lg:py-1.5 max-lg:text-sm" value={who} onChange={(e) => setWho(e.target.value)}>
                   <option value="everyone">Everyone</option>
                   <option value="me">Me</option>
                   {p.team.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}

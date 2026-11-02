@@ -80,7 +80,9 @@ export function CallCenter() {
         console.error("HQ calling:", msg);
         setTimeout(revive, 5000);
         if (seen.has(msg)) return;
-        seen.add(msg); report("error", msg); setNote(`HQ phone problem: ${msg}. Reconnecting…`);
+        // Background drops reconnect on their own, so they aren't shown (owner 2026-11-02: the box kept covering the
+        // phone screen); they're still in Admin → Integrations troubleshooting. A problem on a call still shows.
+        seen.add(msg); report("error", msg);
       });
       await d.register().catch(() => null);
       window.hqCall = async (number: string, name?: string) => {

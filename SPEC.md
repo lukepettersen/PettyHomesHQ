@@ -160,6 +160,11 @@ Principles:
   box has a magnifying glass. **Filters**: added filters are chips with × (and Clear all on All people); + Add filter
   opens a small pop-up with the same fields and conditions, a search box for long option lists, and options as pills
   to tap ("2 picked").
+- **People list on a phone** *(owner report 2026-11-02)*: cards instead of the table: full name, phone, then up to four
+  of the list's columns as a short line; Call and Text buttons on each card; **Select** shows checkboxes for the bulk
+  bar, which is one swipeable row. Columns is computer-only. **Tasks on a phone**: the list buttons are one even,
+  swipeable row (no scroll bar); Edit columns is computer-only. Background drops of the in-browser phone line no longer
+  show a pop-up (they reconnect on their own; still logged in Admin → Integrations).
 - **On a phone** *(owner report 2026-11-01)*: collections and lists fold into one "List: <name> ▼" button above the
   people; picking a list closes it and shows that list. Rows are bigger to tap, ⋯ is always visible, and drag to
   reorder is off on touch screens (⋯ → ↑/↓/Move to… instead). The search box gets its own row.
