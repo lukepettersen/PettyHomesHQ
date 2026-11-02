@@ -509,7 +509,11 @@ scrolls with it until its last card is on screen, then stays put while the middl
   **book events** on a contact's page with a Google invite ("Jack Rotman swing by house today 10:30am" → "Rotman - Swing by house", named like every appointment with the last name(s) first, owner request 2026-10-30; the client is
   invited when it's a meeting with them, plus the speaker and any teammate named) or **on the calendar alone** when no
   contact is involved ("dentist Fri 3pm"); move or cancel appointments; add tasks; log notes, calls and texts; and
-  **text a client** (now or scheduled), which always waits for a **YES** reply. "**undo**" reverses the last thing it did
+  **text a client** (now or scheduled), which always waits for a **YES** reply. It can also read and **change a
+  purchase agreement's terms** (owner request 2026-11-02: "move Ortiz closing to 11/25 and price 495k"): HQ texts back
+  each change as "Close date: Tue Nov 17 → Wed Nov 25" and saves only on **YES**, through the same save as Edit (any term
+  on the form; checked the same way; a moved pending date is marked Extended; checklists re-date and re-check "Only
+  when"; calendar invites and the sales sheet update); "undo" puts the contract back, date marks included. "**undo**" reverses the last thing it did
   in the last two hours (a text already sent can't be undone). It asks rather than guesses (which Jack? what time?),
   remembers the last 30 minutes of the conversation, logs everything in Activity, and **only answers the owner's own
   cell texting the owner's HQ number** (owner decision 2026-10-30); anyone else's texts, including other team members',

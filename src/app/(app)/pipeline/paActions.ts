@@ -8,6 +8,7 @@ import { logActivity } from "@/server/activity";
 import { hasPermission } from "@/server/permissions";
 import { loadForm } from "@/server/pa";
 import { savePaPartners } from "@/server/partners";
+import { saveContractAnswers } from "@/server/paEdit";
 import { syncContract } from "@/server/google";
 import { syncSalesRow } from "@/server/salesSheet";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
@@ -76,35 +77,9 @@ const editSchema = z.object({ id, answers: answersSchema, ...partnerLinks });
 export async function updatePurchaseAgreement(input: z.input<typeof editSchema>) {
   return guarded(null, async (user) => {
     const v = editSchema.parse(input);
-    const pa = await db.purchaseAgreement.findFirst({ where: { id: v.id, deletedAt: null }, include: { file: { include: { person: { select: { name: true } } } } } });
-    if (!pa) throw new UserError("That contract was deleted.");
-    const canComm = hasPermission(user.permissions, "seeCommissions");
-    const form = await loadForm(pa.side as "buyer" | "seller");
-    const c = clean(form, v.answers, canComm);
-    // Moving a date that was still pending marks it Extended and remembers the original.
-    const status = obj(pa.dateStatus), orig = obj(pa.originalDates);
-    const moved: string[] = [];
-    for (const [k] of KEY_DATES) {
-      const before = pa[k] ? isoFromDate(pa[k]!) : null, after = c.dates[k];
-      if (before && after && before !== after) {
-        moved.push(label(k));
-        if (!status[k] || status[k] === "pending" || status[k] === "extended") { status[k] = "extended"; orig[k] = orig[k] ?? before; }
-      }
-    }
-    const steps = await db.$transaction(async (tx) => {
-      await tx.purchaseAgreement.update({
-        where: { id: pa.id },
-        data: { address: c.address, price: c.price, answers: c.answers, writtenStatementNA: c.writtenStatementNA, ...dateData(c.dates), dateStatus: status, originalDates: orig },
-      });
-      if (canComm) await tx.paCommission.upsert({ where: { paId: pa.id }, update: c.commission, create: { paId: pa.id, ...c.commission } });
-      await redateContract(tx, pa.id);
-      return pa.state === "active" ? recheckConditions(tx, pa.id, factsOf(pa.answers, pa.writtenStatementNA), user.id) : { added: 0, removed: 0 };
-    });
-    await savePaPartners(pa.id, form, c.answers, v.partners ?? {}, v.saveAsContact ?? [], user.id);
-    await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Updated purchase agreement for ${pa.file.person.name}${moved.length ? ` (moved ${moved.join(", ")})` : ""}${steps.added || steps.removed ? ` (checklist: ${steps.added} added, ${steps.removed} removed)` : ""}`);
-    await syncContract(pa.id);
-    await syncSalesRow(pa.id, "changed"); // owner's sales Google Sheet, when set up
-    refresh(pa.file.personId);
+    const r = await saveContractAnswers(user, v.id, v.answers);
+    await savePaPartners(v.id, r.form, r.answers, v.partners ?? {}, v.saveAsContact ?? [], user.id);
+    refresh(r.personId);
   });
 }
 

@@ -16,6 +16,8 @@ import { dateFromIso, formatPhone, isoFromDate, normalizeEmail, normalizePhone, 
 import { centralToUtc, scheduleLabel, scheduleProblem } from "@/lib/scheduledText";
 import { formatTime, longIso } from "@/lib/tasks";
 import { clip, cleanWhen } from "@/lib/textAgent";
+import { loadContract, cleanOrThrow, saveContractAnswers } from "@/server/paEdit";
+import { COMMISSION_KEYS, KEY_DATES, visibleSections, type PaField } from "@/lib/pa";
 
 // The text assistant (owner request 2026-10-30): a team member texts their HQ number in plain English and Claude does it
 // in HQ with these tools, then HQ texts back exactly what was done (written by HQ, not Claude, so it can't be wrong about
@@ -47,7 +49,8 @@ Other:
 - add_task for reminders and to-dos (due today if no day is said). add_note to log what happened with a client, in the speaker's words, cleaned up, keeping every fact.
 - text_client when they want someone texted. Write the message as the speaker would (first person, casual, short), greeting them by first name. It goes as a group text that includes the speaker's own cell, and is NOT sent until they reply YES, so call it once, then stop.
 - my_schedule answers "what's on my calendar / today / tomorrow".
-- You can't send emails, move deals between stages or change contracts yet; say so if asked.
+- Contracts (purchase agreements): contract_details shows a contact's active contract with every term (key, label, type, value). To change terms ("move Ortiz closing to 11/25", "price is now 395k", "inspection waived? no: inspection date Nov 8"), call edit_contract once with every change: the key from contract_details and the value in its format (date YYYY-MM-DD; datetime YYYY-MM-DDTHH:MM; money/number digits only; pct like 2.7; yesno "Yes"/"No"; choice exactly one of its choices; "" to clear). It is NOT saved until they reply YES, so stop after it. If a term isn't on the form, say so.
+- You can't send emails or move deals between stages yet; say so if asked.
 
 Reply in one or two short plain sentences (no markdown, no lists), only what they need: an answer, or the one question you need answered. Don't repeat what the tools did: HQ texts that back itself.`;
 
@@ -81,6 +84,10 @@ const tools: Anthropic.Beta.BetaTool[] = [
       name: str('Full name, like "Mason Albee"'), phone: str('Phone number, or ""'), email: str('Email, or ""'),
       partner_type: { type: "string", enum: ["", "realtor", "lender", "title", "inspector", "tc", "attorney", "other"], description: 'Industry partner type when they say what they do (a contractor or sign installer is "other"), else ""' },
     }, required: ["name", "phone", "email", "partner_type"], additionalProperties: false } },
+  { name: "contract_details", description: "A contact's active purchase agreement(s): id, address, side, key dates with status, and every term on the form as key / label / type / value (choices listed).", strict: true,
+    input_schema: { type: "object", properties: { person_id: str("Contact id") }, required: ["person_id"], additionalProperties: false } },
+  { name: "edit_contract", description: "Prepare changes to a purchase agreement's terms. Not saved until the speaker replies YES.", strict: true,
+    input_schema: { type: "object", properties: { contract_id: str("From contract_details"), changes: { type: "array", items: { type: "object", properties: { key: str("The term's key from contract_details"), value: str("The new value in the term's format, or \"\" to clear") }, required: ["key", "value"], additionalProperties: false } } }, required: ["contract_id", "changes"], additionalProperties: false } },
   { name: "text_client", description: "Prepare a text to a contact from the speaker's HQ number. Not sent until the speaker replies YES.", strict: true,
     input_schema: { type: "object", properties: { person_id: str("Contact id"), body: str("The message"), send_date: str('YYYY-MM-DD to send later, or "" for now'), send_time: str('HH:MM to send later, or ""') }, required: ["person_id", "body", "send_date", "send_time"], additionalProperties: false } },
 ];
@@ -232,6 +239,43 @@ async function runTool(me: Me, name: string, a: Record<string, unknown>, seen: S
     return `Added (id ${p.id}).`;
   }
 
+  if (name === "contract_details") {
+    const p = await person(s("person_id"));
+    if (!p) return "Unknown contact id: use find_people first.";
+    const pas = await db.purchaseAgreement.findMany({ where: { state: "active", deletedAt: null, file: { personId: p.id, deletedAt: null } }, select: { id: true } });
+    if (!pas.length) return `${p.name} has no active purchase agreement.`;
+    const out = [];
+    for (const { id } of pas) {
+      const c = await loadContract(id, me.permissions);
+      if (!c) continue;
+      seen.add(id);
+      const fields = visibleSections(c.form, c.answers).flatMap((sec) => sec.fields).filter((f) => c.view.commission !== null || !COMMISSION_KEYS.includes(f.key));
+      out.push({ id, side: c.view.side, address: c.view.address,
+        dates: Object.fromEntries(KEY_DATES.map(([k, l]) => [l, c.view.dates[k] ? `${c.view.dates[k]} (${c.view.dateStatus[k] ?? "pending"})` : null])),
+        terms: fields.map((f) => ({ key: f.key, label: f.label, type: f.type, value: c.answers[f.key] ?? "", ...(f.options ? { choices: f.options } : {}) })) });
+    }
+    return JSON.stringify(out);
+  }
+
+  if (name === "edit_contract") {
+    const paId = s("contract_id");
+    if (!seen.has(paId)) return "Unknown contract id: use contract_details first.";
+    const c = await loadContract(paId, me.permissions);
+    if (!c) return "That contract was deleted.";
+    const raw = Array.isArray(a.changes) ? (a.changes as { key?: unknown; value?: unknown }[]) : [];
+    const changes = raw.map((x) => ({ key: String(x.key ?? "").trim(), value: String(x.value ?? "").trim().slice(0, 300) })).filter((x) => x.key).slice(0, 20);
+    if (!changes.length) return "Not prepared: no changes given.";
+    const next = { ...c.answers };
+    for (const ch of changes) next[ch.key] = ch.value;
+    const all = c.form.flatMap((sec) => sec.fields);
+    const unknown = changes.filter((ch) => !all.some((f) => f.key === ch.key) || (c.view.commission === null && COMMISSION_KEYS.includes(ch.key)));
+    if (unknown.length) return `Not prepared: ${unknown.map((u) => u.key).join(", ")} isn't a term on this contract's form. Check contract_details.`;
+    try { cleanOrThrow(c.form, next, c.view.commission !== null); } catch (e) { return `Not prepared: ${e instanceof UserError ? e.message : "that value doesn't fit"}. Fix the value and try again.`; }
+    const lines = changes.map((ch) => { const f = all.find((x) => x.key === ch.key)!; return `${f.label}: ${termText(f, c.answers[ch.key])} → ${termText(f, ch.value)}`; });
+    await record(me.id, "contract", `Change ${c.pa.file.person.name}'s contract (${c.view.address}):\n${lines.join("\n")}\nReply YES to save, or NO.`, { paId, changes, lines }, "confirm");
+    return "Prepared. Waiting for them to reply YES. Stop here.";
+  }
+
   if (name === "text_client") {
     if (!hasPermission(me.permissions as never, "sendTexts")) return "They aren't allowed to send texts from HQ; tell them.";
     const p = await person(s("person_id"));
@@ -250,6 +294,16 @@ async function runTool(me: Me, name: string, a: Record<string, unknown>, seen: S
     return "Prepared. Waiting for them to reply YES. Stop here.";
   }
   return "Unknown tool.";
+}
+
+/** A term's value the way a person reads it: "Fri, Nov 20", "$395,000", "2.7%", or "blank". */
+function termText(f: PaField, v: string | undefined): string {
+  if (!v) return "blank";
+  if ((f.type === "date" || f.type === "date-na") && /^\d{4}-\d{2}-\d{2}$/.test(v)) return longIso(v);
+  if (f.type === "datetime" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) return `${longIso(v.slice(0, 10))} ${formatTime(v.slice(11, 16))}`;
+  if (f.type === "money" && /^\d+$/.test(v.replace(/[$,]/g, ""))) return `$${Number(v.replace(/[$,]/g, "")).toLocaleString("en-US")}`;
+  if (f.type === "pct") return `${v.replace(/%$/, "")}%`;
+  return v;
 }
 
 const minutesBetween = (a: string, b: string) => { const [h1, m1] = a.split(":").map(Number), [h2, m2] = b.split(":").map(Number); return Math.max(15, h2 * 60 + m2 - (h1 * 60 + m1)); };
@@ -317,6 +371,23 @@ export async function answerConfirm(user: { id: string; name: string }, actionId
   const claim = await db.textAgentAction.updateMany({ where: { id: actionId, status: "confirm" }, data: { status: yes ? "done" : "canceled" } });
   if (!claim.count) return "That one was already handled.";
   const act = await db.textAgentAction.findUniqueOrThrow({ where: { id: actionId } });
+  if (act.kind === "contract") {
+    if (!yes) return "Okay, the contract wasn't changed.";
+    const q = act.payload as { paId: string; changes: { key: string; value: string }[]; lines: string[] };
+    const u = await db.user.findUnique({ where: { id: user.id }, include: { role: true } });
+    const c = u ? await loadContract(q.paId, u.role.permissions) : null;
+    if (!u || !c) { await db.textAgentAction.update({ where: { id: act.id }, data: { status: "canceled" } }); return "Not saved: that contract was deleted."; }
+    const next = { ...c.answers };
+    for (const ch of q.changes) next[ch.key] = ch.value;
+    try {
+      const r = await saveContractAnswers({ id: u.id, permissions: u.role.permissions }, q.paId, next, " by text");
+      await db.textAgentAction.update({ where: { id: act.id }, data: { payload: { ...q, before: c.answers, beforeStatus: (c.pa.dateStatus ?? {}) as object, beforeOrig: (c.pa.originalDates ?? {}) as object } } });
+      return `✓ Saved ${c.pa.file.person.name}'s contract: ${q.lines.join("; ")}.${r.moved.length ? " Checklist dates and calendar invites moved with it." : ""}`;
+    } catch (e) {
+      await db.textAgentAction.update({ where: { id: act.id }, data: { status: "canceled" } });
+      return `Not saved: ${e instanceof UserError ? e.message : "something went wrong. Change it on their page in HQ."}`;
+    }
+  }
   if (!yes) return "Okay, not sent.";
   const p = act.payload as { personId: string; body: string; date: string | null; time: string | null };
   const person = await db.person.findFirst({ where: { id: p.personId, deletedAt: null }, include: { phones: { orderBy: { position: "asc" } } } });
@@ -364,6 +435,15 @@ export async function undoLast(user: { id: string }): Promise<string> {
     if (appt.type === "call") await callChanged(db, appt.personId, user.id);
     await syncAppointment(appt.id);
     what = `Moved "${appt.title}" back to ${when(b.date, b.start)}.`;
+  } else if (act.kind === "contract") {
+    const before = p.before as Record<string, string> | undefined;
+    if (!before) return "That contract change wasn't saved, so there's nothing to undo.";
+    const u = await db.user.findUnique({ where: { id: user.id }, include: { role: true } });
+    if (!u) return "Couldn't find you in HQ.";
+    try { await saveContractAnswers({ id: u.id, permissions: u.role.permissions }, id("paId"), before, " (undo by text)"); } catch (e) { return `Couldn't undo: ${e instanceof UserError ? e.message : "change it back on their page in HQ."}`; }
+    // The dates' Met / Extended marks go back too, so a moved-then-undone date isn't left "Extended".
+    await db.purchaseAgreement.update({ where: { id: id("paId") }, data: { dateStatus: (p.beforeStatus ?? {}) as object, originalDates: (p.beforeOrig ?? {}) as object } });
+    what = "Put the contract back the way it was.";
   } else if (act.kind === "event") {
     if (!(await removeCalendarEvent(id("eventId")))) return "Couldn't remove that calendar event. Delete it in Google Calendar.";
     what = "Removed it from your calendar.";
