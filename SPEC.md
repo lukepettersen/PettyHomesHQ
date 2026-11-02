@@ -127,7 +127,11 @@ Principles:
   and puts the name on the board as writing that opens their contact. Click to type (or open a name); press and drag
   a name, text or note itself (or its ⠿ grip / top bar) to move it, and a plain click still types or opens; drag the
   corner square to reshape a note or a text box (text wraps inside it); left / center / right buttons line up the words
-  in picked notes and text; A−/A+ resize selected text or names; × twice removes. **Pick several** with ⌘/Ctrl/Shift-click
+  in picked notes and text; **B / I / U** (or ⌘B / ⌘I / ⌘U) make words bold, italic or underlined (the selected words,
+  else the line you're on; with items picked and not typing, the whole item) and **• / 1.** make bullet or numbered
+  lists (Enter continues the list, Enter on an empty item ends it), owner request 2026-11-02: kept in the text as
+  **bold**, *italic*, __underline__, "• " and "1. ", shown formatted except in the note or text you're typing in;
+  A−/A+ resize selected text or names; × twice removes. **Pick several** with ⌘/Ctrl/Shift-click
   or by dragging a box on an empty spot, then move them together (they keep their layout), resize, recolor, align, or
   remove them (Delete key or Remove, asked twice); Escape unpicks. **Group** keeps picked items together for good (saved
   with the board): clicking or dragging any one grabs the whole group; ⌥ (Option)-drag moves just one; **Ungroup** splits

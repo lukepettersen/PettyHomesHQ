@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Caveat } from "next/font/google";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { BOARD, boxOf, NOTE_COLORS, placeNew, type BoardItem } from "@/lib/whiteboard";
+import { BOARD, boxOf, NOTE_COLORS, listEnter, listMark, placeNew, plainText, richSegments, toggleAll, toggleList, toggleMark, type BoardItem } from "@/lib/whiteboard";
 import { saveBoard } from "./actions";
 
 const hand = Caveat({ subsets: ["latin"], weight: ["500", "700"] });
@@ -20,6 +20,58 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
   const [status, setStatus] = useState<"saved" | "saving" | "error">("saved");
   const [picking, setPicking] = useState(false);
   const [fresh, setFresh] = useState<string | null>(null); // just added: the cursor goes in it
+  // The note or text being typed in shows the raw words (with **bold** markers); the rest show formatted (owner request 2026-11-02).
+  const [editing, setEditing] = useState<string | null>(null);
+  const typingIn = (id: string) => editing === id || fresh === id;
+  const box2 = useRef<HTMLTextAreaElement | null>(null); // the textarea being typed in
+  const selRange = useRef<{ start: number; end: number } | null>(null); // the selection to restore after B / I / U / lists
+  /** B / I / U: around the selected words while typing, else the whole of each picked note or text. */
+  const format = (mark: "**" | "*" | "__") => {
+    const el = box2.current, id = editing ?? fresh;
+    if (el && id && document.activeElement === el) {
+      let a = el.selectionStart, z = el.selectionEnd;
+      // Nothing selected: the line the cursor is on (e.g. a heading like "OFFERS SUBMITTED").
+      if (a === z) { const v = el.value; a = v.lastIndexOf("\n", a - 1) + 1; z = v.indexOf("\n", z); if (z < 0) z = v.length; while (a < z && v[a] === " ") a++; while (z > a && v[z - 1] === " ") z--; }
+      const r = toggleMark(el.value, a, z, mark);
+      selRange.current = { start: r.start, end: r.end }; // put back right after the change shows
+      patch(id, { text: r.text });
+      return;
+    }
+    setItems((list) => list.map((i) => (picked.includes(i.id) && i.kind !== "person" ? { ...i, text: toggleAll(i.text, mark) } : i)));
+  };
+  /** • List / 1. List: the lines the cursor or selection touches, else the whole of each picked note or text. */
+  const list = (kind: "bullet" | "number") => {
+    const el = box2.current, id = editing ?? fresh;
+    if (el && id && document.activeElement === el) {
+      const r = toggleList(el.value, el.selectionStart, el.selectionEnd, kind);
+      selRange.current = { start: r.end, end: r.end };
+      patch(id, { text: r.text });
+      return;
+    }
+    setItems((all) => all.map((i) => (picked.includes(i.id) && i.kind !== "person" ? { ...i, text: toggleList(i.text, 0, i.text.length, kind).text } : i)));
+  };
+  const keys = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const id = editing ?? fresh;
+    // Enter on a list line keeps the list going; Enter on an empty item ends it.
+    if (e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey && id) {
+      const el = e.currentTarget, r = el.selectionStart === el.selectionEnd ? listEnter(el.value, el.selectionStart) : null;
+      if (r) { e.preventDefault(); selRange.current = { start: r.pos, end: r.pos }; patch(id, { text: r.text }); }
+      return;
+    }
+    if (!(e.metaKey || e.ctrlKey)) return;
+    const mark = ({ b: "**", i: "*", u: "__" } as const)[e.key.toLowerCase() as "b" | "i" | "u"];
+    if (mark) { e.preventDefault(); format(mark); }
+  };
+  const field = (id: string) => ({
+    ref: (el: HTMLTextAreaElement | null) => {
+      if (!el) return;
+      box2.current = el;
+      if (document.activeElement !== el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+      if (selRange.current && el.value.length >= selRange.current.end) { el.setSelectionRange(selRange.current.start, selRange.current.end); selRange.current = null; }
+    },
+    onKeyDown: keys,
+    onBlur: () => { setEditing((x) => (x === id ? null : x)); setFresh((x) => (x === id ? null : x)); },
+  });
   const [box, setBox] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   // A smaller screen (a phone) shrinks the board so everything placed on the computer still shows (owner 2026-11-02).
@@ -207,6 +259,18 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
               className={`px-2.5 py-1.5 hover:bg-sunken disabled:opacity-40 aria-pressed:bg-sunken ${n ? "border-l border-misty" : ""}`}><AlignIcon a={a} /></button>
           ))}
         </span>
+        <span className="flex overflow-hidden rounded-lg border border-misty bg-white text-sm" role="group" aria-label="Bold, italic, underline">
+          {([["**", "Bold (⌘B)", "font-bold", "B"], ["*", "Italic (⌘I)", "italic font-serif", "I"], ["__", "Underline (⌘U)", "underline", "U"]] as const).map(([m, label, cls, ch], n) => (
+            <button key={m} type="button" disabled={!aligned.length && !editing && !fresh} aria-label={label} title={label}
+              onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()} onClick={() => format(m)}
+              className={`w-8 py-1.5 hover:bg-sunken disabled:opacity-40 ${cls} ${n ? "border-l border-misty" : ""}`}>{ch}</button>
+          ))}
+          {([["bullet", "Bullet list", "•"], ["number", "Numbered list", "1."]] as const).map(([k, label, ch]) => (
+            <button key={k} type="button" disabled={!aligned.length && !editing && !fresh} aria-label={label} title={label}
+              onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()} onClick={() => list(k)}
+              className="w-8 border-l border-misty py-1.5 font-semibold hover:bg-sunken disabled:opacity-40">{ch}</button>
+          ))}
+        </span>
         <span className="ml-auto flex items-center gap-2">
           <span className={`text-xs ${status === "error" ? "font-semibold text-bad" : "muted"}`} role="status">
             {status === "saving" ? "Saving…" : status === "error" ? "Couldn't save. Check your connection." : dirty ? <b className="text-charcoal">Unsaved changes</b> : <>Saved ✓ · only you can see this<span className="hidden xl:inline"> · ⌘-click or drag a box to pick several</span></>}
@@ -224,8 +288,12 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
               <div key={i.id} data-item onPointerDown={grab(i.id)} className={`absolute flex flex-col rounded shadow-[0_6px_14px_rgba(56,50,50,.15)] ${ring(i.id)}`}
                 style={{ left: i.x, top: i.y, width: i.w, height: i.h, background: i.color }}>
                 <div onPointerDown={drag(i.id, "move")} title="Drag to move" className="flex h-5 flex-none cursor-move touch-none items-center justify-end px-1">{x(i.id, "font-sans")}</div>
-                <textarea aria-label="Sticky note" autoFocus={fresh === i.id} value={i.text} placeholder="Type…" onChange={(e) => patch(i.id, { text: e.target.value })}
-                  style={{ textAlign: i.align ?? "left" }} className="min-h-0 flex-1 resize-none bg-transparent px-3 pb-3 text-[24px] leading-tight text-charcoal outline-none placeholder:text-black/30" />
+                {typingIn(i.id)
+                  ? <textarea aria-label="Sticky note" {...field(i.id)} value={i.text} placeholder="Type…" onChange={(e) => patch(i.id, { text: e.target.value })}
+                      style={{ textAlign: i.align ?? "left" }} className="min-h-0 flex-1 resize-none bg-transparent px-3 pb-3 text-[24px] leading-tight text-charcoal outline-none placeholder:text-black/30" />
+                  : <div role="textbox" aria-label="Sticky note" tabIndex={0} onClick={(e) => { if (!(e.metaKey || e.ctrlKey || e.shiftKey)) setEditing(i.id); }} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); setEditing(i.id); } }}
+                      style={{ textAlign: i.align ?? "left" }} className="min-h-0 flex-1 cursor-text overflow-hidden whitespace-pre-wrap break-words px-3 pb-3 text-[24px] leading-tight text-charcoal">
+                      {i.text ? <RichText text={i.text} /> : <span className="text-black/30">Type…</span>}</div>}
                 <span onPointerDown={drag(i.id, "size")} aria-hidden="true" className="absolute -bottom-1.5 -right-1.5 size-3.5 cursor-nwse-resize touch-none rounded-sm border-2 border-coral bg-white" />
               </div>
             );
@@ -237,13 +305,18 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
                 <span className="hidden font-sans group-hover:inline">{x(i.id)}</span>
               </div>
             );
-            const lines = (i.text || "Type here").split("\n"), shaped = !!(i.w && i.h);
+            const lines = (plainText(i.text) || "Type here").split("\n"), shaped = !!(i.w && i.h);
+            const look = { fontSize: size, textAlign: i.align ?? "left", ...(shaped ? { width: i.w, height: i.h } : { width: `${Math.max(4, ...lines.map((l) => l.length)) * 0.55 + 1}em` }) } as const;
             return (
               <div key={i.id} data-item onPointerDown={grab(i.id)} className={`group absolute ${ring(i.id)}`} style={{ left: i.x, top: i.y }}>
                 {grip(i.id)}
-                <textarea aria-label="Text" autoFocus={fresh === i.id} value={i.text} placeholder="Type here" rows={lines.length} onChange={(e) => patch(i.id, { text: e.target.value })}
-                  className={`block resize-none bg-transparent font-bold leading-tight text-[#2f5d8a] outline-none placeholder:text-[#2f5d8a]/40 ${shaped ? "overflow-y-auto" : "overflow-hidden"}`}
-                  style={{ fontSize: size, textAlign: i.align ?? "left", ...(shaped ? { width: i.w, height: i.h } : { width: `${Math.max(4, ...lines.map((l) => l.length)) * 0.55 + 1}em` }) }} />
+                {typingIn(i.id)
+                  ? <textarea aria-label="Text" {...field(i.id)} value={i.text} placeholder="Type here" rows={Math.max(lines.length, i.text.split("\n").length)} onChange={(e) => patch(i.id, { text: e.target.value })}
+                      className={`block resize-none bg-transparent font-bold leading-tight text-[#2f5d8a] outline-none placeholder:text-[#2f5d8a]/40 ${shaped ? "overflow-y-auto" : "overflow-hidden"}`}
+                      style={{ ...look, ...(shaped ? {} : { width: `${Math.max(4, ...i.text.split("\n").map((l) => l.length)) * 0.55 + 1}em` }) }} />
+                  : <div role="textbox" aria-label="Text" tabIndex={0} onClick={(e) => { if (!(e.metaKey || e.ctrlKey || e.shiftKey)) setEditing(i.id); }} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); setEditing(i.id); } }}
+                      className={`cursor-text whitespace-pre-wrap break-words font-bold leading-tight text-[#2f5d8a] ${shaped ? "overflow-hidden" : ""}`} style={look}>
+                      {i.text ? <RichText text={i.text} heavy /> : <span className="text-[#2f5d8a]/40">Type here</span>}</div>}
                 <span className="absolute -right-6 top-0 hidden font-sans group-hover:block">{x(i.id)}</span>
                 {/* Drag the corner to reshape the box; the words wrap to fit (owner request 2026-11-02). */}
                 <span onPointerDown={drag(i.id, "size")} aria-hidden="true" title="Drag to reshape"
@@ -267,6 +340,20 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
       </div>
     </div>
   );
+}
+
+/** Words with their bold / italic / underline. Marker text (already bold) gets a heavier stroke for bold. */
+function RichText({ text, heavy = false }: { text: string; heavy?: boolean }) {
+  const words = (t: string) => richSegments(t).map((s, n) => (
+    <span key={n} className={`${s.b ? (heavy ? "[-webkit-text-stroke:0.035em_currentColor]" : "font-bold") : ""} ${s.i ? "italic" : ""} ${s.u ? "underline decoration-2 underline-offset-4" : ""}`}>{s.t}</span>
+  ));
+  // List lines ("• " or "1. ") hang so wrapped words line up under the first word.
+  return <>{text.split("\n").map((line, n) => {
+    const mark = listMark(line);
+    return mark
+      ? <span key={n} className="flex"><span className="flex-none pr-[0.3em]">{mark.trim()}</span><span className="min-w-0">{words(line.slice(mark.length))}</span></span>
+      : <span key={n} className="block min-h-[1.25em]">{words(line)}</span>;
+  })}</>;
 }
 
 function AlignIcon({ a }: { a: "left" | "center" | "right" }) {

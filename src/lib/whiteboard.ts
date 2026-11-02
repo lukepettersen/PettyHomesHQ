@@ -59,3 +59,67 @@ export function placeNew(view: { left: number; top: number; w?: number; h?: numb
   }
   return { x: clamp(view.left + 60 + (items.length % 6) * 24, 0, BOARD.w - size.w), y: clamp(view.top + 60 + (items.length % 6) * 24, 0, BOARD.h - size.h) };
 }
+
+/** Bold, italic and underline on the board (owner request 2026-11-02), kept in the text as **bold**, *italic* and
+ *  __underline__ so the saved board stays plain words. A marker without its partner shows as typed. */
+export type Rich = { t: string; b: boolean; i: boolean; u: boolean };
+const MARKS = ["**", "__", "*"] as const;
+export function richSegments(text: string): Rich[] {
+  const tokens = text.split(/(\*\*|__|\*)/).filter((x) => x !== "");
+  const left = new Map<string, number>(MARKS.map((m) => [m, tokens.filter((x) => x === m).length]));
+  const out: Rich[] = [];
+  const on = { "**": false, "__": false, "*": false } as Record<string, boolean>;
+  for (const tok of tokens) {
+    if ((MARKS as readonly string[]).includes(tok)) {
+      const n = left.get(tok)!; left.set(tok, n - 1);
+      // An opening marker with no partner left to close it is just a character.
+      if (on[tok] || n >= 2) { on[tok] = !on[tok]; continue; }
+    }
+    const seg = { t: tok, b: on["**"], i: on["*"], u: on["__"] };
+    const last = out[out.length - 1];
+    if (last && last.b === seg.b && last.i === seg.i && last.u === seg.u) last.t += tok; else out.push(seg);
+  }
+  return out;
+}
+/** The words without the formatting markers (for sizing). */
+export const plainText = (text: string) => richSegments(text).map((s) => s.t).join("");
+/** Turns a marker on or off around the selected words (or puts a pair at the cursor). Returns the new text and selection. */
+export function toggleMark(text: string, start: number, end: number, mark: "**" | "*" | "__") {
+  const n = mark.length;
+  if (start >= n && text.slice(start - n, start) === mark && text.slice(end, end + n) === mark && !(mark === "*" && (text[start - n - 1] === "*" || text[end + n] === "*")))
+    return { text: text.slice(0, start - n) + text.slice(start, end) + text.slice(end + n), start: start - n, end: end - n };
+  return { text: text.slice(0, start) + mark + text.slice(start, end) + mark + text.slice(end), start: start + n, end: end + n };
+}
+/** The whole item on or off (the B / I / U buttons with items picked, not typing), line by line (after any list mark). */
+export function toggleAll(text: string, mark: "**" | "*" | "__") {
+  const n = mark.length;
+  const parts = text.split("\n").map((l) => { const m = l.match(/^(• |\d+\. )/)?.[0] ?? ""; return { m, w: l.slice(m.length) }; });
+  const wrapped = (w: string) => w.length >= 2 * n && w.startsWith(mark) && w.endsWith(mark);
+  const off = parts.filter((p) => p.w.trim()).every((p) => wrapped(p.w));
+  return parts.map(({ m, w }) => (!w.trim() ? m + w : off ? m + w.slice(n, -n) : wrapped(w) ? m + w : `${m}${mark}${w}${mark}`)).join("\n");
+}
+
+/** Bullet and numbered lists (owner request 2026-11-02): lines that start with "• " or "1. ". */
+export const BULLET = "• ";
+const NUM = /^(\d+)\. /;
+export const listMark = (line: string) => (line.startsWith(BULLET) ? BULLET : line.match(NUM)?.[0] ?? null);
+/** Turns the lines the selection touches into a list, or back to plain lines when they all already are one. */
+export function toggleList(text: string, start: number, end: number, kind: "bullet" | "number") {
+  const a = text.lastIndexOf("\n", start - 1) + 1;
+  let z = text.indexOf("\n", end > start && text[end - 1] === "\n" ? end - 1 : end); if (z < 0) z = text.length;
+  const lines = text.slice(a, z).split("\n");
+  const has = (l: string) => (kind === "bullet" ? l.startsWith(BULLET) : NUM.test(l));
+  const strip = (l: string) => l.replace(/^• /, "").replace(NUM, "");
+  const off = lines.every(has);
+  const out = lines.map((l, n) => (off ? strip(l) : `${kind === "bullet" ? BULLET : `${n + 1}. `}${strip(l)}`)).join("\n");
+  return { text: text.slice(0, a) + out + text.slice(z), start: a, end: a + out.length };
+}
+/** Enter on a list line: the next line continues the list ("• " or the next number); Enter on an empty item ends it. Null = a normal Enter. */
+export function listEnter(text: string, pos: number) {
+  const a = text.lastIndexOf("\n", pos - 1) + 1, line = text.slice(a, pos), mark = listMark(line);
+  if (!mark) return null;
+  if (line === mark) return { text: text.slice(0, a) + text.slice(pos), pos: a }; // empty item: end the list
+  const next = mark === BULLET ? BULLET : `${+mark.match(NUM)![1] + 1}. `;
+  const ins = `\n${next}`;
+  return { text: text.slice(0, pos) + ins + text.slice(pos), pos: pos + ins.length };
+}
