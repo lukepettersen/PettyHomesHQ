@@ -79,7 +79,9 @@ export async function sendDueAutoTasks(now = new Date()): Promise<number> {
       const filled = await autoMessage(t, su);
       if (!filled) throw new UserError("No message template is picked for this step (Admin → Checklists).");
       const { body, subject } = filled;
-      if (body.missing.length || (t.kind === "email" && subject.missing.length)) throw new UserError("Some details the template needs aren't filled in yet, so it wasn't sent. Send it by hand from the step.");
+      // Says which details are blank, so it's clear what to fill in (owner report 2026-11-02).
+      const blank = [...new Set([...body.missing, ...(t.kind === "email" ? subject.missing : [])])].map(filled.label);
+      if (blank.length) throw new UserError(`Not filled in for this person: ${blank.join(", ")}. Fill ${blank.length === 1 ? "it" : "them"} in, or send it by hand from the step.`);
 
       // Who it goes to.
       const person = await db.person.findFirst({ where: { id: t.personId, deletedAt: null }, include: { phones: { orderBy: { position: "asc" } }, emails: { orderBy: { position: "asc" } } } });
