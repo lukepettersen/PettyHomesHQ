@@ -551,7 +551,8 @@ scrolls with it until its last card is on screen, then stays put while the middl
   in, tagged Buyer/Seller, and that stage's checklist starts, the same as + Add buyer (owner request 2026-11-02).
 - **Updating deals already using a checklist** *(owner request 2026-10-29)*: after saving a checklist that open deals
   already use, HQ offers **Update the N deals**, listing each one by name (the person, and the contract address, showing
-  or deal when there is one; owner request 2026-11-03). Their open steps take the new name, type, phase, timing, message,
+  or deal when there is one; owner request 2026-11-03). Only deals still going count (and get updated): steps left on a
+  closed, fell-through or deleted contract or deal are skipped, the same as on the Tasks page. Their open steps take the new name, type, phase, timing, message,
   "when done" and automatic send (re-dated from their dates); new steps are added; steps removed from the checklist, or
   whose "Only when" no longer fits, go to Trash. Done steps, steps someone deleted, dates set by hand, who a step is
   assigned to, and tag/stage steps are left alone. "Not now" keeps the old behavior (only deals that start it later).

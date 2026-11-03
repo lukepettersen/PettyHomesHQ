@@ -99,9 +99,19 @@ function stepData(t: Template, spec: Spec, ctx: Ctx, who: (first: string) => str
  * assignee, message and automatic send; new steps are added; steps removed (or whose "Only when" no longer fits) go to
  * Trash. Done steps, steps someone deleted, and tag/stage steps are left alone. Returns what changed.
  */
+/** Only deals still going: the deal isn't closed or deleted and the contract (if any) is active (owner report 2026-11-03:
+ *  closed and fell-through test contracts were counted in "Update the N deals"). Same rule as the Tasks page. */
+const ON_OPEN_DEALS = {
+  person: { deletedAt: null },
+  AND: [
+    { OR: [{ fileId: null }, { file: { is: { closedAt: null, deletedAt: null } } }] },
+    { OR: [{ paId: null }, { pa: { is: { state: "active", deletedAt: null } } }] },
+  ],
+};
+
 export async function syncTemplateToOpen(t: Template, userId: string): Promise<{ deals: number; updated: number; added: number; removed: number }> {
   const out = { deals: 0, updated: 0, added: 0, removed: 0 };
-  const open = await db.task.findMany({ where: { templateId: t.id, completedAt: null, deletedAt: null, personId: { not: null }, person: { deletedAt: null } }, select: { personId: true, fileId: true, paId: true, showingId: true } });
+  const open = await db.task.findMany({ where: { templateId: t.id, completedAt: null, deletedAt: null, personId: { not: null }, ...ON_OPEN_DEALS }, select: { personId: true, fileId: true, paId: true, showingId: true } });
   const groups = [...new Map(open.map((g) => [`${g.personId}|${g.fileId ?? ""}|${g.paId ?? ""}|${g.showingId ?? ""}`, g])).values()];
   const stepIds = new Set(t.phases.flatMap((p) => p.steps.map((x) => x.id)));
   for (const g of groups) {
@@ -175,12 +185,12 @@ export async function openUses(templateId: string): Promise<number> {
 /** The deals a checklist is open on, named for the "Update the deals" offer (owner request 2026-11-03): the person, and
  *  the contract or deal address or showing when there is one ("Emma Sharpe & Vy Nguyen · 2001 Westwood Hills Drive"). */
 export async function openUseNames(templateId: string): Promise<string[]> {
-  const rows = await db.task.findMany({ where: { templateId, completedAt: null, deletedAt: null, personId: { not: null }, person: { deletedAt: null } },
+  const rows = await db.task.findMany({ where: { templateId, completedAt: null, deletedAt: null, personId: { not: null }, ...ON_OPEN_DEALS },
     select: { personId: true, fileId: true, paId: true, showingId: true, person: { select: { name: true } }, pa: { select: { address: true } }, file: { select: { address: true, kind: true } } },
     distinct: ["personId", "fileId", "paId", "showingId"] });
-  const shows = new Map((await db.showing.findMany({ where: { id: { in: rows.map((r) => r.showingId).filter((x): x is string => !!x) } }, select: { id: true, address: true } })).map((x) => [x.id, x.address]));
+  const shows = new Map((await db.showing.findMany({ where: { id: { in: rows.map((r) => r.showingId).filter((x): x is string => !!x) }, status: "confirmed" }, select: { id: true, address: true } })).map((x) => [x.id, x.address]));
   const short = (a: string | null | undefined) => (a ?? "").split(",")[0].trim();
-  return rows.map((r) => { const where = short(r.pa?.address) || short(r.showingId ? shows.get(r.showingId) : "") || short(r.file?.address) || (r.file ? (r.file.kind === "listing" ? "listing" : "buyer") : ""); return `${r.person!.name}${where ? ` · ${where}` : ""}`; })
+  return rows.filter((r) => !r.showingId || shows.has(r.showingId)).map((r) => { const where = short(r.pa?.address) || short(r.showingId ? shows.get(r.showingId) : "") || short(r.file?.address) || (r.file ? (r.file.kind === "listing" ? "listing" : "buyer") : ""); return `${r.person!.name}${where ? ` · ${where}` : ""}`; })
     .sort((a, b) => a.localeCompare(b));
 }
 
