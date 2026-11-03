@@ -9,7 +9,9 @@ import { logActivity } from "@/server/activity";
 import { publicBase } from "@/server/twilio";
 import { COMMAND_HELP, parseTextCommand, parseYesNo, type NewContact } from "@/lib/textCommands";
 import { answerAsk } from "@/server/askByText";
-import { answerConfirm, pendingConfirm, runTextAgent, undoLast } from "@/server/textAgent";
+import { answerConfirm, pendingConfirm, runTextAgent, undoLast, type Photo } from "@/server/textAgent";
+import { fetchTextMedia } from "@/server/twilio";
+import type { TextMedia } from "@/lib/textMedia";
 import { isConnected } from "@/server/integrations";
 import { isUndo } from "@/lib/textAgent";
 
@@ -18,13 +20,16 @@ import { isUndo } from "@/lib/textAgent";
  * "task" or "help" is a command, not a conversation (owner request 2026-10-24). HQ does it and texts back.
  * Returns false for anything else, which is then saved as a normal text.
  */
-export async function runTextCommand(o: { from: string; to: string; body: string }): Promise<boolean> {
-  const cmd = parseTextCommand(o.body);
+export async function runTextCommand(o: { from: string; to: string; body: string; media?: TextMedia[] }): Promise<boolean> {
+  const media = o.media ?? [];
+  const cmd = media.length ? null : parseTextCommand(o.body);
   const user = (await db.user.findMany({ where: { textNumber: o.to, forwardTo: { not: null }, status: { not: "DISABLED" } }, select: { id: true, name: true, forwardTo: true, isOwner: true } }))
     .find((u) => normalizePhone(u.forwardTo!) === normalizePhone(o.from));
   if (!user) return false;
   if (!cmd) {
-    const reply = await notACommand(user, o.body);
+    // A photo is only for the owner's text assistant; anyone else's photo is a normal text.
+    if (media.length && !(user.isOwner && isConnected("claude"))) return false;
+    const reply = media.length ? await runTextAgent(user, o.body, await photosFor(media)) : await notACommand(user, o.body);
     if (!reply) return false;
     await replyTo(o.to, user.forwardTo!, o.from, reply);
     return true;
@@ -61,6 +66,19 @@ async function notACommand(user: { id: string; name: string; isOwner: boolean },
   const answer = await answerAsk(user, body);
   if (answer) return answer;
   return user.isOwner && isConnected("claude") ? runTextAgent(user, body) : null;
+}
+
+/** Up to 3 photos from a text, read from Twilio for Claude (JPEG, PNG, GIF or WebP, under 4.5 MB each). */
+async function photosFor(media: TextMedia[]): Promise<Photo[]> {
+  const out: Photo[] = [];
+  for (const m of media.filter((x) => /^image\/(jpeg|png|gif|webp)$/.test(x.type)).slice(0, 3)) {
+    const r = await fetchTextMedia(m);
+    if (!r?.ok) continue;
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (buf.length > 4_500_000) continue;
+    out.push({ type: m.type as Photo["type"], data: buf.toString("base64") });
+  }
+  return out;
 }
 
 /** The reply is a courtesy: if it can't be sent or saved, the command still counts. */

@@ -108,7 +108,8 @@ export async function recordIncoming(o: { from: string; to: string; body: string
   });
   if (!saved) return;
   // "task …" from your own cell to your own HQ number: done and answered, no alert or timeline line.
-  if (!media.length && (await runTextCommand({ from: theirs, to: o.to, body }))) {
+  // Photos from the owner's cell go to the text assistant too, so it can read a screenshot (owner request 2026-11-03).
+  if (await runTextCommand({ from: theirs, to: o.to, body: media.length && !o.body.trim() ? "" : body, media })) {
     await db.textMessage.updateMany({ where: { twilioSid: o.sid }, data: { readAt: new Date() } });
     return;
   }

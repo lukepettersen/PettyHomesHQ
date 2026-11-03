@@ -513,7 +513,11 @@ scrolls with it until its last card is on screen, then stays put while the middl
   purchase agreement's terms** (owner request 2026-11-02: "move Ortiz closing to 11/25 and price 495k"): HQ texts back
   each change as "Close date: Tue Nov 17 → Wed Nov 25" and saves only on **YES**, through the same save as Edit (any term
   on the form; checked the same way; a moved pending date is marked Extended; checklists re-date and re-check "Only
-  when"; calendar invites and the sales sheet update); "undo" puts the contract back, date marks included. "**undo**" reverses the last thing it did
+  when"; calendar invites and the sales sheet update); "undo" puts the contract back, date marks included. It also
+  **reads photos** the owner texts to the HQ number (owner request 2026-11-03): a booking confirmation or other
+  appointment screenshot goes on the calendar by itself (date, time and address from the photo; "Haircut - Jesse's
+  Barber Shop"), a business card becomes a contact, and a photo with no words is acted on when it's plain what it
+  calls for, otherwise it asks. Up to 3 photos per text; photos from anyone else are handled as normal texts. "**undo**" reverses the last thing it did
   in the last two hours (a text already sent can't be undone). It asks rather than guesses (which Jack? what time?),
   remembers the last 30 minutes of the conversation, logs everything in Activity, and **only answers the owner's own
   cell texting the owner's HQ number** (owner decision 2026-10-30); anyone else's texts, including other team members',

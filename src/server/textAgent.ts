@@ -50,6 +50,7 @@ Other:
 - text_client when they want someone texted. Write the message as the speaker would (first person, casual, short), greeting them by first name. It goes as a group text that includes the speaker's own cell, and is NOT sent until they reply YES, so call it once, then stop.
 - my_schedule answers "what's on my calendar / today / tomorrow".
 - Contracts (purchase agreements): contract_details shows a contact's active contract with every term (key, label, type, value). To change terms ("move Ortiz closing to 11/25", "price is now 395k", "inspection waived? no: inspection date Nov 8"), call edit_contract once with every change: the key from contract_details and the value in its format (date YYYY-MM-DD; datetime YYYY-MM-DDTHH:MM; money/number digits only; pct like 2.7; yesno "Yes"/"No"; choice exactly one of its choices; "" to clear). It is NOT saved until they reply YES, so stop after it. If a term isn't on the form, say so.
+- Photos: they may text a photo or screenshot (a booking confirmation, a flyer, a showing request, a business card). Read it. A booking or appointment for them (haircut, dentist, a meeting) that isn't about a contact in HQ: book_event with person_id "", the date, start, end and address from the photo, invite_client false, and a short title naming what and where ("Haircut - Jesse's Barber Shop"). The photo's date wins over a vague "today" in their words. A business card or contact details: add_contact. A photo with no words: do what it plainly calls for; if that isn't clear, ask what they'd like done.
 - You can't send emails or move deals between stages yet; say so if asked.
 
 Reply in one or two short plain sentences (no markdown, no lists), only what they need: an answer, or the one question you need answered. Don't repeat what the tools did: HQ texts that back itself.`;
@@ -309,7 +310,9 @@ function termText(f: PaField, v: string | undefined): string {
 const minutesBetween = (a: string, b: string) => { const [h1, m1] = a.split(":").map(Number), [h2, m2] = b.split(":").map(Number); return Math.max(15, h2 * 60 + m2 - (h1 * 60 + m1)); };
 
 /** A plain-English text from a team member's cell. Returns the reply to text back. */
-export async function runTextAgent(user: { id: string; name: string }, text: string): Promise<string> {
+export type Photo = { type: "image/jpeg" | "image/png" | "image/gif" | "image/webp"; data: string };
+
+export async function runTextAgent(user: { id: string; name: string }, text: string, photos: Photo[] = []): Promise<string> {
   if (!isConnected("claude")) return 'HQ\'s assistant isn\'t connected yet (ANTHROPIC_API_KEY in Railway). You can still text "task …" or "contact …".';
   const u = await db.user.findUnique({ where: { id: user.id }, include: { role: true } });
   if (!u?.isOwner) return "Couldn't find you in HQ."; // owner only (owner decision 2026-10-30); the router checks this too
@@ -318,15 +321,24 @@ export async function runTextAgent(user: { id: string; name: string }, text: str
   const nowTime = new Date().toLocaleTimeString("en-US", { timeZone: "America/Chicago", hour: "numeric", minute: "2-digit" });
   const team = await db.user.findMany({ where: { status: { not: "DISABLED" } }, select: { name: true } });
   const memory = await db.textAgentTurn.findMany({ where: { userId: me.id, createdAt: { gte: new Date(Date.now() - MEMORY_MIN * 60000) } }, orderBy: { createdAt: "asc" }, take: 12 });
-  await db.textAgentTurn.create({ data: { userId: me.id, role: "user", text: text.slice(0, 2000) } });
+  const words = text.trim() || (photos.length ? "(sent a photo with no words)" : "");
+  await db.textAgentTurn.create({ data: { userId: me.id, role: "user", text: `${words.slice(0, 2000)}${photos.length ? ` [${photos.length} photo${photos.length === 1 ? "" : "s"}]` : ""}` } });
 
   const context = `${calendarHint(today)} It's ${nowTime} Central.\nSpeaker: ${me.name}. Team: ${team.map((t) => t.name).join(", ")}.`;
   const messages: Anthropic.Beta.BetaMessageParam[] = [
     ...memory.map((m) => ({ role: m.role === "assistant" ? ("assistant" as const) : ("user" as const), content: m.text })),
-    { role: "user", content: `${context}\n\nText: ${text}` },
+    { role: "user", content: photos.length
+      ? [...photos.map((p) => ({ type: "image" as const, source: { type: "base64" as const, media_type: p.type, data: p.data } })), { type: "text" as const, text: `${context}\n\nText (with ${photos.length === 1 ? "the photo above" : "the photos above"}): ${words}` }]
+      : `${context}\n\nText: ${words}` },
   ];
   // Claude needs turns to alternate; merge any two in a row from the same side.
-  const merged = messages.reduce<Anthropic.Beta.BetaMessageParam[]>((out, m) => { const last = out[out.length - 1]; if (last && last.role === m.role && typeof last.content === "string" && typeof m.content === "string") last.content += `\n${m.content}`; else out.push({ ...m }); return out; }, []);
+  const blocks = (c: Anthropic.Beta.BetaMessageParam["content"]) => (typeof c === "string" ? [{ type: "text" as const, text: c }] : c);
+  const merged = messages.reduce<Anthropic.Beta.BetaMessageParam[]>((out, m) => {
+    const last = out[out.length - 1];
+    if (last && last.role === m.role) last.content = typeof last.content === "string" && typeof m.content === "string" ? `${last.content}\n${m.content}` : [...blocks(last.content), ...blocks(m.content)];
+    else out.push({ ...m });
+    return out;
+  }, []);
   if (merged[0]?.role === "assistant") merged.shift();
 
   const client = new Anthropic({ maxRetries: 2, timeout: 60000 });
