@@ -522,7 +522,11 @@ scrolls with it until its last card is on screen, then stays put while the middl
   calls for, otherwise it asks. Up to 3 photos per text; photos from anyone else are handled as normal texts. It can
   also **add a sticky note to the owner's whiteboard** (owner request 2026-11-03: "put on my board: call Mike about the
   Hopkins lot"), in the first open spot, any of the five colors; "undo" takes it off. Saving the whiteboard from a page
-  opened before the note keeps the note (and then shows it). "**undo**" reverses the last thing it did
+  opened before the note keeps the note (and then shows it). A **couple or two people buying/selling together** become one contact
+  ("Jack & Adonis Smith") with both phones and emails, never two (owner report 2026-11-03). It can **combine two contacts**
+  (everything moves to the kept one, duplicate phones/emails kept once, blank details filled, the other to Trash; can't be
+  undone by text) and **delete a contact** (to Trash; "undo" puts it back); both wait for **YES**. It never describes HQ
+  features it wasn't told about. "**undo**" reverses the last thing it did
   in the last two hours (a text already sent can't be undone). It asks rather than guesses (which Jack? what time?),
   remembers the last 30 minutes of the conversation, logs everything in Activity, and **only answers the owner's own
   cell texting the owner's HQ number** (owner decision 2026-10-30); anyone else's texts, including other team members',

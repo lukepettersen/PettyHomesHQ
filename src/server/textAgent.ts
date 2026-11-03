@@ -18,6 +18,7 @@ import { formatTime, longIso } from "@/lib/tasks";
 import { clip, cleanWhen } from "@/lib/textAgent";
 import { loadContract, cleanOrThrow, saveContractAnswers } from "@/server/paEdit";
 import { addBoardNote, removeBoardNote } from "@/server/whiteboard";
+import { mergeContacts } from "@/server/mergePeople";
 import { COMMISSION_KEYS, KEY_DATES, visibleSections, type PaField } from "@/lib/pa";
 
 // The text assistant (owner request 2026-10-30): a team member texts their HQ number in plain English and Claude does it
@@ -41,7 +42,7 @@ People:
 Calendar:
 - book_event puts something on the calendar. With a contact, it goes on their HQ page too ("Jack Rotman swing by house today 10:30am" → person_id Jack's id, title "Swing by house"). With no contact in it ("dentist Fri 3pm", "block Thursday afternoon for MLS tour"), person_id is "".
 - If they name someone not in HQ, ask whether to put it on the calendar by itself or add them as a contact; don't do both.
-- add_contact adds someone new (find_people first so you don't add a duplicate). When they give a name and a number or email to add, add it, then go on with what they asked in the same turn (e.g. add_contact, then text_client with the new id).
+- add_contact adds someone new (find_people first so you don't add a duplicate). A couple or two people buying or selling together are ONE contact named like "Jack & Adonis Smith" (or "Jack Smith & Adonis Jones" when last names differ) with both phones and emails (labels like "Jack" / "Adonis"); never two contacts, unless the speaker asks for separate ones. When they give a name and a number or email to add, add it, then go on with what they asked in the same turn (e.g. add_contact, then text_client with the new id).
 - date YYYY-MM-DD from the calendar you're given; start/end 24-hour HH:MM. No end said: leave end "" (HQ uses an hour). No time said for a meeting: ask. "All day" or a reminder with no time: start "".
 - invite_client true when it's a meeting with the client (they'll get the calendar invite); false for things you do on your own (dropping off a sign, a reminder). Only list team members in with_team when the speaker says someone joins.
 - move_event / cancel_event change an appointment; get its id from person_details or my_schedule first.
@@ -53,7 +54,8 @@ Other:
 - add_to_whiteboard puts a sticky note on the speaker's private HQ whiteboard, for things to remember that aren't a task with a due date ("put on my board…", "remember…", "whiteboard: …"). Keep their words; a short list can be lines starting with "• ".
 - Contracts (purchase agreements): contract_details shows a contact's active contract with every term (key, label, type, value). To change terms ("move Ortiz closing to 11/25", "price is now 395k", "inspection waived? no: inspection date Nov 8"), call edit_contract once with every change: the key from contract_details and the value in its format (date YYYY-MM-DD; datetime YYYY-MM-DDTHH:MM; money/number digits only; pct like 2.7; yesno "Yes"/"No"; choice exactly one of its choices; "" to clear). It is NOT saved until they reply YES, so stop after it. If a term isn't on the form, say so.
 - Photos: they may text a photo or screenshot (a booking confirmation, a flyer, a showing request, a business card). Read it. A booking or appointment for them (haircut, dentist, a meeting) that isn't about a contact in HQ: book_event with person_id "", the date, start, end and address from the photo, invite_client false, and a short title naming what and where ("Haircut - Jesse's Barber Shop"). The photo's date wins over a vague "today" in their words. A business card or contact details: add_contact. A photo with no words: do what it plainly calls for; if that isn't clear, ask what they'd like done.
-- You can't send emails or move deals between stages yet; say so if asked.
+- combine_contacts merges two contacts into one (both kept as one: phones, emails, notes, tasks, deals); delete_contact moves one to Trash. Both wait for YES.
+- You can't send emails or move deals between stages yet; say so if asked. Never describe HQ buttons or features you weren't told about here; if you can't do something, say so plainly.
 
 Reply in one or two short plain sentences (no markdown, no lists), only what they need: an answer, or the one question you need answered. Don't repeat what the tools did: HQ texts that back itself.`;
 
@@ -84,9 +86,15 @@ const tools: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: { person_id: str("Contact id"), kind: { type: "string", enum: ["note", "call", "text"] }, body: str("The note") }, required: ["person_id", "kind", "body"], additionalProperties: false } },
   { name: "add_contact", description: "Add a new contact to HQ. Returns the new id (or the existing contact's, if that number or email is already in HQ).", strict: true,
     input_schema: { type: "object", properties: {
-      name: str('Full name, like "Mason Albee"'), phone: str('Phone number, or ""'), email: str('Email, or ""'),
+      name: str('Full name, like "Mason Albee", or a couple: "Jack & Adonis Smith"'), phone: str('Phone number, or ""'), email: str('Email, or ""'),
+      more_phones: { type: "array", items: { type: "object", properties: { number: str("Phone number"), label: str('Whose, like "Adonis", or ""') }, required: ["number", "label"], additionalProperties: false }, description: "Other phone numbers (e.g. the partner's)" },
+      more_emails: { type: "array", items: { type: "string" }, description: "Other email addresses" },
       partner_type: { type: "string", enum: ["", "realtor", "lender", "title", "inspector", "tc", "attorney", "other"], description: 'Industry partner type when they say what they do (a contractor or sign installer is "other"), else ""' },
-    }, required: ["name", "phone", "email", "partner_type"], additionalProperties: false } },
+    }, required: ["name", "phone", "email", "more_phones", "more_emails", "partner_type"], additionalProperties: false } },
+  { name: "combine_contacts", description: "Combine two contacts into one (phones, emails, notes, tasks, deals and texts all end up on the kept one; the other goes to Trash). Not done until the speaker replies YES.", strict: true,
+    input_schema: { type: "object", properties: { keep_id: str("Contact id to keep"), other_id: str("Contact id to fold in"), name: str('Name for the combined contact, like "Jack & Adonis Smith", or "" to keep the name') }, required: ["keep_id", "other_id", "name"], additionalProperties: false } },
+  { name: "delete_contact", description: "Move a contact to Trash (restorable for 30 days). Not done until the speaker replies YES.", strict: true,
+    input_schema: { type: "object", properties: { person_id: str("Contact id") }, required: ["person_id"], additionalProperties: false } },
   { name: "add_to_whiteboard", description: "Add a sticky note to the speaker's private whiteboard in HQ.", strict: true,
     input_schema: { type: "object", properties: { text: str("What the note says, in their words"), color: { type: "string", enum: ["yellow", "green", "pink", "blue", "orange"] } }, required: ["text", "color"], additionalProperties: false } },
   { name: "contract_details", description: "A contact's active purchase agreement(s): id, address, side, key dates with status, and every term on the form as key / label / type / value (choices listed).", strict: true,
@@ -226,22 +234,39 @@ async function runTool(me: Me, name: string, a: Record<string, unknown>, seen: S
 
   if (name === "add_contact") {
     const full = s("name").replace(/\s+/g, " ").slice(0, 120);
-    const phone = normalizePhone(s("phone"));
-    const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s("email")) ? normalizeEmail(s("email")) : "";
+    const okEmail = (x: string) => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x.trim()) ? normalizeEmail(x) : "");
+    const extra = Array.isArray(a.more_phones) ? (a.more_phones as { number?: unknown; label?: unknown }[]).map((x) => ({ n: normalizePhone(String(x.number ?? "")), label: String(x.label ?? "").trim().slice(0, 40) })).filter((x) => x.n) : [];
+    const phones = [{ n: normalizePhone(s("phone")), label: "" }, ...extra].filter((x, i, all) => x.n && all.findIndex((y) => y.n === x.n) === i);
+    const emails = [...new Set([okEmail(s("email")), ...(Array.isArray(a.more_emails) ? (a.more_emails as unknown[]).map((x) => okEmail(String(x))) : [])].filter(Boolean))];
     if (!full) return "Not added: needs a name.";
-    if (phone && phone.length !== 10) return "Not added: that phone number doesn't look right; ask for it again.";
-    const existing = phone || email ? await db.person.findFirst({ where: { deletedAt: null, OR: [...(phone ? [{ phones: { some: { normalized: phone } } }] : []), ...(email ? [{ emails: { some: { normalized: email } } }] : [])] }, select: { id: true, name: true } }) : null;
+    if (phones.some((x) => x.n.length !== 10)) return "Not added: a phone number doesn't look right; ask for it again.";
+    const existing = phones.length || emails.length ? await db.person.findFirst({ where: { deletedAt: null, OR: [...phones.map((x) => ({ phones: { some: { normalized: x.n } } })), ...emails.map((e) => ({ emails: { some: { normalized: e } } }))] }, select: { id: true, name: true } }) : null;
     if (existing) { seen.add(existing.id); return `Already in HQ as ${existing.name} (id ${existing.id}); use that.`; }
     const type = s("partner_type");
     const p = await db.person.create({ data: {
       name: full, mailingName: full, createdById: me.id, assignedToId: me.id, partnerType: type || null,
-      phones: phone ? { create: [{ label: "Mobile", number: formatPhone(phone), normalized: phone, position: 0 }] } : undefined,
-      emails: email ? { create: [{ label: "", address: email, normalized: email, position: 0 }] } : undefined,
+      phones: phones.length ? { create: phones.map((x, i) => ({ label: x.label || "Mobile", number: formatPhone(x.n), normalized: x.n, position: i })) } : undefined,
+      emails: emails.length ? { create: emails.map((e, i) => ({ label: "", address: e, normalized: e, position: i })) } : undefined,
     } });
     seen.add(p.id);
     await logActivity(me.id, "create", "person", p.id, `Added ${full} by text`);
-    await record(me.id, "contact", `✓ Added ${full} to HQ${phone ? ` (${formatPhone(phone)})` : ""}${email ? ` · ${email}` : ""}.`, { personId: p.id });
+    await record(me.id, "contact", `✓ Added ${full} to HQ${phones.length ? ` (${phones.map((x) => formatPhone(x.n)).join(", ")})` : ""}${emails.length ? ` · ${emails.join(", ")}` : ""}.`, { personId: p.id });
     return `Added (id ${p.id}).`;
+  }
+
+  if (name === "combine_contacts" || name === "delete_contact") {
+    const ids = name === "combine_contacts" ? [s("keep_id"), s("other_id")] : [s("person_id")];
+    const people = await Promise.all(ids.map((id) => person(id)));
+    if (people.some((x) => !x)) return "Unknown contact id: use find_people first.";
+    if (name === "delete_contact") {
+      await record(me.id, "deleteContact", `Move ${people[0]!.name} to Trash (restorable for 30 days)?\nReply YES to delete, or NO.`, { personId: people[0]!.id }, "confirm");
+      return "Prepared. Waiting for them to reply YES. Stop here.";
+    }
+    if (ids[0] === ids[1]) return "Those are the same contact.";
+    const newName = s("name").slice(0, 120);
+    await record(me.id, "merge", `Combine ${people[1]!.name} into ${people[0]!.name}${newName && newName !== people[0]!.name ? ` and name it ${newName}` : ""}? Their phones, emails, notes, tasks and deals will all be on one contact; the other goes to Trash.\nReply YES to combine, or NO.`,
+      { keepId: ids[0], goneId: ids[1], name: newName }, "confirm");
+    return "Prepared. Waiting for them to reply YES. Stop here.";
   }
 
   if (name === "add_to_whiteboard") {
@@ -399,6 +424,22 @@ export async function answerConfirm(user: { id: string; name: string }, actionId
   const claim = await db.textAgentAction.updateMany({ where: { id: actionId, status: "confirm" }, data: { status: yes ? "done" : "canceled" } });
   if (!claim.count) return "That one was already handled.";
   const act = await db.textAgentAction.findUniqueOrThrow({ where: { id: actionId } });
+  if (act.kind === "merge" || act.kind === "deleteContact") {
+    const q = act.payload as { keepId?: string; goneId?: string; name?: string; personId?: string };
+    if (!yes) return act.kind === "merge" ? "Okay, not combined." : "Okay, not deleted.";
+    try {
+      if (act.kind === "merge") {
+        const name = await mergeContacts(user.id, q.keepId!, q.goneId!, q.name);
+        return `✓ Combined into one contact: ${name}. The other one is in Trash.`;
+      }
+      const p = await db.person.update({ where: { id: q.personId!, deletedAt: null }, data: { deletedAt: new Date() } });
+      await logActivity(user.id, "delete", "person", p.id, `Moved ${p.name} to Trash by text`);
+      return `✓ Moved ${p.name} to Trash. Text "undo" to put them back.`;
+    } catch (e) {
+      await db.textAgentAction.update({ where: { id: act.id }, data: { status: "canceled" } });
+      return `Not done: ${e instanceof Error ? e.message : "something went wrong"}`;
+    }
+  }
   if (act.kind === "contract") {
     if (!yes) return "Okay, the contract wasn't changed.";
     const q = act.payload as { paId: string; changes: { key: string; value: string }[]; lines: string[] };
@@ -463,6 +504,11 @@ export async function undoLast(user: { id: string }): Promise<string> {
     if (appt.type === "call") await callChanged(db, appt.personId, user.id);
     await syncAppointment(appt.id);
     what = `Moved "${appt.title}" back to ${when(b.date, b.start)}.`;
+  } else if (act.kind === "deleteContact") {
+    const p = await db.person.update({ where: { id: id("personId") }, data: { deletedAt: null } });
+    what = `Put ${p.name} back.`;
+  } else if (act.kind === "merge") {
+    return "Combining can't be undone by text. The other contact is in Trash (Admin → Trash) if you need its details.";
   } else if (act.kind === "whiteboard") {
     if (!(await removeBoardNote(user.id, id("noteId")))) return "That note is already off your whiteboard.";
     what = "Took that note off your whiteboard.";
