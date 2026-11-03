@@ -17,6 +17,7 @@ import { centralToUtc, scheduleLabel, scheduleProblem } from "@/lib/scheduledTex
 import { formatTime, longIso } from "@/lib/tasks";
 import { clip, cleanWhen } from "@/lib/textAgent";
 import { loadContract, cleanOrThrow, saveContractAnswers } from "@/server/paEdit";
+import { addBoardNote, removeBoardNote } from "@/server/whiteboard";
 import { COMMISSION_KEYS, KEY_DATES, visibleSections, type PaField } from "@/lib/pa";
 
 // The text assistant (owner request 2026-10-30): a team member texts their HQ number in plain English and Claude does it
@@ -49,6 +50,7 @@ Other:
 - add_task for reminders and to-dos (due today if no day is said). add_note to log what happened with a client, in the speaker's words, cleaned up, keeping every fact.
 - text_client when they want someone texted. Write the message as the speaker would (first person, casual, short), greeting them by first name. It goes as a group text that includes the speaker's own cell, and is NOT sent until they reply YES, so call it once, then stop.
 - my_schedule answers "what's on my calendar / today / tomorrow".
+- add_to_whiteboard puts a sticky note on the speaker's private HQ whiteboard, for things to remember that aren't a task with a due date ("put on my board…", "remember…", "whiteboard: …"). Keep their words; a short list can be lines starting with "• ".
 - Contracts (purchase agreements): contract_details shows a contact's active contract with every term (key, label, type, value). To change terms ("move Ortiz closing to 11/25", "price is now 395k", "inspection waived? no: inspection date Nov 8"), call edit_contract once with every change: the key from contract_details and the value in its format (date YYYY-MM-DD; datetime YYYY-MM-DDTHH:MM; money/number digits only; pct like 2.7; yesno "Yes"/"No"; choice exactly one of its choices; "" to clear). It is NOT saved until they reply YES, so stop after it. If a term isn't on the form, say so.
 - Photos: they may text a photo or screenshot (a booking confirmation, a flyer, a showing request, a business card). Read it. A booking or appointment for them (haircut, dentist, a meeting) that isn't about a contact in HQ: book_event with person_id "", the date, start, end and address from the photo, invite_client false, and a short title naming what and where ("Haircut - Jesse's Barber Shop"). The photo's date wins over a vague "today" in their words. A business card or contact details: add_contact. A photo with no words: do what it plainly calls for; if that isn't clear, ask what they'd like done.
 - You can't send emails or move deals between stages yet; say so if asked.
@@ -85,6 +87,8 @@ const tools: Anthropic.Beta.BetaTool[] = [
       name: str('Full name, like "Mason Albee"'), phone: str('Phone number, or ""'), email: str('Email, or ""'),
       partner_type: { type: "string", enum: ["", "realtor", "lender", "title", "inspector", "tc", "attorney", "other"], description: 'Industry partner type when they say what they do (a contractor or sign installer is "other"), else ""' },
     }, required: ["name", "phone", "email", "partner_type"], additionalProperties: false } },
+  { name: "add_to_whiteboard", description: "Add a sticky note to the speaker's private whiteboard in HQ.", strict: true,
+    input_schema: { type: "object", properties: { text: str("What the note says, in their words"), color: { type: "string", enum: ["yellow", "green", "pink", "blue", "orange"] } }, required: ["text", "color"], additionalProperties: false } },
   { name: "contract_details", description: "A contact's active purchase agreement(s): id, address, side, key dates with status, and every term on the form as key / label / type / value (choices listed).", strict: true,
     input_schema: { type: "object", properties: { person_id: str("Contact id") }, required: ["person_id"], additionalProperties: false } },
   { name: "edit_contract", description: "Prepare changes to a purchase agreement's terms. Not saved until the speaker replies YES.", strict: true,
@@ -238,6 +242,18 @@ async function runTool(me: Me, name: string, a: Record<string, unknown>, seen: S
     await logActivity(me.id, "create", "person", p.id, `Added ${full} by text`);
     await record(me.id, "contact", `✓ Added ${full} to HQ${phone ? ` (${formatPhone(phone)})` : ""}${email ? ` · ${email}` : ""}.`, { personId: p.id });
     return `Added (id ${p.id}).`;
+  }
+
+  if (name === "add_to_whiteboard") {
+    const text = s("text").slice(0, 2000);
+    if (!text) return "Not added: what should the note say?";
+    const color = ["yellow", "green", "pink", "blue", "orange"].indexOf(s("color"));
+    try {
+      const noteId = await addBoardNote(me.id, text, Math.max(0, color));
+      await logActivity(me.id, "update", "whiteboard", null, "Added a sticky note to their whiteboard by text");
+      await record(me.id, "whiteboard", `✓ Added to your whiteboard: "${clip(text, 80)}"`, { noteId });
+      return "Added.";
+    } catch (e) { return `Not added: ${e instanceof Error ? e.message : "something went wrong"}`; }
   }
 
   if (name === "contract_details") {
@@ -447,6 +463,9 @@ export async function undoLast(user: { id: string }): Promise<string> {
     if (appt.type === "call") await callChanged(db, appt.personId, user.id);
     await syncAppointment(appt.id);
     what = `Moved "${appt.title}" back to ${when(b.date, b.start)}.`;
+  } else if (act.kind === "whiteboard") {
+    if (!(await removeBoardNote(user.id, id("noteId")))) return "That note is already off your whiteboard.";
+    what = "Took that note off your whiteboard.";
   } else if (act.kind === "contract") {
     const before = p.before as Record<string, string> | undefined;
     if (!before) return "That contract change wasn't saved, so there's nothing to undo.";

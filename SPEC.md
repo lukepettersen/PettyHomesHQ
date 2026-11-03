@@ -517,7 +517,10 @@ scrolls with it until its last card is on screen, then stays put while the middl
   **reads photos** the owner texts to the HQ number (owner request 2026-11-03): a booking confirmation or other
   appointment screenshot goes on the calendar by itself (date, time and address from the photo; "Haircut - Jesse's
   Barber Shop"), a business card becomes a contact, and a photo with no words is acted on when it's plain what it
-  calls for, otherwise it asks. Up to 3 photos per text; photos from anyone else are handled as normal texts. "**undo**" reverses the last thing it did
+  calls for, otherwise it asks. Up to 3 photos per text; photos from anyone else are handled as normal texts. It can
+  also **add a sticky note to the owner's whiteboard** (owner request 2026-11-03: "put on my board: call Mike about the
+  Hopkins lot"), in the first open spot, any of the five colors; "undo" takes it off. Saving the whiteboard from a page
+  opened before the note keeps the note (and then shows it). "**undo**" reverses the last thing it did
   in the last two hours (a text already sent can't be undone). It asks rather than guesses (which Jack? what time?),
   remembers the last 30 minutes of the conversation, logs everything in Activity, and **only answers the owner's own
   cell texting the owner's HQ number** (owner decision 2026-10-30); anyone else's texts, including other team members',

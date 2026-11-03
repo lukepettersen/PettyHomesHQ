@@ -15,6 +15,7 @@ type Hit = { id: string; name: string; stage: string };
  *  together, keeping how they're laid out. */
 export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
   const [items, setItems] = useState(initial);
+  const [opened] = useState(() => Date.now()); // notes the text assistant adds after this are kept when saving
   const [picked, setPicked] = useState<string[]>([]);
   const [confirm, setConfirm] = useState<string | null>(null); // an item id, or "many" for Delete on several
   const [status, setStatus] = useState<"saved" | "saving" | "error">("saved");
@@ -104,8 +105,9 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
   const dirty = items !== saved;
   const save = async () => {
     if (!dirty || status === "saving") return;
-    setStatus("saving"); const now = items; const r = await saveBoard(now);
-    if (r.ok) setSaved(now);
+    setStatus("saving"); const now = items; const r = await saveBoard(now, opened);
+    if (r.ok && r.data?.added.length) { const all = [...now, ...r.data.added]; setItems(all); setSaved(all); } // notes texted in meanwhile now show
+    else if (r.ok) setSaved(now);
     setStatus(r.ok ? "saved" : "error");
   };
   const cancel = () => { setItems(saved); setPicked([]); setConfirm(null); setStatus("saved"); };
