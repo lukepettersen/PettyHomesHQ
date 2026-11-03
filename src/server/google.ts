@@ -119,7 +119,7 @@ export function syncAppointment(id: string) {
     if (!a || a.deletedAt || a.person.deletedAt) { await deleteEvent(`appt:${id}`); return; }
     const invitees = Array.isArray(a.invitees) ? (a.invitees as string[]) : [];
     const people = inviteeEmails(invitees, await team(), { firstName: splitCouple(a.person.name)[0].trim(), emails: a.person.emails.map((e) => ({ address: e.address, label: e.label })) });
-    await upsertEvent(`appt:${id}`, apptEvent({ title: a.title, date: isoFromDate(a.date), start: a.start, end: a.end, location: a.location }, people, "Booked in Petty Homes HQ."));
+    await upsertEvent(`appt:${id}`, apptEvent({ title: a.title, date: isoFromDate(a.date), start: a.start, end: a.end, location: a.location }, people, "")); // no description: clients see it (owner 2026-11-03)
   });
 }
 
@@ -141,7 +141,7 @@ export function syncContract(paId: string) {
       const clientEmails = pa.file.person.emails.map((e) => ({ email: e.address, name: pa.file.person.name }));
       for (const e of contractEvents(await loadInviteRules(), inviteContext(pa, pa.file.person.name))) {
         const guests = [...(e.team ? teamEmails : []), ...(e.client ? clientEmails : [])];
-        wanted.set(contractKey(paId, e.ruleId), apptEvent({ title: e.title, date: e.date, start: e.start, end: e.end, location: pa.address }, guests, `${pa.address} · from the purchase agreement in Petty Homes HQ.`));
+        wanted.set(contractKey(paId, e.ruleId), apptEvent({ title: e.title, date: e.date, start: e.start, end: e.end, location: pa.address }, guests, pa.address)); // just the address: clients see it (owner 2026-11-03)
       }
     }
     for (const [key, ev] of wanted) await upsertEvent(key, ev);
@@ -156,7 +156,7 @@ export function syncContract(paId: string) {
 export async function addCalendarEvent(e: { title: string; date: string; start: string | null; end: string | null; location: string; guests: { email: string; name: string }[] }): Promise<string | null> {
   try {
     if (!(await calendarConnection())) return null;
-    const r = await call("POST", "?sendUpdates=all", acceptForTeam(apptEvent(e, e.guests, "Added by text in Petty Homes HQ."), await teamEmailList()));
+    const r = await call("POST", "?sendUpdates=all", acceptForTeam(apptEvent(e, e.guests, ""), await teamEmailList()));
     if (!r?.ok) { if (r) console.error("Google Calendar: create failed", r.status); return null; }
     return ((await r.json()) as { id: string }).id;
   } catch (err) {

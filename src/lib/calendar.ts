@@ -25,7 +25,7 @@ export function apptEvent(a: Pick<ApptView, "title" | "date" | "start" | "end" |
     ? { summary: a.title, start: { dateTime: `${a.date}T${a.start}:00`, timeZone: TZ }, end: { dateTime: `${a.date}T${a.end && a.end > a.start ? a.end : addMinutes(a.start, 60)}:00`, timeZone: TZ } }
     : { summary: a.title, start: { date: a.date }, end: { date: nextDay(a.date) } };
   if (a.location) ev.location = a.location;
-  if (description) ev.description = description;
+  if (description !== undefined) ev.description = description; // "" clears an old description when the event updates
   const unique = attendees.filter((x, i, all) => x.email && all.findIndex((y) => y.email.toLowerCase() === x.email.toLowerCase()) === i);
   if (unique.length) ev.attendees = unique.map((x) => ({ email: x.email, displayName: x.name }));
   return ev;
