@@ -4,6 +4,11 @@ import { z } from "zod";
 
 export const NOTE_COLORS = ["#fdf1a8", "#d8ecc8", "#f8d7dd", "#d4e6f5", "#fbe0c4"] as const;
 export const BOARD = { w: 2400, h: 1400 };
+/** Font sizes like Google Docs' list (owner request 2026-11-03). */
+export const FONT_SIZES = [6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 30, 32, 36, 40, 48, 60, 72, 96, 120];
+/** The next size up or down the list from any size ("+" / "−"). */
+export const stepSize = (size: number, dir: 1 | -1) => (dir > 0 ? FONT_SIZES.find((x) => x > size) ?? 120 : [...FONT_SIZES].reverse().find((x) => x < size) ?? 6);
+export const NOTE_MAX_H = 1400; // a note can grow to fit its words (owner request 2026-11-03)
 
 const itemSchema = z.object({
   id: z.string().min(1).max(40),
@@ -29,8 +34,9 @@ export function cleanBoard(raw: unknown): BoardItem[] {
   return list.map((i) => ({
     id: i.id, kind: i.kind, text: i.text,
     x: clamp(i.x, 0, BOARD.w - 40), y: clamp(i.y, 0, BOARD.h - 30),
-    ...(i.kind === "note" ? { w: clamp(i.w ?? 220, 120, 700), h: clamp(i.h ?? 160, 80, 700), color: NOTE_COLORS.includes(i.color as never) ? i.color : NOTE_COLORS[0] } : {}),
-    ...(i.kind !== "note" ? { size: clamp(i.size ?? (i.kind === "text" ? 40 : 30), 16, 120) } : {}),
+    ...(i.kind === "note" ? { w: clamp(i.w ?? 220, 120, 700), h: clamp(i.h ?? 160, 80, NOTE_MAX_H), color: NOTE_COLORS.includes(i.color as never) ? i.color : NOTE_COLORS[0] } : {}),
+    // Font size on everything, sticky notes included (owner request 2026-11-03), 6 to 120.
+    ...(i.kind !== "note" || i.size ? { size: clamp(i.size ?? (i.kind === "text" ? 40 : i.kind === "note" ? 24 : 30), 6, 120) } : {}),
     // A text box the owner has reshaped keeps its width and height; otherwise it fits its words.
     ...(i.kind === "text" && i.w && i.h ? { w: clamp(i.w, 60, BOARD.w), h: clamp(i.h, 30, BOARD.h) } : {}),
     ...(i.kind !== "person" && i.align && i.align !== "left" ? { align: i.align } : {}),

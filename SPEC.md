@@ -131,7 +131,9 @@ Principles:
   else the line you're on; with items picked and not typing, the whole item) and **• / 1.** make bullet or numbered
   lists (Enter continues the list, Enter on an empty item ends it), owner request 2026-11-02: kept in the text as
   **bold**, *italic*, __underline__, "• " and "1. ", shown formatted except in the note or text you're typing in;
-  A−/A+ resize selected text or names; × twice removes. **Pick several** with ⌘/Ctrl/Shift-click
+  the **text size** box (− [size] +, Google Docs-style sizes 6, 8, 10, 12, 14, 16, 18, 20, 24 … 120; owner request
+  2026-11-03) sets the size of everything picked, sticky notes included (notes start at 24); a sticky note **grows
+  taller to fit its words** and never shrinks by itself (saved with the next Save); × twice removes. **Pick several** with ⌘/Ctrl/Shift-click
   or by dragging a box on an empty spot, then move them together (they keep their layout), resize, recolor, align, or
   remove them (Delete key or Remove, asked twice); Escape unpicks. **Group** keeps picked items together for good (saved
   with the board): clicking or dragging any one grabs the whole group; ⌥ (Option)-drag moves just one; **Ungroup** splits

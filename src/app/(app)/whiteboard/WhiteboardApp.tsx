@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Caveat } from "next/font/google";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { BOARD, boxOf, NOTE_COLORS, listEnter, listMark, placeNew, plainText, richSegments, toggleAll, toggleList, toggleMark, type BoardItem } from "@/lib/whiteboard";
+import { BOARD, FONT_SIZES, NOTE_MAX_H, boxOf, stepSize, NOTE_COLORS, listEnter, listMark, placeNew, plainText, richSegments, toggleAll, toggleList, toggleMark, type BoardItem } from "@/lib/whiteboard";
 import { saveBoard } from "./actions";
 
 const hand = Caveat({ subsets: ["latin"], weight: ["500", "700"] });
@@ -15,6 +15,11 @@ type Hit = { id: string; name: string; stage: string };
  *  together, keeping how they're laid out. */
 export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
   const [items, setItems] = useState(initial);
+  const [fitH, setFitH] = useState<Record<string, number>>({}); // notes grown to fit their words
+  const [fontsReady, setFontsReady] = useState(false); // measure again once the handwriting font has loaded
+  useEffect(() => { let on = true; document.fonts?.ready.then(() => { if (on) setFontsReady(true); }); return () => { on = false; }; }, []);
+  const noteH = (i: BoardItem) => Math.max(i.h ?? 160, fitH[i.id] ?? 0);
+  const withFit = (list: BoardItem[]) => list.map((i) => (i.kind === "note" && (fitH[i.id] ?? 0) > (i.h ?? 160) ? { ...i, h: fitH[i.id] } : i));
   const [opened] = useState(() => Date.now()); // notes the text assistant adds after this are kept when saving
   const [picked, setPicked] = useState<string[]>([]);
   const [confirm, setConfirm] = useState<string | null>(null); // an item id, or "many" for Delete on several
@@ -105,11 +110,33 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
   const dirty = items !== saved;
   const save = async () => {
     if (!dirty || status === "saving") return;
-    setStatus("saving"); const now = items; const r = await saveBoard(now, opened);
+    setStatus("saving"); const now = items; const r = await saveBoard(withFit(now), opened);
     if (r.ok && r.data?.added.length) { const all = [...now, ...r.data.added]; setItems(all); setSaved(all); } // notes texted in meanwhile now show
     else if (r.ok) setSaved(now);
     setStatus(r.ok ? "saved" : "error");
   };
+  // A note grows taller when its words don't fit (owner request 2026-11-03); it never shrinks by itself. The extra height
+  // is kept apart from the board's items, so it alone doesn't count as an unsaved change; it's saved with the next Save.
+  useLayoutEffect(() => {
+    if (frozen != null || !layer.current) return;
+    const grow: Record<string, number> = {};
+    layer.current.querySelectorAll<HTMLElement>("[data-note-body]").forEach((el) => {
+      const extra = el.scrollHeight - el.clientHeight;
+      if (extra > 2) grow[el.dataset.noteBody!] = extra;
+    });
+    if (!Object.keys(grow).length) return;
+    const frame = requestAnimationFrame(() => setFitH((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const i of items) {
+        if (!grow[i.id] || i.kind !== "note") continue;
+        const now = Math.max(i.h ?? 160, prev[i.id] ?? 0), h = Math.min(NOTE_MAX_H, now + grow[i.id] + 6);
+        if (h > now) { next[i.id] = h; changed = true; }
+      }
+      return changed ? next : prev;
+    }));
+    return () => cancelAnimationFrame(frame);
+  }, [items, frozen, fontsReady]); // one pass is enough: the overflow it measures is exact
   const cancel = () => { setItems(saved); setPicked([]); setConfirm(null); setStatus("saved"); };
   const saveRef = useRef(save);
   useEffect(() => { saveRef.current = save; });
@@ -168,7 +195,7 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
     const group = mode === "size" || e.altKey ? [id] : picked.includes(id) && !multi ? picked : members(id);
     if (!picked.includes(id) || multi || e.altKey) pick(id, e);
     if (multi && wait) return; // ⌘-click only picks
-    const start = items.filter((i) => group.includes(i.id)).map((i) => { const b = boxOf(i); return { id: i.id, x: i.x, y: i.y, w: b.w, h: b.h, kind: i.kind }; });
+    const start = items.filter((i) => group.includes(i.id)).map((i) => { const b = boxOf(i.kind === "note" ? { ...i, h: noteH(i) } : i); return { id: i.id, x: i.x, y: i.y, w: b.w, h: b.h, kind: i.kind }; });
     const sx = e.clientX, sy = e.clientY;
     let moving = !wait;
     const k = scale; setFrozen(k);
@@ -183,7 +210,7 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
       ev.preventDefault();
       if (mode === "size") {
         const s0 = start[0];
-        if (s0.kind === "note") patch(id, { w: Math.max(120, Math.min(700, s0.w + dx)), h: Math.max(80, Math.min(700, s0.h + dy)) });
+        if (s0.kind === "note") patch(id, { w: Math.max(120, Math.min(700, s0.w + dx)), h: Math.max(80, Math.min(NOTE_MAX_H, s0.h + dy)) });
         else patch(id, { w: Math.round(Math.max(60, s0.w + dx)), h: Math.round(Math.max(30, s0.h + dy)) }); // a text box: the words wrap inside it
         return;
       }
@@ -222,7 +249,10 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
     };
     target.addEventListener("pointermove", move); target.addEventListener("pointerup", up);
   };
-  const resizeText = (d: number) => setItems((list) => list.map((i) => (picked.includes(i.id) && i.kind !== "note" ? { ...i, size: Math.max(16, Math.min(120, (i.size ?? 36) + d)) } : i)));
+  // Font size for everything picked, sticky notes included (owner request 2026-11-03): "−" / "+" step through the list.
+  const sizeOf = (i: BoardItem) => i.size ?? (i.kind === "note" ? 24 : i.kind === "text" ? 40 : 30);
+  const setSize = (f: (now: number) => number) => setItems((list) => list.map((i) => (picked.includes(i.id) ? { ...i, size: Math.max(6, Math.min(120, f(sizeOf(i)))) } : i)));
+  const sizes = [...new Set(sel.map(sizeOf))];
   const grip = (id: string) => (
     <span role="button" tabIndex={-1} aria-label="Drag to move" title="Drag to move" onPointerDown={drag(id, "move")}
       className={`absolute -left-6 top-1 cursor-move touch-none select-none rounded px-1 text-sm text-muted group-hover:block group-focus-within:block ${picked.includes(id) ? "block" : "hidden"}`}>⠿</span>
@@ -251,8 +281,13 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
           {picking && <PersonPicker onPick={(h) => { add({ kind: "person", text: h.name, personId: h.id, size: 30 }); setPicking(false); }} onClose={() => setPicking(false)} />}
         </span>
         <span className="flex overflow-hidden rounded-lg border border-misty bg-white text-sm font-semibold">
-          <button type="button" className="px-2.5 py-1.5 hover:bg-sunken disabled:opacity-40" disabled={!words.length} onClick={() => resizeText(-4)} aria-label="Smaller">A−</button>
-          <button type="button" className="border-l border-misty px-2.5 py-1.5 hover:bg-sunken disabled:opacity-40" disabled={!words.length} onClick={() => resizeText(4)} aria-label="Bigger">A+</button>
+          <button type="button" className="px-2.5 py-1.5 hover:bg-sunken disabled:opacity-40" disabled={!sel.length} onClick={() => setSize((n) => stepSize(n, -1))} aria-label="Smaller text" title="Smaller text">−</button>
+          <select aria-label="Text size" title="Text size" disabled={!sel.length} className="w-16 border-x border-misty bg-white px-1 text-center disabled:opacity-40"
+            value={sizes.length === 1 ? String(sizes[0]) : ""} onChange={(e) => { const n = Number(e.target.value); if (n) setSize(() => n); }}>
+            <option value="" disabled>{sel.length ? "Mixed" : "Size"}</option>
+            {[...new Set([...FONT_SIZES, ...sizes])].sort((a, b) => a - b).map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+          <button type="button" className="px-2.5 py-1.5 hover:bg-sunken disabled:opacity-40" disabled={!sel.length} onClick={() => setSize((n) => stepSize(n, 1))} aria-label="Bigger text" title="Bigger text">+</button>
         </span>
         <span className="flex overflow-hidden rounded-lg border border-misty bg-white text-sm font-semibold" role="group" aria-label="Line up the words">
           {(["left", "center", "right"] as const).map((a, n) => (
@@ -288,13 +323,13 @@ export function WhiteboardApp({ initial }: { initial: BoardItem[] }) {
           {items.map((i) => {
             if (i.kind === "note") return (
               <div key={i.id} data-item onPointerDown={grab(i.id)} className={`absolute flex flex-col rounded shadow-[0_6px_14px_rgba(56,50,50,.15)] ${ring(i.id)}`}
-                style={{ left: i.x, top: i.y, width: i.w, height: i.h, background: i.color }}>
+                style={{ left: i.x, top: i.y, width: i.w, height: noteH(i), background: i.color }}>
                 <div onPointerDown={drag(i.id, "move")} title="Drag to move" className="flex h-5 flex-none cursor-move touch-none items-center justify-end px-1">{x(i.id, "font-sans")}</div>
                 {typingIn(i.id)
-                  ? <textarea aria-label="Sticky note" {...field(i.id)} value={i.text} placeholder="Type…" onChange={(e) => patch(i.id, { text: e.target.value })}
-                      style={{ textAlign: i.align ?? "left" }} className="min-h-0 flex-1 resize-none bg-transparent px-3 pb-3 text-[24px] leading-tight text-charcoal outline-none placeholder:text-black/30" />
-                  : <div role="textbox" aria-label="Sticky note" tabIndex={0} onClick={(e) => { if (!(e.metaKey || e.ctrlKey || e.shiftKey)) setEditing(i.id); }} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); setEditing(i.id); } }}
-                      style={{ textAlign: i.align ?? "left" }} className="min-h-0 flex-1 cursor-text overflow-hidden whitespace-pre-wrap break-words px-3 pb-3 text-[24px] leading-tight text-charcoal">
+                  ? <textarea aria-label="Sticky note" data-note-body={i.id} {...field(i.id)} value={i.text} placeholder="Type…" onChange={(e) => patch(i.id, { text: e.target.value })}
+                      style={{ textAlign: i.align ?? "left", fontSize: sizeOf(i) }} className="min-h-0 flex-1 resize-none bg-transparent px-3 pb-3 leading-tight text-charcoal outline-none placeholder:text-black/30" />
+                  : <div role="textbox" aria-label="Sticky note" data-note-body={i.id} tabIndex={0} onClick={(e) => { if (!(e.metaKey || e.ctrlKey || e.shiftKey)) setEditing(i.id); }} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); setEditing(i.id); } }}
+                      style={{ textAlign: i.align ?? "left", fontSize: sizeOf(i) }} className="min-h-0 flex-1 cursor-text overflow-hidden whitespace-pre-wrap break-words px-3 pb-3 leading-tight text-charcoal">
                       {i.text ? <RichText text={i.text} /> : <span className="text-black/30">Type…</span>}</div>}
                 <span onPointerDown={drag(i.id, "size")} aria-hidden="true" className="absolute -bottom-1.5 -right-1.5 size-3.5 cursor-nwse-resize touch-none rounded-sm border-2 border-coral bg-white" />
               </div>

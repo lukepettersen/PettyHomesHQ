@@ -96,3 +96,12 @@ describe("formatting edge cases (owner report 2026-11-02)", () => {
     expect(listEnter("1) Look", 7)).toEqual({ text: "1) Look\n2) ", pos: 11 });
   });
 });
+
+describe("font sizes (owner request 2026-11-03)", () => {
+  it("steps through the Docs-style list and keeps a note's size", async () => {
+    const { stepSize, cleanBoard } = await import("./whiteboard");
+    expect(stepSize(24, 1)).toBe(28); expect(stepSize(24, -1)).toBe(20); expect(stepSize(25, -1)).toBe(24); expect(stepSize(120, 1)).toBe(120); expect(stepSize(6, -1)).toBe(6);
+    expect(cleanBoard([{ id: "n", kind: "note", x: 0, y: 0, text: "", size: 14 }])[0].size).toBe(14);
+    expect(cleanBoard([{ id: "t", kind: "text", x: 0, y: 0, text: "", size: 2 }])[0].size).toBe(6);
+  });
+});
