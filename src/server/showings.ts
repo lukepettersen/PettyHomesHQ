@@ -16,9 +16,10 @@ export async function onShowingEmail(gmailId: string, subject: string, text: str
   const e = parseShowingEmail(subject, text, received);
   if (!e) return;
   const team = await db.user.findMany({ where: { status: { not: "DISABLED" } }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, email: true, isOwner: true } });
-  // Only our listings: "Presented by" one of us. A showing we booked has the buyer's agent as one of us: skipped.
   const ours = (n: string) => team.some((u) => u.name.toLowerCase() === n.trim().toLowerCase());
-  if (e.presentedBy && !ours(e.presentedBy)) return;
+  // Our listing: "Presented by" one of us. A showing we booked for a buyer (owner request 2026-11-03): the listing
+  // agent isn't one of us (one of our own listings is handled by its listing-side email).
+  if (e.side === "listing" && e.presentedBy && !ours(e.presentedBy)) return;
   if (ours(e.agent.name) || team.some((u) => u.email.toLowerCase() === e.agent.email)) return;
   const owner = team.find((u) => u.isOwner) ?? team[0];
   if (!owner) return;
@@ -51,11 +52,15 @@ async function confirmed(e: ShowingEmail, ownerId: string, gmailId: string) {
       } });
       agentId = p.id;
     }
-    const s = await tx.showing.create({ data: { key: e.key, agentId, sellerId: seller?.id ?? null, address: e.address, mlsId: e.mlsId, date: dateFromIso(e.date), start: e.start, end: e.end, total: e.total } });
-    await tx.timelineEntry.create({ data: { personId: agentId, kind: "note", body: `Showing booked (ShowingTime): ${e.address}, ${when(e)}` } });
+    const s = await tx.showing.create({ data: { key: e.key, agentId, sellerId: seller?.id ?? null, address: e.address, mlsId: e.mlsId, date: dateFromIso(e.date), start: e.start, end: e.end, total: e.total, side: e.side, noTexts: e.noTexts } });
+    await tx.timelineEntry.create({ data: { personId: agentId, kind: "note", body: e.side === "buyer"
+      ? `We're showing their listing (ShowingTime): ${e.address}, ${when(e)}${e.noTexts ? ". Their listing says no text messages." : ""}`
+      : `Showing booked (ShowingTime): ${e.address}, ${when(e)}` } });
     // Only for showings still ahead, so nothing old sends by surprise.
-    const tasks = future ? await runTrigger(tx, "showing:confirmed", { personId: agentId, showingId: s.id, start: isoFromDate(todayCentral()),
+    const tasks = future ? await runTrigger(tx, e.side === "buyer" ? "showing:booked" : "showing:confirmed", { personId: agentId, showingId: s.id, start: isoFromDate(todayCentral()),
       dates: { showing: e.date, showingEnd: e.date }, times: { showing: e.start, showingEnd: e.end ?? e.start } }, ownerId) : 0;
+    // "No text messages" on the listing: its automatic texts don't send; each stays a task to reach them another way.
+    if (e.noTexts && tasks) await tx.task.updateMany({ where: { showingId: s.id, kind: "text", autoState: "pending" }, data: { autoState: "off", autoError: "Their listing says no text messages, so it wasn't texted. Email or call them instead." } });
     return { agentId, showingId: s.id, created: !existing, tasks };
   });
   await logActivity(ownerId, "create", "showing", r.agentId, `Showing from ShowingTime: ${e.agent.name} at ${e.address}, ${when(e)}${r.created ? " (agent added)" : ""}${r.tasks ? `, ${r.tasks} steps` : ""} [${gmailId.slice(0, 6)}]`);
@@ -65,7 +70,7 @@ async function confirmed(e: ShowingEmail, ownerId: string, gmailId: string) {
 async function stopped(e: ShowingEmail, ownerId: string) {
   const at = e.kind === "rescheduled" ? e.was : { date: e.date, start: e.start };
   if (!at) return;
-  const s = await db.showing.findFirst({ where: { status: "confirmed", date: dateFromIso(at.date), start: at.start, address: { equals: e.address, mode: "insensitive" } } });
+  const s = await db.showing.findFirst({ where: { status: "confirmed", side: e.side, date: dateFromIso(at.date), start: at.start, address: { equals: e.address, mode: "insensitive" } } });
   if (!s) return;
   const status = e.kind === "cancelled" ? "cancelled" : "rescheduled";
   await db.$transaction(async (tx) => {
@@ -77,13 +82,13 @@ async function stopped(e: ShowingEmail, ownerId: string) {
   await logActivity(ownerId, "update", "showing", s.agentId, `Showing ${status}: ${s.address}, ${when({ date: isoFromDate(s.date), start: s.start, end: s.end })}`);
 }
 
-/** A contact's showings (as the buyer's agent), newest first, for the Showings card. */
+/** A contact's showings (as the buyer's agent on our listing, or the listing agent on one we showed), newest first, for the Showings card. */
 export async function loadShowings(agentId: string) {
   const rows = await db.showing.findMany({ where: { agentId }, orderBy: [{ date: "desc" }, { start: "desc" }], take: 30, include: { seller: { select: { id: true, name: true, deletedAt: true } } } });
   const today = isoFromDate(todayCentral());
   return rows.map((s) => {
     const date = isoFromDate(s.date);
-    return { id: s.id, address: s.address, date, when: when({ date, start: s.start, end: s.end }), status: s.status === "confirmed" && date < today ? "shown" : s.status,
+    return { id: s.id, side: s.side, address: s.address, date, when: when({ date, start: s.start, end: s.end }), status: s.status === "confirmed" && date < today ? "shown" : s.status,
       seller: s.seller && !s.seller.deletedAt ? { id: s.seller.id, name: s.seller.name } : null, total: s.total };
   });
 }

@@ -118,6 +118,7 @@ function Editor({ t: initial, statuses, team, roles, tags, stages, today, templa
                 <option value="closed:any">When any contract closes (buyer or seller)</option>
                 <option value="lead:website">When a website lead comes in</option>
                 <option value="showing:confirmed">When a showing is confirmed on one of our listings (ShowingTime)</option>
+                <option value="showing:booked">When a showing we booked for a buyer is confirmed (ShowingTime)</option>
               </optgroup>
               <optgroup label="Appointments">
                 <option value="phonecall">When a phone call is booked</option>

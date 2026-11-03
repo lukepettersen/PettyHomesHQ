@@ -54,7 +54,7 @@ export function triggerLabel(trigger: string | null, statuses: { id: string; kin
   }
   return ({ "pa:buyer": "When a buyer-side purchase agreement is added", "pa:seller": "When a seller-side purchase agreement is added",
     "pending:buyer": "When a buyer-side contract goes pending", "pending:seller": "When a seller-side contract goes pending",
-    "closed:buyer": "When a buyer-side contract closes", "closed:seller": "When a seller-side contract closes", "closed:any": "When any contract closes (buyer or seller)", "showing:confirmed": "When a showing is confirmed on one of our listings (ShowingTime)", "lead:website": "When a website lead comes in", phonecall: "When a phone call is booked",
+    "closed:buyer": "When a buyer-side contract closes", "closed:seller": "When a seller-side contract closes", "closed:any": "When any contract closes (buyer or seller)", "showing:confirmed": "When a showing is confirmed on one of our listings (ShowingTime)", "showing:booked": "When a showing we booked for a buyer is confirmed (ShowingTime)", "lead:website": "When a website lead comes in", phonecall: "When a phone call is booked",
     buyerconsult: "When a Buyer consult is booked", sellerconsult: "When a Seller consult is booked", anyconsult: "When a Buyer consult or Seller consult is booked", offer: "When an offer is submitted (every offer)" } as Record<string, string>)[trigger] ?? trigger;
 }
 

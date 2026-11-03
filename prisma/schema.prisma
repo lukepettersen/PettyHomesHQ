@@ -760,6 +760,8 @@ model Showing {
   end         String?
   status      String   @default("confirmed") // confirmed | cancelled | rescheduled
   total       Int? // "Total # of Showings" on this listing, from the email
+  side        String   @default("listing") // listing: someone showing our listing (agentId = their buyer's agent) | buyer: one we booked (agentId = the listing agent)
+  noTexts     Boolean  @default(false) // the listing's instructions say no text messages
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

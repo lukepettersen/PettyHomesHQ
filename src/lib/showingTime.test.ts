@@ -43,8 +43,24 @@ describe("ShowingTime emails (owner request 2026-11-01)", () => {
     expect(s.agent).toEqual({ name: "Bruce Nelson", company: "Bridge Realty, LLC", mobile: "(952) 555-1514", office: "952-555-0021", email: "brucenelsonrealestate@outlook.com" });
     expect(s.seller).toEqual({ name: "Sue Lane", phone: "(612) 555-4835", email: "sue@example.com" });
   });
-  it("ignores showings we booked, walk-throughs and feedback", () => {
-    for (const subj of ["YOUR SHOWING CONFIRMED | 121 Fox Hollow Drive, Chanhassen, MN 55317 Fri, 10/30 1:15 PM", "WALK-THROUGH CONFIRMED | 4425 5th Street NE, Columbia Heights, MN 55421 Fri, 10/16 11:00 AM",
+  it("reads a showing we booked for a buyer: the listing agent, and their no-texts note (owner request 2026-11-03)", () => {
+    const body = `| In regards to the Showing on 121 Fox Hollow Drive scheduled for Friday, October 30, 2026 1:15 PM - 2:15 PM Click here |
+| Showing Confirmed |
+| 121 Fox Hollow Drive Chanhassen, MN 55317 $525,000 | ACTIVE | ID# 7144123 [](http://maps.apple.com/x) Subdivision: Fox Hollow Presented by: Dana Lister Additional Listing Details[](https://x) |
+| | Friday, October 30, 2026 |
+| | 1:15 PM - 2:15 PM |
+| | PLEASE REMOVE SHOES. EMAILS ONLY, NO TEXT MESSAGES. |
+| Listing Presented By |
+| Dana Lister eXp Realty (612) 555-7024 (Mobile Phone)[](6125557024) (320) 555-4397 (Office Main Line)[](3205554397) dana@listerhomes.com[](dana@listerhomes.com) |
+| For questions regarding this appointment, please contact eXp Realty directly at (320) 555-4397 |
+| SA BSQ CONF 899919775 |`;
+    const s = parseShowingEmail("YOUR SHOWING CONFIRMED | 121 Fox Hollow Drive, Chanhassen, MN 55317 Fri, 10/30 1:15 PM", body, new Date("2026-10-29T19:44:28Z"))!;
+    expect(s).toMatchObject({ kind: "confirmed", side: "buyer", address: "121 Fox Hollow Drive, Chanhassen, MN 55317", date: "2026-10-30", start: "13:15", end: "14:15", key: "st:899919775", noTexts: true, seller: null });
+    expect(s.agent).toEqual({ name: "Dana Lister", company: "eXp Realty", mobile: "(612) 555-7024", office: "(320) 555-4397", email: "dana@listerhomes.com" });
+    expect(parseShowingEmail("YOUR SHOWING CONFIRMED | 121 Fox Hollow Drive, Chanhassen, MN 55317 Fri, 10/30 1:15 PM", body.replace("EMAILS ONLY, NO TEXT MESSAGES.", ""), new Date("2026-10-29T19:44:28Z"))!.noTexts).toBe(false);
+  });
+  it("ignores walk-throughs and feedback", () => {
+    for (const subj of ["WALK-THROUGH CONFIRMED | 4425 5th Street NE, Columbia Heights, MN 55421 Fri, 10/16 11:00 AM",
       "FEEDBACK RECEIVED | 4385 Trenton Lane N Unit# #212, Plymouth, MN 55442", "AGENT PREVIEW CONFIRMED | 720 3rd Avenue NE Unit# #211, Minneapolis, MN 55413 Fri, 10/23 4:00 PM"])
       expect(parseShowingEmail(subj, CONFIRMED, new Date())).toBeNull();
   });

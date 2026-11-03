@@ -716,8 +716,17 @@ scrolls with it until its last card is on screen, then stays put while the middl
 
 - HQ reads ShowingTime's emails in the Gmail it already syncs (now also on the app's own minute timer, at most every 3
   minutes, so it works when nobody has HQ open). Only **"SHOWING CONFIRMED | …"** (someone showing one of our
-  listings, "Presented by" a team member) starts anything. "YOUR SHOWING CONFIRMED" (a showing we booked for a buyer),
-  walk-throughs, agent previews, appraisals and feedback emails are ignored.
+  listings, "Presented by" a team member) and **"YOUR SHOWING CONFIRMED | …"** (a showing we booked for a buyer, owner
+  request 2026-11-03) start anything. Walk-throughs, agent previews, appraisals and feedback emails are ignored.
+- **Showings we book for a buyer** (owner request 2026-11-03): the **listing agent** ("Listing Presented By") is found or
+  added the same way, the showing is saved on them (Showings card: "we showed their listing"), and checklists that start
+  **"When a showing we booked for a buyer is confirmed (ShowingTime)"** run on them. A starter checklist, made once,
+  **"Buyer showing · ask about offers"**: an automatic text from the assistant to the listing agent 60 minutes before the
+  showing, text template "Ask listing agent about offers": "Hi {first_name}, this is {my_first_name}, {agent_name}'s
+  assistant. {agent_first_name} is showing {showing_address} today. Can you let us know if you have any offers when you get
+  the chance? Thank you!" (texts still wait out quiet hours). When the listing's instructions say **no text messages**
+  ("emails only", "do not text"), its automatic texts don't send and stay as tasks ("email or call them instead").
+  YOUR SHOWING CANCELLED / RESCHEDULED work like the listing-side ones.
 - The buyer's agent is found by email or mobile; if they aren't in HQ they're added (Realtor, their company, mobile and
   office phones, email, stage Industry Partners). The showing is saved on the agent (address, MLS ID, date, start–end,
   the seller when the listing contact is in HQ, "Total # of Showings") with a timeline note, and checklists that start

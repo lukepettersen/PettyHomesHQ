@@ -142,6 +142,25 @@ async function main() {
       await db.task.update({ where: { id: o.id }, data: { assigneeId: named ?? o.person?.assignedToId ?? owner, advanceStatusId: o.advanceStatusId ?? step?.advance ?? null } });
     }
   }
+  // One time (owner request 2026-11-03): a checklist for showings we book for buyers that texts the listing agent an
+  // hour before, asking about offers. Made once; if the owner changes or deletes it, it stays that way.
+  if (!(await db.appSetting.findUnique({ where: { key: "seed.buyerShowingOffers" } }))) {
+    const team = await db.user.findMany({ where: { status: { not: "DISABLED" } }, select: { name: true, isOwner: true } });
+    const helper = team.find((u) => !u.isOwner)?.name.split(/\s+/)[0] ?? "";
+    const msg = await db.messageTemplate.upsert({
+      where: { kind_name: { kind: "text", name: "Ask listing agent about offers" } }, update: {},
+      create: { kind: "text", name: "Ask listing agent about offers", folder: "Showings",
+        body: "Hi {first_name}, this is {my_first_name}, {agent_name}'s assistant. {agent_first_name} is showing {showing_address} today. Can you let us know if you have any offers when you get the chance? Thank you!" },
+    });
+    if (!(await db.taskTemplate.findFirst({ where: { trigger: "showing:booked" } }))) {
+      const last = await db.taskTemplate.aggregate({ _max: { position: true } });
+      await db.taskTemplate.create({ data: { name: "Buyer showing · ask about offers", trigger: "showing:booked", position: (last._max.position ?? 0) + 1, phases: [{
+        id: "bso1", name: "Before the showing", steps: [{ id: "bso1a", name: "Ask listing agent about offers", assignee: helper, type: "text", days: 0, dir: "minutesBefore", minutes: 60,
+          anchor: "showing", cond: "always", messageId: msg.id, auto: { from: helper, to: ["client"], time: "09:00" } }],
+      }] } });
+    }
+    await db.appSetting.create({ data: { key: "seed.buyerShowingOffers", value: true } });
+  }
   // Trash: anything deleted more than 30 days ago is removed for good.
   const cutoff = new Date(Date.now() - 30 * 86400000);
   // People with stored files are purged by the app (it removes the files from the bucket first).
