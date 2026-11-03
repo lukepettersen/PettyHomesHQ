@@ -276,7 +276,9 @@ export function TasksApp(p: Props) {
       <ListPicker current={title(view)} count={openCount(view)} late={lateCount(view)} onNew={() => setNewList("")}
         items={[["today", "Today"], ["upcoming", "Upcoming"], ...p.lists.map((l) => [keyOf(l), l.name] as [string, string])].map(([k, l]) => ({ key: k, label: l, count: openCount(k), late: lateCount(k), on: view === k }))} onPick={go} />
       <nav aria-label="Task lists" className={`flex flex-col gap-3.5 lg:sticky lg:top-3 ${newList !== null ? "max-lg:block" : "max-lg:hidden"}`}>
-        <ul className="flex flex-col gap-px max-lg:flex-row max-lg:gap-1.5">{navItem("today", "Today")}{navItem("upcoming", "Upcoming")}</ul>
+        <ul className="flex flex-col gap-px max-lg:flex-row max-lg:gap-1.5">{navItem("today", "Today")}{navItem("upcoming", "Upcoming")}
+          {/* Everything waiting to go out, for every contact (owner request 2026-11-03). */}
+          <li><Link href="/tasks/scheduled" className="flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 whitespace-nowrap hover:bg-sunken max-lg:rounded-full max-lg:border max-lg:border-misty max-lg:bg-white max-lg:px-3 max-lg:py-1 max-lg:text-sm">Scheduled <span aria-hidden="true" className="text-xs muted">↗</span></Link></li></ul>
         <div>
           <h2 className="mb-1 flex items-center justify-between px-2.5 text-[11px] font-semibold tracking-wider uppercase muted max-lg:hidden">
             Lists <button type="button" className="link text-[11px] normal-case" onClick={() => { if (guard()) { setArranging(true); setView("today"); setSelId(null); } }}>Edit</button>
@@ -314,7 +316,7 @@ export function TasksApp(p: Props) {
               </span>
             ) : <h1 className="text-xl font-extrabold sm:text-[28px]">{title(view)}</h1>}
             <p className="text-sm muted">{view === "today" ? `${longIso(p.today)} · overdue items are marked in red` : SUBTITLE[view] ?? "Your list"}
-              {" · "}<Link href="/tasks/scheduled" className="font-semibold text-accent hover:underline">Scheduled texts &amp; emails</Link></p>
+</p>
             {currentList && renaming === null && (
               <span className="mt-0.5 flex flex-wrap items-center gap-3 text-sm">
                 <button type="button" className="link" onClick={() => setRenaming(currentList.name)}>Rename</button>

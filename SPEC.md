@@ -723,7 +723,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
 - A page for everything waiting to go out, for **every contact**: scheduled texts and emails, automatic checklist texts
   and emails, and check-in texts to the team, soonest first, each with when, the contact (linked), who it's to, who it's
   from and which checklist; click to read it in full; Cancel / Turn off as on the contact page; filters Everything /
-  Texts / Emails / Check-ins / Didn't send. Linked from the top of Tasks ("Scheduled texts & emails"). Each contact's own
+  Texts / Emails / Check-ins / Didn't send. Linked as **Scheduled** in the Tasks sidebar, under Upcoming. Each contact's own
   Scheduled box stays on their page.
 - Purchase agreement people (owner report 2026-11-03): "Save as contact" links an existing contact only when it's a
   partner of that section's type (a Lender for Buyer's Lender) by email or name, else any partner; a client who shares
