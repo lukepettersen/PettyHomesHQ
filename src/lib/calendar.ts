@@ -7,8 +7,15 @@ export type GEvent = {
   summary: string; location?: string; description?: string;
   start: { date?: string; dateTime?: string; timeZone?: string };
   end: { date?: string; dateTime?: string; timeZone?: string };
-  attendees?: { email: string; displayName?: string }[];
+  attendees?: { email: string; displayName?: string; responseStatus?: "accepted" }[];
 };
+
+/** New events show the team as already going (owner request 2026-11-03): teammates' invites are accepted for them;
+ *  clients and partners still answer for themselves. */
+export function acceptForTeam(ev: GEvent, teamEmails: string[]): GEvent {
+  const team = new Set(teamEmails.map((e) => e.toLowerCase()));
+  return ev.attendees ? { ...ev, attendees: ev.attendees.map((a) => (team.has(a.email.toLowerCase()) ? { ...a, responseStatus: "accepted" as const } : a)) } : ev;
+}
 
 const nextDay = (iso: string) => new Date(Date.parse(`${iso}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
 

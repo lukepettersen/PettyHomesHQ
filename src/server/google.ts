@@ -4,7 +4,7 @@ import { seal, unseal } from "@/server/crypto";
 import { isoFromDate } from "@/lib/normalize";
 import { contractEvents } from "@/lib/contractInvites";
 import { inviteContext, loadInviteRules } from "@/server/contractInvites";
-import { apptEvent, contractKey, inviteeEmails, type GEvent } from "@/lib/calendar";
+import { acceptForTeam, apptEvent, contractKey, inviteeEmails, type GEvent } from "@/lib/calendar";
 import { addressesIn, buildMime, messageFullText, messageText, buildMimeRaw, type Attachment } from "@/lib/email";
 import { splitCouple } from "@/lib/normalize";
 
@@ -81,6 +81,9 @@ async function call(method: string, path: string, body?: unknown): Promise<Respo
   });
 }
 
+/** Everyone on the team who can sign in, for marking their invites accepted on new events. */
+const teamEmailList = async () => (await db.user.findMany({ where: { status: { not: "DISABLED" } }, select: { email: true } })).map((u) => u.email);
+
 /** Creates or updates the event for an HQ item; invites go out to attendees. */
 async function upsertEvent(key: string, ev: GEvent) {
   const link = await db.calendarLink.findUnique({ where: { key } });
@@ -89,7 +92,7 @@ async function upsertEvent(key: string, ev: GEvent) {
     if (r?.ok) return;
     if (r && r.status !== 404 && r.status !== 410) { console.error("Google Calendar: update failed", r.status); return; }
   }
-  const r = await call("POST", "?sendUpdates=all", ev);
+  const r = await call("POST", "?sendUpdates=all", acceptForTeam(ev, await teamEmailList()));
   if (!r) return;
   if (!r.ok) { console.error("Google Calendar: create failed", r.status); return; }
   const { id } = (await r.json()) as { id: string };
@@ -153,7 +156,7 @@ export function syncContract(paId: string) {
 export async function addCalendarEvent(e: { title: string; date: string; start: string | null; end: string | null; location: string; guests: { email: string; name: string }[] }): Promise<string | null> {
   try {
     if (!(await calendarConnection())) return null;
-    const r = await call("POST", "?sendUpdates=all", apptEvent(e, e.guests, "Added by text in Petty Homes HQ."));
+    const r = await call("POST", "?sendUpdates=all", acceptForTeam(apptEvent(e, e.guests, "Added by text in Petty Homes HQ."), await teamEmailList()));
     if (!r?.ok) { if (r) console.error("Google Calendar: create failed", r.status); return null; }
     return ((await r.json()) as { id: string }).id;
   } catch (err) {

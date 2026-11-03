@@ -21,3 +21,12 @@ describe("calendar events", () => {
     expect(contractKey("pa1", "inspection-deadline-at-pm")).toBe("pa:pa1:inspection-deadline-at-pm");
   });
 });
+
+describe("acceptForTeam (owner request 2026-11-03)", () => {
+  it("marks only teammates as going", async () => {
+    const { acceptForTeam, apptEvent } = await import("./calendar");
+    const ev = acceptForTeam(apptEvent({ title: "Rotman - Consult", date: "2026-11-06", start: "16:30", end: "17:30", location: "" },
+      [{ email: "Alyssa@pettyhomes.com", name: "Alyssa" }, { email: "client@gmail.com", name: "Jack" }]), ["alyssa@pettyhomes.com", "luke@pettyhomes.com"]);
+    expect(ev.attendees).toEqual([{ email: "Alyssa@pettyhomes.com", displayName: "Alyssa", responseStatus: "accepted" }, { email: "client@gmail.com", displayName: "Jack" }]);
+  });
+});

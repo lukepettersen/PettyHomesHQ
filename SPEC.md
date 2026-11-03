@@ -701,7 +701,9 @@ scrolls with it until its last card is on screen, then stays put while the middl
   appointment, inspection and Written Statement deadlines and Close Date HOLD are calendar
   events that invite **only the team and the client** (never lenders, title, the other agent
   or other partners; owner decision 2026-10-14); they update when dates change and are
-  removed when the contract closes or falls through. If Google is unreachable, HQ still saves.
+  removed when the contract closes or falls through. If Google is unreachable, HQ still saves. New events show
+  teammates as already **going** (their invite is accepted for them, owner request 2026-11-03); clients and partners
+  answer for themselves. Every guest, clients included, sees the event's description.
   Until connected, appointments are stored in HQ only.
 - *Later:* booking a call for someone who already has one upcoming becomes **Reschedule
   call** *(decided, §17)*.
