@@ -313,7 +313,8 @@ export function TasksApp(p: Props) {
                 })}>Save</button>
               </span>
             ) : <h1 className="text-xl font-extrabold sm:text-[28px]">{title(view)}</h1>}
-            <p className="text-sm muted">{view === "today" ? `${longIso(p.today)} · overdue items are marked in red` : SUBTITLE[view] ?? "Your list"}</p>
+            <p className="text-sm muted">{view === "today" ? `${longIso(p.today)} · overdue items are marked in red` : SUBTITLE[view] ?? "Your list"}
+              {" · "}<Link href="/tasks/scheduled" className="font-semibold text-accent hover:underline">Scheduled texts &amp; emails</Link></p>
             {currentList && renaming === null && (
               <span className="mt-0.5 flex flex-wrap items-center gap-3 text-sm">
                 <button type="button" className="link" onClick={() => setRenaming(currentList.name)}>Rename</button>

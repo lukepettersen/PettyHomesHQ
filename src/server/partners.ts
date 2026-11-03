@@ -22,9 +22,16 @@ export async function savePaPartners(paId: string, form: PaSection[], answers: R
     const p = partnerFromAnswers(s, answers);
     if (!p.name) continue;
     const email = p.email ? normalizeEmail(p.email) : "";
-    // Already a contact? Same email, else a partner with the same name (so saving twice doesn't make duplicates).
-    const existing = (email ? await db.email.findFirst({ where: { normalized: email, person: { deletedAt: null } }, select: { personId: true } }) : null)
-      ?? (await db.person.findFirst({ where: { deletedAt: null, partnerType: { not: null }, name: { equals: p.name, mode: "insensitive" } }, select: { id: true } }).then((x) => (x ? { personId: x.id } : null)));
+    // Already a contact of this kind? Same email, else the same name, among partners of this section's type (a lender
+    // for Buyer's Lender), else any partner. A client who shares the email (a lender who's also a client) is never
+    // linked here (owner report 2026-11-03), so saving twice still doesn't make duplicates of the partner.
+    const type = sectionPartnerType(s);
+    const partner = async (where: object) => (await db.person.findFirst({ where: { deletedAt: null, ...where }, orderBy: { createdAt: "asc" }, select: { id: true } }))?.id ?? null;
+    const byEmail = email ? { emails: { some: { normalized: email } } } : null;
+    const byName = { name: { equals: p.name, mode: "insensitive" as const } };
+    const found = (type && byEmail ? await partner({ partnerType: type, ...byEmail }) : null) ?? (type ? await partner({ partnerType: type, ...byName }) : null)
+      ?? (byEmail ? await partner({ partnerType: { not: null }, ...byEmail }) : null) ?? (await partner({ partnerType: { not: null }, ...byName }));
+    const existing = found ? { personId: found } : null;
     if (existing) { links.push({ sectionId: s.id, personId: existing.personId }); continue; }
     const created = await db.person.create({
       data: {

@@ -3,8 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { COMPOSE_EVENT, type ComposeRequest } from "./compose";
-import { cancelScheduledText } from "../../messages/actions";
-import { cancelScheduledEmail } from "../emailActions";
+import { ScheduledList as Scheduled } from "@/components/ScheduledList";
 import { factRows, fileLine, money, shortDay, type FileSection, type FileView } from "@/lib/files";
 
 const pick = (o: Record<string, string>, keys: string[]) => Object.fromEntries(keys.filter((k) => o[k]).map((k) => [k, o[k]]));
@@ -28,7 +27,8 @@ type EmailProps = { emails: string[]; templates: { id: string; name: string }[];
 export type OfferRow = { id: string; fileId: string; createdAt: string; address: string; price: number | null; summary: string; prefill: Record<string, string> };
 type Props = { offers: OfferRow[]; email: EmailProps; text: Omit<React.ComponentProps<typeof TextComposer>, "personId">; fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean; canDelete: boolean; timeline: React.ReactNode;
   contracts: PaView[]; forms: Record<Side, PaSection[]>; pendingAt: DateKey[]; ucColumns: { name: string; untilDate: string | null }[]; today: string; checklists: TaskRow[]; team: TeamMember[]; scheduled: ScheduledRow[] };
-export type ScheduledRow = { id: string; when: string; to: string; body: string; by: string; mine: boolean; status: string; error: string | null; personId?: string | null; auto?: boolean; email?: boolean };
+export type { ScheduledRow } from "@/components/ScheduledList";
+import type { ScheduledRow } from "@/components/ScheduledList";
 
 /** Middle column: a tab per active buyer/listing file, then Timeline (SPEC.md §6.3). */
 export function FileTabs(p: Props) {
@@ -234,32 +234,3 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
   );
 }
 
-/** Texts and emails scheduled for this person that haven't gone out (or didn't send), and checklist steps that send by
- *  themselves, with Cancel / Turn off (owner requests 2026-10-28, 10-29). */
-function Scheduled({ rows }: { rows: ScheduledRow[] }) {
-  const router = useRouter();
-  const [error, setError] = useState("");
-  const [busy, start] = useTransition();
-  const [full, setFull] = useState<string[]>([]); // texts opened to read in full (owner request 2026-10-28)
-  if (!rows.length) return null;
-  return (
-    <section aria-label="Scheduled" className="card mb-3 px-4 py-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wider muted">{rows.some((x) => x.auto || x.email) ? "Scheduled texts & emails" : "Scheduled texts"}</h3>
-      <ul className="mt-1 flex flex-col">
-        {rows.map((x) => (
-          <li key={x.id} className="flex flex-wrap items-start justify-between gap-2 border-t border-misty/60 py-1.5 text-sm first:border-0">
-            <span className="min-w-0 flex-1">
-              <b>{x.status === "failed" ? "Not sent" : x.when}</b> <span className="muted">to {x.to} · by {x.by}</span>
-              <button type="button" aria-expanded={full.includes(x.id)} title={full.includes(x.id) ? "Show less" : "Show the whole text"} onClick={() => setFull(full.includes(x.id) ? full.filter((y) => y !== x.id) : [...full, x.id])}
-                className={`block w-full text-left hover:text-accent ${full.includes(x.id) ? "whitespace-pre-wrap break-words" : "truncate"}`}>{x.body}</button>
-              {x.error && <span className="block text-xs text-bad">{x.when}: {x.error}</span>}
-            </span>
-            {x.status === "pending" && x.mine && <button type="button" className="text-xs font-semibold text-bad hover:underline" disabled={busy}
-              onClick={() => start(async () => { setError(""); const r = x.id.startsWith("email:") ? await cancelScheduledEmail(x.id.slice(6)) : await cancelScheduledText(x.id); if (!r.ok) setError(r.error); else router.refresh(); })}>{x.auto ? "Turn off" : "Cancel"}</button>}
-          </li>
-        ))}
-      </ul>
-      {error && <p role="alert" className="text-sm text-bad">{error}</p>}
-    </section>
-  );
-}

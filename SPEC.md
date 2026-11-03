@@ -718,6 +718,17 @@ scrolls with it until its last card is on screen, then stays put while the middl
 - *Later:* booking a call for someone who already has one upcoming becomes **Reschedule
   call** *(decided, §17)*.
 
+### Tasks → Scheduled *(owner request 2026-11-03)*
+
+- A page for everything waiting to go out, for **every contact**: scheduled texts and emails, automatic checklist texts
+  and emails, and check-in texts to the team, soonest first, each with when, the contact (linked), who it's to, who it's
+  from and which checklist; click to read it in full; Cancel / Turn off as on the contact page; filters Everything /
+  Texts / Emails / Check-ins / Didn't send. Linked from the top of Tasks ("Scheduled texts & emails"). Each contact's own
+  Scheduled box stays on their page.
+- Purchase agreement people (owner report 2026-11-03): "Save as contact" links an existing contact only when it's a
+  partner of that section's type (a Lender for Buyer's Lender) by email or name, else any partner; a client who shares
+  the email (a lender who's also a client) is never linked.
+
 ### Showings from ShowingTime *(owner request 2026-11-01)*
 
 - HQ reads ShowingTime's emails in the Gmail it already syncs (now also on the app's own minute timer, at most every 3

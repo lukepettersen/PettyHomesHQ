@@ -54,13 +54,22 @@ export async function loadScheduledFor(personId: string, userId: string, canCanc
   return [...texts, ...emails, ...asks].sort((a, b) => a.at - b.at);
 }
 
+/** Everything scheduled for every contact (owner request 2026-11-03, Tasks → Scheduled): texts, emails, automatic
+ *  checklist sends and check-in texts, soonest first, each with the contact's name. */
+export async function loadAllScheduled(userId: string, canCancelAny: boolean) {
+  const [texts, emails, asks] = await Promise.all([loadScheduled({ all: true }, userId, canCancelAny), loadScheduledEmails(undefined, userId, canCancelAny), loadAskSteps(undefined, userId, canCancelAny)]);
+  const rows = [...texts, ...emails, ...asks].sort((a, b) => a.at - b.at);
+  const names = new Map((await db.person.findMany({ where: { id: { in: [...new Set(rows.map((r) => r.personId).filter((x): x is string => !!x))] } }, select: { id: true, name: true } })).map((p) => [p.id, p.name]));
+  return rows.map((r) => ({ ...r, personName: r.personId ? names.get(r.personId) ?? null : null }));
+}
+
 /** Scheduled texts from someone's number, for Messages → Scheduled (owner request 2026-10-28). */
 export async function loadScheduledBy(createdById: string, userId: string, canCancelAny: boolean) {
   return loadScheduled({ createdById }, userId, canCancelAny);
 }
 
-async function loadScheduled(where: { personId?: string; createdById?: string }, userId: string, canCancelAny: boolean) {
-  const rows = await db.scheduledText.findMany({ where: { ...where, OR: [{ status: { in: ["pending", "sending"] } }, { status: "failed", sendAt: { gte: new Date(Date.now() - 7 * 86400000) } }] }, orderBy: { sendAt: "asc" } });
+async function loadScheduled(where: { personId?: string; createdById?: string; all?: boolean }, userId: string, canCancelAny: boolean) {
+  const rows = await db.scheduledText.findMany({ where: { ...(where.personId ? { personId: where.personId } : {}), ...(where.createdById ? { createdById: where.createdById } : {}), OR: [{ status: { in: ["pending", "sending"] } }, { status: "failed", sendAt: { gte: new Date(Date.now() - 7 * 86400000) } }] }, orderBy: { sendAt: "asc" } });
   const by = new Map((await db.user.findMany({ where: { id: { in: rows.map((x) => x.createdById) } }, select: { id: true, name: true } })).map((u) => [u.id, u.name.split(" ")[0]]));
   const names = await namesForNumbers([...new Set(rows.flatMap((x) => x.numbers))]);
   const all = [...new Set(rows.flatMap((x) => x.numbers))];
@@ -72,11 +81,11 @@ async function loadScheduled(where: { personId?: string; createdById?: string },
 
 /** Checklist steps that send by themselves (owner request 2026-10-29), listed with the scheduled texts. On a contact page
  *  both texts and emails; in Messages only the texts that go out from that person's number. Id "task:<id>". */
-async function loadAutoSteps(where: { personId?: string; createdById?: string }, userId: string, canCancelAny: boolean) {
+async function loadAutoSteps(where: { personId?: string; createdById?: string; all?: boolean }, userId: string, canCancelAny: boolean) {
   const tasks = await db.task.findMany({
     // Also steps still waiting for their date (autoState null, autoSend set), shown as "No date yet".
-    where: { OR: [{ autoState: { in: ["pending", "sending", "failed"] } }, { autoState: null, kind: { in: ["text", "email"] }, templateId: { not: null } }], completedAt: null, deletedAt: null, ...(where.personId ? { personId: where.personId } : { kind: "text" }) },
-    include: { person: { select: { name: true } } }, orderBy: { dueDate: "asc" }, take: 100,
+    where: { OR: [{ autoState: { in: ["pending", "sending", "failed"] } }, { autoState: null, kind: { in: ["text", "email"] }, templateId: { not: null } }], completedAt: null, deletedAt: null, ...(where.personId ? { personId: where.personId } : where.all ? { person: { deletedAt: null } } : { kind: "text" }) },
+    include: { person: { select: { name: true } } }, orderBy: { dueDate: "asc" }, take: where.all ? 500 : 100,
   });
   if (!tasks.length) return [];
   const team = await db.user.findMany({ select: { id: true, name: true } });
@@ -108,10 +117,10 @@ async function loadAutoSteps(where: { personId?: string; createdById?: string },
 
 /** "Ask by text" steps on this contact's checklist (owner request 2026-10-30): the check-in text HQ will send the
  *  teammate it's assigned to, shown ahead of time. Id "ask:<id>"; Turn off stops the text, the step stays. */
-async function loadAskSteps(personId: string, userId: string, canCancelAny: boolean) {
+async function loadAskSteps(personId: string | undefined, userId: string, canCancelAny: boolean) {
   const tasks = await db.task.findMany({
-    where: { personId, askKind: { not: null }, OR: [{ askState: "pending" }, { askState: null, dueDate: null }], completedAt: null, deletedAt: null },
-    include: { person: { select: { name: true } }, assignee: { select: { id: true, name: true } } }, orderBy: { dueDate: "asc" }, take: 20,
+    where: { ...(personId ? { personId } : { person: { deletedAt: null } }), askKind: { not: null }, OR: [{ askState: "pending" }, { askState: null, dueDate: null }], completedAt: null, deletedAt: null },
+    include: { person: { select: { name: true } }, assignee: { select: { id: true, name: true } } }, orderBy: { dueDate: "asc" }, take: personId ? 20 : 300,
   });
   const lists = await checklistNames(tasks);
   return Promise.all(tasks.map(async (t) => {

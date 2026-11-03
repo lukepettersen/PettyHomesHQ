@@ -35,8 +35,8 @@ export async function sendDueEmails(now = new Date()): Promise<number> {
 }
 
 /** A contact's scheduled emails not yet sent, and ones that failed in the last week; ids are "email:<id>". */
-export async function loadScheduledEmails(personId: string, userId: string, canCancelAny: boolean) {
-  const rows = await db.scheduledEmail.findMany({ where: { personId, OR: [{ status: { in: ["pending", "sending"] } }, { status: "failed", sendAt: { gte: new Date(Date.now() - 7 * 86400000) } }] }, orderBy: { sendAt: "asc" } });
+export async function loadScheduledEmails(personId: string | undefined, userId: string, canCancelAny: boolean) {
+  const rows = await db.scheduledEmail.findMany({ where: { ...(personId ? { personId } : {}), OR: [{ status: { in: ["pending", "sending"] } }, { status: "failed", sendAt: { gte: new Date(Date.now() - 7 * 86400000) } }] }, orderBy: { sendAt: "asc" } });
   if (!rows.length) return [];
   const by = new Map((await db.user.findMany({ where: { id: { in: rows.map((x) => x.createdById) } }, select: { id: true, name: true } })).map((u) => [u.id, u.name.split(" ")[0]]));
   const people = await db.email.findMany({ where: { normalized: { in: [...new Set(rows.flatMap((x) => x.to))] }, person: { deletedAt: null } }, select: { normalized: true, person: { select: { name: true } } } });
