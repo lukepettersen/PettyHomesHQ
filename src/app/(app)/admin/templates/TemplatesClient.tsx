@@ -22,7 +22,7 @@ export function TemplatesClient(p: Props) {
   const folders = [...new Set(p.templates.map((t) => t.folder ?? "").filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const [folder, setFolder] = useState<string | null>(null); // the folder open in the side panel
   // "Update the open deals" offer after a save; kept here because the editor reloads when the save lands.
-  const [offer, setOffer] = useState<{ id: string; uses: number; synced: string } | null>(null);
+  const [offer, setOffer] = useState<{ id: string; uses: number; synced: string; names?: string[] } | null>(null);
   const pick = (id: string) => {
     if (dirty) { setMsg("Save or discard your changes first."); return; }
     setMsg(""); setSelId(id); window.history.replaceState(null, "", `/admin/templates?t=${id}`);
@@ -50,7 +50,7 @@ export function TemplatesClient(p: Props) {
 
 function Editor({ t: initial, statuses, team, roles, tags, stages, today, templates, messages, folders, onDirty, onSelect, offer, onOffer }: Props & {
   folders: string[]; t: Template; onDirty: (d: boolean) => void; onSelect: (id: string | null) => void;
-  offer: { id: string; uses: number; synced: string } | null; onOffer: (o: { id: string; uses: number; synced: string } | null) => void;
+  offer: { id: string; uses: number; synced: string; names?: string[] } | null; onOffer: (o: { id: string; uses: number; synced: string; names?: string[] } | null) => void;
 }) {
   const router = useRouter();
   const [t, setT] = useState<Template>(initial);
@@ -85,7 +85,7 @@ function Editor({ t: initial, statuses, team, roles, tags, stages, today, templa
     setError("");
     const r = await saveTemplate({ id: t.id, name: t.name, trigger: t.trigger, folder: t.folder ?? "", phases: t.phases });
     if (!r.ok) { setError(r.error); return; }
-    onOffer(r.data!.openDeals ? { id: t.id, uses: r.data!.openDeals, synced: "" } : null); onDirty(false); router.refresh();
+    onOffer(r.data!.openDeals ? { id: t.id, uses: r.data!.openDeals, synced: "", names: r.data!.openNames } : null); onDirty(false); router.refresh();
   });
   const syncOpen = () => start(async () => {
     setError("");
@@ -149,7 +149,8 @@ function Editor({ t: initial, statuses, team, roles, tags, stages, today, templa
         <p className="text-xs muted">{t.trigger ? "Changes apply to deals that reach this point from now on. After saving, you can also update the deals already using it." : "Apply it from any contact page: Tasks card → Apply template."}</p>
         {uses > 0 && !dirty && (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-accent/40 bg-accent-soft px-3 py-2 text-sm">
-            <span><b>Saved.</b> {uses} open deal{uses === 1 ? " is" : "s are"} already using this checklist. Update {uses === 1 ? "it" : "them"} too? Done steps, dates set by hand and who steps are assigned to stay as they are; removed steps go to Trash.</span>
+            <span><b>Saved.</b> {uses} open deal{uses === 1 ? " is" : "s are"} already using this checklist. Update {uses === 1 ? "it" : "them"} too? Done steps, dates set by hand and who steps are assigned to stay as they are; removed steps go to Trash.
+              {offer?.names?.length ? <ul className="mt-1.5 list-disc pl-5">{offer.names.map((n) => <li key={n}>{n}</li>)}</ul> : null}</span>
             <span className="flex gap-2">
               <button type="button" className="btn" onClick={() => onOffer(null)}>Not now</button>
               <button type="button" className="btn btn-primary" disabled={pending} onClick={syncOpen}>{pending ? "Updating…" : `Update ${uses === 1 ? "it" : `the ${uses} deals`}`}</button>

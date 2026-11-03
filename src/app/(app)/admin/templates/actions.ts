@@ -6,7 +6,7 @@ import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { templateProblem, type Phase, type Template } from "@/lib/templates";
-import { openUses, syncTemplateToOpen } from "@/server/automation";
+import { openUseNames, syncTemplateToOpen } from "@/server/automation";
 
 const FIXED_TRIGGERS = ["pa:buyer", "pa:seller", "pending:buyer", "pending:seller", "closed:buyer", "closed:seller", "closed:any", "lead:website", "showing:confirmed", "showing:booked", "phonecall", "buyerconsult", "sellerconsult", "anyconsult", "offer"];
 const tags = z.array(z.string().trim().min(1).max(60)).max(20).optional();
@@ -46,7 +46,8 @@ export async function saveTemplate(input: z.input<typeof templateSchema>) {
     const steps = t.phases.reduce((n, p) => n + p.steps.length, 0);
     await logActivity(user.id, v.id ? "update" : "create", "taskTemplate", saved.id, `${v.id ? "Saved" : "Created"} task template "${t.name}" (${steps} steps)`);
     revalidatePath("/admin/templates");
-    return { id: saved.id, openDeals: v.id ? await openUses(saved.id) : 0 };
+    const names = v.id ? await openUseNames(saved.id) : [];
+    return { id: saved.id, openDeals: names.length, openNames: names };
   });
 }
 

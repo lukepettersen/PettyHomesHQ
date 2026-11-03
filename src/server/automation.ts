@@ -169,8 +169,19 @@ export async function syncTemplateToOpen(t: Template, userId: string): Promise<{
 
 /** How many people/deals currently have open steps from a checklist (for "Update the N open deals"). */
 export async function openUses(templateId: string): Promise<number> {
-  const rows = await db.task.findMany({ where: { templateId, completedAt: null, deletedAt: null, personId: { not: null }, person: { deletedAt: null } }, select: { personId: true, fileId: true, paId: true, showingId: true }, distinct: ["personId", "fileId", "paId", "showingId"] });
-  return rows.length;
+  return (await openUseNames(templateId)).length;
+}
+
+/** The deals a checklist is open on, named for the "Update the deals" offer (owner request 2026-11-03): the person, and
+ *  the contract or deal address or showing when there is one ("Emma Sharpe & Vy Nguyen · 2001 Westwood Hills Drive"). */
+export async function openUseNames(templateId: string): Promise<string[]> {
+  const rows = await db.task.findMany({ where: { templateId, completedAt: null, deletedAt: null, personId: { not: null }, person: { deletedAt: null } },
+    select: { personId: true, fileId: true, paId: true, showingId: true, person: { select: { name: true } }, pa: { select: { address: true } }, file: { select: { address: true, kind: true } } },
+    distinct: ["personId", "fileId", "paId", "showingId"] });
+  const shows = new Map((await db.showing.findMany({ where: { id: { in: rows.map((r) => r.showingId).filter((x): x is string => !!x) } }, select: { id: true, address: true } })).map((x) => [x.id, x.address]));
+  const short = (a: string | null | undefined) => (a ?? "").split(",")[0].trim();
+  return rows.map((r) => { const where = short(r.pa?.address) || short(r.showingId ? shows.get(r.showingId) : "") || short(r.file?.address) || (r.file ? (r.file.kind === "listing" ? "listing" : "buyer") : ""); return `${r.person!.name}${where ? ` · ${where}` : ""}`; })
+    .sort((a, b) => a.localeCompare(b));
 }
 
 /** "Change stage" step: sets the contact's stage (a stage that was renamed or removed is skipped). */
