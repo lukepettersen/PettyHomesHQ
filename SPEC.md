@@ -677,7 +677,8 @@ scrolls with it until its last card is on screen, then stays put while the middl
 - Fields: date, start, end (call 30 min, others 60), location (phone number for calls,
   property address for showings), invitees (client + team, tick to include). Each email on the contact is
   its own choice (e.g. Megan and Jaylen), all ticked to start; untick anyone who shouldn't get the invite
-  *(owner request 2026-10-24)*.
+  *(owner request 2026-10-24)*. **+ Add someone** *(owner request 2026-11-03)* invites anyone else: search any contact in HQ and pick
+  one of their emails, or type an email address; they show as a removable chip and get the Google invite too.
 - The contact page Appointments card lists upcoming appointments, then "Past appointments
   (N)"; contract dates show as "From contract". Delete is two-step.
 - **Phone call** also starts every template triggered by "When a phone call is booked"

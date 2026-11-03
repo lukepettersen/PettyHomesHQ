@@ -10,7 +10,7 @@ const GENERIC = /^(mobile|cell|home|work|other|main|phone|personal|email)$/i;
 const whose = (h: Hit, o: string) => { const l = h.labels?.[o]?.trim(); return l && !GENERIC.test(l) ? l : ""; };
 
 /** "+ Add": search a contact (pick one of their emails or numbers) or type an address / number yourself. */
-export function AddRecipient({ mode, onAdd, exclude = [] }: { mode: "email" | "phone"; onAdd: (x: Extra) => void; exclude?: string[] }) {
+export function AddRecipient({ mode, onAdd, exclude = [], label = "+ Add" }: { mode: "email" | "phone"; onAdd: (x: Extra) => void; exclude?: string[]; label?: string }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
@@ -22,7 +22,7 @@ export function AddRecipient({ mode, onAdd, exclude = [] }: { mode: "email" | "p
   }, [open, q]);
   const typed = mode === "email" ? (/^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/.test(q.trim()) ? q.trim().toLowerCase() : null) : (normalizePhone(q).length === 10 && /^[\d\s()+.-]+$/.test(q.trim()) ? normalizePhone(q) : null);
   const add = (x: Extra) => { onAdd(x); setQ(""); setHits([]); setOpen(false); };
-  if (!open) return <button type="button" className="text-sm font-semibold text-accent hover:underline" onClick={() => setOpen(true)}>+ Add</button>;
+  if (!open) return <button type="button" className="text-sm font-semibold text-accent hover:underline" onClick={() => setOpen(true)}>{label}</button>;
   return (
     <div className="relative flex w-full flex-col gap-1 sm:w-80">
       <span className="flex gap-1.5">

@@ -36,8 +36,14 @@ export function apptEvent(a: Pick<ApptView, "title" | "date" | "start" | "end" |
  * address (each email on the contact is its own choice, owner 2026-10-24). Older appointments saved the client's
  * first name, meaning their first email. Addresses that aren't on the contact are ignored.
  */
+/** An extra guest added with "+ Add someone" (owner request 2026-11-03): another contact or a typed address, kept as "Name <email>". */
+export const EXTRA_GUEST = /^(.*?)\s*<([^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+)>$/;
+export const extraGuest = (name: string, email: string) => `${name.replace(/[<>]/g, "").trim() || email} <${email.toLowerCase()}>`;
+
 export function inviteeEmails(invitees: string[], team: { name: string; email: string }[], client: { firstName: string; emails: { address: string; label: string }[] }): { email: string; name: string }[] {
   return invitees.flatMap((n) => {
+    const extra = n.match(EXTRA_GUEST);
+    if (extra) return [{ email: extra[2].toLowerCase(), name: extra[1] || extra[2] }];
     const member = team.find((t) => t.name === n);
     if (member) return [{ email: member.email, name: member.name }];
     const own = client.emails.find((e) => e.address.toLowerCase() === n.toLowerCase());

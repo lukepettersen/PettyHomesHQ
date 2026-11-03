@@ -30,3 +30,12 @@ describe("acceptForTeam (owner request 2026-11-03)", () => {
     expect(ev.attendees).toEqual([{ email: "Alyssa@pettyhomes.com", displayName: "Alyssa", responseStatus: "accepted" }, { email: "client@gmail.com", displayName: "Jack" }]);
   });
 });
+
+describe("extra guests (owner request 2026-11-03)", () => {
+  it("invites another contact or a typed address added with + Add someone", async () => {
+    const { inviteeEmails, extraGuest } = await import("./calendar");
+    expect(extraGuest("Pat Lee", "Pat@Lender.com")).toBe("Pat Lee <pat@lender.com>");
+    expect(inviteeEmails(["Pat Lee <pat@lender.com>", "stranger@x.com", "sam@x.com <sam@x.com>"], [], { firstName: "Bob", emails: [] }))
+      .toEqual([{ email: "pat@lender.com", name: "Pat Lee" }, { email: "sam@x.com", name: "sam@x.com" }]);
+  });
+});

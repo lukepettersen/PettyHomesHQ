@@ -10,6 +10,8 @@ import { initials } from "@/lib/normalize";
 import type { StatusRow } from "@/server/files";
 import type { FileSection } from "@/lib/files";
 import { bookAppointment, deleteAppointment, updateAppointment } from "../apptActions";
+import { AddRecipient } from "@/components/AddRecipient";
+import { EXTRA_GUEST, extraGuest } from "@/lib/calendar";
 import { TimeSelect } from "@/components/TimeSelect";
 import { FileForm } from "../../pipeline/FileForm";
 import { splitCouple } from "@/lib/normalize";
@@ -72,7 +74,7 @@ function Appt({ a, today, personName, onEdit, onDeleted }: { a: ApptView; today:
       <span className={`block text-xs ${n === 0 ? "font-semibold text-accent" : "muted"}`}>{time}{day}</span>
       {a.location && <span className="block text-xs muted">{a.location}</span>}
       <span className="mt-1 flex items-center justify-between gap-2">
-        <span className="flex gap-1">{a.invitees.map((x) => <span key={x} title={x} className="grid h-5 w-5 place-items-center rounded-full bg-accent-soft text-[9px] font-bold text-accent">{initials(x.includes("@") ? x.split("@")[0] : x)}</span>)}</span>
+        <span className="flex gap-1">{a.invitees.map((x) => <span key={x} title={x} className="grid h-5 w-5 place-items-center rounded-full bg-accent-soft text-[9px] font-bold text-accent">{initials(EXTRA_GUEST.test(x) ? x.match(EXTRA_GUEST)![1] : x.includes("@") ? x.split("@")[0] : x)}</span>)}</span>
         {a.fromContract ? <span className="text-xs muted" title="Change it on the purchase agreement (Edit, or the date tiles)">From contract</span> : (
           <span className="flex gap-3">
           <button type="button" className="text-xs font-semibold text-accent hover:underline" aria-label={`Edit ${a.title}`} onClick={onEdit}>Edit</button>
@@ -140,6 +142,17 @@ function BookModal({ type, types = BUILTIN_TYPES, personId, personName, today, p
               </label>
             );
           })}
+          {/* Anyone else: another contact in HQ or a typed email (owner request 2026-11-03). */}
+          {f.invitees.filter((x) => EXTRA_GUEST.test(x)).map((x) => (
+            <span key={x} className="flex items-center gap-1 rounded-full border border-misty bg-white px-2 py-0.5 text-xs" title={x.match(EXTRA_GUEST)![2]}>
+              {x.match(EXTRA_GUEST)![1]}
+              <button type="button" aria-label={`Don't invite ${x.match(EXTRA_GUEST)![1]}`} className="muted hover:text-bad" onClick={() => setF({ ...f, invitees: f.invitees.filter((y) => y !== x) })}>×</button>
+            </span>
+          ))}
+          <span className="basis-full">
+            <AddRecipient mode="email" label="+ Add someone" exclude={f.invitees.flatMap((x) => { const m = x.match(EXTRA_GUEST); return m ? [m[2]] : x.includes("@") ? [x.toLowerCase()] : []; })}
+              onAdd={(x) => setF({ ...f, invitees: [...f.invitees, extraGuest(x.label.split(" · ")[0], x.value)] })} />
+          </span>
         </fieldset>
         <p className="text-xs muted">{calendarConnected ? "Adds it to Google Calendar and sends the invites." : "Saved in HQ only. Connect Google Calendar in Admin → Integrations to add appointments to the calendar."}{calendarConnected && !hasEmail && ` There's no email on file for ${client}, so only the team gets the invite.`}</p>
         {type === "call" && !edit && <p className="text-xs muted">{starts.length ? `Starts ${starts.map((t) => `"${t.name}"`).join(" + ")}: ${steps} tasks timed from today and the call.` : "No template starts when a call is booked. Add one in Admin → Checklists."}</p>}
