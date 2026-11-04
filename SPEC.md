@@ -724,15 +724,23 @@ scrolls with it until its last card is on screen, then stays put while the middl
 - *Later:* booking a call for someone who already has one upcoming becomes **Reschedule
   call** *(decided, §17)*.
 
-### Weekly deadlines email *(owner request 2026-11-04)*
+### Weekly emails *(owner requests 2026-11-04)*
 
-- **Admin → Weekly deadlines email**: once a week (day and time picked, default Monday 8:00am Central; off until turned
-  on) HQ emails the contingency deadlines still open on every active contract (Inspection, Written Statement unless N/A,
-  HOA doc rescission when there's an HOA; met and waived left out) for **This Week** and **Next Week** (Monday–Sunday),
-  each split into **BUYERS** / **SELLERS** ("NONE" when empty), each line "SHARPE/NGUYEN | Tuesday, 11/03", the address
-  (a Google Maps link) and the deadline, like the email the assistant wrote by hand. From a teammate's own Gmail (else
-  HQ's connected Gmail) to the addresses listed (the owner by default), with the sender's Gmail signature. The page shows
-  a preview as it would go out today and **Send me a test**. If it can't send, the owner gets an alert.
+- **Admin → Weekly emails**: three reports HQ builds from the deals and emails once a week, like the ones the assistant
+  wrote by hand. Each has its own on/off (off until turned on), day and time (default Monday 8:00am Central), sender (a
+  teammate's own Gmail, else HQ's connected Gmail), recipients (the owner by default), a preview as it would go out today
+  and **Send me a test**; if one can't send, the owner gets an alert. Addresses are Google Maps links.
+- **Contingency deadlines** ("Weekly Contingency Report - Week of November 2nd"): the deadlines still open on every
+  active contract (Inspection, Written Statement unless N/A, HOA doc rescission when there's an HOA; met and waived left
+  out) for **This Week** and **Next Week** (Monday–Sunday), each split into **BUYERS** / **SELLERS** ("NONE" when empty),
+  each "SHARPE/NGUYEN | Tuesday, 11/03", the address and the deadline.
+- **Closings** ("Weekly Closing Report - …"): **This Week** (including ones already marked closed this week, shown
+  **CLOSED**), **Next Week** and **Further Out** (and active contracts with no closing date), buyers / sellers, each
+  "BUYER | Friday 11/06 | Weesner" and the address.
+- **Listings** ("Weekly Listing Report - …"): open listings not under contract, by stage: **Active/Coming Soon** (stages
+  named Active or Coming soon; "Coming Soon - goes active <date>" from the Active date), **Upcoming** (other listing
+  stages, with photos and active dates) and **Withheld/No Timeline** (stages named withheld, hold, paused or no timeline);
+  consult stages are left out. Each the seller's last name and the address.
 
 ### Tasks → Scheduled *(owner request 2026-11-03)*
 

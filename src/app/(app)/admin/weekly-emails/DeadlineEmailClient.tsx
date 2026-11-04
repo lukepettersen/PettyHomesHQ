@@ -5,12 +5,12 @@ import { useState, useTransition } from "react";
 import { SaveBar } from "@/components/SaveBar";
 import { TimeSelect } from "@/components/TimeSelect";
 import { toHtml } from "@/lib/email";
-import type { DigestSettings } from "@/lib/deadlineDigest";
+import type { DigestSettings, ReportKind } from "@/lib/deadlineDigest";
 import { saveDeadlineEmail, testDeadlineEmail } from "./actions";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-export function DeadlineEmailClient({ initial, team, preview }: { initial: DigestSettings; team: { first: string; name: string }[]; preview: { subject: string; body: string } }) {
+export function DeadlineEmailClient({ kind, initial, team, preview }: { kind: ReportKind; initial: DigestSettings; team: { first: string; name: string }[]; preview: { subject: string; body: string } }) {
   const [s, setS] = useState(initial);
   const [toText, setToText] = useState(initial.to.join(", "));
   const [msg, setMsg] = useState("");
@@ -34,19 +34,19 @@ export function DeadlineEmailClient({ initial, team, preview }: { initial: Diges
           <label className="label">To (emails, separated by commas)<input className="input" value={toText} onChange={(e) => setToText(e.target.value)} placeholder="luke@pettyhomes.com" /></label>
           <p className="text-xs muted">Sent from a teammate&apos;s own Gmail when they&apos;ve connected it in Admin → Integrations; otherwise from HQ&apos;s connected Gmail.</p>
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" className="btn" disabled={pending} onClick={() => start(async () => { setMsg(""); setError(""); const r = await testDeadlineEmail(now); if (!r.ok) setError(r.error); else setMsg(`Sent a test to ${r.data!.to}.`); })}>Send me a test</button>
+            <button type="button" className="btn" disabled={pending} onClick={() => start(async () => { setMsg(""); setError(""); const r = await testDeadlineEmail(kind, now); if (!r.ok) setError(r.error); else setMsg(`Sent a test to ${r.data!.to}.`); })}>Send me a test</button>
             {msg && <span className="text-sm text-accent" role="status">{msg}</span>}
           </div>
         </div>
         <SaveBar dirty={dirty} pending={pending} error={error} onDiscard={() => { setS(initial); setToText(initial.to.join(", ")); setError(""); }}
-          onSave={() => start(async () => { setError(""); const r = await saveDeadlineEmail(now); if (!r.ok) setError(r.error); else { setMsg(s.on ? `Saved. It goes out every ${DAYS[s.day]}.` : "Saved. It's off."); router.refresh(); } })} />
+          onSave={() => start(async () => { setError(""); const r = await saveDeadlineEmail(kind, now); if (!r.ok) setError(r.error); else { setMsg(s.on ? `Saved. It goes out every ${DAYS[s.day]}.` : "Saved. It's off."); router.refresh(); } })} />
       </section>
-      <section className="card px-4 py-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wider muted">Preview (as it would go out today)</h2>
+      <details className="card px-4 py-3">
+        <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wider muted">Preview (as it would go out today)</summary>
         <p className="mt-1 font-semibold">{preview.subject}</p>
         {/* toHtml escapes everything and adds only HQ's own tags (bold, links). */}
         <div className="mt-2 text-sm [&_a]:text-accent [&_a]:underline" dangerouslySetInnerHTML={{ __html: toHtml(preview.body) }} />
-      </section>
+      </details>
     </div>
   );
 }
