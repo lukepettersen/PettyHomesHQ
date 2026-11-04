@@ -276,7 +276,10 @@ scrolls with it until its last card is on screen, then stays put while the middl
     subject in bold, Opened / Not opened yet, the message shortened until "Show full email", and **↩ Reply** (opens
     the Email tab with "Re: subject"). Texts back and forth within 12 hours of each other (nothing else between) are
     one thread: the latest message with a count on the icon and "View N more text messages", which opens the thread
-    as chat bubbles (ours on the right).
+    as chat bubbles (ours on the right). Emails in one conversation (the same subject ignoring "Re:" / "Fwd:", within 60 days) are one
+    thread too, shown where the newest is, with "View N more emails in this conversation" listing the earlier ones (who,
+    when, the message), so a client's reply sits with the email it answers (owner request 2026-11-04). Replies come in
+    from Gmail every few minutes (shared Gmail and anyone's own connected Gmail); quoted history is trimmed.
   - **Edit / Delete** *(owner request 2026-10-23)* under notes, logged calls and logged texts: Edit changes the
     words (and a call's outcome) in place with Save / Cancel; Delete takes two clicks and hides the entry (kept
     as deleted). Only the person who wrote it, or someone allowed to delete records, sees these. Texts and emails

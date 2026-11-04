@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { threads } from "@/lib/timelineThreads";
 import { useRef, useState, useTransition } from "react";
 import { requestCompose } from "./compose";
 import { addTimelineEntry, deleteTimelineEntry, editTimelineEntry } from "../actions";
@@ -106,7 +107,7 @@ export function Timeline({ personId, personName, entries, team, startOpen = fals
         )}
       </div>
       <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="text-xs muted">Emails sent from HQ show here. Replies stay in Gmail for now.</span>
+        <span className="text-xs muted">Emails to and from them show here, replies included (HQ checks Gmail every few minutes).</span>
         <button type="button" className="btn btn-primary" disabled={pending || !body.trim()} onClick={save}>{pending ? "Saving…" : tab[3]}</button>
       </div>
       {error && <p role="alert" className="mt-2 text-sm text-bad">{error}</p>}
@@ -174,19 +175,6 @@ function DeleteEntry({ id, onDone }: { id: string; onDone: () => void }) {
 // ---------- Timeline items, threaded like FUB (owner request 2026-10-28) ----------
 const when = (iso: string) => new Date(iso).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).replace(/ (AM|PM)$/, (m) => m.trim().toLowerCase());
 const initials = (name: string) => name.split(/\s+/).filter((w) => /[A-Za-z]/.test(w[0] ?? "")).slice(0, 2).map((w) => w[0].toUpperCase()).join("") || "?";
-const THREAD_GAP = 12 * 3600 * 1000;
-
-/** Texts back and forth close together (within 12 hours, nothing else between) become one thread; everything else stands alone. */
-function threads(list: Entry[]): Entry[][] {
-  const out: Entry[][] = [];
-  for (const e of list) {
-    const last = out[out.length - 1];
-    const prev = last?.[last.length - 1];
-    if (e.kind === "text" && prev?.kind === "text" && Math.abs(new Date(prev.at).getTime() - new Date(e.at).getTime()) <= THREAD_GAP) last.push(e);
-    else out.push([e]);
-  }
-  return out;
-}
 
 const ICON: Record<string, { bg: string; path: string }> = {
   email: { bg: "bg-[#dfeaf3] text-[#3f6f93]", path: "M4 6h16v12H4z M4 7l8 6 8-6" },
@@ -251,12 +239,12 @@ function TimelineItem({ items, personName, team, editing, setEditing, onChanged,
         {subject && <p className="mt-2 font-bold">{subject}</p>}
         <div className="mt-1.5 text-sm">
           {editing === e.id ? <EditEntry entry={e} onDone={() => { setEditing(null); onChanged(); }} />
-            : e.kind === "email" ? <EmailText text={body} />
+            : e.kind === "email" ? <><EmailText text={body} />{items.length > 1 && open && <EarlierEmails items={items.slice(1)} personName={personName} />}</>
             : items.length > 1 && open ? <Bubbles items={[...items].reverse()} personName={personName} team={team} editing={editing} setEditing={setEditing} onChanged={onChanged} />
             : <div className="whitespace-pre-wrap [overflow-wrap:anywhere]">{splitMentions(body, team).map((part, i) => part.mention ? <mark key={i} className="rounded bg-accent-soft px-0.5 font-semibold text-accent">{part.text}</mark> : part.text)}</div>}
           {e.audio && <audio controls preload="none" src={e.audio} className="mt-1 w-full max-w-sm" aria-label="Call recording" />}
         </div>
-        {items.length > 1 && <button type="button" className="mt-2 text-sm font-semibold text-accent hover:underline" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Show only the latest" : `View ${items.length - 1} more text message${items.length === 2 ? "" : "s"}`}</button>}
+        {items.length > 1 && <button type="button" className="mt-2 text-sm font-semibold text-accent hover:underline" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Show only the latest" : `View ${items.length - 1} more ${e.kind === "email" ? `email${items.length === 2 ? "" : "s"} in this conversation` : `text message${items.length === 2 ? "" : "s"}`}`}</button>}
         {e.editable && editing !== e.id && !(items.length > 1 && open) && (
           <div className="mt-1 flex gap-3 text-xs">
             <button type="button" className="font-semibold text-accent hover:underline" onClick={() => setEditing(e.id)}>Edit</button>
@@ -288,6 +276,24 @@ function Bubbles({ items, personName, team, editing, setEditing, onChanged }: { 
         );
       })}
     </div>
+  );
+}
+
+/** The rest of an email conversation (owner request 2026-11-04): newest first, each with who sent it and when. */
+function EarlierEmails({ items, personName }: { items: Entry[]; personName: string }) {
+  return (
+    <ol className="mt-3 flex flex-col gap-3 border-l-2 border-misty pl-3">
+      {items.map((m) => {
+        const head = m.body.split("\n\n")[0];
+        const { from, to } = who(m, personName);
+        return (
+          <li key={m.id}>
+            <div className="text-xs"><b>{from}</b>{to && <span className="muted"> › {to}</span>} <span className="muted">· {when(m.at)}</span></div>
+            <EmailText text={m.body.slice(head.length).trim()} />
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
