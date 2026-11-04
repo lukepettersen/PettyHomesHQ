@@ -25,11 +25,13 @@ export async function saveDeadlineEmail(kind: ReportKind, input: z.input<typeof 
   });
 }
 
-/** Sends it now to the person asking, to check it. */
+/** Sends it now to everyone in its To box (else the person asking), to check it (owner report 2026-11-04). */
 export async function testDeadlineEmail(kind: ReportKind, input: z.input<typeof schema>) {
   return guarded("manageUsers", async (user) => {
-    const r = await sendDigest(cleanDigest(schema.parse(input)), [user.email], kindOf(kind).kind);
+    const settings = cleanDigest(schema.parse(input));
+    const to = settings.to.length ? settings.to : [user.email];
+    const r = await sendDigest(settings, to, kindOf(kind).kind);
     if (!r.ok) throw new UserError(r.error);
-    return { to: user.email };
+    return { to: to.join(", ") };
   });
 }

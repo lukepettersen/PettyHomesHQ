@@ -34,7 +34,7 @@ export function DeadlineEmailClient({ kind, initial, team, preview }: { kind: Re
           <label className="label">To (emails, separated by commas)<input className="input" value={toText} onChange={(e) => setToText(e.target.value)} placeholder="luke@pettyhomes.com" /></label>
           <p className="text-xs muted">Sent from a teammate&apos;s own Gmail when they&apos;ve connected it in Admin → Integrations; otherwise from HQ&apos;s connected Gmail.</p>
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" className="btn" disabled={pending} onClick={() => start(async () => { setMsg(""); setError(""); const r = await testDeadlineEmail(kind, now); if (!r.ok) setError(r.error); else setMsg(`Sent a test to ${r.data!.to}.`); })}>Send me a test</button>
+            <button type="button" className="btn" disabled={pending} onClick={() => start(async () => { setMsg(""); setError(""); const r = await testDeadlineEmail(kind, now); if (!r.ok) setError(r.error); else setMsg(`Sent a test to ${r.data!.to}.`); })}>Send a test now</button>
             {msg && <span className="text-sm text-accent" role="status">{msg}</span>}
           </div>
         </div>

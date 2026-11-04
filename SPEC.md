@@ -729,7 +729,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
 - **Admin → Weekly emails**: three reports HQ builds from the deals and emails once a week, like the ones the assistant
   wrote by hand. Each has its own on/off (off until turned on), day and time (default Monday 8:00am Central), sender (a
   teammate's own Gmail, else HQ's connected Gmail), recipients (the owner by default), a preview as it would go out today
-  and **Send me a test**; if one can't send, the owner gets an alert. Addresses are Google Maps links.
+  and **Send a test now** (to everyone in its To box); if one can't send, the owner gets an alert. Addresses are Google Maps links.
 - **Contingency deadlines** ("Weekly Contingency Report - Week of November 2nd"): the deadlines still open on every
   active contract (Inspection, Written Statement unless N/A, HOA doc rescission when there's an HOA; met and waived left
   out) for **This Week** and **Next Week** (Monday–Sunday), each split into **BUYERS** / **SELLERS** ("NONE" when empty),

@@ -17,7 +17,7 @@ export default async function Page() {
   return (
     <>
       <h1 className="text-2xl font-extrabold">Weekly emails</h1>
-      <p className="mb-4 mt-1 text-sm muted">Reports HQ builds from your deals and emails out once a week, each on its own day and time. Each starts off: check the preview, send yourself a test, then turn it on.</p>
+      <p className="mb-4 mt-1 text-sm muted">Reports HQ builds from your deals and emails out once a week, each on its own day and time. Each starts off: check the preview, send a test, then turn it on.</p>
       <div className="flex flex-col gap-6">
         {reports.map((r) => (
           <section key={r.kind} aria-labelledby={`r-${r.kind}`}>
