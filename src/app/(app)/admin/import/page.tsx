@@ -13,7 +13,7 @@ export default async function Page() {
   const [{ people, loadedAt }, stages, sources, users, saved, batches] = await Promise.all([
     cachedFubPeople(), db.stage.findMany({ orderBy: { position: "asc" } }), db.source.findMany({ orderBy: { position: "asc" } }),
     db.user.findMany({ where: { status: { not: "DISABLED" } }, orderBy: [{ isOwner: "desc" }, { name: "asc" }], select: { id: true, name: true } }),
-    db.appSetting.findUnique({ where: { key: "fub.plan" } }), db.importBatch.findMany({ orderBy: { createdAt: "desc" }, take: 10 }),
+    db.appSetting.findUnique({ where: { key: "fub.plan" } }), db.importBatch.findMany({ where: { kind: "fub" }, orderBy: { createdAt: "desc" }, take: 10 }),
   ]);
   const summary = summarize(people);
   const [hp, hc, ht] = await Promise.all([

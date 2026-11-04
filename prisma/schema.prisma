@@ -588,6 +588,7 @@ model Document {
 // One run of Admin → Import from Follow Up Boss; Undo removes the people it added.
 model ImportBatch {
   id          String    @id @default(cuid())
+  kind        String    @default("fub") // fub | addresses (Import address list; its undo record is AppSetting "addressImport.<id>")
   createdAt   DateTime  @default(now())
   createdById String
   added       Int       @default(0)

@@ -32,6 +32,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     { label: "Integrations", href: "/admin/integrations", desc: "Google (calendar, email, sheet), texting & calls, file storage" },
     { label: "Tools menu", href: "/admin/tools", desc: "Links in the Tools menu (MLS, Slack, Gmail…)" },
     { label: "Top bar", href: "/admin/topbar", desc: "The order of the tabs at the top (Whiteboard, Tasks, People…)" },
+    { label: "Import address list", href: "/admin/address-list", desc: "A spreadsheet of names and addresses (holiday cards), matched to people already in HQ" },
     { label: "Import from Follow Up Boss", href: "/admin/import", desc: "Contacts, notes, texts and templates" },
   ] },
 ];

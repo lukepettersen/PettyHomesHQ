@@ -328,6 +328,27 @@ scrolls with it until its last card is on screen, then stays put while the middl
   address, role, state).
 - Partners are **never** invited to contract calendar events (only the team and the client).
 
+### 6.5 Import address list *(owner request 2026-11-04)*
+
+- Admin → **Import address list** (Connections & tools; same permission as the Follow Up Boss import) brings in a
+  CSV of names and addresses, like the holiday card list. Columns are found by their headings: First Name, Last
+  Name, Display/Household Name, Address Line 1, Address Line 2, City, State, Postal (4-digit ZIPs get their 0 back).
+- **Nothing saves until you check it.** Each row shows who it is in HQ: **same name**, **same address** (house
+  number + street), or **Check: same last name** (a "maybe"; picked for you only when a first name matches too and
+  the row isn't a household like "The Anderson Family"). Each row can be switched to another match, **Add as new
+  contact** or **Skip**. Filters: All / Already in HQ / Check these / New.
+- **Tags:** everyone saved gets the list tag (default **Holiday card**). Each row can also get a group tag:
+  **Family**, **Friend** or **Wife's friend** (names editable; "Set the group for these" sets every row shown).
+- **New contacts:** name from First + Last (or the household name), Mailing name from the household column, the
+  address as their mailing address, stage **Personal** (created if missing; pick another), no follow-up so they
+  never show as Due for a touch.
+- **People already in HQ:** tagged; a blank Mailing name is filled from the household column; an address is added
+  when they have none. When HQ has a different address, "Use the list's address for mail" (on by default) adds it
+  as their mailing address; an address HQ already has is left as is.
+- **Undo** (Earlier imports, two-step) removes the people it added and takes back its tags, addresses and mailing
+  names on the others.
+- For the cards: People → filter by the tag → **Mailing list** at the bottom.
+
 ## 7. Pipeline
 
 ### 7.1 Client files
