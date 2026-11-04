@@ -5,6 +5,7 @@ import { sendDueEmails } from "@/server/scheduledEmails";
 import { sendDueAsks } from "@/server/askByText";
 import { syncGmail } from "@/server/google";
 import { sendBulkJobs } from "@/server/bulkEmail";
+import { sendDueDigest } from "@/server/deadlineDigest";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
   const sent = await run("scheduled texts", sendDueTexts), auto = await run("automatic steps", () => sendDueAutoTasks());
   const emails = await run("scheduled emails", sendDueEmails), asks = await run("check-in texts", sendDueAsks);
   const bulk = await run("mass emails", () => sendBulkJobs());
+  const digest = await run("weekly deadlines email", () => sendDueDigest());
   const gmail = await run("Gmail", syncGmail);
-  return Response.json({ sent, auto, emails, asks, bulk, gmail });
+  return Response.json({ sent, auto, emails, asks, bulk, digest, gmail });
 }

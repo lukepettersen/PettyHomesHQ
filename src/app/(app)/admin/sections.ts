@@ -13,6 +13,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
   { name: "Texts & emails", icon: "💬", blurb: "Messages you send.", items: [
     { label: "Text templates", href: "/admin/text-templates", desc: "Texts to pick from, by folder", need: "messages" },
     { label: "Email templates", href: "/admin/email-templates", desc: "Emails to pick from, by folder", need: "messages" },
+    { label: "Weekly deadlines email", href: "/admin/deadline-email", desc: "Every week: open contingency deadlines on active contracts, this week and next" },
   ] },
   { name: "Deals", icon: "🏡", blurb: "How buyer and seller deals move.", items: [
     { label: "Pipeline stages", href: "/admin/statuses", desc: "Buyer, seller and Under Contract columns" },

@@ -724,6 +724,16 @@ scrolls with it until its last card is on screen, then stays put while the middl
 - *Later:* booking a call for someone who already has one upcoming becomes **Reschedule
   call** *(decided, §17)*.
 
+### Weekly deadlines email *(owner request 2026-11-04)*
+
+- **Admin → Weekly deadlines email**: once a week (day and time picked, default Monday 8:00am Central; off until turned
+  on) HQ emails the contingency deadlines still open on every active contract (Inspection, Written Statement unless N/A,
+  HOA doc rescission when there's an HOA; met and waived left out) for **This Week** and **Next Week** (Monday–Sunday),
+  each split into **BUYERS** / **SELLERS** ("NONE" when empty), each line "SHARPE/NGUYEN | Tuesday, 11/03", the address
+  (a Google Maps link) and the deadline, like the email the assistant wrote by hand. From a teammate's own Gmail (else
+  HQ's connected Gmail) to the addresses listed (the owner by default), with the sender's Gmail signature. The page shows
+  a preview as it would go out today and **Send me a test**. If it can't send, the owner gets an alert.
+
 ### Tasks → Scheduled *(owner request 2026-11-03)*
 
 - A page for everything waiting to go out, for **every contact**: scheduled texts and emails, automatic checklist texts
