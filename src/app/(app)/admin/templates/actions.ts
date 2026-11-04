@@ -19,7 +19,7 @@ const stepSchema = z.object({
   advance: z.string().max(40).optional(), message: z.string().trim().max(120).optional(), messageId: z.string().max(40).optional(), addTags: tags, removeTags: tags, stage: z.string().trim().max(60).optional(),
   ask: z.union([z.boolean(), z.literal("consult")]).optional(),
   matchListing: z.boolean().optional(),
-  auto: z.object({ from: z.string().trim().max(40), to: z.array(z.string().trim().max(80)).min(1, "Pick who an automatic message goes to.").max(20), time: z.string().regex(/^(([01]\d|2[0-3]):[03]0|now)$/) }).optional(),
+  auto: z.object({ from: z.string().trim().max(40), to: z.array(z.string().trim().max(80)).min(1, "Pick who an automatic message goes to.").max(20), time: z.string().regex(/^(([01]\d|2[0-3]):[0-5][05]|now)$/) }).optional(),
 });
 const templateSchema = z.object({
   id: z.string().max(40).nullable(), name: z.string().trim().max(120), trigger: z.string().max(60).nullable(), folder: z.string().trim().max(60).default(""),

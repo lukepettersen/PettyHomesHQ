@@ -911,7 +911,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
   timeline, and checks off the checklist step it came from. The contact page's Scheduled list shows it ("Email:
   subject…") with Cancel; one that couldn't send shows "Not sent" with the reason and a bell alert.
 - **Automatic texts and emails from checklists** *(owner request 2026-10-29)*: in Admin → Task templates, a text or
-  email step that has a due date can be set to **Send automatically**. Each step picks the time (30-minute steps,
+  email step that has a due date can be set to **Send automatically**. Each step picks the time (5-minute steps, owner request 2026-11-04;
   8:00am–8:00pm Central, on the step's due date; a step timed in minutes before/after an appointment uses that time; or **Right away** (owner request 2026-11-02): within a minute of the checklist starting when the step is due that day, 8:00am on a later day, texts still waiting out quiet hours),
   **from** whom (whoever the step is assigned to, or a named teammate: texts go from their HQ number, emails from
   their own Gmail when connected) and **to** whom: the client(s), any of the deal people on the contract (lender,

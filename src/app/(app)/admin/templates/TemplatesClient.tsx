@@ -321,7 +321,8 @@ function TagList({ label, value, all, onChange }: { label: string; value: string
   );
 }
 
-const HALF_HOURS = Array.from({ length: 25 }, (_, i) => `${String(8 + Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`);
+// 8:00am to 8:00pm in 5-minute steps (owner request 2026-11-04; was half hours).
+const SEND_TIMES = Array.from({ length: 145 }, (_, i) => `${String(8 + Math.floor(i / 12)).padStart(2, "0")}:${String((i % 12) * 5).padStart(2, "0")}`);
 const clock = (t: string) => { const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")}${h < 12 ? "am" : "pm"}`; };
 
 /**
@@ -342,7 +343,7 @@ function AutoSendFields({ step, team, roles, field, onChange }: { step: Step; te
       {a && (
         <>
           <span className="flex flex-wrap items-center gap-2 text-xs font-semibold muted">
-            {!timed && <label className="flex items-center gap-1">at<select className={field} value={a.time} onChange={(e) => onChange({ ...a, time: e.target.value })}><option value="now">Right away</option>{HALF_HOURS.map((t) => <option key={t} value={t}>{clock(t)}</option>)}</select>{a.time === "now" ? <span title="As soon as the checklist starts when the step is due that day; on a later day, at 8:00am. Texts still wait out quiet hours (8pm–8am).">on the due date (8:00am if later)</span> : "on the due date"}</label>}
+            {!timed && <label className="flex items-center gap-1">at<select className={field} value={a.time} onChange={(e) => onChange({ ...a, time: e.target.value })}><option value="now">Right away</option>{SEND_TIMES.map((t) => <option key={t} value={t}>{clock(t)}</option>)}</select>{a.time === "now" ? <span title="As soon as the checklist starts when the step is due that day; on a later day, at 8:00am. Texts still wait out quiet hours (8pm–8am).">on the due date (8:00am if later)</span> : "on the due date"}</label>}
             {timed && <span>at the step&apos;s time ({step.minutes} min {step.dir === "minutesBefore" ? "before" : "after"})</span>}
             <label className="flex items-center gap-1">from<select className={field} value={a.from} onChange={(e) => onChange({ ...a, from: e.target.value })}><option value="">Whoever the step is assigned to</option>{team.map((t) => <option key={t} value={t}>{t}</option>)}</select></label>
           </span>
