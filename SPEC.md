@@ -477,6 +477,24 @@ scrolls with it until its last card is on screen, then stays put while the middl
   financing, material defect, written statement).
 - Needs ANTHROPIC_API_KEY (same as Ask Claude).
 
+### 7.5b Request paperwork *(owner request 2026-11-04)*
+
+- **Request paperwork** on every deal (buyer and seller, before and after contract) asks a teammate
+  (Alyssa by default; "Send to" picks anyone) to write a form up in ClickContracts.
+- Forms (owner's list): **Listing contract** (list price, starts, expires), **Amendment** (what's
+  changing), **Change form** (new list price, other changes), **Cancellation** (why), **Cancel &
+  relist** (new list price, starts, expires), **Other** (which form). Each has the property address,
+  filled in from the deal (contract address, or the listing address) along with the price; plus
+  **Notes** with a Talk (mic) button. Needs an address or a note.
+- Sending makes a task for them **due right away** (today, the current time), titled "Write up
+  <form> in ClickContracts · <client>", with the details in its notes; a **bell alert** (pops up);
+  a note on the contact's timeline ("Asked Alyssa for an amendment in ClickContracts" + details); and
+  a **text to their cell** from their HQ number (when texting is on and they have an HQ number and
+  cell). Replying **YES** to that text checks the task off, like Ask by text.
+- When someone else checks it off (HQ, the alarm pop-up, or YES by text), whoever asked gets a bell
+  alert and a text: "Alyssa wrote up the amendment for <client>: ready to sign in ClickContracts".
+  HQ doesn't connect to ClickContracts itself.
+
 ## 8. Task templates and automations
 
 - A **template** = phases of steps. Each step: name, timing (days before/on/after an anchor

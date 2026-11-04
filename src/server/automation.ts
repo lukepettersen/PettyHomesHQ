@@ -4,6 +4,7 @@ import { db } from "@/server/db";
 import { logActivity } from "@/server/activity";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
 import { CONTRACT_ANCHORS, SEND_NOW, SIDE_CONDS, autoClock, condMet, expand, minutesOffset, offsetOf, timeBefore, type Anchor, type Facts, type Phase, type Template } from "@/lib/templates";
+import { paperworkDone } from "@/server/paperwork";
 
 // Task templates in action (SPEC.md §8): start checklists on triggers, re-date steps when contract
 // dates change, and apply "Add/remove tags" steps.
@@ -390,6 +391,8 @@ export async function restartConsultSteps(tx: Tx, trigger: "buyerconsult" | "sel
 /** A checklist step marked "When done: move deal to…" moves the file once it's done (SPEC.md §7.1), whether it was
  *  checked off by hand or sent by itself (owner 2026-10-29). Returns the stage it moved to, if any. */
 export async function advanceAfterDone(taskId: string, userId: string): Promise<string | null> {
+  // A paperwork request checked off tells whoever asked that it's ready to sign (never blocks the rest).
+  await paperworkDone(taskId, userId).catch(() => null);
   const t = await db.task.findUnique({ where: { id: taskId }, select: { title: true, fileId: true, personId: true, advanceStatusId: true, completedAt: true } });
   if (!t?.completedAt || !t.advanceStatusId || (!t.fileId && !t.personId)) return null;
   let status = await db.pipelineStatus.findUnique({ where: { id: t.advanceStatusId } });

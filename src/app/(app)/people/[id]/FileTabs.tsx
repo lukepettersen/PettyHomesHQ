@@ -20,6 +20,7 @@ import { Checklist } from "./Checklist";
 import { EmailComposer } from "./EmailComposer";
 import { TextComposer } from "@/components/TextComposer";
 import { OfferModal } from "./OfferModal";
+import { PaperworkModal } from "./PaperworkModal";
 import { DealNotes } from "./DealNotes";
 import { SocialPosts } from "./SocialPosts";
 
@@ -98,6 +99,7 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
   const [editingPa, setEditingPa] = useState(false);
   const { open: moreOpen, setOpen: setMoreOpen, ref: moreRef } = useDropdown<HTMLSpanElement>();
   const [offering, setOffering] = useState(false);
+  const [papering, setPapering] = useState(false);
   const [viewOffer, setViewOffer] = useState<string | null>(null);
   const myOffers = offers.filter((o) => o.fileId === file.id);
   const mine = contracts.filter((c) => c.fileId === file.id);
@@ -153,6 +155,7 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
         <div className="flex flex-wrap items-center gap-2">
           {activePa && <PaButtons pa={activePa} personName={personName} pendingAt={pendingAt} today={today} onMsg={setMsg} onError={setError} />}
           {file.kind === "buyer" && !activePa && <button type="button" className="btn btn-primary" onClick={() => setOffering(true)}>Submit offer</button>}
+          <button type="button" className="btn" onClick={() => setPapering(true)}>Request paperwork</button>
           <span ref={moreRef} className="relative">
             <button type="button" className="btn border-transparent muted" aria-expanded={moreOpen} onClick={() => setMoreOpen(!moreOpen)}>More ▾</button>
             {moreOpen && (
@@ -224,6 +227,9 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
           onClose={() => setEditingPa(false)} onSaved={(m) => { setEditingPa(false); setMsg(m); router.refresh(); }} />
       )}
       {offering && <OfferModal personId={personId} personName={personName} buyerFiles={[{ id: file.id, label: fileLine(file) }]} fileId={file.id} onClose={() => setOffering(false)} />}
+      {papering && <PaperworkModal personId={personId} personName={personName} kind={file.kind} team={team}
+        prefill={{ address: activePa ? activePa.address : file.address ?? "", price: price ? String(price) : "" }}
+        onClose={() => setPapering(false)} onSent={(m) => { setPapering(false); setMsg(m); }} />}
       {msg && <p role="status" className="mt-2 text-sm text-accent">{msg}</p>}
       {error && <p role="alert" className="mt-2 text-sm text-bad">{error}</p>}
       {editing && (
