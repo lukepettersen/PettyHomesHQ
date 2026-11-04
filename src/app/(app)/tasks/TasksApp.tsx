@@ -274,7 +274,9 @@ export function TasksApp(p: Props) {
   return (
     <div className={`mx-auto grid max-w-[1800px] grid-cols-1 items-start gap-5 px-4 py-4 lg:grid-cols-[210px_minmax(0,1fr)] ${selected ? "xl:grid-cols-[210px_minmax(0,1fr)_340px]" : ""}`}>
       <ListPicker current={title(view)} count={openCount(view)} late={lateCount(view)} onNew={() => setNewList("")}
-        items={[["today", "Today"], ["upcoming", "Upcoming"], ...p.lists.map((l) => [keyOf(l), l.name] as [string, string])].map(([k, l]) => ({ key: k, label: l, count: openCount(k), late: lateCount(k), on: view === k }))} onPick={go} />
+        items={[...[["today", "Today"], ["upcoming", "Upcoming"], ...p.lists.map((l) => [keyOf(l), l.name] as [string, string])].map(([k, l]) => ({ key: k, label: l, count: openCount(k), late: lateCount(k), on: view === k })),
+          { key: "scheduled", label: "Scheduled texts & emails ↗", count: 0, late: 0, on: false }]}
+        onPick={(k) => (k === "scheduled" ? router.push("/tasks/scheduled") : go(k))} />
       <nav aria-label="Task lists" className={`flex flex-col gap-3.5 lg:sticky lg:top-3 ${newList !== null ? "max-lg:block" : "max-lg:hidden"}`}>
         <ul className="flex flex-col gap-px max-lg:flex-row max-lg:gap-1.5">{navItem("today", "Today")}{navItem("upcoming", "Upcoming")}
           {/* Everything waiting to go out, for every contact (owner request 2026-11-03). */}
