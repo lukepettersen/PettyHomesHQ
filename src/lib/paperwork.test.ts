@@ -24,14 +24,14 @@ describe("paperwork requests", () => {
   });
 
   it("change form: only the checked boxes' steps, values filled, the contract date says where to find it", () => {
-    const r = paperSchema.parse({ type: "change", values: { address: "4385 Trenton Lane N #212", checks: "price", price: "425000", newPrice: "409900", mls: "" } });
+    const r = paperSchema.parse({ type: "change", values: { address: "4385 Trenton Lane N #212", checks: "price", price: "425000", newPrice: "409900" } });
     expect(paperProblem(r)).toBeNull();
     expect(paperDetails(r)).toContain("Changing: Price change");
     const steps = paperSteps(r, "Susan Lach", DEFAULT_STEPS);
     expect(steps.some((s) => s.includes("New List Price: $409,900 (was $425,000)"))).toBe(true);
     expect(steps.some((s) => /Expiration/.test(s))).toBe(false);
     expect(steps.find((s) => s.includes("listing contract dated"))).toContain("____ (find it on the signed listing contract)");
-    expect(steps[1]).toContain("Listing Number ____");
+    expect(steps[1]).toMatch(/^Search the listing in ClickContracts for its MLS number/);
     expect(paperProblem(paperSchema.parse({ type: "change", values: { address: "x" } }))).toBe("Check what's changing.");
   });
   it("own forms: saved with their steps; unknown ones are refused", () => {

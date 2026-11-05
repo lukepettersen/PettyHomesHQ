@@ -520,10 +520,10 @@ scrolls with it until its last card is on screen, then stays put while the middl
   value reads "____"; the listing contract date says "find it on the signed listing contract".
 - **Change form** (NorthstarMLS Listing Change Form and Contract Amendment): "What's changing?" boxes — Price change,
   Expiration date change, Temp. not available for showing, Back to Active, Cancelled, Something else — show only the
-  fields needed (current and new list price; old and new expiration; off-market date; other changes) plus MLS # and
-  "Listing contract dated". HQ fills in what the seller deal knows: address, price, Listing agreement signed (the
+  fields needed (current and new list price; old and new expiration; off-market date; other changes) plus "Listing contract dated"
+  (no MLS #: the first step has her search the listing in ClickContracts for it, owner 2026-11-05). HQ fills in what the seller deal knows: address, price, Listing agreement signed (the
   contract date), Listing expires. Steps for unchecked boxes are left out. Cancellation and Cancel & relist also ask
-  for MLS #, the listing contract date and the off-market date.
+  for the listing contract date and the off-market date.
 - **Admin → Paperwork steps** (Deals; "Edit task templates" permission): edit each form's steps (fill-ins like
   {address}, {newPrice}, {lcDate}, {client}, {notes}; Change form steps can be "Only for" one box), reorder, remove,
   "Use the starting steps". **+ Add a form** adds your own (a name and steps; it asks for the property address and

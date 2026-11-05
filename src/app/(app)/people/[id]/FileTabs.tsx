@@ -228,7 +228,7 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
       )}
       {offering && <OfferModal personId={personId} personName={personName} buyerFiles={[{ id: file.id, label: fileLine(file) }]} fileId={file.id} onClose={() => setOffering(false)} />}
       {papering && <PaperworkModal personId={personId} personName={personName} kind={file.kind} team={team}
-        prefill={{ address: activePa ? activePa.address : file.address ?? "", price: price ? String(price) : "", lcDate: file.info.lcSigned ?? "", oldExpires: file.info.lcExpires ?? "", mls: file.info.mls ?? "" }}
+        prefill={{ address: activePa ? activePa.address : file.address ?? "", price: price ? String(price) : "", lcDate: file.info.lcSigned ?? "", oldExpires: file.info.lcExpires ?? "" }}
         onClose={() => setPapering(false)} onSent={(m) => { setPapering(false); setMsg(m); }} />}
       {msg && <p role="status" className="mt-2 text-sm text-accent">{msg}</p>}
       {error && <p role="alert" className="mt-2 text-sm text-bad">{error}</p>}
