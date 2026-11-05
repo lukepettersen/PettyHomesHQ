@@ -19,6 +19,8 @@ import { clip, cleanWhen } from "@/lib/textAgent";
 import { loadContract, cleanOrThrow, saveContractAnswers } from "@/server/paEdit";
 import { addBoardNote, removeBoardNote } from "@/server/whiteboard";
 import { mergeContacts } from "@/server/mergePeople";
+import { loadPaperConfig, requestPaperwork } from "@/server/paperwork";
+import { allTypes, aOrAn, paperDetails, paperProblem, paperSchema, paperSteps, formName } from "@/lib/paperwork";
 import { COMMISSION_KEYS, KEY_DATES, visibleSections, type PaField } from "@/lib/pa";
 
 // The text assistant (owner request 2026-10-30): a team member texts their HQ number in plain English and Claude does it
@@ -54,6 +56,7 @@ Other:
 - add_to_whiteboard puts a sticky note on the speaker's private HQ whiteboard, for things to remember that aren't a task with a due date ("put on my board…", "remember…", "whiteboard: …"). Keep their words; a short list can be lines starting with "• ".
 - Contracts (purchase agreements): contract_details shows a contact's active contract with every term (key, label, type, value). To change terms ("move Ortiz closing to 11/25", "price is now 395k", "inspection waived? no: inspection date Nov 8"), call edit_contract once with every change: the key from contract_details and the value in its format (date YYYY-MM-DD; datetime YYYY-MM-DDTHH:MM; money/number digits only; pct like 2.7; yesno "Yes"/"No"; choice exactly one of its choices; "" to clear). It is NOT saved until they reply YES, so stop after it. If a term isn't on the form, say so.
 - Photos: they may text a photo or screenshot (a booking confirmation, a flyer, a showing request, a business card). Read it. A booking or appointment for them (haircut, dentist, a meeting) that isn't about a contact in HQ: book_event with person_id "", the date, start, end and address from the photo, invite_client false, and a short title naming what and where ("Haircut - Jesse's Barber Shop"). The photo's date wins over a vague "today" in their words. A business card or contact details: add_contact. A photo with no words: do what it plainly calls for; if that isn't clear, ask what they'd like done.
+- Paperwork (ClickContracts forms written up by a teammate, usually Alyssa): "have Alyssa do a price change for Lach to 409,900", "need a listing contract for the Smiths". Call paperwork_forms with the contact first: it lists the forms, what each asks, the boxes on the Change form, and what HQ already knows from their deal. Then ask the speaker, in one short text, for anything the form needs that isn't known (e.g. the new price, the new expiration date, the off-market date), only what matters for what they asked. Then call request_paperwork once with every value (dates YYYY-MM-DD, money digits only). It is NOT sent until they reply YES, so stop after it. Leave blank anything nobody knows (like the MLS number); the teammate fills it in.
 - combine_contacts merges two contacts into one (both kept as one: phones, emails, notes, tasks, deals); delete_contact moves one to Trash. Both wait for YES.
 - You can't send emails or move deals between stages yet; say so if asked. Never describe HQ buttons or features you weren't told about here; if you can't do something, say so plainly.
 
@@ -101,6 +104,15 @@ const tools: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: { person_id: str("Contact id") }, required: ["person_id"], additionalProperties: false } },
   { name: "edit_contract", description: "Prepare changes to a purchase agreement's terms. Not saved until the speaker replies YES.", strict: true,
     input_schema: { type: "object", properties: { contract_id: str("From contract_details"), changes: { type: "array", items: { type: "object", properties: { key: str("The term's key from contract_details"), value: str("The new value in the term's format, or \"\" to clear") }, required: ["key", "value"], additionalProperties: false } } }, required: ["contract_id", "changes"], additionalProperties: false } },
+  { name: "paperwork_forms", description: "The paperwork forms a teammate can write up in ClickContracts (key, name, fields, Change form boxes), what HQ already knows from this contact's deal, and who it can go to.", strict: true,
+    input_schema: { type: "object", properties: { person_id: str("Contact id") }, required: ["person_id"], additionalProperties: false } },
+  { name: "request_paperwork", description: "Prepare a paperwork request for a teammate (a task due now, with the form's steps, and a text to them). Not sent until the speaker replies YES.", strict: true,
+    input_schema: { type: "object", properties: {
+      person_id: str("Contact id"), form: str("Form key from paperwork_forms"),
+      values: { type: "array", items: { type: "object", properties: { key: str("Field key from paperwork_forms"), value: str("The value: date YYYY-MM-DD, money digits only") }, required: ["key", "value"], additionalProperties: false } },
+      checks: { type: "array", items: str("Change form box key (price, expiration, temp, active, cancelled, other)") },
+      notes: str('Anything else for the teammate, or ""'), send_to: str('Teammate user id from paperwork_forms, or "" for the usual one'),
+    }, required: ["person_id", "form", "values", "checks", "notes", "send_to"], additionalProperties: false } },
   { name: "text_client", description: "Prepare a text to a contact from the speaker's HQ number. Not sent until the speaker replies YES.", strict: true,
     input_schema: { type: "object", properties: { person_id: str("Contact id"), body: str("The message"), send_date: str('YYYY-MM-DD to send later, or "" for now'), send_time: str('HH:MM to send later, or ""') }, required: ["person_id", "body", "send_date", "send_time"], additionalProperties: false } },
 ];
@@ -318,6 +330,47 @@ async function runTool(me: Me, name: string, a: Record<string, unknown>, seen: S
     return "Prepared. Waiting for them to reply YES. Stop here.";
   }
 
+  if (name === "paperwork_forms") {
+    const p = await person(s("person_id"));
+    if (!p) return "Unknown contact id: use find_people first.";
+    const [{ custom }, files, team] = await Promise.all([
+      loadPaperConfig(),
+      db.clientFile.findMany({ where: { personId: p.id, deletedAt: null, closedAt: null }, orderBy: { createdAt: "desc" }, include: { contracts: { where: { state: "active", deletedAt: null }, take: 1 } } }),
+      db.user.findMany({ where: { status: { not: "DISABLED" } }, orderBy: [{ isOwner: "asc" }, { name: "asc" }], select: { id: true, name: true, isOwner: true } }),
+    ]);
+    const f = files.find((x) => x.kind === "listing") ?? files[0];
+    const info = (f?.info ?? {}) as Record<string, string>;
+    const pa = f?.contracts[0];
+    const known = f ? { address: pa?.address ?? f.address ?? "", price: String(pa?.price ?? f.price ?? ""), lcDate: info.lcSigned ?? "", oldExpires: info.lcExpires ?? "", mls: info.mls ?? "" } : {};
+    return JSON.stringify({
+      client: p.name, deal: f ? (f.kind === "listing" ? "seller" : "buyer") : "none", known,
+      forms: allTypes(custom).map((t) => ({ key: t.key, name: t.label, fields: t.fields.map((x) => ({ key: x.key, label: x.label, type: x.type, ...(x.when ? { onlyWhenChecked: x.when } : {}) })), ...(t.options ? { boxes: t.options.map((o) => ({ key: o.key, label: o.label })) } : {}) })),
+      sendTo: team.filter((u) => u.id !== me.id).map((u) => ({ id: u.id, name: u.name, usual: !u.isOwner })),
+    });
+  }
+
+  if (name === "request_paperwork") {
+    const p = await person(s("person_id"));
+    if (!p) return "Unknown contact id: use find_people first.";
+    const raw = Array.isArray(a.values) ? (a.values as { key?: unknown; value?: unknown }[]) : [];
+    const values: Record<string, string> = Object.fromEntries(raw.map((x) => [String(x.key ?? "").trim(), String(x.value ?? "").trim().slice(0, 500)]).filter(([k]) => k));
+    const checks = Array.isArray(a.checks) ? (a.checks as unknown[]).map(String) : [];
+    if (checks.length) values.checks = checks.join(",");
+    const parsed = paperSchema.safeParse({ type: s("form"), values, notes: s("notes") });
+    if (!parsed.success) return "Not prepared: unknown form. Use a key from paperwork_forms.";
+    const req = parsed.data;
+    const { steps, custom } = await loadPaperConfig();
+    const problem = paperProblem(req, custom);
+    if (problem) return `Not prepared: ${problem}`;
+    const team = await db.user.findMany({ where: { status: { not: "DISABLED" }, id: { not: me.id } }, orderBy: [{ isOwner: "asc" }, { name: "asc" }], select: { id: true, name: true } });
+    const to = team.find((u) => u.id === s("send_to")) ?? team[0];
+    if (!to) return "There's nobody else on the team to send it to; tell them.";
+    const d = paperDetails(req, custom);
+    const n = paperSteps(req, p.name, steps, custom).length;
+    await record(me.id, "paperwork", `Ask ${to.name.split(" ")[0]} for ${aOrAn(formName(req, custom))} for ${p.name}:\n${d}${n ? `\n(${n} steps on the task)` : ""}\nReply YES to send, or NO.`, { personId: p.id, toId: to.id, request: req }, "confirm");
+    return "Prepared. Waiting for them to reply YES. Stop here.";
+  }
+
   if (name === "text_client") {
     if (!hasPermission(me.permissions as never, "sendTexts")) return "They aren't allowed to send texts from HQ; tell them.";
     const p = await person(s("person_id"));
@@ -457,6 +510,18 @@ export async function answerConfirm(user: { id: string; name: string }, actionId
       return `Not saved: ${e instanceof UserError ? e.message : "something went wrong. Change it on their page in HQ."}`;
     }
   }
+  if (act.kind === "paperwork") {
+    if (!yes) return "Okay, not sent.";
+    const q = act.payload as { personId: string; toId: string; request: unknown };
+    try {
+      const r = await requestPaperwork(user, q.personId, q.toId, paperSchema.parse(q.request));
+      await db.textAgentAction.update({ where: { id: act.id }, data: { payload: { ...q, taskId: r.taskId } as object } });
+      return `✓ Sent to ${r.to}: a task due now with the steps${r.texted ? ", and a text" : ""}. You'll hear when it's ready to sign.`;
+    } catch (e) {
+      await db.textAgentAction.update({ where: { id: act.id }, data: { status: "canceled" } });
+      return `Not sent: ${e instanceof UserError ? e.message : "something went wrong. Use Request paperwork on their deal in HQ."}`;
+    }
+  }
   if (!yes) return "Okay, not sent.";
   const p = act.payload as { personId: string; body: string; date: string | null; time: string | null };
   const person = await db.person.findFirst({ where: { id: p.personId, deletedAt: null }, include: { phones: { orderBy: { position: "asc" } } } });
@@ -527,6 +592,10 @@ export async function undoLast(user: { id: string }): Promise<string> {
   } else if (act.kind === "contact") {
     const p = await db.person.update({ where: { id: id("personId") }, data: { deletedAt: new Date() } });
     what = `Removed ${p.name} (in Trash for 30 days).`;
+  } else if (act.kind === "paperwork") {
+    if (!p.taskId) return "That request wasn't sent, so there's nothing to undo.";
+    await db.task.update({ where: { id: id("taskId") }, data: { deletedAt: new Date() } });
+    what = "Took back that paperwork request (the task is in Trash). If they already got the text, let them know.";
   } else if (act.kind === "task") {
     await db.task.update({ where: { id: id("taskId") }, data: { deletedAt: new Date() } });
     what = "Removed that task.";

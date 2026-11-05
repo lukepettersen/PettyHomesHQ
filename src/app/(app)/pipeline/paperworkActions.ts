@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { guarded } from "@/server/safe";
-import { requestPaperwork } from "@/server/paperwork";
+import { loadPaperConfig, requestPaperwork } from "@/server/paperwork";
 import { paperSchema } from "@/lib/paperwork";
 
 // Request paperwork (SPEC.md §7.5b): ask a teammate to write a form up in ClickContracts.
@@ -16,4 +16,9 @@ export async function submitPaperwork(input: z.input<typeof schema>) {
     revalidatePath(`/people/${v.personId}`); revalidatePath("/tasks");
     return r;
   });
+}
+
+/** The forms (with the owner's own) and their steps, for the Request paperwork pop-up's preview. */
+export async function paperworkSetup() {
+  return guarded(null, async () => loadPaperConfig());
 }

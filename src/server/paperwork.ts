@@ -6,7 +6,18 @@ import { textingEnabled } from "@/server/integrations";
 import { logActivity } from "@/server/activity";
 import { UserError } from "@/server/safe";
 import { isoFromDate, dateFromIso, normalizePhone, todayCentral } from "@/lib/normalize";
-import { paperDetails, paperProblem, paperText, paperTitle, formName, aOrAn, SOURCE_PREFIX, type PaperRequest } from "@/lib/paperwork";
+import { cleanConfig, paperDetails, paperProblem, paperSteps, paperText, paperTitle, formName, aOrAn, SOURCE_PREFIX, type PaperConfig, type PaperRequest } from "@/lib/paperwork";
+
+const KEY = "paperwork.steps";
+/** The steps for each form and the owner's own forms (Admin → Paperwork steps). */
+export async function loadPaperConfig(): Promise<PaperConfig> {
+  return cleanConfig((await db.appSetting.findUnique({ where: { key: KEY } }))?.value);
+}
+export async function savePaperConfig(userId: string, cfg: PaperConfig) {
+  const value = { steps: cfg.steps, custom: cfg.custom.map((c) => ({ key: c.key, label: c.label })) };
+  await db.appSetting.upsert({ where: { key: KEY }, update: { value }, create: { key: KEY, value } });
+  await logActivity(userId, "update", "setting", KEY, `Saved paperwork steps (${cfg.custom.length} of your own forms)`);
+}
 
 // Request paperwork (SPEC.md §7.5b, owner request 2026-11-04): a task for a teammate to write a form up in
 // ClickContracts, due right away, with a bell alert and a text to their cell (YES checks it off). When it's
@@ -27,28 +38,32 @@ async function textTeammate(userId: string, body: string): Promise<boolean> {
 }
 
 export async function requestPaperwork(from: { id: string; name: string }, personId: string, toId: string, req: PaperRequest) {
-  const problem = paperProblem(req);
+  const { steps, custom } = await loadPaperConfig();
+  const problem = paperProblem(req, custom);
   if (problem) throw new UserError(problem);
   const person = await db.person.findFirst({ where: { id: personId, deletedAt: null }, select: { id: true, name: true } });
   if (!person) throw new UserError("That person was deleted.");
   const to = await db.user.findFirst({ where: { id: toId, status: { not: "DISABLED" } }, select: { id: true, name: true } });
   if (!to) throw new UserError("Pick who should write it up.");
 
-  const title = paperTitle(req, person.name);
-  const details = paperDetails(req);
+  const title = paperTitle(req, person.name, custom);
+  const details = paperDetails(req, custom);
+  const name = formName(req, custom);
+  // The form's steps, filled in, are checkboxes on the task (owner 2026-11-05).
+  const subtasks = paperSteps(req, person.name, steps, custom).map((t) => ({ title: t, done: false }));
   const task = await db.$transaction(async (tx) => {
     const t = await tx.task.create({
-      data: { title, notes: details, kind: "task", dueDate: dateFromIso(isoFromDate(todayCentral())), dueTime: nowClock(), priority: 1, personId: person.id, assigneeId: to.id, createdById: from.id, sourceKey: `${SOURCE_PREFIX}${randomUUID()}` },
+      data: { title, notes: details, kind: "task", dueDate: dateFromIso(isoFromDate(todayCentral())), dueTime: nowClock(), subtasks, priority: 1, personId: person.id, assigneeId: to.id, createdById: from.id, sourceKey: `${SOURCE_PREFIX}${randomUUID()}` },
     });
-    await tx.timelineEntry.create({ data: { personId: person.id, kind: "note", authorId: from.id, body: `Asked ${first(to.name)} for ${aOrAn(formName(req))} in ClickContracts.${details ? `\n${details}` : ""}` } });
-    if (to.id !== from.id) await tx.notification.create({ data: { toId: to.id, fromId: from.id, personId: person.id, alert: true, text: `${first(from.name)} needs ${aOrAn(formName(req))} for ${person.name} in ClickContracts` } });
+    await tx.timelineEntry.create({ data: { personId: person.id, kind: "note", authorId: from.id, body: `Asked ${first(to.name)} for ${aOrAn(name)} in ClickContracts.${details ? `\n${details}` : ""}` } });
+    if (to.id !== from.id) await tx.notification.create({ data: { toId: to.id, fromId: from.id, personId: person.id, alert: true, text: `${first(from.name)} needs ${aOrAn(name)} for ${person.name} in ClickContracts` } });
     return t;
   });
 
   // The text is a check-in: a YES from their cell checks the task off (same as "Ask by text" steps).
-  const texted = await textTeammate(to.id, paperText(req, person.name, first(from.name)));
+  const texted = await textTeammate(to.id, paperText(req, person.name, first(from.name), custom));
   if (texted) await db.task.update({ where: { id: task.id }, data: { askState: "asked", askKind: "done", askedAt: new Date() } });
-  await logActivity(from.id, "create", "task", task.id, `Requested ${formName(req)} for ${person.name} from ${to.name}`);
+  await logActivity(from.id, "create", "task", task.id, `Requested ${name} for ${person.name} from ${to.name}`);
   return { taskId: task.id, to: first(to.name), texted };
 }
 

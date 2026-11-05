@@ -19,6 +19,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     { label: "Pipeline stages", href: "/admin/statuses", desc: "Buyer, seller and Under Contract columns" },
     { label: "Deal questions", href: "/admin/file-forms", desc: "Buyer and seller forms, and the purchase agreement", also: ["/admin/forms"] },
     { label: "Checklists", href: "/admin/templates", desc: "Task templates that fill in each deal, with automatic texts and emails", need: "templates" },
+    { label: "Paperwork steps", href: "/admin/paperwork", desc: "Step-by-step instructions for each Request paperwork form, and your own forms", need: "templates" },
     { label: "Calendar invites", href: "/admin/calendar", desc: "Which contract dates go on the calendar, and who's invited" },
   ] },
   { name: "Contacts", icon: "📇", blurb: "How people are organized.", items: [
