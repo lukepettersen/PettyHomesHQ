@@ -104,9 +104,10 @@ const tools: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: { person_id: str("Contact id") }, required: ["person_id"], additionalProperties: false } },
   { name: "edit_contract", description: "Prepare changes to a purchase agreement's terms. Not saved until the speaker replies YES.", strict: true,
     input_schema: { type: "object", properties: { contract_id: str("From contract_details"), changes: { type: "array", items: { type: "object", properties: { key: str("The term's key from contract_details"), value: str("The new value in the term's format, or \"\" to clear") }, required: ["key", "value"], additionalProperties: false } } }, required: ["contract_id", "changes"], additionalProperties: false } },
-  { name: "paperwork_forms", description: "The paperwork forms a teammate can write up in ClickContracts (key, name, fields, Change form boxes), what HQ already knows from this contact's deal, and who it can go to.", strict: true,
+  { name: "paperwork_forms", description: "The paperwork forms a teammate can write up in ClickContracts (key, name, fields, Change form boxes), what HQ already knows from this contact's deal, and who it can go to.",
     input_schema: { type: "object", properties: { person_id: str("Contact id") }, required: ["person_id"], additionalProperties: false } },
-  { name: "request_paperwork", description: "Prepare a paperwork request for a teammate (a task due now, with the form's steps, and a text to them). Not sent until the speaker replies YES.", strict: true,
+  // Not strict: with 17 strict tools the API's grammar got "too complex" (owner report 2026-11-05); HQ checks the input itself.
+  { name: "request_paperwork", description: "Prepare a paperwork request for a teammate (a task due now, with the form's steps, and a text to them). Not sent until the speaker replies YES.",
     input_schema: { type: "object", properties: {
       person_id: str("Contact id"), form: str("Form key from paperwork_forms"),
       values: { type: "array", items: { type: "object", properties: { key: str("Field key from paperwork_forms"), value: str("The value: date YYYY-MM-DD, money digits only") }, required: ["key", "value"], additionalProperties: false } },
@@ -456,7 +457,11 @@ export async function runTextAgent(user: { id: string; name: string }, text: str
       merged.push({ role: "user", content: results });
     }
   } catch (e) {
-    console.error("Text assistant failed:", e instanceof Anthropic.APIError ? e.status : e instanceof Error ? e.name : "error");
+    const why = e instanceof Anthropic.APIError ? `${e.status ?? ""} ${String((e.error as { error?: { message?: string } } | undefined)?.error?.message ?? e.message)}`.trim() : e instanceof Error ? e.name : "error";
+    console.error("Text assistant failed:", why.slice(0, 300));
+    // A request Claude rejects (400) won't fix itself by waiting, so say why (no message text is in it).
+    if (e instanceof Anthropic.APIError && e.status === 400) return `HQ's assistant hit an error (${why.slice(0, 160)}). Text "task …" for now; this needs a fix in HQ.`;
+    if (e instanceof Anthropic.APIError && /credit balance|billing/i.test(why)) return "HQ's assistant is out of Anthropic credit. Add credit at console.anthropic.com → Billing.";
     return 'HQ\'s assistant couldn\'t answer just now. Try again in a minute, or text "task …".';
   }
   // HQ writes what was done, so the receipt is always right; Claude's words cover answers and questions.
