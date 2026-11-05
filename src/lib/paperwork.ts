@@ -8,9 +8,8 @@ export type PaperOption = { key: string; label: string };
 export type PaperType = { key: string; label: string; fields: PaperField[]; options?: PaperOption[] };
 
 const address: PaperField = { key: "address", label: "Property address", type: "text" };
-const lcDate: PaperField = { key: "lcDate", label: "Listing contract dated", type: "date", hint: "The original listing contract date" };
 const offMarket: PaperField = { key: "offMarket", label: "Off-market date", type: "date" };
-/** What can change on the NorthstarMLS Listing Change Form (owner 2026-11-05: price change needs the listing contract date). */
+/** What can change on the NorthstarMLS Listing Change Form (owner 2026-11-05: only ask what Alyssa can't look up herself). */
 export const CHANGE_OPTIONS: PaperOption[] = [
   { key: "price", label: "Price change" }, { key: "expiration", label: "Expiration date change" }, { key: "temp", label: "Temp. not available for showing" },
   { key: "active", label: "Back to Active" }, { key: "cancelled", label: "Cancelled" }, { key: "other", label: "Something else" },
@@ -19,13 +18,12 @@ export const PAPER_TYPES: PaperType[] = [
   { key: "listing", label: "Listing contract", fields: [address, { key: "price", label: "List price", type: "money" }, { key: "start", label: "Listing starts", type: "date" }, { key: "end", label: "Listing expires", type: "date" }] },
   { key: "amendment", label: "Amendment", fields: [address, { key: "changes", label: "What's changing", type: "long" }] },
   { key: "change", label: "Change form", options: CHANGE_OPTIONS, fields: [
-    address, lcDate,
-    { key: "price", label: "Current list price", type: "money", when: ["price"] }, { key: "newPrice", label: "New list price", type: "money", when: ["price"] },
-    { key: "oldExpires", label: "Old expiration date", type: "date", when: ["expiration"] }, { key: "newExpires", label: "New expiration date", type: "date", when: ["expiration"] },
+    address, { key: "newPrice", label: "New list price", type: "money", when: ["price"] },
+    { key: "newExpires", label: "New expiration date", type: "date", when: ["expiration"] },
     { ...offMarket, when: ["temp", "cancelled"] }, { key: "changes", label: "Other changes", type: "long", when: ["other"], hint: 'Like "Bedrooms = 4"' },
   ] },
-  { key: "cancel", label: "Cancellation", fields: [address, lcDate, offMarket, { key: "reason", label: "Why it's cancelling", type: "long" }] },
-  { key: "relist", label: "Cancel & relist", fields: [address, lcDate, offMarket, { key: "newPrice", label: "New list price", type: "money" }, { key: "start", label: "New listing starts", type: "date" }, { key: "end", label: "New listing expires", type: "date" }] },
+  { key: "cancel", label: "Cancellation", fields: [address, offMarket, { key: "reason", label: "Why it's cancelling", type: "long" }] },
+  { key: "relist", label: "Cancel & relist", fields: [address, offMarket, { key: "newPrice", label: "New list price", type: "money" }, { key: "start", label: "New listing starts", type: "date" }, { key: "end", label: "New listing expires", type: "date" }] },
   { key: "other", label: "Other", fields: [{ key: "form", label: "Which form", type: "text" }, address] },
 ];
 
@@ -42,14 +40,14 @@ export type PaperSteps = Record<string, PaperStep[]>;
 const st = (text: string, when = ""): PaperStep => ({ text, when });
 const TOP = st("Search the listing in ClickContracts for its MLS number, then fill the top: Listing Number, Address {address}, Listing Office ID, Listing Agent ID and Listing Agent Name.");
 const CHANGE_FORM = st("In ClickContracts, open the NorthstarMLS Listing Change Form and Contract Amendment for {address}.");
-const DATED = st('Fill in "listing contract dated" with the original listing contract date: {lcDate}.');
+const DATED = st('Fill in "listing contract dated" with the original listing contract date (on the signed listing contract).');
 export const DEFAULT_STEPS: PaperSteps = {
   listing: [st("In ClickContracts, open a new listing contract for {client}."), st("Property {address}, list price {price}."), st("Listing starts {start} and expires {end}."), st("Send it for signatures.")],
   amendment: [st("In ClickContracts, open an amendment to the purchase agreement for {address}."), st("Write in the changes: {changes}"), st("Send it for signatures.")],
   change: [
     CHANGE_FORM, TOP,
-    st("Check Price Change and enter the New List Price: {newPrice} (was {price}).", "price"),
-    st("Check Expiration Date Change: Old Expiration Date {oldExpires}, New Expiration Date {newExpires}. If the old date has passed, it must be signed within 7 days of it; after that it has to be a new listing.", "expiration"),
+    st("Check Price Change and enter the New List Price: {newPrice}.", "price"),
+    st("Check Expiration Date Change: Old Expiration Date (from the listing contract), New Expiration Date {newExpires}. If the old date has passed, it must be signed within 7 days of it; after that it has to be a new listing.", "expiration"),
     st("Check Status Change → Temp. Not Avail. For Showing, Off-Market Date {offMarket}.", "temp"),
     st("Check Status Change → Active.", "active"),
     st("Check Status Change → Cancelled, Off-Market Date {offMarket}. The owners and the broker must sign to cancel.", "cancelled"),
@@ -155,7 +153,7 @@ export function paperSteps(r: PaperRequest, personName: string, steps: PaperStep
     if (k === "notes") return r.notes || "____";
     const v = r.values[k]?.trim();
     if (v) { const f = fieldOf(k); return f ? show(f, v) : v; }
-    return k === "lcDate" ? "____ (find it on the signed listing contract)" : "____";
+    return "____";
   });
   return (steps[t.key] ?? []).filter((s) => !s.when || checks.includes(s.when)).map((s) => fill(s.text));
 }

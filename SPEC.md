@@ -518,12 +518,15 @@ scrolls with it until its last card is on screen, then stays put while the middl
 - **Steps** *(owner request 2026-11-05)*: each form comes with step-by-step instructions, filled in with the
   request's details, as **checkboxes on the task** (and previewed in the pop-up under "Steps on the task"). A blank
   value reads "____"; the listing contract date says "find it on the signed listing contract".
+- **Only what she can't look up** *(owner 2026-11-05)*: the pop-up never asks for things Alyssa finds herself in
+  ClickContracts (MLS #, listing contract date, current price, old expiration date). The property address comes
+  from the deal and shows next to the client's name; it's only asked for when the deal has none.
 - **Change form** (NorthstarMLS Listing Change Form and Contract Amendment): "What's changing?" boxes — Price change,
-  Expiration date change, Temp. not available for showing, Back to Active, Cancelled, Something else — show only the
-  fields needed (current and new list price; old and new expiration; off-market date; other changes) plus "Listing contract dated"
-  (no MLS #: the first step has her search the listing in ClickContracts for it, owner 2026-11-05). HQ fills in what the seller deal knows: address, price, Listing agreement signed (the
-  contract date), Listing expires. Steps for unchecked boxes are left out. Cancellation and Cancel & relist also ask
-  for the listing contract date and the off-market date.
+  Expiration date change, Temp. not available for showing, Back to Active, Cancelled, Something else — and only the
+  new values: new list price; new expiration date; off-market date; other changes. A price change asks for just the
+  new price. Steps for unchecked boxes are left out; the steps tell her where to find the rest (search the listing
+  for the MLS number; the listing contract date is on the signed listing contract). Cancellation asks for the
+  off-market date and why; Cancel & relist for the off-market date, new price and new listing dates.
 - **Admin → Paperwork steps** (Deals; "Edit task templates" permission): edit each form's steps (fill-ins like
   {address}, {newPrice}, {lcDate}, {client}, {notes}; Change form steps can be "Only for" one box), reorder, remove,
   "Use the starting steps". **+ Add a form** adds your own (a name and steps; it asks for the property address and

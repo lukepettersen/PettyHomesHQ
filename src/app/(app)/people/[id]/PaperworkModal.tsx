@@ -26,7 +26,10 @@ export function PaperworkModal({ personId, personName, kind, prefill, team, onCl
   const custom = cfg?.custom ?? [];
   const types = allTypes(custom);
   const t = paperType(type, custom) ?? types[0];
+  // The address comes from the deal; it's only asked for when the deal has none (owner 2026-11-05).
+  const fromDeal = !!prefill.address?.trim();
   const fields = shownFields(t, values);
+  const asked = fields.filter((f) => !(f.key === "address" && fromDeal));
   const checks = checksOf(values);
   const toggle = (k: string) => setValues({ ...values, checks: (checks.includes(k) ? checks.filter((c) => c !== k) : [...checks, k]).join(",") });
   const request = { type: t.key, values: Object.fromEntries([...fields.map((f) => [f.key, values[f.key] ?? ""]), ...(t.options ? [["checks", values.checks ?? ""]] : [])]), notes };
@@ -54,7 +57,7 @@ export function PaperworkModal({ personId, personName, kind, prefill, team, onCl
     <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/40 p-4" role="dialog" aria-modal="true" aria-label={`Request paperwork for ${personName}`}>
       <div className="card w-full max-w-lg p-5">
         <h2 className="text-lg font-extrabold">Request paperwork</h2>
-        <p className="text-sm muted">For {personName}. It goes to ClickContracts to be written up.</p>
+        <p className="text-sm muted">For {personName}{fromDeal && t.fields.some((f) => f.key === "address") ? ` · ${values.address}` : ""}. It goes to ClickContracts to be written up.</p>
         <div className="mt-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Form">
           {types.map((p) => (
             <button key={p.key} type="button" role="radio" aria-checked={t.key === p.key} onClick={() => setType(p.key)}
@@ -72,7 +75,7 @@ export function PaperworkModal({ personId, personName, kind, prefill, team, onCl
           </fieldset>
         )}
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          {fields.map((f) => (
+          {asked.map((f) => (
             <label key={f.key} className={`text-sm font-semibold ${f.type === "long" || f.key === "address" || f.key === "form" ? "sm:col-span-2" : ""}`}>{f.label}{f.hint && <span className="ml-1 text-xs font-normal muted">{f.hint}</span>}
               {f.type === "long"
                 ? <textarea className={field} rows={3} value={values[f.key] ?? ""} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })} />
