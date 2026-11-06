@@ -70,7 +70,7 @@ export function BulkText({ ids: picked, onClose }: { ids: string[]; onClose: () 
       {prep && prep.sendsFrom && !jobId && (
         <div className="flex flex-col gap-3">
           <p className="text-sm">
-            <b>{n.toLocaleString()} {n === 1 ? "contact" : "contacts"}</b> get their own text from your HQ number ({prep.sendsFrom}).
+            <b>{n.toLocaleString()} {n === 1 ? "contact" : "contacts"}</b> {n === 1 ? "gets" : "get"} their own text from your HQ number ({prep.sendsFrom}).
             {couples > 0 && <> {couples.toLocaleString()} with two or more numbers {prep.groups ? "get one group text with all of them" : "get it on their first number (group texts are off in Admin → Integrations)"}.</>}
             {(prep.skipped.noPhone > 0 || prep.skipped.optedOut > 0) && <span className="muted"> Skipped: {[prep.skipped.noPhone && `${prep.skipped.noPhone} with no phone`, prep.skipped.optedOut && `${prep.skipped.optedOut} who replied STOP`].filter(Boolean).join(", ")}.</span>}
           </p>
