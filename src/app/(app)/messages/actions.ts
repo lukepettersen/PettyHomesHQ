@@ -93,9 +93,11 @@ export async function addPersonFromNumber(input: { number: string; name: string 
 async function attach(number: string, personId: string) {
   // Answered calls from the number, each with its own timeline entry (and recording, if any).
   const calls = await db.phoneCall.findMany({ where: { theirNumber: number, personId: null } });
-  const owners = new Map((await db.user.findMany({ where: { textNumber: { in: calls.map((c) => c.ourNumber) } }, select: { textNumber: true, name: true } })).map((u) => [u.textNumber, u.name]));
+  const team = await db.user.findMany({ where: { textNumber: { not: null } }, select: { id: true, textNumber: true, name: true } });
+  const owners = new Map(team.map((u) => [u.textNumber, u.name]));
+  const lineOf = (n: string) => team.find((u) => u.textNumber === n)?.id ?? null; // whose HQ number (last call / text count the owner's only)
   for (const c of calls) {
-    const entry = await db.timelineEntry.create({ data: { personId, kind: "call", outcome: "Answered", body: answeredBody(owners.get(c.ourNumber) ?? null, c.ourNumber, c.seconds), createdAt: c.createdAt } });
+    const entry = await db.timelineEntry.create({ data: { personId, kind: "call", outcome: "Answered", body: answeredBody(owners.get(c.ourNumber) ?? null, c.ourNumber, c.seconds), createdAt: c.createdAt, lineUserId: lineOf(c.ourNumber) } });
     await db.phoneCall.update({ where: { id: c.id }, data: { personId, entryId: entry.id } });
   }
   const loose = await db.textMessage.findMany({ where: { theirNumber: number, personId: null }, orderBy: { createdAt: "asc" } });
@@ -104,8 +106,8 @@ async function attach(number: string, personId: string) {
   await db.$transaction([
     db.textMessage.updateMany({ where: { id: { in: loose.map((m) => m.id) } }, data: { personId } }),
     ...loose.map((m) => db.timelineEntry.create({ data: m.kind === "missed_call"
-      ? { personId, kind: "call", outcome: "Missed call", body: `Called the business number (${formatPhone(m.ourNumber)}).`, createdAt: m.createdAt }
-      : { personId, kind: "text", outcome: m.direction === "in" ? "Received" : "Sent", body: m.body, authorId: m.sentById, createdAt: m.createdAt } })),
+      ? { personId, kind: "call", outcome: "Missed call", body: `Called the business number (${formatPhone(m.ourNumber)}).`, createdAt: m.createdAt, lineUserId: lineOf(m.ourNumber) }
+      : { personId, kind: "text", outcome: m.direction === "in" ? "Received" : "Sent", body: m.body, authorId: m.sentById, createdAt: m.createdAt, lineUserId: lineOf(m.ourNumber) } })),
     // Last text: the owner's texts only (owner 2026-11-06).
     db.person.update({ where: { id: personId }, data: { lastTextAt: loose.filter((m) => m.kind === "sms" && ownerLines.has(m.ourNumber)).at(-1)?.createdAt ?? undefined } }),
   ]);

@@ -42,9 +42,12 @@ export async function loadPeopleRows(): Promise<PersonRow[]> {
       _count: { select: { tasks: { where: { completedAt: null, deletedAt: null, dueDate: { gte: today } } } } },
     },
   });
-  // Last call / text / email from the timeline, for smart list filters and columns.
+  // Last call / text / email from the timeline, for smart list filters and columns: the owner's only (owner 2026-11-06:
+  // a teammate's calls, texts and emails don't count). Entries with no author and no line (older emails, imports) count.
+  const ownerIds = (await db.user.findMany({ where: { isOwner: true }, select: { id: true } })).map((u) => u.id);
   const lastBy = new Map<string, Date>();
-  for (const g of await db.timelineEntry.groupBy({ by: ["personId", "kind"], where: { deletedAt: null, kind: { in: ["call", "text", "email"] } }, _max: { createdAt: true } }))
+  for (const g of await db.timelineEntry.groupBy({ by: ["personId", "kind"], where: { deletedAt: null, kind: { in: ["call", "text", "email"] },
+    OR: [{ authorId: { in: ownerIds } }, { authorId: null, lineUserId: null }, { authorId: null, lineUserId: { in: ownerIds } }] }, _max: { createdAt: true } }))
     if (g._max.createdAt) lastBy.set(`${g.personId}:${g.kind}`, g._max.createdAt);
   // Each person's next open task: soonest due first, undated after (automatic sends still waiting aren't tasks).
   const nextTask = new Map<string, { title: string; due: string | null }>();

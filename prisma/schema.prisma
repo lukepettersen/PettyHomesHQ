@@ -257,6 +257,7 @@ model TimelineEntry {
   outcome   String?
   authorId  String?
   author    User?     @relation(fields: [authorId], references: [id])
+  lineUserId String? // calls, texts and emails that came in: whose HQ number or Gmail it was (owner 2026-11-06: "last call / text / email" count the owner's only)
   createdAt DateTime  @default(now())
   deletedAt DateTime?
 

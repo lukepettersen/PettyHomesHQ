@@ -128,7 +128,7 @@ export async function recordIncoming(o: { from: string; to: string; body: string
     if (isStopWord(body)) { await setTextStop(person.id, true); extra = " They replied STOP: tagged Text Unsubscribed, and texts to them are blocked."; }
     else if (isStartWord(body) && (await hasTextStop(person.id))) { await setTextStop(person.id, false); extra = " They opted back in: Text Unsubscribed tag removed."; }
     await db.$transaction([
-      db.timelineEntry.create({ data: { personId: person.id, kind: "text", outcome: "Received", body } }),
+      db.timelineEntry.create({ data: { personId: person.id, kind: "text", outcome: "Received", body, lineUserId: owner?.id ?? null } }),
       db.person.update({ where: { id: person.id }, data: textTouch(await isOwnerNumber(o.to)) }),
       ...(extra ? [db.timelineEntry.create({ data: { personId: person.id, kind: "system", body: extra.trim() } })] : []),
     ]);
@@ -147,7 +147,7 @@ export async function recordMissedCall(o: { from: string; to: string; sid: strin
   if (await db.textMessage.findUnique({ where: { twilioSid: key } })) return;
   const [owner, person] = await Promise.all([lineOwner(o.to), personForNumber(theirs)]);
   await db.textMessage.create({ data: { ourNumber: o.to, theirNumber: theirs, personId: person?.id ?? null, direction: "in", kind: "missed_call", twilioSid: key, status: "received" } });
-  if (person) await db.timelineEntry.create({ data: { personId: person.id, kind: "call", outcome: "Missed call", body: `Called ${owner ? `${owner.name.split(" ")[0]}'s` : "the"} business number (${formatPhone(o.to)}).` } });
+  if (person) await db.timelineEntry.create({ data: { personId: person.id, kind: "call", outcome: "Missed call", body: `Called ${owner ? `${owner.name.split(" ")[0]}'s` : "the"} business number (${formatPhone(o.to)}).`, lineUserId: owner?.id ?? null } });
   if (owner) await db.notification.create({ data: { toId: owner.id, personId: person?.id ?? null, alert: true, link: `/messages?n=${theirs}`, text: `Missed call from ${person?.name ?? formatPhone(theirs)}` } });
 }
 
@@ -158,7 +158,7 @@ export async function recordAnsweredCall(o: { from: string; to: string; sid: str
   const data = { ourNumber: o.to, theirNumber: theirs, personId: person?.id ?? null, seconds: Math.max(0, Math.round(o.seconds) || 0), ...(o.recordingSid ? { recordingSid: o.recordingSid } : {}) };
   const call = await db.phoneCall.upsert({ where: { callSid: o.sid }, create: { callSid: o.sid, ...data }, update: data });
   if (!person || call.entryId) return;
-  const entry = await db.timelineEntry.create({ data: { personId: person.id, kind: "call", outcome: "Answered", body: answeredBody(owner?.name ?? null, o.to, call.seconds), createdAt: call.createdAt } });
+  const entry = await db.timelineEntry.create({ data: { personId: person.id, kind: "call", outcome: "Answered", body: answeredBody(owner?.name ?? null, o.to, call.seconds), createdAt: call.createdAt, lineUserId: owner?.id ?? null } });
   await db.$transaction([
     db.phoneCall.update({ where: { id: call.id }, data: { entryId: entry.id } }),
     db.person.update({ where: { id: person.id }, data: { lastContactAt: new Date() } }),

@@ -111,8 +111,9 @@ async function recordGroupMessage(t: Thread, o: { from: string; body: string; si
     await db.person.update({ where: { id: sender.person.id }, data: textTouch(await isOwnerNumber(t.ourNumber)) });
   }
   // On every contact in the group (once each, even with two numbers in it), so each timeline shows the whole conversation.
+  const line = await lineOwner(t.ourNumber);
   for (const m of uniqueContacts(people)) if (m.person) {
-    await db.timelineEntry.create({ data: { personId: m.person.id, kind: "text", outcome: "Received", body: `Group text from ${nameOf(sender)}: ${o.body}` } });
+    await db.timelineEntry.create({ data: { personId: m.person.id, kind: "text", outcome: "Received", body: `Group text from ${nameOf(sender)}: ${o.body}`, lineUserId: line?.id ?? null } });
     revalidatePath(`/people/${m.person.id}`);
   }
   const owner = await lineOwner(t.ourNumber);

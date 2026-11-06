@@ -197,7 +197,7 @@ Principles:
     column (a deal under contract counts in its column, not its old stage), or "No open deal".
   - *(2026-10-14)* More specific filters: Stage / Type / Source / Assigned to (incl. Nobody)
     "is any of / is none of" (several at once); Tags "has any of / has all of / has none
-    of"; **Last call, Last text, Last email** and Last contact (any) more/less than N days
+    of"; **Last call, Last text, Last email** and Last contact (any) more/less than N days (*owner 2026-11-06*: Last call / Last text / Last email count the **owner's** calls, texts and emails only — sent by the owner, or received on the owner's HQ number or Gmail; a teammate's count only toward Last contact. Each call/text/email on the timeline records whose number or Gmail it came in on; past ones were filled in from the phone records, and older incoming emails and Follow Up Boss imports with no author count as the owner's. Last text dates a teammate's text had moved were reset to the owner's latest text)
     or never; Added to HQ; Birthday / Homeiversary in the next N days; Has an email / phone.
   - **Columns** *(2026-10-14)*: each smart list (and All people) picks and orders its columns
     from Stage, Type, Company, Phone, Email, Last contact/call/text/email, Follow up, Tags,

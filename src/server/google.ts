@@ -333,7 +333,7 @@ async function syncSince(fromMs: number, accountEmail: string, accountUserId: st
       const twin = await db.timelineEntry.findFirst({ where: { personId, kind: "email", createdAt: { gte: new Date(at.getTime() - 120000), lte: new Date(at.getTime() + 120000) }, body: { contains: ` · ${subject}\n` } }, select: { id: true } });
       if (twin) continue;
       try {
-        await db.timelineEntry.create({ data: { personId, kind: "email", gmailId: `${id}:${personId}`, body: `${line} · ${subject}\n\n${text}`, createdAt: at, authorId: outbound ? accountUserId : null } });
+        await db.timelineEntry.create({ data: { personId, kind: "email", gmailId: `${id}:${personId}`, body: `${line} · ${subject}\n\n${text}`, createdAt: at, authorId: outbound ? accountUserId : null, lineUserId: accountUserId } });
         await db.person.updateMany({ where: { id: personId, OR: [{ lastContactAt: null }, { lastContactAt: { lt: at } }] }, data: { lastContactAt: at } });
         added++;
       } catch { /* already added by another run */ }
