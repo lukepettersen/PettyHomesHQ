@@ -1,6 +1,7 @@
 "use client";
 
 import { BulkEmail } from "./BulkEmail";
+import { BulkText } from "./BulkText";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -64,8 +65,8 @@ function cellOf(k: string, r: Row): [React.ReactNode, string | number] {
   }
 }
 
-export function PeopleTable({ rows, options, canDelete, canExport, exportHref, emptyText, listId, columns, sort, page, pages, total, viewQuery, allIds }: {
-  rows: Row[]; options: Opt; canDelete: boolean; canExport: boolean; exportHref: string; emptyText: string; listId: string | null; columns: string[];
+export function PeopleTable({ rows, options, canDelete, canExport, canText, exportHref, emptyText, listId, columns, sort, page, pages, total, viewQuery, allIds }: {
+  rows: Row[]; options: Opt; canDelete: boolean; canExport: boolean; canText?: boolean; exportHref: string; emptyText: string; listId: string | null; columns: string[];
   sort: string; page: number; pages: number; total: number; viewQuery: string; allIds: string[];
 }) {
   const [sel, setSel] = useState<Set<string>>(new Set());
@@ -101,6 +102,7 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
   const [confirm, setConfirm] = useState(false);
   const [msg, setMsg] = useState("");
   const [emailing, setEmailing] = useState(false);
+  const [texting, setTexting] = useState(false);
   const [pending, start] = useTransition();
   const router = useRouter();
   const sorted = rows; // already in order (HQ sorts the whole list, not just this page)
@@ -146,6 +148,7 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
   return (
     <>
       {emailing && <BulkEmail ids={ids} onClose={() => setEmailing(false)} />}
+      {texting && <BulkText ids={ids} onClose={() => setTexting(false)} />}
       {(ids.length > 0 || msg) && (
         <div className="fixed bottom-4 left-1/2 z-30 flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-nowrap items-center gap-1.5 overflow-x-auto whitespace-nowrap rounded-xl md:flex-wrap md:whitespace-normal bg-charcoal px-3 py-2 text-sm text-white shadow-[0_8px_24px_rgba(0,0,0,.25)]">
           {ids.length > 0 && <b className="mr-2">{ids.length.toLocaleString()} selected</b>}
@@ -155,6 +158,7 @@ export function PeopleTable({ rows, options, canDelete, canExport, exportHref, e
               <button key={k} type="button" className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" onClick={() => { setAction(k); setValue(k === "contacted" ? new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" }) : ""); setMsg(""); }}>{l}</button>
             ))}
             <button type="button" className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" onClick={() => { setEmailing(true); setMsg(""); }}>Email</button>
+            {canText && <button type="button" className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" onClick={() => { setTexting(true); setMsg(""); }}>Text</button>}
             {canExport && <a className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" href={`/api/export/people?ids=${ids.join(",")}`}>Export</a>}
             {canExport && <a className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" title="Mailing name and mailing address for direct mail" href={`/api/export/people?mail=1&ids=${ids.join(",")}`}>Mailing list</a>}
             {canDelete && <button type="button" className="rounded-md bg-white/15 px-2.5 py-1 font-semibold text-red-200 hover:bg-white/25" disabled={pending}

@@ -6,7 +6,7 @@ import { UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { isConnected, textingEnabled } from "@/server/integrations";
 import { addGroupSender, closeConversation, conversationParticipants, createGroup, postGroupMessage, publicBase, setGroupAddress, uploadGroupPhoto } from "@/server/twilio";
-import { COPY_WINDOW, dailyCap, hasTextStop, lineOwner, personForNumber, recordIncoming, recordReaction, saveOnce, setTextStop } from "@/server/texting";
+import { COPY_WINDOW, dailyCap, hasTextStop, isOwnerNumber, lineOwner, personForNumber, recordIncoming, recordReaction, saveOnce, setTextStop, textTouch } from "@/server/texting";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { centralDayStart, isStartWord, isStopWord, MAX_TEXT, otherRoute, toE164 } from "@/lib/texting";
 import { groupMembers, groupTitle, isGroupKey, MAX_GROUP, otherRecipients, readParticipants } from "@/lib/groupText";
@@ -108,7 +108,7 @@ async function recordGroupMessage(t: Thread, o: { from: string; body: string; si
   if (sender.person) {
     if (isStopWord(o.body)) await setTextStop(sender.person.id, true);
     else if (isStartWord(o.body) && (await hasTextStop(sender.person.id))) await setTextStop(sender.person.id, false);
-    await db.person.update({ where: { id: sender.person.id }, data: { lastTextAt: new Date(), lastContactAt: new Date() } });
+    await db.person.update({ where: { id: sender.person.id }, data: textTouch(await isOwnerNumber(t.ourNumber)) });
   }
   // On every contact in the group (once each, even with two numbers in it), so each timeline shows the whole conversation.
   for (const m of uniqueContacts(people)) if (m.person) {
@@ -208,10 +208,11 @@ export async function sendGroupText(user: { id: string; name: string }, o: { sid
     if (!r.ok) throw new UserError(r.error);
     await db.textMessage.create({ data: { ourNumber, theirNumber: o.sid, direction: "out", body: textWithPhotos(part.body, part.photo ? [part.photo] : []), media: part.photo ? [{ url: part.photo, type: "image" }] : [], twilioSid: r.sid, status: r.status, sentById: user.id, readAt: new Date() } });
   }
+  const mine = await isOwnerNumber(ourNumber);
   for (const m of uniqueContacts(people)) if (m.person) {
     await db.$transaction([
       db.timelineEntry.create({ data: { personId: m.person.id, kind: "text", outcome: "Sent", body: `Group text: ${[text, photos.length ? "📷 Photo" : ""].filter(Boolean).join("\n")}`, authorId: user.id } }),
-      db.person.update({ where: { id: m.person.id }, data: { lastTextAt: new Date(), lastContactAt: new Date() } }),
+      db.person.update({ where: { id: m.person.id }, data: textTouch(mine) }),
     ]);
     revalidatePath(`/people/${m.person.id}`);
   }

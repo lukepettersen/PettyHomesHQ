@@ -71,7 +71,8 @@ export async function completeTask(taskId: string) {
       // A text task checked off is logged as a text (Texts filter, last text); other tasks as "Task done".
       if (t.personId) await tx.timelineEntry.create({ data: { personId: t.personId, kind: t.kind === "text" ? "text" : "task", body: t.title, taskId: t.id, authorId: user.id } });
       // Checking off a text task means they were texted: it restarts their follow-up ("Due for a touch").
-      if (t.personId && t.kind === "text") await tx.person.update({ where: { id: t.personId }, data: { lastTextAt: new Date(), lastContactAt: new Date() } });
+      // Last text counts the owner's texts only (owner 2026-11-06); a teammate's still counts as a contact.
+      if (t.personId && t.kind === "text") await tx.person.update({ where: { id: t.personId }, data: user.isOwner ? { lastTextAt: new Date(), lastContactAt: new Date() } : { lastContactAt: new Date() } });
       if (t.repeat) {
         const from = t.dueDate ? isoFromDate(t.dueDate) : isoFromDate(todayCentral());
         const n = await tx.task.create({
@@ -126,7 +127,7 @@ export async function completeDateTask(key: string) {
       db.task.update({ where: { id: t.id }, data: { completedAt: new Date(), completedById: user.id, deletedAt: null } }),
       ...(t.personId ? [db.timelineEntry.create({ data: { personId: t.personId, kind: t.kind === "text" ? "text" : "task", body: t.title, taskId: t.id, authorId: user.id } })] : []),
       // "Text Happy Birthday" checked off: they were texted, so their follow-up restarts.
-      ...(t.personId && t.kind === "text" ? [db.person.update({ where: { id: t.personId }, data: { lastTextAt: new Date(), lastContactAt: new Date() } })] : []),
+      ...(t.personId && t.kind === "text" ? [db.person.update({ where: { id: t.personId }, data: user.isOwner ? { lastTextAt: new Date(), lastContactAt: new Date() } : { lastContactAt: new Date() } })] : []),
     ]);
     await logActivity(user.id, "update", "task", t.id, `Completed "${t.title}"`);
     refresh(t.personId);
@@ -189,7 +190,7 @@ export async function logTouch(personId: string) {
     if (!p) throw new UserError("That person was deleted.");
     await db.$transaction([
       db.timelineEntry.create({ data: { personId: p.id, kind: "text", body: "Text logged from Tasks (Due for a touch)", authorId: user.id } }),
-      db.person.update({ where: { id: p.id }, data: { lastContactAt: new Date(), lastTextAt: new Date() } }),
+      db.person.update({ where: { id: p.id }, data: user.isOwner ? { lastContactAt: new Date(), lastTextAt: new Date() } : { lastContactAt: new Date() } }),
     ]);
     await logActivity(user.id, "create", "timeline", p.id, `Logged a text for ${p.name} (Due for a touch)`);
     refresh(p.id);

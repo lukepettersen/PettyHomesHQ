@@ -218,6 +218,17 @@ Principles:
 - Bulk actions on selected rows (Add tag; **Remove tag** picks from the existing tags, and both say how many people
   changed, owner request 2026-10-27): Add tag, Change stage, Set follow-up, Assign, Export,
   Delete, **Email** *(owner request 2026-10-20)*.
+- **Mass text (Text)** *(owner request 2026-11-06, for events)*: select people, then **Text**. One text per contact
+  from your HQ number; a contact with two or more numbers (a couple) gets **one group text** with all of them (with
+  group texts off in Admin → Integrations, just their first number). Write it or pick a text template; merge fields
+  fill in per contact ({first_name} gives a couple both names); optional flyer photo; **Preview** shows it for the first
+  person. HQ adds "Reply STOP to opt out." at the end. It skips anyone tagged Text Unsubscribed or with no phone (and
+  checks again right before each send). Sent in the background by the minute timer, **one every 1–2 minutes at
+  random, 9am–7pm Central only**, and stops for the day at your daily text limit (texts you send by hand count too),
+  picking up at 9am the next day, so a big list takes a few days (the pop-up estimates how many). Each send goes on
+  the contact's timeline and Messages; replies come in as normal threads. **People → Mass texts** lists your mass
+  texts with progress, skipped and didn't-send counts, and **Stop** (two-step); one mass text at a time per number.
+  Write links out in full (carriers block short links). The owner's Twilio campaign covers marketing (owner 2026-11-06).
 - **Mass email (Email):** up to 1,000 people at a time. Pick **what kind of email it is** (owner request 2026-11-02;
   the kinds are edited in Admin → Email templates, default Monthly newsletter, Events & invites, Market updates), pick a
   template or write it (merge fields fill in for each person), preview as the first person gets it, then **Send to N**
@@ -689,7 +700,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
 - A contact opened from Tasks shows **‹ Prev · 3 of 12 in Today · Next ›** to step through the people
   in the list you came from, in the order shown *(owner request 2026-10-20)*.
   - Built-in: **Clients** (grouped by client, click name to open), **Due for a touch**
-    (people past their follow-up frequency **since their last text**; texts are the touch, owner decision 2026-10-14 — calls and emails don't restart it; the card shows "Last text …"; **Log text** records a text on their timeline and restarts the clock, as do logging a text on the timeline, checking off a text task (incl. "Text Happy Birthday"; it's logged on the timeline as a text, not "Task done"), the bulk action **Mark texted**, and the last text date pulled from Follow Up Boss; **Spread out** *(owner request 2026-10-15)*: "Show 5 a day" gives everyone due right now a day to appear — the first 5 today, the next 5 the next weekday, and so on — without faking texts, so timelines and "Last text" stay true; anyone not texted stays on the list; **Undo spread out (N waiting)** puts everyone back right away; **weekdays only** *(owner request 2026-10-24)*: the list shows Monday to Friday and is empty on Saturday and Sunday; spreading skips weekends (started on a weekend, the first batch is Monday), and clicking Spread out again re-spreads everyone due, including people already waiting), **Important dates** (each birthday/homeiversary task shows the
+    (people past their follow-up frequency **since their last text**; **last text counts the owner's texts only** *(owner 2026-11-06: "it should not count if alyssa texts someone")*: texts sent from or received on the owner's HQ number, and texts the owner logs or checks off; a teammate's texts still count as **last contact** (bulk **Mark texted** sets it for anyone who uses it); texts are the touch, owner decision 2026-10-14 — calls and emails don't restart it; the card shows "Last text …"; **Log text** records a text on their timeline and restarts the clock, as do logging a text on the timeline, checking off a text task (incl. "Text Happy Birthday"; it's logged on the timeline as a text, not "Task done"), the bulk action **Mark texted**, and the last text date pulled from Follow Up Boss; **Spread out** *(owner request 2026-10-15)*: "Show 5 a day" gives everyone due right now a day to appear — the first 5 today, the next 5 the next weekday, and so on — without faking texts, so timelines and "Last text" stay true; anyone not texted stays on the list; **Undo spread out (N waiting)** puts everyone back right away; **weekdays only** *(owner request 2026-10-24)*: the list shows Monday to Friday and is empty on Saturday and Sunday; spreading skips weekends (started on a weekend, the first batch is Monday), and clicking Spread out again re-spreads everyone due, including people already waiting), **Important dates** (each birthday/homeiversary task shows the
     name and mailing address with **Copy**, for writing the card without opening their page; a birthday is addressed to just the
     birthday person with their last name ("Lena Ortiz"), a homeiversary to the mailing name; owner request 2026-10-27), **Recurring**,
     **Misc** (any task with no client).

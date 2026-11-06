@@ -48,6 +48,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
               <input className="input pl-9" type="search" name="q" defaultValue={q} placeholder="Search name, phone, email, tag…" aria-label="Search people" />
             </form>
             <Link href="/people/emails" className="btn">Mass emails</Link>
+            <Link href="/people/texts" className="btn">Mass texts</Link>
             <AddPersonButton options={options} />
           </div>
         </div>
@@ -67,7 +68,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
             nextTask: r.nextTask, today: isoFromDate(todayCentral()),
           }))}
           options={{ stages: options.stages, tags: options.tags, followUp: options.followUp, team: options.team }}
-          canDelete={hasPermission(user.permissions, "deleteRecords")} canExport={hasPermission(user.permissions, "exportData")}
+          canDelete={hasPermission(user.permissions, "deleteRecords")} canExport={hasPermission(user.permissions, "exportData")} canText={hasPermission(user.permissions, "sendTexts")}
           exportHref={`/api/export/people?${exportParams}`}
           emptyText={rows.length === 0 ? "No one here yet. Click “+ Add person” to add your first contact." : "No one matches."} />
       </main>

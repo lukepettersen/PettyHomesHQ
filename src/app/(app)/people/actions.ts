@@ -146,7 +146,7 @@ export async function addTimelineEntry(input: z.input<typeof entrySchema>) {
     const snippet = v.body.length > 140 ? `${v.body.slice(0, 140)}…` : v.body;
     await db.$transaction([
       db.timelineEntry.create({ data: { personId: v.personId, kind: v.kind, body: v.body, outcome: v.kind === "call" ? v.outcome ?? null : null, authorId: user.id } }),
-      db.person.update({ where: { id: v.personId }, data: { lastContactAt: new Date(), ...(v.kind === "text" ? { lastTextAt: new Date() } : {}) } }),
+      db.person.update({ where: { id: v.personId }, data: { lastContactAt: new Date(), ...(v.kind === "text" && user.isOwner ? { lastTextAt: new Date() } : {}) } }), // last text: the owner's only (2026-11-06)
       ...mentioned.map((m) => db.notification.create({ data: { toId: m.id, fromId: user.id, personId: v.personId, text: `${user.name.split(" ")[0]} mentioned you on ${person.name}: "${snippet}"` } })),
     ]);
     await logActivity(user.id, "create", "timeline", v.personId, `Logged ${v.kind} for ${person.name}${mentioned.length ? ` (mentioned ${mentioned.map((m) => m.name).join(", ")})` : ""}`);

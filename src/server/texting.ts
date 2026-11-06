@@ -55,6 +55,16 @@ export async function setTextStop(personId: string, on: boolean) {
   if (on) await db.personTag.upsert({ where: { personId_tagId: { personId, tagId: tag.id } }, create: { personId, tagId: tag.id }, update: {} });
   else await db.personTag.deleteMany({ where: { personId, tagId: tag.id } });
 }
+/**
+ * "Last text" (and the follow-up clock) counts the owner's texts only (owner 2026-11-06: "it should not count if
+ * alyssa texts someone"): texts sent from or received on the owner's HQ number.
+ */
+export async function isOwnerNumber(ourNumber: string | null | undefined): Promise<boolean> {
+  return !!ourNumber && (await db.user.count({ where: { isOwner: true, textNumber: ourNumber } })) > 0;
+}
+/** The data to save on a contact for a text: last contact always; last text only on the owner's number. */
+export const textTouch = (mine: boolean) => (mine ? { lastTextAt: new Date(), lastContactAt: new Date() } : { lastContactAt: new Date() });
+
 export async function hasTextStop(personId: string) {
   return (await db.personTag.count({ where: { personId, tag: { name: TEXT_STOP_TAG } } })) > 0;
 }
@@ -119,7 +129,7 @@ export async function recordIncoming(o: { from: string; to: string; body: string
     else if (isStartWord(body) && (await hasTextStop(person.id))) { await setTextStop(person.id, false); extra = " They opted back in: Text Unsubscribed tag removed."; }
     await db.$transaction([
       db.timelineEntry.create({ data: { personId: person.id, kind: "text", outcome: "Received", body } }),
-      db.person.update({ where: { id: person.id }, data: { lastTextAt: new Date(), lastContactAt: new Date() } }),
+      db.person.update({ where: { id: person.id }, data: textTouch(await isOwnerNumber(o.to)) }),
       ...(extra ? [db.timelineEntry.create({ data: { personId: person.id, kind: "system", body: extra.trim() } })] : []),
     ]);
   }
@@ -226,7 +236,7 @@ export async function sendTextAs(user: { id: string; name: string }, o: { person
   if (person) {
     await db.$transaction([
       db.timelineEntry.create({ data: { personId: person.id, kind: "text", outcome: "Sent", body: body && photos.length ? `${body}\n📷 Photo` : saved, authorId: user.id } }),
-      db.person.update({ where: { id: person.id }, data: { lastTextAt: new Date(), lastContactAt: new Date() } }),
+      db.person.update({ where: { id: person.id }, data: textTouch(await isOwnerNumber(me.textNumber)) }),
     ]);
     revalidatePath(`/people/${person.id}`);
   }

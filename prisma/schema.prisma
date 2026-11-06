@@ -771,6 +771,28 @@ model Showing {
 
 /// A mass email being sent in the background by the minute timer (owner report 2026-11-02: a send from the browser
 /// stopped at 55 of 241 when HQ restarted). One row per send; recipients are worked through a group at a time.
+/// Mass text from People (owner request 2026-11-06): one text per contact (a couple's numbers as one group text),
+/// sent slowly by the minute timer 9am–7pm Central within the sender's daily cap.
+model BulkTextJob {
+  id          String    @id @default(cuid())
+  userId      String // who it sends as (their HQ number)
+  body        String // as typed, merge fields not yet filled; the opt-out line is added when sent
+  media       Json      @default("[]") // photo urls (our email-images uploads)
+  personIds   Json // everyone it's for, in order
+  doneIds     Json      @default("[]") // handled so far (sent, skipped or failed)
+  sent        Int       @default(0)
+  skipped     Int       @default(0) // STOP or no phone by the time their turn came
+  failed      Json      @default("[]") // [{ name, error }]
+  state       String    @default("sending") // sending | done | stopped
+  error       String?
+  nextAt      DateTime  @default(now()) // the next text goes at or after this (gap, hours, daily cap)
+  lockedUntil DateTime? // a timer tick is working on it
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([state])
+}
+
 model BulkEmailJob {
   id          String    @id @default(cuid())
   userId      String // who it sends as (their Gmail)

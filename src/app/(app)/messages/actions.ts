@@ -100,12 +100,14 @@ async function attach(number: string, personId: string) {
   }
   const loose = await db.textMessage.findMany({ where: { theirNumber: number, personId: null }, orderBy: { createdAt: "asc" } });
   if (!loose.length) return;
+  const ownerLines = new Set((await db.user.findMany({ where: { isOwner: true, textNumber: { not: null } }, select: { textNumber: true } })).map((u) => u.textNumber!));
   await db.$transaction([
     db.textMessage.updateMany({ where: { id: { in: loose.map((m) => m.id) } }, data: { personId } }),
     ...loose.map((m) => db.timelineEntry.create({ data: m.kind === "missed_call"
       ? { personId, kind: "call", outcome: "Missed call", body: `Called the business number (${formatPhone(m.ourNumber)}).`, createdAt: m.createdAt }
       : { personId, kind: "text", outcome: m.direction === "in" ? "Received" : "Sent", body: m.body, authorId: m.sentById, createdAt: m.createdAt } })),
-    db.person.update({ where: { id: personId }, data: { lastTextAt: loose.filter((m) => m.kind === "sms").at(-1)?.createdAt ?? undefined } }),
+    // Last text: the owner's texts only (owner 2026-11-06).
+    db.person.update({ where: { id: personId }, data: { lastTextAt: loose.filter((m) => m.kind === "sms" && ownerLines.has(m.ourNumber)).at(-1)?.createdAt ?? undefined } }),
   ]);
 }
 
