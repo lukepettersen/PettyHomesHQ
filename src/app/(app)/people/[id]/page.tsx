@@ -22,6 +22,7 @@ import { TEXT_STOP_TAG } from "@/lib/texting";
 import { formatPhone } from "@/lib/normalize";
 import { TasksCard } from "./TasksCard";
 import { FileTabs } from "./FileTabs";
+import { ScheduledList } from "@/components/ScheduledList";
 import { PipelineCard } from "./PipelineCard";
 import { AppointmentsCard } from "./AppointmentsCard";
 import { FilesCard } from "./FilesCard";
@@ -138,6 +139,8 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
             <InfoCard id={p.id} name={p.name} lastContactDays={daysAgo(p.lastContactAt)}
               addresses={p.addresses.length ? p.addresses.map((x) => ({ label: x.label, value: x.value, mailing: x.mailing })) : p.address ? [{ label: "", value: p.address, mailing: false }] : []}
               phones={p.phones.map((x) => ({ label: x.label, value: x.number }))} emails={p.emails.map((x) => ({ label: x.label, value: x.address }))} />
+            {/* Phone: scheduled texts & emails right under the contact info (owner request 2026-11-07); wide screens show them above the timeline. */}
+            {scheduled.length > 0 && <div className="mt-3 lg:hidden [&>section]:mb-0"><ScheduledList rows={scheduled} /></div>}
           </div>
           <div className="order-4 flex min-w-0 flex-col gap-3">
             <DetailsCard id={p.id} options={options} stageId={p.stageId} sourceId={p.sourceId} assignedToId={p.assignedToId}

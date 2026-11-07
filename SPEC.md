@@ -112,7 +112,7 @@ Principles:
   `#bbbbb3`; Mukta Mahee font; P-house logo.
 - Desktop first; works in a phone browser. A phone-friendly contact page and Today view are
   a Phase 1 item *(decided, §17)*.
-  On a phone the contact page shows contact info, then Tasks, then Timeline, then the other
+  On a phone the contact page shows contact info, then scheduled texts & emails (when any), then Tasks, then Timeline, then the other
   cards; the Tasks sidebar becomes a row of chips and task details open full screen.
 
 - **Home-screen app** *(2026-10-14)*: "Add to Home Screen" gives the white house mark on moss,
@@ -967,7 +967,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
   texts** (when, to whom by name, by whom, the message shortened; click it to read the whole text) with **Cancel** for the person who scheduled it or anyone allowed to
   delete records; one that couldn't send shows "Not sent" with the reason for a week, and the scheduler gets a bell
   alert. The **Scheduled** box is its own section at the top of the contact page's middle column, above the deal tabs
-  (owner request 2026-10-30), whenever anything is set: one-off scheduled texts and emails, automatic checklist
+  (owner request 2026-10-30; **on a phone it's right under the contact info**, owner request 2026-11-07), whenever anything is set: one-off scheduled texts and emails, automatic checklist
   texts/emails, and check-in texts from "Ask by text" steps (to whom: the teammate's cell, with the question it will
   ask; **Turn off** stops the text and keeps the step). **Not a task while it's set to send** (owner request 2026-10-30, so nobody sends it twice by hand): an automatic checklist text/email, an "Ask by text" step until its check-in text goes out (and it doesn't ring as an alarm while the text waits for your reply either, owner report 2026-11-02), and a step someone scheduled a text or email for (Draft → Schedule), stays off the Tasks page, the contact's Tasks card, alarms and the Pipeline "next task" until it sends (then it's checked off). It still shows in the Scheduled box and on the deal's checklist; if it fails, is turned off or the scheduled send is cancelled, it's a normal task again. **Turn off** is for that one person only and sticks, even through "Update the open deals"; it can't be switched back on (send it by hand from Draft, which also checks it off). Each automatic or check-in row names the checklist it came from ("Automatic text from the "Consult scheduled" checklist: …"). Automatic and check-in steps still waiting for their date show
   "No date yet" / "Waits for its date" and start counting down once the date they're timed from is set. One whose send time has already passed (e.g. a 9:00am email on a call booked at 9:22am) shows "Sending now" and goes out within a minute (owner report 2026-11-02). Steps added before 2026-10-30 that lost this while waiting for a date get it back once on deploy (only ones due after today start waiting to send).

@@ -62,7 +62,8 @@ export function FileTabs(p: Props) {
   return (
     <>
       {/* Its own section at the top (owner request 2026-10-30): anything set to send later, from a deal or not. */}
-      <Scheduled rows={p.scheduled} />
+      {/* On a phone it shows at the top of the page instead, under their contact info (owner request 2026-11-07). */}
+      <div className="hidden lg:block"><Scheduled rows={p.scheduled} /></div>
       <div role="tablist" aria-label="Files and timeline" className="flex gap-1 overflow-x-auto border-b border-misty">
         {active.map((f) => (
           <button key={f.id} role="tab" type="button" aria-selected={shown === f.id} onClick={() => setTab(f.id)}
