@@ -43,6 +43,13 @@ describe("ShowingTime emails (owner request 2026-11-01)", () => {
     expect(s.agent).toEqual({ name: "Bruce Nelson", company: "Bridge Realty, LLC", mobile: "(952) 555-1514", office: "952-555-0021", email: "brucenelsonrealestate@outlook.com" });
     expect(s.seller).toEqual({ name: "Sue Lane", phone: "(612) 555-4835", email: "sue@example.com" });
   });
+  it("reads a 2nd showing (owner report 2026-11-09)", () => {
+    const s = parseShowingEmail("2ND SHOWING CONFIRMED | 4385 Trenton Lane N Unit# #212, Plymouth, MN 55442 Sun, 11/1 12:30 PM", CONFIRMED.replace("Showing Confirmed", "2nd Showing Confirmed"), new Date("2026-10-29T14:50:18Z"))!;
+    expect(s.kind).toBe("confirmed");
+    expect(s.side).toBe("listing");
+    expect(s.address).toBe("4385 Trenton Lane N #212, Plymouth, MN 55442");
+    expect(parseShowingEmail("YOUR 3RD SHOWING CONFIRMED | 121 Fox Hollow Drive, Chanhassen, MN 55317 Fri, 10/30 1:15 PM", "", new Date())?.side ?? "buyer").toBe("buyer");
+  });
   it("reads a showing we booked for a buyer: the listing agent, and their no-texts note (owner request 2026-11-03)", () => {
     const body = `| In regards to the Showing on 121 Fox Hollow Drive scheduled for Friday, October 30, 2026 1:15 PM - 2:15 PM Click here |
 | Showing Confirmed |

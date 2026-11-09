@@ -829,7 +829,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
 ### Showings from ShowingTime *(owner request 2026-11-01)*
 
 - HQ reads ShowingTime's emails in the Gmail it already syncs (now also on the app's own minute timer, at most every 3
-  minutes, so it works when nobody has HQ open). Only **"SHOWING CONFIRMED | …"** (someone showing one of our
+  minutes, so it works when nobody has HQ open). Only **"SHOWING CONFIRMED | …"** (also "2ND / 3RD … SHOWING CONFIRMED", a repeat visit, owner report 2026-11-09) (someone showing one of our
   listings, "Presented by" a team member) and **"YOUR SHOWING CONFIRMED | …"** (a showing we booked for a buyer, owner
   request 2026-11-03) start anything. Walk-throughs, agent previews, appraisals and feedback emails are ignored.
 - **Showings we book for a buyer** (owner request 2026-11-03): the **listing agent** ("Listing Presented By") is found or

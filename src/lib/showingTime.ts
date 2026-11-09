@@ -51,7 +51,8 @@ export function splitAgent(text: string, email: string): { name: string; company
 /** What a ShowingTime email says, or null when HQ should leave it alone. `received` dates the year. */
 export function parseShowingEmail(subject: string, body: string, received: Date): ShowingEmail | null {
   const sub = subject.replace(/\s+/g, " ").trim();
-  const m0 = sub.match(/^(YOUR )?SHOWING (CONFIRMED|CANCELL?ED|RESCHEDULED) \| (.+?),? (?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*, (\d{1,2})\/(\d{1,2}) (\d{1,2}:\d{2} [AP]M)$/i);
+  // "2ND SHOWING CONFIRMED" (a second visit by the same agent, owner report 2026-11-09) is a showing like any other.
+  const m0 = sub.match(/^(YOUR )?(?:\d+(?:ST|ND|RD|TH) )?SHOWING (CONFIRMED|CANCELL?ED|RESCHEDULED) \| (.+?),? (?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*, (\d{1,2})\/(\d{1,2}) (\d{1,2}:\d{2} [AP]M)$/i);
   if (!m0) return null; // walk-throughs, previews, appraisals, feedback
   const side = m0[1] ? "buyer" : "listing";
   const head = [m0[0], m0[2], m0[3], m0[4], m0[5], m0[6]];

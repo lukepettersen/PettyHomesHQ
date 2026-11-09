@@ -273,6 +273,15 @@ export async function syncGmail(): Promise<number> {
   const own = googleKeysSet() ? await db.googleConnection.findMany({ where: { id: { startsWith: "gmail:" } } }).catch(() => []) : [];
   let added = 0;
   for (const c of [...(shared ? [shared] : []), ...own]) added += await syncOne(c);
+  // One-time catch-up (owner report 2026-11-09): "2ND SHOWING CONFIRMED" emails weren't read before, so read the last
+  // 3 days again. Showings already in HQ and emails already on a timeline are skipped, so nothing doubles.
+  const flag = "gmail.rescan.2ndShowing";
+  if (!(await db.appSetting.findUnique({ where: { key: flag } }))) {
+    const mine = await db.appSetting.create({ data: { key: flag, value: new Date().toISOString() } }).then(() => true, () => false);
+    if (mine) for (const c of [...(shared ? [shared] : []), ...own]) {
+      if (hasScope(c, GMAIL_READ_SCOPE)) added += await syncSince(Date.now() - 3 * 86400000, c.email, c.userId, c.id).catch(() => 0);
+    }
+  }
   return added;
 }
 
