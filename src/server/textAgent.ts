@@ -5,6 +5,7 @@ import { UserError } from "@/server/safe";
 import { isConnected } from "@/server/integrations";
 import { logActivity } from "@/server/activity";
 import { bookAppt } from "@/server/booking";
+import { loadApptTypes } from "@/server/appointments";
 import { callChanged, consultChanged, redateConsult } from "@/server/automation";
 import { addCalendarEvent, calendarConnection, removeCalendarEvent, syncAppointment } from "@/server/google";
 import { sendTextAs } from "@/server/texting";
@@ -42,7 +43,7 @@ People:
 - Use person_details to answer questions about a contact (phone, email, deal, dates, tasks) and to get appointment ids.
 
 Calendar:
-- book_event puts something on the calendar. With a contact, it goes on their HQ page too ("Jack Rotman swing by house today 10:30am" → person_id Jack's id, title "Swing by house"). With no contact in it ("dentist Fri 3pm", "block Thursday afternoon for MLS tour"), person_id is "".
+- book_event puts something on the calendar. A buyer consult, seller/listing consult or phone call with a contact: set kind to buyer, seller or call (HQ names it, starts its checklist, and a consult starts their buyer/seller deal); anything else is kind "other". With a contact, it goes on their HQ page too ("Jack Rotman swing by house today 10:30am" → person_id Jack's id, title "Swing by house"). With no contact in it ("dentist Fri 3pm", "block Thursday afternoon for MLS tour"), person_id is "".
 - If they name someone not in HQ, ask whether to put it on the calendar by itself or add them as a contact; don't do both.
 - add_contact adds someone new (find_people first so you don't add a duplicate). A couple or two people buying or selling together are ONE contact named like "Jack & Adonis Smith" (or "Jack Smith & Adonis Jones" when last names differ) with both phones and emails (labels like "Jack" / "Adonis"); never two contacts, unless the speaker asks for separate ones. When they give a name and a number or email to add, add it, then go on with what they asked in the same turn (e.g. add_contact, then text_client with the new id).
 - date YYYY-MM-DD from the calendar you're given; start/end 24-hour HH:MM. No end said: leave end "" (HQ uses an hour). No time said for a meeting: ask. "All day" or a reminder with no time: start "".
@@ -70,12 +71,15 @@ const tools: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: { person_id: str("Contact id") }, required: ["person_id"], additionalProperties: false } },
   { name: "my_schedule", description: "Appointments on a day (everyone's, with ids) and the speaker's tasks due that day.", strict: true,
     input_schema: { type: "object", properties: { date: str("YYYY-MM-DD") }, required: ["date"], additionalProperties: false } },
-  { name: "book_event", description: "Put an event on the calendar, on a contact's page when person_id is set.", strict: true,
+  // Not strict (keeps the strict set small; HQ checks every value itself).
+  { name: "book_event", description: "Put an event on the calendar, on a contact's page when person_id is set.",
     input_schema: { type: "object", properties: {
-      person_id: str('Contact id, or "" for an event that is not about a contact'), title: str("Short title, like \"Swing by house\" (no name: HQ adds their last name)"),
+      person_id: str('Contact id, or "" for an event that is not about a contact'),
+      kind: { type: "string", enum: ["other", "call", "buyer", "seller"], description: "With a contact: \"buyer\" for a buyer consult, \"seller\" for a seller/listing consult, \"call\" for a phone call, else \"other\"" },
+      title: str("Short title, like \"Swing by house\" (no name: HQ adds their last name; ignored for call/buyer/seller, which HQ names)"),
       date: str("YYYY-MM-DD"), start: str('HH:MM 24-hour, or "" for all day'), end: str('HH:MM 24-hour, or ""'), location: str('Address or place, or ""'),
       invite_client: { type: "boolean", description: "Send the contact a calendar invite" }, with_team: { type: "array", items: { type: "string" }, description: "First names of teammates joining (besides the speaker)" },
-    }, required: ["person_id", "title", "date", "start", "end", "location", "invite_client", "with_team"], additionalProperties: false } },
+    }, required: ["person_id", "kind", "title", "date", "start", "end", "location", "invite_client", "with_team"], additionalProperties: false } },
   { name: "move_event", description: "Change an appointment's day and time.", strict: true,
     input_schema: { type: "object", properties: { appointment_id: str("From person_details or my_schedule"), date: str("YYYY-MM-DD"), start: str('HH:MM or ""'), end: str('HH:MM or ""') }, required: ["appointment_id", "date", "start", "end"], additionalProperties: false } },
   { name: "cancel_event", description: "Cancel (delete) an appointment; the calendar invite is cancelled too.", strict: true,
@@ -170,7 +174,12 @@ async function runTool(me: Me, name: string, a: Record<string, unknown>, seen: S
     const title = s("title").slice(0, 120);
     if (!w || !title) return "Not booked: needs a title and date (YYYY-MM-DD).";
     if (w.date < today) return "Not booked: that day has passed.";
-    const end = w.time ? (cleanWhen(a.date, a.end)?.time ?? addMinutes(w.time, 60)) : null;
+    // A phone call or consult is booked like the Book button (owner report 2026-11-10: a consult booked by text never
+    // started their buyer deal): its checklist runs and a consult starts their buyer/seller deal at Consult scheduled.
+    const kind = (["call", "buyer", "seller"] as const).find((k) => k === s("kind") && !!s("person_id")) ?? "other";
+    const types = kind === "other" ? null : await loadApptTypes();
+    const mins = types?.find((t) => t.key === kind)?.mins ?? 60;
+    const end = w.time ? (cleanWhen(a.date, a.end)?.time ?? addMinutes(w.time, mins)) : null;
     const team = await db.user.findMany({ where: { status: { not: "DISABLED" } }, select: { name: true, email: true } });
     const joining = (Array.isArray(a.with_team) ? a.with_team : []).filter((x): x is string => typeof x === "string").map((f) => team.find((u) => u.name.split(/\s+/)[0].toLowerCase() === f.toLowerCase())).filter((u): u is { name: string; email: string } => !!u && u.name !== me.name);
     const pid = s("person_id");
@@ -179,11 +188,12 @@ async function runTool(me: Me, name: string, a: Record<string, unknown>, seen: S
       if (!p) return "Unknown contact id: use find_people first.";
       // Named like every other appointment: "Schultz - Swing by" (owner request 2026-10-30).
       const prefix = defaultTitle(p.name, "other");
-      const named = (title.toLowerCase().startsWith(prefix.toLowerCase()) ? title : `${prefix}${title}`).slice(0, 120);
-      const r = await bookAppt(me.id, { personId: p.id, type: "other", title: named, date: w.date, start: w.time, end, location: s("location").slice(0, 300),
+      const named = types ? defaultTitle(p.name, kind, types) : (title.toLowerCase().startsWith(prefix.toLowerCase()) ? title : `${prefix}${title}`).slice(0, 120);
+      const r = await bookAppt(me.id, { personId: p.id, type: kind, startFile: kind === "buyer" || kind === "seller", title: named, date: w.date, start: w.time, end, location: s("location").slice(0, 300),
         invitees: [...(a.invite_client === true ? p.emails.map((e) => e.address) : []), me.name, ...joining.map((u) => u.name)] });
       const invite = (await calendarConnection()) ? (a.invite_client === true && p.emails.length ? " Invite sent to them." : " On your calendar.") : "";
-      await record(me.id, "appt", `✓ Booked "${named}" with ${p.name}, ${when(w.date, w.time, end)}.${invite}`, { appointmentId: r.id });
+      const extra = [r.started ? `Started their ${r.started === "buyer" ? "buyer" : "seller"} deal at Consult scheduled.` : "", r.tasks ? `${r.tasks} checklist step${r.tasks === 1 ? "" : "s"} added.` : ""].filter(Boolean).join(" ");
+      await record(me.id, "appt", `✓ Booked "${named}" with ${p.name}, ${when(w.date, w.time, end)}.${invite}${extra ? ` ${extra}` : ""}`, { appointmentId: r.id });
       return `Booked (appointment id ${r.id}).`;
     }
     const id = await addCalendarEvent({ title, date: w.date, start: w.time, end, location: s("location").slice(0, 300), guests: [{ email: me.email, name: me.name }, ...joining] });

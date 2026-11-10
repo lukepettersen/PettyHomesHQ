@@ -583,7 +583,9 @@ scrolls with it until its last card is on screen, then stays put while the middl
   find contacts and answer questions about them (phone, email, deal, key dates, open tasks); say what's on a day;
   **book events** on a contact's page with a Google invite ("Jack Rotman swing by house today 10:30am" → "Rotman - Swing by house", named like every appointment with the last name(s) first, owner request 2026-10-30; the client is
   invited when it's a meeting with them, plus the speaker and any teammate named) or **on the calendar alone** when no
-  contact is involved ("dentist Fri 3pm"); move or cancel appointments; add tasks; log notes, calls and texts; and
+  contact is involved ("dentist Fri 3pm"); a **buyer consult, seller consult or phone call** is booked as that type, like
+  the Book button (owner report 2026-11-10: a consult booked by text didn't start the buyer deal): its checklist starts and a
+  consult with no open deal of that kind starts one at Consult scheduled; move or cancel appointments; add tasks; log notes, calls and texts; and
   **text a client** (now or scheduled), which always waits for a **YES** reply. It can also read and **change a
   purchase agreement's terms** (owner request 2026-11-02: "move Ortiz closing to 11/25 and price 495k"): HQ texts back
   each change as "Close date: Tue Nov 17 → Wed Nov 25" and saves only on **YES**, through the same save as Edit (any term
