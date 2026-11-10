@@ -245,7 +245,7 @@ Principles:
   can't trigger it). All tags them **Email Unsubscribed**; a kind tags them "Unsubscribed: <kind>" (texting isn't
   affected either way), noted on their timeline. People who unsubscribed before 2026-11-02 stay unsubscribed from all.
 - **Attachments** *(owner request 2026-10-21)*: **📎 Attach file** on mass emails and the timeline Email
-  tab (PDFs, Word/Excel, images; up to 5 files, 20 MB total). Files upload once to the private file
+  tab (PDFs, Word/Excel, images; up to 5 files, 24 MB total, owner request 2026-11-10; Gmail allows 25 MB). Files upload once to the private file
   storage and go with each email; the timeline notes the file names. Needs File storage connected.
 - **Open tracking (mass emails only)** *(owner decision 2026-10-21)*: each mass email carries a tiny image;
   the first load marks it **Opened** (shown under that email on the contact's timeline, else "Not opened

@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
 import { putFile, storageConnected } from "@/server/storage";
 import { storageProblem, safeName, uploadProblem } from "@/lib/documents";
-import { ATTACH_PREFIX, MAX_ATTACH_TOTAL } from "@/server/attachments";
+import { ATTACH_PREFIX, MAX_ATTACH_MB, MAX_ATTACH_TOTAL } from "@/server/attachments";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   const file = form?.get("file");
   if (!(file instanceof File)) return Response.json({ error: "Pick a file." }, { status: 400 });
   const name = safeName(file.name);
-  const problem = uploadProblem(name, file.size) ?? (file.size > MAX_ATTACH_TOTAL ? `"${name}" is larger than 20 MB, too big to email.` : null);
+  const problem = uploadProblem(name, file.size) ?? (file.size > MAX_ATTACH_TOTAL ? `"${name}" is larger than ${MAX_ATTACH_MB} MB, too big to email.` : null);
   if (problem) return Response.json({ error: problem }, { status: 400 });
   const key = `${ATTACH_PREFIX}${new Date().toISOString().slice(0, 7)}/${randomBytes(9).toString("base64url")}-${name.replace(/ /g, "_")}`;
   const type = (file.type || "application/octet-stream").slice(0, 120);
