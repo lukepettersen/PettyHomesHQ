@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { playAlert } from "@/components/sounds";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useDropdown } from "@/components/useDropdown";
@@ -71,13 +72,7 @@ export function Bell({ initial }: { initial: Bell }) {
     if (!popup.length) return;
     const chime = () => {
       const ctx = audio.current;
-      if (!ctx || ctx.state !== "running") return;
-      [0, 0.15].forEach((at, i) => {
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.frequency.value = i ? 1046 : 784;
-        g.gain.setValueAtTime(0.0001, ctx.currentTime + at); g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + at + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + at + 0.3);
-        o.connect(g).connect(ctx.destination); o.start(ctx.currentTime + at); o.stop(ctx.currentTime + at + 0.32);
-      });
+      if (ctx) playAlert(ctx); // at their Alerts volume (My settings)
     };
     // One chime per new alert (no repeating), and a desktop notification when HQ is in a background tab (owner 2026-10-28).
     const fresh = popup.filter((n) => !rung.current.has(n.id));

@@ -360,6 +360,14 @@ scrolls with it until its last card is on screen, then stays put while the middl
   names on the others.
 - For the cards: People → filter by the tag → **Mailing list** at the bottom.
 
+### 6.6 My settings *(owner request 2026-11-10)*
+
+- The ⚙ in the top bar (everyone) opens **My settings**: things each person sets for themselves only.
+- **Sounds:** a slider (0–200%, 100% is the usual, 0 is off) and **▶ Test** for **Alerts** (bell pop-ups: new texts,
+  offers, paperwork…), **Task alarms** and **Incoming calls**. Explicit Save/Cancel; saved per person (AppSetting
+  `sounds.<userId>`), so it follows them to their other devices. At 100% a call rings with Twilio's own ring; any other
+  level uses HQ's ring at that volume. The computer's own volume still applies.
+
 ## 7. Pipeline
 
 ### 7.1 Client files
@@ -513,7 +521,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
 
 - **Request paperwork** on every deal (buyer and seller, before and after contract) asks a teammate
   (Alyssa by default; "Send to" picks anyone) to write a form up in ClickContracts.
-- Forms (owner's list): **Listing contract** (list price, starts, expires), **Amendment** (what's
+- Forms (owner's list): **Buyer rep** (owner request 2026-11-11: starts, expires, compensation, area/price range; no address; its steps are on the task and editable in Admin → Paperwork steps; the default form on a buyer deal before it's under contract), **Listing contract** (list price, starts, expires), **Amendment** (what's
   changing), **Change form** (new list price, other changes), **Cancellation** (why), **Cancel &
   relist** (new list price, starts, expires), **Other** (which form). Each has the property address,
   filled in from the deal (contract address, or the listing address) along with the price; plus
@@ -959,6 +967,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
 - **Names, not numbers** *(owner request 2026-10-28)*: recipients show as names everywhere a text is written or
   scheduled: a number's label when it names someone ("Emma"), else the contact's name, "Your cell" / "Luke's cell"
   for a teammate's cell; the number only shows on hover, or when two chips would read the same.
+- **Template pickers** open upward when they're near the bottom of the screen, like the Messages box (owner report 2026-11-11).
 - **Scheduled texts** *(owner request 2026-10-28)*: **Schedule** sits next to every Send text (contact page, deal,
   Messages, group texts, and Draft text on checklist steps). It opens a calendar date and a time in 30-minute steps
   from 8:00am to 8:00pm Central (quiet hours), at least 5 minutes ahead and within a year. The text goes out from the

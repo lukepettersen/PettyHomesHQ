@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { playAlarm } from "@/components/sounds";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { completeTask } from "@/app/(app)/tasks/actions";
@@ -80,16 +81,7 @@ export function AlarmCenter() {
     let flip = false;
     const chime = () => {
       const ctx = audio.current;
-      if (ctx && ctx.state === "running") {
-        [0, 0.18, 0.36].forEach((offset, i) => {
-          const o = ctx.createOscillator(), g = ctx.createGain();
-          o.type = "sine"; o.frequency.value = i === 2 ? 1320 : 880;
-          g.gain.setValueAtTime(0.0001, ctx.currentTime + offset);
-          g.gain.exponentialRampToValueAtTime(0.35, ctx.currentTime + offset + 0.02);
-          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + offset + 0.16);
-          o.connect(g).connect(ctx.destination); o.start(ctx.currentTime + offset); o.stop(ctx.currentTime + offset + 0.17);
-        });
-      }
+      if (ctx) playAlarm(ctx); // at their Task alarms volume (My settings)
       flip = !flip; document.title = flip ? `⏰ ${ringing[0].title}` : original;
     };
     chime();

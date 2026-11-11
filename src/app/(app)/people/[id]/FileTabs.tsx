@@ -228,7 +228,7 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
           onClose={() => setEditingPa(false)} onSaved={(m) => { setEditingPa(false); setMsg(m); router.refresh(); }} />
       )}
       {offering && <OfferModal personId={personId} personName={personName} buyerFiles={[{ id: file.id, label: fileLine(file) }]} fileId={file.id} onClose={() => setOffering(false)} />}
-      {papering && <PaperworkModal personId={personId} personName={personName} kind={file.kind} team={team}
+      {papering && <PaperworkModal personId={personId} personName={personName} kind={file.kind} underContract={!!activePa} team={team}
         prefill={{ address: activePa ? activePa.address : file.address ?? "", price: price ? String(price) : "" }}
         onClose={() => setPapering(false)} onSent={(m) => { setPapering(false); setMsg(m); }} />}
       {msg && <p role="status" className="mt-2 text-sm text-accent">{msg}</p>}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { audioContext, playRing, soundPct } from "@/components/sounds";
 import type { Call, Device } from "@twilio/voice-sdk";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 
@@ -49,6 +50,11 @@ export function CallCenter() {
       const { Device, Call } = await import("@twilio/voice-sdk");
       const d = new Device(t, { closeProtection: true, codecPreferences: [Call.Codec.Opus, Call.Codec.PCMU] });
       device.current = d;
+      // Ring volume (My settings): at 100 Twilio's own ring plays; otherwise HQ's ring at that volume (or none at 0).
+      const applyRing = () => { try { d.audio?.incoming(soundPct("calls") === 100); } catch { /* not ready */ } };
+      applyRing();
+      window.addEventListener("hq-sounds", applyRing);
+      cleanup.push(() => window.removeEventListener("hq-sounds", applyRing));
       d.on("tokenWillExpire", async () => { const n = await token(); if (n) d.updateToken(n); });
       d.on("incoming", async (call: Call) => {
         const from = normalizePhone(call.parameters.From ?? "");
@@ -96,6 +102,14 @@ export function CallCenter() {
     return () => { stopped = true; cleanup.forEach((f) => f()); delete window.hqCall; device.current?.destroy(); device.current = null; };
   }, [watch]);
 
+  // HQ's own ring while a call is coming in, when the ring volume isn't the usual (owner request 2026-11-10).
+  useEffect(() => {
+    if (live?.state !== "incoming" || soundPct("calls") === 100) return;
+    const ring = () => { const ctx = audioContext(); if (ctx) playRing(ctx); };
+    ring();
+    const t = setInterval(ring, 3000);
+    return () => clearInterval(t);
+  }, [live?.state]);
   useEffect(() => { if (live?.state !== "live") return; const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, [live?.state]);
   useEffect(() => { if (!note) return; const t = setTimeout(() => setNote(""), 8000); return () => clearTimeout(t); }, [note]);
 

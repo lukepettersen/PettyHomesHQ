@@ -3,7 +3,7 @@ import { cleanConfig, DEFAULT_STEPS, PAPER_TYPES, paperDetails, paperProblem, pa
 
 describe("paperwork requests", () => {
   it("has the owner's forms", () => {
-    expect(PAPER_TYPES.map((t) => t.label)).toEqual(["Listing contract", "Amendment", "Change form", "Cancellation", "Cancel & relist", "Other"]);
+    expect(PAPER_TYPES.map((t) => t.label)).toEqual(["Buyer rep", "Listing contract", "Amendment", "Change form", "Cancellation", "Cancel & relist", "Other"]);
   });
   it("titles, details and the text read cleanly", () => {
     const r = paperSchema.parse({ type: "listing", values: { address: "12 Elm St, Austin, MN", price: "350000", start: "2026-11-10", end: "", junk: "x" }, notes: "Lockbox on back door" });
@@ -42,5 +42,15 @@ describe("paperwork requests", () => {
     expect(paperTitle(r, "Jo", cfg.custom)).toBe("Write up buyer rep agreement in ClickContracts · Jo");
     expect(paperSteps(r, "Jo", cfg.steps, cfg.custom)).toEqual(["Open it for Jo at 1 A St"]);
     expect(paperProblem(r)).toBe("That form was removed. Pick another.");
+  });
+
+  it("buyer rep: no address needed, steps filled in", () => {
+    const r = paperSchema.parse({ type: "buyerRep", values: { start: "2026-11-11", end: "2027-05-11", comp: "2.7%" } });
+    expect(paperProblem(r)).toBeNull();
+    expect(paperTitle(r, "Nicole & Garrett Hess")).toBe("Write up buyer rep in ClickContracts · Nicole & Garrett Hess");
+    const steps = paperSteps(r, "Nicole & Garrett Hess", DEFAULT_STEPS);
+    expect(steps[0]).toBe("In ClickContracts, open a new Buyer Representation Agreement for Nicole & Garrett Hess.");
+    expect(steps).toContain("Term: starts 11/11/2026, expires 5/11/2027.");
+    expect(steps).toContain("Compensation: 2.7%.");
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type KeyboardEvent, type RefObject } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 import { matchTemplates, slashQuery, type TemplateOption } from "@/lib/templateSearch";
 
 const itemCls = (on: boolean) => `block w-full truncate px-3 py-1.5 text-left text-sm ${on ? "bg-accent-soft" : "hover:bg-paper"}`;
@@ -13,6 +13,10 @@ export function TemplateSearch({ templates, value, onPick, disabled, emptyLabel 
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
+  // Near the bottom of the screen (the Messages box), the list opens upward so it can be seen (owner report 2026-11-11).
+  const [up, setUp] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const place = () => { const r = wrap.current?.getBoundingClientRect(); if (r) setUp(window.innerHeight - r.bottom < 300 && r.top > window.innerHeight - r.bottom); };
   const chosen = templates.find((t) => t.id === value);
   const matches = matchTemplates(templates, q, 50);
   const pick = (id: string) => { onPick(id); setOpen(false); setQ(""); };
@@ -24,13 +28,13 @@ export function TemplateSearch({ templates, value, onPick, disabled, emptyLabel 
   };
   if (!templates.length) return <input className="input" disabled value={noneLabel ?? "No templates yet"} readOnly />;
   return (
-    <div className="relative">
+    <div ref={wrap} className="relative">
       <input role="combobox" aria-expanded={open} aria-controls={listId} aria-autocomplete="list" className="input w-full" disabled={disabled}
         placeholder={chosen ? chosen.name : `${emptyLabel} · type to search`} value={open ? q : chosen?.name ?? ""}
-        onFocus={() => { setOpen(true); setQ(""); setActive(0); }} onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onFocus={() => { place(); setOpen(true); setQ(""); setActive(0); }} onBlur={() => setTimeout(() => setOpen(false), 150)}
         onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(0); }} onKeyDown={onKey} />
       {open && (
-        <ul id={listId} role="listbox" className="absolute z-30 mt-1 max-h-72 w-full overflow-auto rounded-md border border-misty bg-white py-1 shadow-lg">
+        <ul id={listId} role="listbox" className={`absolute z-30 max-h-72 w-full overflow-auto rounded-md border border-misty bg-white py-1 shadow-lg ${up ? "bottom-full mb-1" : "mt-1"}`}>
           {value && !q && <li role="option" aria-selected={false}><button type="button" className={itemCls(false)} onMouseDown={(e) => e.preventDefault()} onClick={() => pick("")}><i className="muted">{emptyLabel}</i></button></li>}
           {matches.map((t, i) => (
             <li key={t.id} role="option" aria-selected={i === active}>

@@ -10,12 +10,12 @@ import { paperworkSetup, submitPaperwork } from "../../pipeline/paperworkActions
 
 // Request paperwork (SPEC.md §7.5b): pick the form, check what HQ filled in from the deal, add notes (or talk),
 // and it goes to Alyssa as a task due now, a bell alert and a text.
-export function PaperworkModal({ personId, personName, kind, prefill, team, onClose, onSent }: {
-  personId: string; personName: string; kind: "buyer" | "listing"; prefill: Record<string, string>; team: TeamMember[]; onClose: () => void; onSent: (msg: string) => void;
+export function PaperworkModal({ personId, personName, kind, underContract = false, prefill, team, onClose, onSent }: {
+  personId: string; personName: string; kind: "buyer" | "listing"; underContract?: boolean; prefill: Record<string, string>; team: TeamMember[]; onClose: () => void; onSent: (msg: string) => void;
 }) {
   const router = useRouter();
   const speech = useSpeech();
-  const [type, setType] = useState(kind === "listing" ? "listing" : "amendment");
+  const [type, setType] = useState(kind === "listing" ? "listing" : underContract ? "amendment" : "buyerRep");
   const [values, setValues] = useState<Record<string, string>>(prefill);
   const [notes, setNotes] = useState("");
   const [toId, setToId] = useState(team.find((t) => !t.isOwner)?.id ?? team[0]?.id ?? "");

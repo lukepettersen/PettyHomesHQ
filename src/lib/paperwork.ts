@@ -15,6 +15,8 @@ export const CHANGE_OPTIONS: PaperOption[] = [
   { key: "active", label: "Back to Active" }, { key: "cancelled", label: "Cancelled" }, { key: "other", label: "Something else" },
 ];
 export const PAPER_TYPES: PaperType[] = [
+  // Buyer rep (owner request 2026-11-11): the term and what they'll pay; no property yet.
+  { key: "buyerRep", label: "Buyer rep", fields: [{ key: "start", label: "Starts", type: "date" }, { key: "end", label: "Expires", type: "date" }, { key: "comp", label: "Compensation", type: "text", hint: "e.g. 2.7%" }, { key: "area", label: "Area or price range", type: "text" }] },
   { key: "listing", label: "Listing contract", fields: [address, { key: "price", label: "List price", type: "money" }, { key: "start", label: "Listing starts", type: "date" }, { key: "end", label: "Listing expires", type: "date" }] },
   { key: "amendment", label: "Amendment", fields: [address, { key: "changes", label: "What's changing", type: "long" }] },
   { key: "change", label: "Change form", options: CHANGE_OPTIONS, fields: [
@@ -42,6 +44,14 @@ const TOP = st("Search the listing in ClickContracts for its MLS number, then fi
 const CHANGE_FORM = st("In ClickContracts, open the NorthstarMLS Listing Change Form and Contract Amendment for {address}.");
 const DATED = st('Fill in "listing contract dated" with the original listing contract date (on the signed listing contract).');
 export const DEFAULT_STEPS: PaperSteps = {
+  buyerRep: [
+    st("In ClickContracts, open a new Buyer Representation Agreement for {client}."),
+    st("Fill in the buyers' names and contact info from their HQ page."),
+    st("Term: starts {start}, expires {end}."),
+    st("Compensation: {comp}."),
+    st("Area / price range if the form asks: {area}."),
+    st("Send it to {client} for signatures, then add the signed copy to their Files in HQ and fill in Buyer rep signed / expires on their buyer deal."),
+  ],
   listing: [st("In ClickContracts, open a new listing contract for {client}."), st("Property {address}, list price {price}."), st("Listing starts {start} and expires {end}."), st("Send it for signatures.")],
   amendment: [st("In ClickContracts, open an amendment to the purchase agreement for {address}."), st("Write in the changes: {changes}"), st("Send it for signatures.")],
   change: [
@@ -125,7 +135,8 @@ export function paperDetails(r: PaperRequest, custom: PaperType[] = []): string 
 export function paperProblem(r: PaperRequest, custom: PaperType[] = []): string | null {
   if (!paperType(r.type, custom)) return "That form was removed. Pick another.";
   if (r.type === "other" && !r.values.form?.trim()) return "Say which form.";
-  if (!r.values.address?.trim() && !r.notes) return "Add the property address or a note.";
+  const t = paperType(r.type, custom)!;
+  if (t.fields.some((f) => f.key === "address") && !r.values.address?.trim() && !r.notes) return "Add the property address or a note.";
   if (r.type === "change" && !checksOf(r.values).length) return "Check what's changing.";
   return null;
 }
