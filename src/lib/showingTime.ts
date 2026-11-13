@@ -53,9 +53,11 @@ export function parseShowingEmail(subject: string, body: string, received: Date)
   const sub = subject.replace(/\s+/g, " ").trim();
   // "2ND SHOWING CONFIRMED" (a second visit by the same agent, owner report 2026-11-09) is a showing like any other.
   const m0 = sub.match(/^(YOUR )?(?:\d+(?:ST|ND|RD|TH) )?SHOWING (CONFIRMED|CANCELL?ED|RESCHEDULED) \| (.+?),? (?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*, (\d{1,2})\/(\d{1,2}) (\d{1,2}:\d{2} [AP]M)$/i);
-  if (!m0) return null; // walk-throughs, previews, appraisals, feedback
-  const side = m0[1] ? "buyer" : "listing";
-  const head = [m0[0], m0[2], m0[3], m0[4], m0[5], m0[6]];
+  // Some offices' ShowingTime sends "CANCELLED | Showing | <address> | Thu, 11/12 3:30 PM" (owner report 2026-11-13).
+  const m1 = m0 ? null : sub.match(/^(CONFIRMED|CANCELL?ED|RESCHEDULED) \| (?:\d+(?:ST|ND|RD|TH) )?Showing \| (.+?) \| (?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*, (\d{1,2})\/(\d{1,2}) (\d{1,2}:\d{2} [AP]M)$/i);
+  if (!m0 && !m1) return null; // walk-throughs, previews, appraisals, feedback
+  const side = m0 ? (m0[1] ? "buyer" : "listing") : /Listing Presented By/i.test(body) ? "buyer" : /Buyer'?s Agent Details/i.test(body) ? "listing" : "buyer";
+  const head = m0 ? [m0[0], m0[2], m0[3], m0[4], m0[5], m0[6]] : [m1![0], m1![1], m1![2], m1![3], m1![4], m1![5]];
   const kind: ShowingKind = /^CONF/i.test(head[1]) ? "confirmed" : /^CANC/i.test(head[1]) ? "cancelled" : "rescheduled";
   const t = flat(body);
   // Dates in the body ("Sunday, November 1, 2026") give the year; the subject's month/day is the new time.
@@ -91,7 +93,8 @@ export function parseShowingEmail(subject: string, body: string, received: Date)
 
   const address = head[2].replace(/\s+Unit#\s*#?/i, " #").replace(/,?\s*MINNESOTA\b/i, ", MN").trim();
   const key = kind === "confirmed" && conf ? `st:${conf}` : `${side === "buyer" ? "buyer|" : ""}${address.toLowerCase()}|${date}|${start}`;
-  if (!start || !agent.name) return null;
+  // A cancellation only needs the place and time to find the showing it's about.
+  if (!start || (kind !== "cancelled" && !agent.name)) return null;
   return { kind, side, address, mlsId, date, start, end, was, presentedBy, key, total, agent, seller, noTexts };
 }
 

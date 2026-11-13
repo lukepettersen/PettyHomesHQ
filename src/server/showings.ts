@@ -5,7 +5,7 @@ import { runTrigger } from "@/server/automation";
 import { dateFromIso, formatPhone, isoFromDate, normalizePhone, todayCentral } from "@/lib/normalize";
 import { centralToUtc } from "@/lib/scheduledText";
 import { formatTime, longIso } from "@/lib/tasks";
-import { parseShowingEmail, type ShowingEmail } from "@/lib/showingTime";
+import { parseShowingEmail, streetKey, type ShowingEmail } from "@/lib/showingTime";
 
 // Showings on our listings from ShowingTime's emails (owner request 2026-11-01; SPEC.md §10 Showings). Called by the
 // Gmail sync for every email from showingtime.com; anything that isn't about one of our listings is ignored.
@@ -70,7 +70,11 @@ async function confirmed(e: ShowingEmail, ownerId: string, gmailId: string) {
 async function stopped(e: ShowingEmail, ownerId: string) {
   const at = e.kind === "rescheduled" ? e.was : { date: e.date, start: e.start };
   if (!at) return;
-  const s = await db.showing.findFirst({ where: { status: "confirmed", side: e.side, date: dateFromIso(at.date), start: at.start, address: { equals: e.address, mode: "insensitive" } } });
+  // The same place and time, on either side: matched by house number and street, since offices write the address
+  // differently ("Unit# #212", "Road" / "Rd") (owner report 2026-11-13).
+  const key = streetKey(e.address)?.toLowerCase();
+  const same = await db.showing.findMany({ where: { status: "confirmed", date: dateFromIso(at.date), start: at.start } });
+  const s = same.find((x) => x.address.toLowerCase() === e.address.toLowerCase()) ?? (key ? same.find((x) => streetKey(x.address)?.toLowerCase() === key) : undefined);
   if (!s) return;
   const status = e.kind === "cancelled" ? "cancelled" : "rescheduled";
   await db.$transaction(async (tx) => {

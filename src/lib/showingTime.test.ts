@@ -96,4 +96,11 @@ describe("ShowingTime emails (owner request 2026-11-01)", () => {
     expect(pickListingTemplate(t, "8841 Nicollet Avenue S, Bloomington, MN 55420")?.name).toBe("SPC 8841 Nicollet Buyer Agent Showing Text");
     expect(pickListingTemplate(t, "4385 Trenton Lane N #212")).toBeNull();
   });
+  it("reads the \"CANCELLED | Showing | …\" style (owner report 2026-11-13)", () => {
+    const c = parseShowingEmail("CANCELLED | Showing | 520 Pleasant View Road, Chanhassen, MN 55317 | Thu, 11/12 3:30 PM", "Showing Cancelled 520 Pleasant View Road Chanhassen, MN 55317 Thursday, November 12, 2026 3:30 PM - 4:30 PM", new Date("2026-11-12T19:31:00Z"))!;
+    expect(c.kind).toBe("cancelled");
+    expect(c.address).toBe("520 Pleasant View Road, Chanhassen, MN 55317");
+    expect([c.date, c.start]).toEqual(["2026-11-12", "15:30"]);
+    expect(parseShowingEmail("FEEDBACK | Showing | 520 Pleasant View Road | Thu, 11/12 3:30 PM", "", new Date())).toBeNull();
+  });
 });
