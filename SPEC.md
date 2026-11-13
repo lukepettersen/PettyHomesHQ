@@ -522,7 +522,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
 
 - **Request paperwork** on every deal (buyer and seller, before and after contract) asks a teammate
   (Alyssa by default; "Send to" picks anyone) to write a form up in ClickContracts.
-- Forms (owner's list): **Buyer rep** (owner request 2026-11-11: starts, expires, compensation, area/price range; no address; its steps are on the task and editable in Admin → Paperwork steps; the default form on a buyer deal before it's under contract), **Listing contract** (list price, starts, expires), **Amendment** (what's
+- Forms (owner's list): **Buyer rep** (owner request 2026-11-11: starts, expires, compensation, area/price range; no address; its steps are on the task and editable in Admin → Paperwork steps; the default form on a buyer deal before it's under contract), **Touring agreement** (owner request 2026-11-13: homes they'll tour, starts, expires, compensation), **Listing contract** (list price, starts, expires), **Amendment** (what's
   changing), **Change form** (new list price, other changes), **Cancellation** (why), **Cancel &
   relist** (new list price, starts, expires), **Other** (which form). Each has the property address,
   filled in from the deal (contract address, or the listing address) along with the price; plus

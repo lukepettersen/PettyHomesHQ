@@ -3,7 +3,7 @@ import { cleanConfig, DEFAULT_STEPS, PAPER_TYPES, paperDetails, paperProblem, pa
 
 describe("paperwork requests", () => {
   it("has the owner's forms", () => {
-    expect(PAPER_TYPES.map((t) => t.label)).toEqual(["Buyer rep", "Listing contract", "Amendment", "Change form", "Cancellation", "Cancel & relist", "Other"]);
+    expect(PAPER_TYPES.map((t) => t.label)).toEqual(["Buyer rep", "Touring agreement", "Listing contract", "Amendment", "Change form", "Cancellation", "Cancel & relist", "Other"]);
   });
   it("titles, details and the text read cleanly", () => {
     const r = paperSchema.parse({ type: "listing", values: { address: "12 Elm St, Austin, MN", price: "350000", start: "2026-11-10", end: "", junk: "x" }, notes: "Lockbox on back door" });

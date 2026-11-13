@@ -17,6 +17,8 @@ export const CHANGE_OPTIONS: PaperOption[] = [
 export const PAPER_TYPES: PaperType[] = [
   // Buyer rep (owner request 2026-11-11): the term and what they'll pay; no property yet.
   { key: "buyerRep", label: "Buyer rep", fields: [{ key: "start", label: "Starts", type: "date" }, { key: "end", label: "Expires", type: "date" }, { key: "comp", label: "Compensation", type: "text", hint: "e.g. 2.7%" }, { key: "area", label: "Area or price range", type: "text" }] },
+  // Touring agreement (owner request 2026-11-13): the short agreement to show a buyer homes before a buyer rep.
+  { key: "touring", label: "Touring agreement", fields: [{ key: "homes", label: "Homes they'll tour", type: "long", hint: "Addresses, or \"any\"" }, { key: "start", label: "Starts", type: "date" }, { key: "end", label: "Expires", type: "date" }, { key: "comp", label: "Compensation", type: "text", hint: "e.g. 2.7%" }] },
   { key: "listing", label: "Listing contract", fields: [address, { key: "price", label: "List price", type: "money" }, { key: "start", label: "Listing starts", type: "date" }, { key: "end", label: "Listing expires", type: "date" }] },
   { key: "amendment", label: "Amendment", fields: [address, { key: "changes", label: "What's changing", type: "long" }] },
   { key: "change", label: "Change form", options: CHANGE_OPTIONS, fields: [
@@ -51,6 +53,13 @@ export const DEFAULT_STEPS: PaperSteps = {
     st("Compensation: {comp}."),
     st("Area / price range if the form asks: {area}."),
     st("Send it to {client} for signatures, then add the signed copy to their Files in HQ and fill in Buyer rep signed / expires on their buyer deal."),
+  ],
+  touring: [
+    st("In ClickContracts, open a new Touring Agreement for {client}."),
+    st("Fill in the buyers' names and contact info from their HQ page."),
+    st("Homes they'll tour: {homes}"),
+    st("Term: starts {start}, expires {end}. Compensation: {comp}."),
+    st("Send it to {client} for signatures before the showing, then add the signed copy to their Files in HQ."),
   ],
   listing: [st("In ClickContracts, open a new listing contract for {client}."), st("Property {address}, list price {price}."), st("Listing starts {start} and expires {end}."), st("Send it for signatures.")],
   amendment: [st("In ClickContracts, open an amendment to the purchase agreement for {address}."), st("Write in the changes: {changes}"), st("Send it for signatures.")],
