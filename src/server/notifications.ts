@@ -30,7 +30,8 @@ export async function notifyAssigned(by: { id: string; name: string }, taskId: s
   try {
     if (!(await emailConnection())) return;
     const link = `${(process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "")}/tasks?task=${t.id}`;
-    await sendGmail({ to: [t.assignee.email], subject: `New task from ${from}: ${t.title}`, body: `${from} gave you a task in HQ:\n\n${what}${t.notes ? `\n\n${t.notes}` : ""}\n\nOpen it: ${link}`, signature: false });
+    const replyTo = (await db.user.findUnique({ where: { id: by.id }, select: { email: true } }))?.email ?? null; // Reply goes to whoever gave the task
+    await sendGmail({ to: [t.assignee.email], replyTo, subject: `New task from ${from}: ${t.title}`, body: `${from} gave you a task in HQ:\n\n${what}${t.notes ? `\n\n${t.notes}` : ""}\n\nOpen it: ${link}`, signature: false });
   } catch { /* the bell already has it */ }
 }
 
@@ -45,6 +46,8 @@ export async function emailMentions(by: { id: string; name: string }, ids: strin
     const from = by.name.split(" ")[0];
     const link = `${(process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "")}/people/${person.id}`;
     const to = await db.user.findMany({ where: { id: { in: ids }, status: { not: "DISABLED" } }, select: { email: true } });
-    for (const u of to) await sendGmail({ to: [u.email], subject: `${from} mentioned you on ${person.name}`, body: `${from} mentioned you in a note on ${person.name}:\n\n${body}\n\nOpen in HQ: ${link}`, signature: false });
+    // Hitting Reply answers whoever wrote the @mention, not the Gmail HQ sends from (owner request 2026-11-13).
+    const replyTo = (await db.user.findUnique({ where: { id: by.id }, select: { email: true } }))?.email ?? null;
+    for (const u of to) await sendGmail({ to: [u.email], replyTo, subject: `${from} mentioned you on ${person.name}`, body: `${from} mentioned you in a note on ${person.name}:\n\n${body}\n\nOpen in HQ: ${link}`, signature: false });
   } catch { /* the bell already has it */ }
 }

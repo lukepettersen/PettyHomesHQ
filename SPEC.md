@@ -298,7 +298,8 @@ scrolls with it until its last card is on screen, then stays put while the middl
   - **@mentions:** typing `@` in a note, logged call or logged text shows the team; picking
     one inserts "@Alyssa". On save, that person gets a bell notification and, when Gmail is
     connected, an email to their pettyhomes.com address with the note and a link to the contact
-    *(built 2026-10-28)*. Mentions are highlighted in the
+    *(built 2026-10-28)*; hitting Reply on that email (and on a "New task from …" email) goes to whoever wrote it
+    (Reply-To, owner request 2026-11-13). Mentions are highlighted in the
     timeline. Not available in "Send text" (client-facing).
 - **Right:**
   - **Tasks:** everything open for this person, soonest first. Includes their own tasks and

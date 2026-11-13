@@ -99,4 +99,9 @@ describe("clickable images (owner request 2026-10-27)", () => {
     expect(toHtml(body)).not.toContain("[");
     expect(toPlain(body)).toBe("https://pettyhomes.com/pie\nSee you there");
   });
+  it("adds Reply-To when given, and never a bad one", () => {
+    const raw = buildMimeRaw({ from: "luke@pettyhomes.com", to: ["luke@pettyhomes.com"], replyTo: "assistant@pettyhomes.com", subject: "Hi", body: "x" });
+    expect(raw).toContain("\r\nReply-To: assistant@pettyhomes.com\r\n");
+    expect(buildMimeRaw({ from: "a@b.co", to: ["c@d.co"], replyTo: "x\r\nBcc: e@f.co", subject: "Hi", body: "x" })).not.toContain("Reply-To");
+  });
 });

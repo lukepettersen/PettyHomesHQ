@@ -59,7 +59,7 @@ export function htmlToText(html: string): string {
  * (HTML, from Gmail settings) when there is one. Line breaks in To/Subject can't add headers.
  */
 export type Attachment = { name: string; type: string; data: Uint8Array };
-type MimeInput = { from: string; to: string[]; subject: string; body: string; signatureHtml?: string | null; pixelUrl?: string | null; attachments?: Attachment[] };
+type MimeInput = { from: string; replyTo?: string | null; to: string[]; subject: string; body: string; signatureHtml?: string | null; pixelUrl?: string | null; attachments?: Attachment[] };
 /** base64url, for Gmail's JSON send. */
 export const buildMime = (m: MimeInput): string => Buffer.from(buildMimeRaw(m), "utf8").toString("base64url");
 
@@ -74,7 +74,9 @@ export function buildMimeRaw(m: MimeInput): string {
   const html = toHtml(m.body) + (sig ? `<br><div class="gmail_signature">${sig}</div>` : "") + pixel;
   const boundary = `hq-${b64(m.subject + to.join()).replace(/[^A-Za-z0-9]/g, "").slice(0, 16)}-${to.length}`;
   const part = (type: string, s: string) => [`--${boundary}`, `Content-Type: ${type}; charset="UTF-8"`, "Content-Transfer-Encoding: base64", "", wrap76(b64(s.replace(/\r?\n/g, "\r\n")))].join("\r\n");
-  const head = [`From: ${oneLine(m.from)}`, `To: ${to.join(", ")}`, `Subject: ${header(oneLine(m.subject))}`, "MIME-Version: 1.0"];
+  // Reply-To: replies go to this teammate instead of the sending Gmail (owner request 2026-11-13: answering Alyssa's @mention).
+  const replyTo = m.replyTo && isEmail(oneLine(m.replyTo)) ? oneLine(m.replyTo) : "";
+  const head = [`From: ${oneLine(m.from)}`, `To: ${to.join(", ")}`, ...(replyTo ? [`Reply-To: ${replyTo}`] : []), `Subject: ${header(oneLine(m.subject))}`, "MIME-Version: 1.0"];
   const alt = [`Content-Type: multipart/alternative; boundary="${boundary}"`, "", part("text/plain", plain), part("text/html", html), `--${boundary}--`, ""];
   const files = (m.attachments ?? []).filter((a) => a.data.length);
   if (!files.length) return [...head, ...alt].join("\r\n");
