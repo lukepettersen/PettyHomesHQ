@@ -150,7 +150,7 @@ async function runTool(me: Me, name: string, a: Record<string, unknown>, seen: S
     ]);
     const d = (x: Date | null) => (x ? isoFromDate(x) : null);
     return JSON.stringify({
-      name: p.name, address: p.address, phones: p.phones.map((x) => `${x.number}${x.label ? ` (${x.label})` : ""}`), emails: p.emails.map((x) => x.address),
+      name: p.name, legalNames: p.legalNames ?? undefined, address: p.address, phones: p.phones.map((x) => `${x.number}${x.label ? ` (${x.label})` : ""}`), emails: p.emails.map((x) => x.address),
       textsBlocked: p.tags.some((t) => /text unsubscribed/i.test(t.tag.name)),
       deals: files.map((f) => { const pa = f.contracts[0]; return { kind: f.kind === "listing" ? "seller" : "buyer", stage: f.status?.name ?? null, ...(pa ? { underContract: pa.address, finalAcceptance: d(pa.finalAcceptance), inspection: d(pa.inspection), closing: d(pa.closing) } : {}) }; }),
       upcoming: appts.map((x) => ({ id: x.id, title: x.title, date: isoFromDate(x.date), start: x.start })),
@@ -376,7 +376,7 @@ async function runTool(me: Me, name: string, a: Record<string, unknown>, seen: S
     const to = team.find((u) => u.id === s("send_to")) ?? team[0];
     if (!to) return "There's nobody else on the team to send it to; tell them.";
     const d = paperDetails(req, custom);
-    const n = paperSteps(req, p.name, steps, custom).length;
+    const n = paperSteps(req, p.name, steps, custom, p.legalNames ?? "").length;
     await record(me.id, "paperwork", `Ask ${to.name.split(" ")[0]} for ${aOrAn(formName(req, custom))} for ${p.name}:\n${d}${n ? `\n(${n} steps on the task)` : ""}\nReply YES to send, or NO.`, { personId: p.id, toId: to.id, request: req }, "confirm");
     return "Prepared. Waiting for them to reply YES. Stop here.";
   }

@@ -90,7 +90,7 @@ export function PaperworkClient({ initial }: { initial: PaperConfig }) {
 
 /** What can be filled in: {address} and friends, with the field each one comes from. */
 function Fill({ t }: { t: PaperType }) {
-  const items: [string, string][] = [["client", "Client name"], ...t.fields.map((f) => [f.key, f.label] as [string, string]), ["notes", "Notes"]];
+  const items: [string, string][] = [["client", "Client name"], ["legal", "Legal names (from Details)"], ...t.fields.map((f) => [f.key, f.label] as [string, string]), ["notes", "Notes"]];
   return (
     <p className="mt-1 text-xs muted">
       Fill-ins: {items.map(([k, l], i) => <span key={k}>{i > 0 && " · "}<code className="rounded bg-sunken px-1">{`{${k}}`}</code> {l.toLowerCase()}</span>)}. A blank one shows as ____.

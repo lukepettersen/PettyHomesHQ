@@ -10,8 +10,8 @@ import { paperworkSetup, submitPaperwork } from "../../pipeline/paperworkActions
 
 // Request paperwork (SPEC.md §7.5b): pick the form, check what HQ filled in from the deal, add notes (or talk),
 // and it goes to Alyssa as a task due now, a bell alert and a text.
-export function PaperworkModal({ personId, personName, kind, underContract = false, prefill, team, onClose, onSent }: {
-  personId: string; personName: string; kind: "buyer" | "listing"; underContract?: boolean; prefill: Record<string, string>; team: TeamMember[]; onClose: () => void; onSent: (msg: string) => void;
+export function PaperworkModal({ personId, personName, legalNames = "", kind, underContract = false, prefill, team, onClose, onSent }: {
+  personId: string; personName: string; legalNames?: string; kind: "buyer" | "listing"; underContract?: boolean; prefill: Record<string, string>; team: TeamMember[]; onClose: () => void; onSent: (msg: string) => void;
 }) {
   const router = useRouter();
   const speech = useSpeech();
@@ -33,7 +33,7 @@ export function PaperworkModal({ personId, personName, kind, underContract = fal
   const checks = checksOf(values);
   const toggle = (k: string) => setValues({ ...values, checks: (checks.includes(k) ? checks.filter((c) => c !== k) : [...checks, k]).join(",") });
   const request = { type: t.key, values: Object.fromEntries([...fields.map((f) => [f.key, values[f.key] ?? ""]), ...(t.options ? [["checks", values.checks ?? ""]] : [])]), notes };
-  const steps = cfg ? paperSteps(request, personName, cfg.steps, custom) : [];
+  const steps = cfg ? paperSteps(request, personName, cfg.steps, custom, legalNames) : [];
 
   useEffect(() => { const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); }, [onClose]);
   // What the mic heard goes into Notes when it stops.
@@ -58,6 +58,7 @@ export function PaperworkModal({ personId, personName, kind, underContract = fal
       <div className="card w-full max-w-lg p-5">
         <h2 className="text-lg font-extrabold">Request paperwork</h2>
         <p className="text-sm muted">For {personName}{fromDeal && t.fields.some((f) => f.key === "address") ? ` · ${values.address}` : ""}. It goes to ClickContracts to be written up.</p>
+        <p className="text-xs muted">{legalNames.trim() ? <>Legal names: <b className="text-charcoal">{legalNames}</b></> : "No legal names on their page yet (Details → Legal names); the steps will ask Alyssa to get them."}</p>
         <div className="mt-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Form">
           {types.map((p) => (
             <button key={p.key} type="button" role="radio" aria-checked={t.key === p.key} onClick={() => setType(p.key)}

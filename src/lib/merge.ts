@@ -5,7 +5,7 @@ import type { PaSection } from "./pa";
 import { splitCouple } from "@/lib/normalize";
 
 export const MERGE_FIELDS: [string, string][] = [
-  ["first_name", "Client first name(s)"], ["last_name", "Client last name"], ["full_name", "Client full name"], ["mailing_name", "Mailing name"],
+  ["first_name", "Client first name(s)"], ["last_name", "Client last name"], ["full_name", "Client full name"], ["mailing_name", "Mailing name"], ["legal_names", "Legal names (for contracts)"],
   ["primary_first_name", "First person's first name"], ["partner_first_name", "Spouse/partner's first name"],
   ["email", "Client email"], ["phone", "Client phone"], ["street", "Client street address"], ["city", "Client city"],
   ["address", "Property address"], ["price", "Purchase or list price"],
@@ -21,7 +21,7 @@ export const MERGE_FIELDS: [string, string][] = [
 ];
 
 export type MergeCtx = {
-  personName: string; mailingName?: string | null;
+  personName: string; mailingName?: string | null; legalNames?: string | null;
   email?: string | null; phone?: string | null; homeAddress?: string | null; // the contact's own (not the deal's)
   address?: string | null; price?: number | null;
   dates?: Partial<Record<"finalAcceptance" | "inspection" | "writtenStatement" | "closing", string | null>>;
@@ -61,7 +61,7 @@ export function mergeValues(c: MergeCtx): Record<string, string> {
   const base: Record<string, string> = {
     primary_first_name: firsts[0] ?? "", partner_first_name: firsts[1] ?? "",
     email: c.email ?? "", phone: c.phone ?? "", street: home[0] ?? "", city: home[1] ?? "", my_first_name: (c.myName ?? "").split(/\s+/)[0], hq_link: c.hqLink ?? "",
-    first_name: first, last_name: last, full_name: c.personName, mailing_name: c.mailingName || c.personName,
+    first_name: first, last_name: last, full_name: c.personName, mailing_name: c.mailingName || c.personName, legal_names: c.legalNames || "",
     address: c.address ?? "", price: c.price ? `$${c.price.toLocaleString("en-US")}` : "",
     final_acceptance_date: d.finalAcceptance ? longDate(d.finalAcceptance) : "", inspection_date: d.inspection ? longDate(d.inspection) : "",
     written_statement_date: d.writtenStatement ? longDate(d.writtenStatement) : "", closing_date: d.closing ? longDate(d.closing) : "",
@@ -104,7 +104,7 @@ export type MergeField = { key: string; label: string; group: string };
 const APPTS = ["next_appointment", "next_appointment_date", "next_appointment_time", "next_appointment_type", "next_appointment_place", "next_consult", "next_showing", "next_phone_call"];
 const SHOWING = ["showing_address", "showing_date", "showing_time", "showing_agent_company"];
 // Client details sit under Client, "Your first name" under Team (owner report 2026-11-02: phone and email were under "Contract").
-const CLIENT = ["first_name", "last_name", "full_name", "mailing_name", "primary_first_name", "partner_first_name", "phone", "email", "street", "city"];
+const CLIENT = ["first_name", "last_name", "full_name", "mailing_name", "legal_names", "primary_first_name", "partner_first_name", "phone", "email", "street", "city"];
 const TEAM = ["agent_name", "agent_first_name", "assistant_name", "my_name", "my_first_name", "hq_link"];
 const labelOf = (k: string) => MERGE_FIELDS.find(([x]) => x === k)![1];
 

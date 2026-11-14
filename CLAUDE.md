@@ -52,6 +52,7 @@ Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact p
 
 ## Data model notes
 
+- `Person.legalNames` (Details → Legal names, owner 2026-11-14): `{legal}` in paperwork steps, `{legal_names}` merge field
 - `Person` with child tables `Phone`, `Email`, `Address` (labelled; `mailing` flag, mirrored into `Person.address`; `src/lib/addresses.ts`), `ImportantDate`, `PersonTag`.
 - `ClientFile` (kind: buyer | listing, status, info JSON) → `PurchaseAgreement` (side, form
   answers JSON validated against the form definition, key dates as typed columns:

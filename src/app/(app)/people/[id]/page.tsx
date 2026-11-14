@@ -144,7 +144,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
           </div>
           <div className="order-4 flex min-w-0 flex-col gap-3">
             <DetailsCard id={p.id} options={options} stageId={p.stageId} sourceId={p.sourceId} assignedToId={p.assignedToId}
-              followUpDays={p.followUpDays} mailingName={p.mailingName ?? ""} referredBy={p.referredBy ?? ""} partnerType={p.partnerType} company={p.company ?? ""} kids={p.kids ?? ""} />
+              followUpDays={p.followUpDays} mailingName={p.mailingName ?? ""} legalNames={p.legalNames ?? ""} referredBy={p.referredBy ?? ""} partnerType={p.partnerType} company={p.company ?? ""} kids={p.kids ?? ""} />
             {partnerDeals.length > 0 && <PartnerDeals deals={partnerDeals.map((d) => ({
               personId: d.pa.file.person.id, client: d.pa.file.person.name, address: d.pa.address, state: d.pa.state,
               role: (d.pa.side === "seller" ? sellerForm : buyerForm).find((s) => s.id === d.sectionId)?.name ?? d.sectionId,
@@ -157,7 +157,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
         </StickySide>
 
         <section className="order-3 min-w-0 lg:order-2">
-          <FileTabs scheduled={scheduled} offers={offers} email={emailProps} text={textProps} fileForms={fileForms} personId={p.id} personName={p.name} files={files} statuses={fileStatuses} canSeeCommission={canSeeCommission}
+          <FileTabs legalNames={p.legalNames ?? ""} scheduled={scheduled} offers={offers} email={emailProps} text={textProps} fileForms={fileForms} personId={p.id} personName={p.name} files={files} statuses={fileStatuses} canSeeCommission={canSeeCommission}
             canDelete={hasPermission(user.permissions, "deleteRecords")} contracts={contracts} forms={{ buyer: buyerForm, seller: sellerForm }} pendingAt={pendingAt} ucColumns={ucColumns} today={tasks.today} checklists={checklists} team={tasks.team} timeline={<Timeline personId={p.id} personName={p.name} startOpen={!files.some((f) => !f.closedAt)} team={tasks.team.map((m) => ({ id: m.id, name: m.name }))} entries={p.timeline.map((e) => ({ id: e.id, kind: e.kind, body: e.body, outcome: e.outcome, author: e.author?.name ?? null, at: e.createdAt.toISOString(), opened: opens.get(e.id), audio: recordings.get(e.id), editable: canEditEntry(e) && (e.authorId === user.id || hasPermission(user.permissions, "deleteRecords")) }))}
             email={emailProps} text={textProps} />} />
         </section>

@@ -200,12 +200,12 @@ export function InfoCard(p: { id: string; name: string; addresses: AddressRow[];
   );
 }
 
-export function DetailsCard(p: { id: string; options: Options; stageId: string | null; sourceId: string | null; assignedToId: string | null; followUpDays: number | null; mailingName: string; referredBy: string; partnerType: string | null; company: string; kids: string }) {
+export function DetailsCard(p: { id: string; options: Options; stageId: string | null; sourceId: string | null; assignedToId: string | null; followUpDays: number | null; mailingName: string; legalNames: string; referredBy: string; partnerType: string | null; company: string; kids: string }) {
   const o = p.options;
   const name = (list: { id: string; name: string }[], id: string | null) => list.find((x) => x.id === id)?.name;
   // Click one value to change just it, ✓ saves, ✕ cancels (like FUB, owner request 2026-10-28).
   const [openKey, setOpenKey] = useState<string | null>(null);
-  const current = { stageId: p.stageId ?? "", sourceId: p.sourceId ?? "", assignedToId: p.assignedToId ?? "", followUpDays: p.followUpDays ? String(p.followUpDays) : "", mailingName: p.mailingName, referredBy: p.referredBy, partnerType: p.partnerType ?? "", company: p.company, kids: p.kids };
+  const current = { stageId: p.stageId ?? "", sourceId: p.sourceId ?? "", assignedToId: p.assignedToId ?? "", followUpDays: p.followUpDays ? String(p.followUpDays) : "", mailingName: p.mailingName, legalNames: p.legalNames, referredBy: p.referredBy, partnerType: p.partnerType ?? "", company: p.company, kids: p.kids };
   type Key = keyof typeof current;
   const saveOne = (k: Key, value: string) => updateDetails({ id: p.id, ...current, [k]: value, followUpDays: (k === "followUpDays" ? value : current.followUpDays) ? Number(k === "followUpDays" ? value : current.followUpDays) : null });
   const fields: { k: Key; label: string; shown: string | null | undefined; options?: [string, string][]; placeholder?: string; show?: boolean }[] = [
@@ -215,6 +215,7 @@ export function DetailsCard(p: { id: string; options: Options; stageId: string |
     { k: "sourceId", label: "Source", shown: name(o.sources, p.sourceId), options: o.sources.map((x) => [x.id, x.name]) },
     { k: "referredBy", label: "Referred by", shown: p.referredBy },
     { k: "mailingName", label: "Mailing name", shown: p.mailingName },
+    { k: "legalNames", label: "Legal names", shown: p.legalNames, placeholder: "For contracts, e.g. Nicole Marie Hess, Garrett James Hess" },
     { k: "kids", label: "Kids", shown: p.kids, placeholder: "First names, e.g. Mia, Leo" },
     { k: "partnerType", label: "Type", shown: p.partnerType ? partnerLabel(p.partnerType) : "Client / sphere", options: PARTNER_TYPES.map(([k, l]) => [k, l]) },
     { k: "company", label: "Company", shown: p.company, show: !!(p.partnerType || p.company) },

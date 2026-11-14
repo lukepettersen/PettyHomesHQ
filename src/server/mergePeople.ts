@@ -49,7 +49,7 @@ export async function mergeContacts(userId: string, keepId: string, goneId: stri
     const later = (a: Date | null, b: Date | null) => (a && b ? (a > b ? a : b) : a ?? b);
     const name = (newName ?? "").trim().slice(0, 120) || keep.name;
     await tx.person.update({ where: { id: keepId }, data: {
-      name, mailingName: keep.mailingName === keep.name && name !== keep.name ? name : keep.mailingName ?? gone.mailingName,
+      name, mailingName: keep.mailingName === keep.name && name !== keep.name ? name : keep.mailingName ?? gone.mailingName, legalNames: keep.legalNames ?? gone.legalNames,
       address: keep.address ?? gone.address, stageId: keep.stageId ?? gone.stageId, sourceId: keep.sourceId ?? gone.sourceId, referredBy: keep.referredBy ?? gone.referredBy,
       kids: keep.kids ?? gone.kids, partnerType: keep.partnerType ?? gone.partnerType, company: keep.company ?? gone.company, followUpDays: keep.followUpDays ?? gone.followUpDays,
       assignedToId: keep.assignedToId ?? gone.assignedToId, lastContactAt: later(keep.lastContactAt, gone.lastContactAt), lastTextAt: later(keep.lastTextAt, gone.lastTextAt),

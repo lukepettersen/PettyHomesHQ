@@ -53,4 +53,9 @@ describe("paperwork requests", () => {
     expect(steps).toContain("Term: starts 11/11/2026, expires 5/11/2027.");
     expect(steps).toContain("Compensation: 2.7%.");
   });
+  it("fills legal names from Details, or says to get them", () => {
+    const r = paperSchema.parse({ type: "buyerRep", values: {} });
+    expect(paperSteps(r, "Sarah and Jake Ehresmann", DEFAULT_STEPS, [], "Sarah Ann Ehresmann, Jacob Lee Ehresmann")[1]).toBe("Fill in the buyers' legal names (Sarah Ann Ehresmann, Jacob Lee Ehresmann) and contact info from their HQ page.");
+    expect(paperSteps(r, "Sarah and Jake Ehresmann", DEFAULT_STEPS)[1]).toContain("not in HQ yet");
+  });
 });

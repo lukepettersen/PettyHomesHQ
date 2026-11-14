@@ -135,6 +135,7 @@ model Person {
   id            String          @id @default(cuid())
   name          String
   mailingName   String?
+  legalNames    String? // "Nicole Marie Hess, Garrett James Hess": for contracts (owner request 2026-11-14)
   address       String?
   stageId       String?
   stage         Stage?          @relation(fields: [stageId], references: [id])

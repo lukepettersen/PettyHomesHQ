@@ -48,7 +48,7 @@ const DATED = st('Fill in "listing contract dated" with the original listing con
 export const DEFAULT_STEPS: PaperSteps = {
   buyerRep: [
     st("In ClickContracts, open a new Buyer Representation Agreement for {client}."),
-    st("Fill in the buyers' names and contact info from their HQ page."),
+    st("Fill in the buyers' legal names ({legal}) and contact info from their HQ page."),
     st("Term: starts {start}, expires {end}."),
     st("Compensation: {comp}."),
     st("Area / price range if the form asks: {area}."),
@@ -56,12 +56,12 @@ export const DEFAULT_STEPS: PaperSteps = {
   ],
   touring: [
     st("In ClickContracts, open a new Touring Agreement for {client}."),
-    st("Fill in the buyers' names and contact info from their HQ page."),
+    st("Fill in the buyers' legal names ({legal}) and contact info from their HQ page."),
     st("Homes they'll tour: {homes}"),
     st("Term: starts {start}, expires {end}. Compensation: {comp}."),
     st("Send it to {client} for signatures before the showing, then add the signed copy to their Files in HQ."),
   ],
-  listing: [st("In ClickContracts, open a new listing contract for {client}."), st("Property {address}, list price {price}."), st("Listing starts {start} and expires {end}."), st("Send it for signatures.")],
+  listing: [st("In ClickContracts, open a new listing contract for {client}."), st("Sellers' legal names: {legal}."), st("Property {address}, list price {price}."), st("Listing starts {start} and expires {end}."), st("Send it for signatures.")],
   amendment: [st("In ClickContracts, open an amendment to the purchase agreement for {address}."), st("Write in the changes: {changes}"), st("Send it for signatures.")],
   change: [
     CHANGE_FORM, TOP,
@@ -99,7 +99,7 @@ export function cleanConfig(v: unknown): PaperConfig {
 }
 
 /** The placeholders a form's steps can use, for the Admin hint. */
-export const placeholdersFor = (t: PaperType) => ["client", ...t.fields.map((f) => f.key), "notes"];
+export const placeholdersFor = (t: PaperType) => ["client", "legal", ...t.fields.map((f) => f.key), "notes"];
 
 /** Forms the owner added in Admin → Paperwork steps: a name and steps, with the property address to fill in. */
 export const customType = (key: string, label: string): PaperType => ({ key, label, fields: [address] });
@@ -163,13 +163,14 @@ export const aOrAn = (s: string) => (/^(a |an |the )/i.test(s) ? s : `${/^[aeiou
  * The steps for this request with its values filled in: steps for unchecked Change form boxes are left out, and a
  * blank value reads "____" (the listing contract date says where to find it).
  */
-export function paperSteps(r: PaperRequest, personName: string, steps: PaperSteps, custom: PaperType[] = []): string[] {
+export function paperSteps(r: PaperRequest, personName: string, steps: PaperSteps, custom: PaperType[] = [], legalNames = ""): string[] {
   const t = paperType(r.type, custom);
   if (!t) return [];
   const checks = checksOf(r.values);
   const fieldOf = (k: string) => t.fields.find((f) => f.key === k);
   const fill = (text: string) => text.replace(/\{(\w+)\}/g, (_, k: string) => {
     if (k === "client") return personName;
+    if (k === "legal") return legalNames.trim() || "____ (not in HQ yet: ask them, and save it in Details → Legal names)";
     if (k === "notes") return r.notes || "____";
     const v = r.values[k]?.trim();
     if (v) { const f = fieldOf(k); return f ? show(f, v) : v; }

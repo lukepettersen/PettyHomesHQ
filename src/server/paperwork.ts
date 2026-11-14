@@ -41,7 +41,7 @@ export async function requestPaperwork(from: { id: string; name: string }, perso
   const { steps, custom } = await loadPaperConfig();
   const problem = paperProblem(req, custom);
   if (problem) throw new UserError(problem);
-  const person = await db.person.findFirst({ where: { id: personId, deletedAt: null }, select: { id: true, name: true } });
+  const person = await db.person.findFirst({ where: { id: personId, deletedAt: null }, select: { id: true, name: true, legalNames: true } });
   if (!person) throw new UserError("That person was deleted.");
   const to = await db.user.findFirst({ where: { id: toId, status: { not: "DISABLED" } }, select: { id: true, name: true } });
   if (!to) throw new UserError("Pick who should write it up.");
@@ -50,7 +50,7 @@ export async function requestPaperwork(from: { id: string; name: string }, perso
   const details = paperDetails(req, custom);
   const name = formName(req, custom);
   // The form's steps, filled in, are checkboxes on the task (owner 2026-11-05).
-  const subtasks = paperSteps(req, person.name, steps, custom).map((t) => ({ title: t, done: false }));
+  const subtasks = paperSteps(req, person.name, steps, custom, person.legalNames ?? "").map((t) => ({ title: t, done: false }));
   const task = await db.$transaction(async (tx) => {
     const t = await tx.task.create({
       data: { title, notes: details, kind: "task", dueDate: dateFromIso(isoFromDate(todayCentral())), dueTime: nowClock(), subtasks, priority: 1, personId: person.id, assigneeId: to.id, createdById: from.id, sourceKey: `${SOURCE_PREFIX}${randomUUID()}` },

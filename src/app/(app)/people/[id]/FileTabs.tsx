@@ -26,7 +26,7 @@ import { SocialPosts } from "./SocialPosts";
 
 type EmailProps = { emails: string[]; templates: { id: string; name: string }[]; sendsFrom: string | null; ownGmail?: boolean; canConnect?: boolean };
 export type OfferRow = { id: string; fileId: string; createdAt: string; address: string; price: number | null; summary: string; prefill: Record<string, string> };
-type Props = { offers: OfferRow[]; email: EmailProps; text: Omit<React.ComponentProps<typeof TextComposer>, "personId">; fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean; canDelete: boolean; timeline: React.ReactNode;
+type Props = { offers: OfferRow[]; email: EmailProps; text: Omit<React.ComponentProps<typeof TextComposer>, "personId">; fileForms: Record<"buyer" | "listing", FileSection[]>; personId: string; personName: string; legalNames?: string; files: FileView[]; statuses: Record<"buyer" | "listing", StatusRow[]>; canSeeCommission: boolean; canDelete: boolean; timeline: React.ReactNode;
   contracts: PaView[]; forms: Record<Side, PaSection[]>; pendingAt: DateKey[]; ucColumns: { name: string; untilDate: string | null }[]; today: string; checklists: TaskRow[]; team: TeamMember[]; scheduled: ScheduledRow[] };
 export type { ScheduledRow } from "@/components/ScheduledList";
 import type { ScheduledRow } from "@/components/ScheduledList";
@@ -93,7 +93,7 @@ export function SideChip({ kind }: { kind: string }) {
   return <span className={`rounded px-1.5 text-[11px] font-bold uppercase tracking-wide ${kind === "buyer" ? "bg-accent-soft text-accent" : "bg-[#f6e3d9] text-[#9a4f2e]"}`}>{kind === "buyer" ? "Buyer" : kind === "listing" ? "Seller" : kind}</span>;
 }
 
-function FilePane({ offers, email, text, fileForms, file, personId, personName, statuses, canSeeCommission, canDelete, onDeleted, contracts, forms, pendingAt, ucColumns, today, checklists, team }: Props & { file: FileView; onDeleted: () => void }) {
+function FilePane({ offers, email, text, fileForms, file, personId, personName, legalNames = "", statuses, canSeeCommission, canDelete, onDeleted, contracts, forms, pendingAt, ucColumns, today, checklists, team }: Props & { file: FileView; onDeleted: () => void }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [addingPa, setAddingPa] = useState(false);
@@ -228,7 +228,7 @@ function FilePane({ offers, email, text, fileForms, file, personId, personName, 
           onClose={() => setEditingPa(false)} onSaved={(m) => { setEditingPa(false); setMsg(m); router.refresh(); }} />
       )}
       {offering && <OfferModal personId={personId} personName={personName} buyerFiles={[{ id: file.id, label: fileLine(file) }]} fileId={file.id} onClose={() => setOffering(false)} />}
-      {papering && <PaperworkModal personId={personId} personName={personName} kind={file.kind} underContract={!!activePa} team={team}
+      {papering && <PaperworkModal personId={personId} personName={personName} legalNames={legalNames} kind={file.kind} underContract={!!activePa} team={team}
         prefill={{ address: activePa ? activePa.address : file.address ?? "", price: price ? String(price) : "" }}
         onClose={() => setPapering(false)} onSent={(m) => { setPapering(false); setMsg(m); }} />}
       {msg && <p role="status" className="mt-2 text-sm text-accent">{msg}</p>}

@@ -340,6 +340,13 @@ scrolls with it until its last card is on screen, then stays put while the middl
   address, role, state).
 - Partners are **never** invited to contract calendar events (only the team and the client).
 
+### 6.4b Legal names *(owner request 2026-11-14)*
+
+- **Legal names** in each contact's Details card (e.g. "Samuel James Ortiz, Jennifer Ann Ortiz"), edited in place like
+  the other details. It shows at the top of **Request paperwork**, fills `{legal}` in paperwork steps (Buyer rep,
+  Touring agreement and Listing contract steps use it; when it's empty the step says to ask and save it), is the
+  `{legal_names}` merge field in text/email templates, and the text assistant can read it. Combining contacts keeps it.
+
 ### 6.5 Import address list *(owner request 2026-11-04)*
 
 - Admin → **Import address list** (Connections & tools; same permission as the Follow Up Boss import) brings in a
