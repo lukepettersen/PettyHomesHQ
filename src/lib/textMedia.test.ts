@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { conversationMedia, isOurImage, plainMedia, textWithPhotos } from "./textMedia";
+import { conversationMedia, isOurImage, plainMedia, textWithPhotos, isPicture, attachmentLabel } from "./textMedia";
 
 describe("photos in texts", () => {
   it("reads photos from both webhooks", () => {
@@ -16,5 +16,11 @@ describe("photos in texts", () => {
   it("labels photo-only texts", () => {
     expect(textWithPhotos("", [{}])).toBe("📷 Photo");
     expect(textWithPhotos("Look!", [{}])).toBe("Look!");
+  });
+  it("photos show as pictures; contact cards and PDFs are links", () => {
+    expect(isPicture("image/jpeg")).toBe(true);
+    expect(isPicture("text/vcard")).toBe(false);
+    expect(attachmentLabel("text/x-vcard")).toBe("📇 Contact card");
+    expect(attachmentLabel("application/pdf")).toBe("📄 PDF");
   });
 });

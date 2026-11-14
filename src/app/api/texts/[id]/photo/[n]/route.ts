@@ -17,5 +17,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (m.url && m.url.includes("/api/img/")) return Response.redirect(m.url, 302);
   const r = await fetchTextMedia(m);
   if (!r || !r.ok) return new Response("The photo isn't available from Twilio right now.", { status: 502 });
-  return new Response(r.body, { headers: { "Content-Type": r.headers.get("content-type") ?? m.type ?? "image/jpeg", "Cache-Control": "private, max-age=86400" } });
+  const type = r.headers.get("content-type") ?? m.type ?? "image/jpeg";
+  // Not a photo (a contact card, a PDF): downloaded with a sensible name instead of shown as a broken picture.
+  const ext = /vcard/i.test(type) ? "vcf" : /pdf/i.test(type) ? "pdf" : null;
+  const headers: Record<string, string> = { "Content-Type": type, "Cache-Control": "private, max-age=86400" };
+  if (!/^image\//i.test(type)) headers["Content-Disposition"] = `attachment; filename="${ext ? `attachment.${ext}` : "attachment"}"`;
+  return new Response(r.body, { headers });
 }

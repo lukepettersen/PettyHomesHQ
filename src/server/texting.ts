@@ -11,7 +11,7 @@ import { runTextCommand } from "@/server/textCommands";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { groupTitle, isGroupKey } from "@/lib/groupText";
 import { applyReaction, parseReaction, reactsTo, type ReactionMark } from "@/lib/reactions";
-import { isOurImage, MAX_TEXT_PHOTOS, textWithPhotos, type TextMedia } from "@/lib/textMedia";
+import { isOurImage, MAX_TEXT_PHOTOS, textWithPhotos, type TextMedia, isPicture, attachmentLabel } from "@/lib/textMedia";
 import { callLength, centralDayStart, DEFAULT_DAILY_CAP, otherRoute, TEXT_STOP_TAG, isStartWord, isStopWord, MAX_TEXT, toE164 } from "@/lib/texting";
 
 // Business texting (SPEC.md §11). Each team member has their own Twilio number (owner, 2026-10-20). Texts and
@@ -247,7 +247,7 @@ export async function sendTextAs(user: { id: string; name: string }, o: { person
 
 // ---------- Messages page ----------
 export type Thread = { number: string; personId: string | null; name: string; last: string; lastKind: string; lastDir: string; at: string; unread: number; group?: boolean; archived?: boolean };
-export type Bubble = { id: string; direction: string; kind: string; body: string; status: string; error: string | null; by: string | null; at: string; from?: string | null; reactions?: string[]; mine?: string[]; photos?: string[] };
+export type Bubble = { id: string; direction: string; kind: string; body: string; status: string; error: string | null; by: string | null; at: string; from?: string | null; reactions?: string[]; mine?: string[]; photos?: string[]; files?: { href: string; label: string }[] };
 export type GroupInfo = { title: string; members: { name: string; personId: string | null; digits: string }[] };
 
 /** Group texts' names (the people in them, as contacts where we have them). */
@@ -289,7 +289,11 @@ export async function loadConversation(ourNumber: string, theirNumber: string, u
   return rows.map((m) => ({ id: m.id, direction: m.direction, kind: m.kind, body: m.body, status: m.status, error: m.error, by: m.sentBy?.name.split(" ")[0] ?? null, at: m.createdAt.toISOString(),
     from: m.fromNumber ? m.person?.name ?? formatPhone(m.fromNumber) : null, reactions: ((Array.isArray(m.reactions) ? m.reactions : []) as ReactionMark[]).map((x) => x.emoji),
     mine: ((Array.isArray(m.reactions) ? m.reactions : []) as ReactionMark[]).filter((x) => userId && x.by === `hq:${userId}`).map((x) => x.emoji),
-    photos: (Array.isArray(m.media) ? m.media : []).map((_, i) => `/api/texts/${m.id}/photo/${i}`) }));
+    ...(() => {
+      const list = (Array.isArray(m.media) ? m.media : []) as { type?: string }[];
+      const at = list.map((x, i) => ({ href: `/api/texts/${m.id}/photo/${i}`, type: x?.type ?? "" }));
+      return { photos: at.filter((x) => isPicture(x.type)).map((x) => x.href), files: at.filter((x) => !isPicture(x.type)).map((x) => ({ href: x.href, label: attachmentLabel(x.type) })) };
+    })() }));
 }
 
 /** Unread texts and missed calls on the user's number, for the Messages tab. */

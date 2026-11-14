@@ -26,6 +26,17 @@ export function conversationMedia(f: Record<string, string>): TextMedia[] {
   }
 }
 
+/** Photos show as pictures; anything else on a text (a contact card someone shared, a PDF…) is a link to open it
+ *  (owner report 2026-11-14: a shared contact showed as a broken picture). */
+export const isPicture = (type: string) => /^image\//i.test(type || "image/");
+export function attachmentLabel(type: string): string {
+  if (/vcard|x-vcard/i.test(type)) return "📇 Contact card";
+  if (/pdf/i.test(type)) return "📄 PDF";
+  if (/^video\//i.test(type)) return "🎬 Video";
+  if (/^audio\//i.test(type)) return "🔊 Audio";
+  return "📎 Attachment";
+}
+
 /** Only photos uploaded to HQ (its public /api/img address) can be sent. */
 export const isOurImage = (url: string, base: string) => !!base && url.startsWith(`${base}/api/img/`) && emailImageName(url.slice(`${base}/api/img/`.length));
 

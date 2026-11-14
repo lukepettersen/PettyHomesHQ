@@ -164,6 +164,11 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
                     ) : (
                       <div className={`flex min-w-0 max-w-[80%] flex-col ${m.direction === "out" ? "items-end self-end" : "items-start self-start"}`}>
                         {m.from && <span className="px-1 text-[11px] font-semibold muted">{m.from}</span>}
+                        {!!m.files?.length && (
+                          <span className={`flex flex-wrap gap-1 ${m.direction === "out" ? "justify-end" : ""}`}>
+                            {m.files.map((f) => <a key={f.href} href={f.href} className="rounded-2xl border border-misty bg-white px-3 py-2 text-sm font-semibold hover:bg-sunken">{f.label}</a>)}
+                          </span>
+                        )}
                         {!!m.photos?.length && (
                           <span className={`flex flex-wrap gap-1 ${m.direction === "out" ? "justify-end" : ""}`}>
                             {m.photos.map((src) => (
