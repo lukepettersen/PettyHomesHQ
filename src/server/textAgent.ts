@@ -1,4 +1,5 @@
 import "server-only";
+import { canText } from "@/lib/texting";
 import Anthropic from "@anthropic-ai/sdk";
 import { db } from "@/server/db";
 import { UserError } from "@/server/safe";
@@ -541,7 +542,8 @@ export async function answerConfirm(user: { id: string; name: string }, actionId
   const person = await db.person.findFirst({ where: { id: p.personId, deletedAt: null }, include: { phones: { orderBy: { position: "asc" } } } });
   if (!person?.phones.length) return "Not sent: they have no phone number in HQ now.";
   // Texts the assistant sends go as a group text with the owner's own cell in it (owner request 2026-10-30).
-  const theirs = [...new Set(person.phones.map((x) => x.normalized))];
+  const theirs = [...new Set(person.phones.filter((x) => canText(x.label)).map((x) => x.normalized))];
+  if (!theirs.length) return "Not sent: their only number is an office line, which can't get texts.";
   const me = await db.user.findUnique({ where: { id: user.id }, select: { forwardTo: true } });
   const cell = me?.forwardTo ? normalizePhone(me.forwardTo) : "";
   const withCell = cell && !theirs.includes(cell) && (await groupReady()) ? [...theirs, cell] : theirs;

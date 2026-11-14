@@ -161,6 +161,27 @@ async function main() {
     }
     await db.appSetting.create({ data: { key: "seed.buyerShowingOffers", value: true } });
   }
+  // One time (owner report 2026-11-14: "I'm not being added to the text thread"): the showing checklists' automatic
+  // texts to the agent also go to the owner's cell, as a group text, including ones already waiting to send.
+  if (!(await db.appSetting.findUnique({ where: { key: "seed.showingTextsOwner" } }))) {
+    const owner = await db.user.findFirst({ where: { isOwner: true }, select: { name: true } });
+    const me = owner ? `team:${owner.name.split(/\s+/)[0]}` : null;
+    type AutoStep = { auto?: { to?: string[] } };
+    const addMe = (a: { to?: string[] } | undefined) => { if (!me || !a?.to?.includes("client") || a.to.includes(me)) return false; a.to.push(me); return true; };
+    if (me) {
+      for (const t of await db.taskTemplate.findMany({ where: { trigger: { startsWith: "showing:" } } })) {
+        const phases = (Array.isArray(t.phases) ? t.phases : []) as { steps?: AutoStep[] }[];
+        let changed = false;
+        for (const ph of phases) for (const st of ph.steps ?? []) if (addMe(st.auto)) changed = true;
+        if (changed) await db.taskTemplate.update({ where: { id: t.id }, data: { phases: phases as object[] } });
+      }
+      for (const t of await db.task.findMany({ where: { showingId: { not: null }, autoState: "pending", completedAt: null, deletedAt: null }, select: { id: true, autoSend: true } })) {
+        const a = t.autoSend as { to?: string[] } | null;
+        if (a && addMe(a)) await db.task.update({ where: { id: t.id }, data: { autoSend: a } });
+      }
+    }
+    await db.appSetting.create({ data: { key: "seed.showingTextsOwner", value: true } });
+  }
   // Trash: anything deleted more than 30 days ago is removed for good.
   const cutoff = new Date(Date.now() - 30 * 86400000);
   // People with stored files are purged by the app (it removes the files from the bucket first).

@@ -8,17 +8,17 @@ import { textingEnabled } from "@/server/integrations";
 import { UserError } from "@/server/safe";
 import type { SessionUser } from "@/server/auth";
 import { fill } from "@/lib/merge";
-import { centralDayStart, TEXT_STOP_TAG } from "@/lib/texting";
+import { canText, centralDayStart, TEXT_STOP_TAG } from "@/lib/texting";
 import { inBulkHours, nextAfterSend, nextBulkStart, pickTextRecipients, tomorrowStart, withOptOut } from "@/lib/bulkText";
 
 // Mass text from People (SPEC.md §6.2, owner request 2026-11-06). The minute timer sends at most one text per send
 // each tick, a random 1–2 minutes apart, 9am–7pm Central, and stops for the day at the sender's daily cap.
 
 export async function bulkTextPeople(personIds: string[]) {
-  const people = await db.person.findMany({ where: { id: { in: personIds }, deletedAt: null }, select: { id: true, name: true, phones: { orderBy: { position: "asc" }, select: { number: true } }, tags: { select: { tag: { select: { name: true } } } } } });
+  const people = await db.person.findMany({ where: { id: { in: personIds }, deletedAt: null }, select: { id: true, name: true, phones: { orderBy: { position: "asc" }, select: { number: true, label: true } }, tags: { select: { tag: { select: { name: true } } } } } });
   const byId = new Map(people.map((p) => [p.id, p]));
   // Keep the order they were picked in.
-  return pickTextRecipients(personIds.map((id) => byId.get(id)).filter((p) => !!p).map((p) => ({ id: p!.id, name: p!.name, phones: p!.phones.map((x) => x.number), tags: p!.tags.map((t) => t.tag.name) })), TEXT_STOP_TAG);
+  return pickTextRecipients(personIds.map((id) => byId.get(id)).filter((p) => !!p).map((p) => ({ id: p!.id, name: p!.name, phones: p!.phones.filter((x) => canText(x.label)).map((x) => x.number), tags: p!.tags.map((t) => t.tag.name) })), TEXT_STOP_TAG);
 }
 
 /** One contact: a plain text to their one number, or one group text to all of theirs (a couple). */

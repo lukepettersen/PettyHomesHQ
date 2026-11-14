@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { callLength, centralDayStart, otherRoute, isStartWord, isStopWord, missedDial, outboundTwiml, sendProblem, toE164, voiceTwiml } from "./texting";
+import { callLength, centralDayStart, otherRoute, isStartWord, isStopWord, missedDial, outboundTwiml, sendProblem, toE164, voiceTwiml, canText } from "./texting";
 import { twilioSignature, validTwilioRequest } from "./twilioSig";
 
 describe("texting", () => {
@@ -63,5 +63,14 @@ describe("calling in HQ (owner request 2026-10-27)", () => {
   it("rings HQ in the browser on incoming calls, with or without a cell", () => {
     expect(voiceTwiml({ client: "hq_u1", action: "https://hq/done" })).toContain('<Dial timeout="20" answerOnBridge="true" action="https://hq/done"><Client>hq_u1</Client></Dial>');
     expect(voiceTwiml({ forwardTo: "+16125550188", client: "hq_u1" })).toContain("<Number>+16125550188</Number><Client>hq_u1</Client>");
+  });
+  it("skips office, fax and main lines for texts", () => {
+    expect(canText("Office")).toBe(false);
+    expect(canText("Office Main Line")).toBe(false);
+    expect(canText("Fax")).toBe(false);
+    expect(canText("Mobile")).toBe(true);
+    expect(canText("Home")).toBe(true);
+    expect(canText("")).toBe(true);
+    expect(canText(null)).toBe(true);
   });
 });

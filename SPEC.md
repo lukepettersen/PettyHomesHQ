@@ -376,6 +376,11 @@ scrolls with it until its last card is on screen, then stays put while the middl
   `sounds.<userId>`), so it follows them to their other devices. At 100% a call rings with Twilio's own ring; any other
   level uses HQ's ring at that volume. The computer's own volume still applies.
 
+- **Texting office lines** *(owner report 2026-11-14)*: numbers labelled Office, Fax, Main or Landline are skipped by
+  automatic checklist texts, mass texts and the text assistant (they can't get texts; a showing thank-you went to an
+  agent's cell and office line as a group). One time, the showing checklists' automatic texts to the agent also got
+  the owner added (group text), including ones already scheduled; change it in Admin → Checklists.
+
 ## 7. Pipeline
 
 ### 7.1 Client files

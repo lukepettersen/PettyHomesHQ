@@ -82,3 +82,7 @@ export function centralDayStart(now: Date = new Date()): Date {
 
 export const DEFAULT_DAILY_CAP = 200;
 export const MAX_TEXT = 1600;
+
+/** Numbers labelled Office, Fax, Main or Landline can't get texts (owner report 2026-11-14: a showing text went to an
+ *  agent's office line too). Automatic, mass and assistant texts skip them. */
+export const canText = (label: string | null | undefined) => !/\b(office|fax|main|landline)\b/i.test(label ?? "");

@@ -1,4 +1,5 @@
 import "server-only";
+import { canText } from "@/lib/texting";
 import { pickListingTemplate } from "@/lib/showingTime";
 import { db } from "@/server/db";
 import { UserError } from "@/server/safe";
@@ -98,7 +99,7 @@ export async function sendDueAutoTasks(now = new Date()): Promise<number> {
       }
       const kind = t.kind === "email" ? "email" : "text";
       const r = resolveRecipients(kind, auto.to, {
-        clientName: person.name, clientPhones: person.phones.map((x) => x.normalized), clientEmails: person.emails.map((x) => x.address), deal,
+        clientName: person.name, clientPhones: person.phones.filter((x) => canText(x.label)).map((x) => x.normalized), clientEmails: person.emails.map((x) => x.address), deal,
         team: team.map((u) => ({ first: u.name.split(/\s+/)[0], name: u.name, email: u.email, cell: u.forwardTo ? normalizePhone(u.forwardTo) : null })),
       });
       if (!(kind === "text" ? r.numbers : r.emails).length) throw new UserError(`Nobody to send it to: no ${kind === "text" ? "phone number" : "email"} on file for ${r.missing.join(", ") || "the people picked"}.`);
