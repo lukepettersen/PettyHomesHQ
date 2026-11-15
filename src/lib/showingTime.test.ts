@@ -103,4 +103,9 @@ describe("ShowingTime emails (owner request 2026-11-01)", () => {
     expect([c.date, c.start]).toEqual(["2026-11-12", "15:30"]);
     expect(parseShowingEmail("FEEDBACK | Showing | 520 Pleasant View Road | Thu, 11/12 3:30 PM", "", new Date())).toBeNull();
   });
+  it("our own listing's instructions never turn its texts off (owner report 2026-11-15)", () => {
+    const s = parseShowingEmail("SHOWING CONFIRMED | 4385 Trenton Lane N Unit# #212, Plymouth, MN 55442 Sun, 11/1 12:30 PM", CONFIRMED + " Please do not text the sellers. No text messages to owner.", new Date("2026-10-29T14:50:18Z"))!;
+    expect(s.side).toBe("listing");
+    expect(s.noTexts).toBe(false);
+  });
 });

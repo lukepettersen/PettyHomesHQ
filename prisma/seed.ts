@@ -182,6 +182,17 @@ async function main() {
     }
     await db.appSetting.create({ data: { key: "seed.showingTextsOwner", value: true } });
   }
+  // One time (owner report 2026-11-15): showings on OUR listings were marked "no texts" from our own instructions; their
+  // texts that haven't gone yet are turned back on (only ones turned off for that reason, for showings still ahead).
+  if (!(await db.appSetting.findUnique({ where: { key: "seed.ownListingNoTexts" } }))) {
+    const today = new Date(new Date().toISOString().slice(0, 10));
+    const wrong = await db.showing.findMany({ where: { side: "listing", noTexts: true, date: { gt: today } }, select: { id: true } });
+    if (wrong.length) {
+      await db.task.updateMany({ where: { showingId: { in: wrong.map((w) => w.id) }, autoState: "off", completedAt: null, deletedAt: null, autoError: { startsWith: "Their listing says no text messages" } }, data: { autoState: "pending", autoError: null } });
+    }
+    await db.showing.updateMany({ where: { side: "listing", noTexts: true }, data: { noTexts: false } });
+    await db.appSetting.create({ data: { key: "seed.ownListingNoTexts", value: true } });
+  }
   // Trash: anything deleted more than 30 days ago is removed for good.
   const cutoff = new Date(Date.now() - 30 * 86400000);
   // People with stored files are purged by the app (it removes the files from the bucket first).

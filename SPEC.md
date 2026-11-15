@@ -376,6 +376,10 @@ scrolls with it until its last card is on screen, then stays put while the middl
   `sounds.<userId>`), so it follows them to their other devices. At 100% a call rings with Twilio's own ring; any other
   level uses HQ's ring at that volume. The computer's own volume still applies.
 
+- **"No texts" only for other agents' listings** *(owner report 2026-11-15)*: the "no text messages" check reads the
+  listing's showing instructions only on showings we book on someone else's listing; our own listings' instructions
+  (e.g. "do not text the sellers") never turn off the texts to the buyer's agent. One time, upcoming showings on our
+  listings that were turned off this way were turned back on.
 - **Texting office lines** *(owner report 2026-11-14)*: numbers labelled Office, Fax, Main or Landline are skipped by
   automatic checklist texts, mass texts and the text assistant (they can't get texts; a showing thank-you went to an
   agent's cell and office line as a group). One time, the showing checklists' automatic texts to the agent also got

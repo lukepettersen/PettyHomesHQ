@@ -77,7 +77,9 @@ export function parseShowingEmail(subject: string, body: string, received: Date)
   const mlsId = t.match(/ID# (\d+)/)?.[1] ?? null;
   const total = Number(t.match(/Total # of Showings: (\d+)/)?.[1]) || null;
   const conf = t.match(/\b(?:LA|SA) [A-Z]+ [A-Z]+ (\d{5,})\b/)?.[1];
-  const noTexts = /\bno text(?:s| messages?)\b|\bdo not text\b|\bemails? only\b/i.test(t);
+  // Only for showings we book on someone else's listing: its instructions are about texting that listing agent. On our
+  // own listings the instructions are ours (e.g. "do not text the sellers"), not about the buyer's agent (owner report 2026-11-15).
+  const noTexts = side === "buyer" && /\bno text(?:s| messages?)\b|\bdo not text\b|\bemails? only\b/i.test(t);
 
   // Our listing: the buyer's agent who's coming. A showing we booked: the listing agent ("Listing Presented By").
   const block = side === "buyer" ? (t.match(/Listing Presented By (.+?)(?: For questions| Free Downloadable|$)/)?.[1] ?? "") : (t.match(/Buyer'?s Agent Details (.+?) Listing Contacts/)?.[1] ?? "");
