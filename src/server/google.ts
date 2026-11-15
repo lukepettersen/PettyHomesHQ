@@ -275,7 +275,8 @@ export async function syncGmail(): Promise<number> {
   for (const c of [...(shared ? [shared] : []), ...own]) added += await syncOne(c);
   // One-time catch-up (owner report 2026-11-09): "2ND SHOWING CONFIRMED" emails weren't read before, so read the last
   // 3 days again. Showings already in HQ and emails already on a timeline are skipped, so nothing doubles.
-  const flag = "gmail.rescan.2ndShowing";
+  // Each catch-up runs once; a new name runs it again (owner report 2026-11-15: a showing email was missed).
+  const flag = "gmail.rescan.2026-11-15";
   if (!(await db.appSetting.findUnique({ where: { key: flag } }))) {
     const mine = await db.appSetting.create({ data: { key: flag, value: new Date().toISOString() } }).then(() => true, () => false);
     if (mine) for (const c of [...(shared ? [shared] : []), ...own]) {
@@ -299,6 +300,15 @@ async function syncOne(c: { id: string; email: string; userId: string; scopes: s
     console.error("Gmail: sync failed", e instanceof Error ? e.message : "unknown");
     return 0;
   }
+}
+
+/** A ShowingTime email HQ couldn't handle: the owner hears about it in the bell (owner report 2026-11-15), so a showing
+ *  is never missed silently. Only the subject and the error are kept, never the email itself. */
+async function showingEmailFailed(subject: string, e: unknown) {
+  const why = e instanceof Error ? e.message.split("\n").filter(Boolean).slice(-1)[0]?.slice(0, 160) ?? e.name : "unknown error";
+  console.error("ShowingTime email:", e instanceof Error ? e.name : "error");
+  const owner = await db.user.findFirst({ where: { isOwner: true }, select: { id: true } }).catch(() => null);
+  if (owner) await db.notification.create({ data: { toId: owner.id, alert: true, text: `HQ couldn't read a ShowingTime email ("${subject.slice(0, 90)}"): ${why}. Tell Claude so it can be fixed.` } }).catch(() => null);
 }
 
 async function syncSince(fromMs: number, accountEmail: string, accountUserId: string, connId = "calendar"): Promise<number> {
@@ -326,7 +336,7 @@ async function syncSince(fromMs: number, accountEmail: string, accountUserId: st
     const from = addressesIn(h("from")), to = addressesIn(`${h("to")}, ${h("cc")}`);
     const outbound = from.some((a) => team.has(a));
     // ShowingTime emails about showings on our listings (owner request 2026-11-01). Never stops the sync.
-    if (from.some((a) => a.endsWith("@showingtime.com"))) await (await import("@/server/showings")).onShowingEmail(id, h("subject"), messageFullText(m.payload ?? {}), new Date(Number(m.internalDate) || Date.now())).catch((e) => console.error("ShowingTime email:", e instanceof Error ? e.name : "error"));
+    if (from.some((a) => a.endsWith("@showingtime.com"))) await (await import("@/server/showings")).onShowingEmail(id, h("subject"), messageFullText(m.payload ?? {}), new Date(Number(m.internalDate) || Date.now())).catch((e) => showingEmailFailed(h("subject"), e));
     const theirs = [...from, ...to].filter((a) => !team.has(a));
     if (!theirs.length) continue;
     const matches = await db.email.findMany({ where: { normalized: { in: theirs }, person: { deletedAt: null } }, select: { personId: true, normalized: true } });

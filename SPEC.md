@@ -376,6 +376,8 @@ scrolls with it until its last card is on screen, then stays put while the middl
   `sounds.<userId>`), so it follows them to their other devices. At 100% a call rings with Twilio's own ring; any other
   level uses HQ's ring at that volume. The computer's own volume still applies.
 
+- **A ShowingTime email HQ can't handle** gives the owner a bell alert with its subject and the reason (owner report
+  2026-11-15: a confirmed showing never appeared); a one-time re-read of the last 3 days of Gmail picked up the missed one.
 - **"No texts" only for other agents' listings** *(owner report 2026-11-15)*: the "no text messages" check reads the
   listing's showing instructions only on showings we book on someone else's listing; our own listings' instructions
   (e.g. "do not text the sellers") never turn off the texts to the buyer's agent. One time, upcoming showings on our
