@@ -1,0 +1,174 @@
+import "server-only";
+import { db } from "@/server/db";
+import { daysUntil, matchesAll, parseFilters, isDueForTouch, type Filter, type PersonFacts } from "@/lib/filters";
+import { isoFromDate, todayCentral } from "@/lib/normalize";
+import { toPaView, ucColumn } from "@/lib/pa";
+import { partnerLabel } from "@/lib/partners";
+import { parseColumns } from "@/lib/columns";
+import { LIVE_STEPS } from "@/server/tasks";
+
+export type PersonRow = PersonFacts & {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  mailingName: string | null;
+  kids: string | null;
+  dueForTouch: boolean;
+  /** Every phone (digits), email, address and mailing name, for search. */
+  contactText: string;
+  company: string | null;
+  /** Their soonest open task (owner request 2026-11-02, "Next task" column): title and due date "YYYY-MM-DD" or null. */
+  nextTask: { title: string; due: string | null } | null;
+};
+
+/** Everyone not in Trash, flattened for the People table and smart lists. */
+export async function loadPeopleRows(): Promise<PersonRow[]> {
+  const today = todayCentral();
+  const people = await db.person.findMany({
+    where: { deletedAt: null },
+    orderBy: { name: "asc" },
+    include: {
+      stage: true,
+      source: true,
+      assignedTo: { select: { name: true } },
+      tags: { include: { tag: true } },
+      phones: { orderBy: { position: "asc" } },
+      addresses: { select: { value: true } },
+      emails: { orderBy: { position: "asc" } },
+      dates: { select: { kind: true, date: true } },
+      files: { where: { deletedAt: null, closedAt: null }, select: { kind: true, status: { select: { name: true } }, contracts: { where: { state: "active", deletedAt: null }, take: 1 } } },
+      _count: { select: { tasks: { where: { completedAt: null, deletedAt: null, dueDate: { gte: today } } } } },
+    },
+  });
+  // Last call / text / email from the timeline, for smart list filters and columns: the owner's only (owner 2026-11-06:
+  // a teammate's calls, texts and emails don't count). Entries with no author and no line (older emails, imports) count.
+  const ownerIds = (await db.user.findMany({ where: { isOwner: true }, select: { id: true } })).map((u) => u.id);
+  const lastBy = new Map<string, Date>();
+  for (const g of await db.timelineEntry.groupBy({ by: ["personId", "kind"], where: { deletedAt: null, kind: { in: ["call", "text", "email"] },
+    OR: [{ authorId: { in: ownerIds } }, { authorId: null, lineUserId: null }, { authorId: null, lineUserId: { in: ownerIds } }] }, _max: { createdAt: true } }))
+    if (g._max.createdAt) lastBy.set(`${g.personId}:${g.kind}`, g._max.createdAt);
+  // Each person's next open task: soonest due first, undated after (automatic sends still waiting aren't tasks).
+  const nextTask = new Map<string, { title: string; due: string | null }>();
+  for (const t of await db.task.findMany({ where: { personId: { not: null }, completedAt: null, deletedAt: null, ...LIVE_STEPS }, select: { personId: true, title: true, dueDate: true },
+    orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }, { dueTime: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }] }))
+    if (!nextTask.has(t.personId!)) nextTask.set(t.personId!, { title: t.title, due: t.dueDate ? isoFromDate(t.dueDate) : null });
+  const mmdd = (d: Date) => d.toISOString().slice(5, 10);
+  // Where each open deal sits: its stage, or its Under Contract column once there's an active purchase agreement.
+  const ucCols = await db.pipelineStatus.findMany({ where: { kind: "uc" }, orderBy: { position: "asc" }, select: { name: true, untilDate: true } });
+  const todayIso = isoFromDate(today);
+  const where = (f: (typeof people)[number]["files"][number]) => {
+    const pa = f.contracts[0];
+    if (pa) return `uc:${ucColumn(ucCols, toPaView(pa, false), todayIso)?.name ?? "Under contract"}`;
+    return f.status ? `${f.kind === "listing" ? "listing" : "buyer"}:${f.status.name}` : null;
+  };
+  return people.map((p) => {
+    const facts: PersonFacts = {
+      stage: p.stage?.name ?? null,
+      type: partnerLabel(p.partnerType),
+      source: p.source?.name ?? null,
+      tags: p.tags.map((t) => t.tag.name).sort(),
+      followUpDays: p.followUpDays,
+      lastContactAt: p.lastContactAt,
+      assignedTo: p.assignedTo?.name ?? null,
+      hasUpcomingTask: p._count.tasks > 0,
+      lastCallAt: lastBy.get(`${p.id}:call`) ?? null, lastTextAt: p.lastTextAt ?? lastBy.get(`${p.id}:text`) ?? null, touchAfter: p.touchAfter, lastEmailAt: lastBy.get(`${p.id}:email`) ?? null,
+      createdAt: p.createdAt, hasEmail: p.emails.length > 0, hasPhone: p.phones.length > 0,
+      birthdays: p.dates.filter((d) => d.kind === "birthday").map((d) => mmdd(d.date)),
+      homeiversary: (() => { const h = p.dates.find((d) => d.kind === "homeiversary"); return h ? mmdd(h.date) : null; })(),
+      pipeline: p.files.map(where).filter((x): x is string => !!x),
+    };
+    return {
+      ...facts, id: p.id, name: p.name, company: p.company, address: p.address, mailingName: p.mailingName, kids: p.kids, phone: p.phones[0]?.number ?? null, email: p.emails[0]?.address ?? null, dueForTouch: isDueForTouch(facts), nextTask: nextTask.get(p.id) ?? null,
+      contactText: [...p.phones.map((x) => x.normalized), ...p.emails.map((x) => x.normalized), p.address ?? "", ...p.addresses.map((a) => a.value), p.mailingName ?? "", p.kids ?? ""].join(" ").toLowerCase(),
+    };
+  });
+}
+
+export function searchRows(rows: PersonRow[], q: string): PersonRow[] {
+  const s = q.trim().toLowerCase();
+  if (!s) return rows;
+  const digits = s.replace(/\D/g, "");
+  return rows.filter((r) =>
+    [r.name, r.contactText, r.stage ?? "", r.type ?? "", r.company ?? "", r.source ?? "", ...r.tags].join(" ").toLowerCase().includes(s) ||
+    (digits.length >= 3 && r.contactText.includes(digits)),
+  );
+}
+
+export async function loadCollections() {
+  const cols = await db.collection.findMany({ orderBy: { position: "asc" }, include: { lists: { orderBy: { position: "asc" } } } });
+  return cols.map((c) => ({ id: c.id, name: c.name, lists: c.lists.map((l) => ({ id: l.id, name: l.name, filters: parseFilters(l.filters), columns: parseColumns(l.columns) })) }));
+}
+
+export function applyFilters(rows: PersonRow[], filters: Filter[]): PersonRow[] {
+  return filters.length ? rows.filter((r) => matchesAll(r, filters)) : rows;
+}
+
+/** Lists used by forms: stages, sources, follow-up options, tags, team. */
+export async function loadOptions() {
+  const [stages, sources, follow, tags, team, statuses] = await Promise.all([
+    db.stage.findMany({ orderBy: { position: "asc" } }),
+    db.source.findMany({ orderBy: { position: "asc" } }),
+    db.followUpOption.findMany({ orderBy: { position: "asc" } }),
+    db.tag.findMany({ orderBy: { name: "asc" } }),
+    db.user.findMany({ where: { status: { not: "DISABLED" } }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    db.pipelineStatus.findMany({ orderBy: { position: "asc" }, select: { kind: true, name: true } }),
+  ]);
+  return {
+    stages: stages.map((s) => ({ id: s.id, name: s.name })),
+    sources: sources.map((s) => ({ id: s.id, name: s.name })),
+    followUp: follow.map((f) => f.days),
+    tags: tags.map((t) => t.name),
+    team,
+    // Pipeline status filter choices: buyer stages, seller stages, Under Contract columns, then no open deal.
+    pipeline: [...(["buyer", "listing", "uc"] as const).flatMap((k) => statuses.filter((s) => s.kind === k).map((s) => `${k}:${s.name}`)), "none"],
+  };
+}
+export type Options = Awaited<ReturnType<typeof loadOptions>>;
+
+/** Sorts like the People table's column headers (Name A–Z, dates most recent first, blanks last). "-key" flips the
+ *  order (owner request 2026-10-29); blanks stay last either way. */
+export function sortRows(rows: PersonRow[], sortIn = "name"): PersonRow[] {
+  const desc = sortIn.startsWith("-"), sort = desc ? sortIn.slice(1) : sortIn;
+  const days = (d: Date | null | undefined) => (d ? -d.getTime() : Number.MAX_SAFE_INTEGER);
+  const next = (r: PersonRow) => (r.birthdays?.length ? Math.min(...r.birthdays.map((b) => daysUntil(b))) : Number.MAX_SAFE_INTEGER);
+  const key = (r: PersonRow): string | number => {
+    switch (sort) {
+      case "lastContact": return days(r.lastContactAt);
+      case "lastCall": return days(r.lastCallAt);
+      case "lastText": return days(r.lastTextAt);
+      case "lastEmail": return days(r.lastEmailAt);
+      case "created": return days(r.createdAt);
+      case "followUp": return r.followUpDays ?? Number.MAX_SAFE_INTEGER;
+      case "birthday": return next(r);
+      case "tags": return r.tags.join(",").toLowerCase() || "~";
+      case "assigned": return (r.assignedTo ?? "~").toLowerCase();
+      case "homeiversary": return r.homeiversary ?? "~";
+      case "nextTask": return r.nextTask ? r.nextTask.due ?? "9999-12-31" : "~"; // soonest first, undated after, none last
+      case "stage": case "type": case "company": case "phone": case "email": case "source": case "address": case "mailingName": case "kids":
+        return ((r as unknown as Record<string, string | null>)[sort] ?? "~").toLowerCase();
+      default: return r.name.toLowerCase();
+    }
+  };
+  const blank = (k: string | number) => k === "~" || k === Number.MAX_SAFE_INTEGER;
+  const cmp = (a: string | number, b: string | number) => (typeof a === "number" && typeof b === "number" ? a - b : String(a).localeCompare(String(b)));
+  return rows.map((r) => [key(r), r] as const)
+    .sort((a, b) => Number(blank(a[0])) - Number(blank(b[0])) || (desc ? -1 : 1) * cmp(a[0], b[0]) || a[1].name.localeCompare(b[1].name))
+    .map(([, r]) => r);
+}
+
+export const PAGE_SIZE = 100;
+export type PeopleQuery = { list?: string; f?: string; q?: string; sort?: string };
+function parseJson(s?: string): unknown { if (!s) return undefined; try { return JSON.parse(s); } catch { return undefined; } }
+
+/** Everyone a People view shows (list, filters, search, sort): shared by the People page and the contact page's Prev / Next. */
+export async function queryPeople(qp: PeopleQuery) {
+  const [rows, collections] = await Promise.all([loadPeopleRows(), loadCollections()]);
+  const lists = collections.flatMap((c) => c.lists.map((l) => ({ ...l, collection: c.name })));
+  const current = lists.find((l) => l.id === qp.list);
+  const urlFilters = parseJson(qp.f);
+  const working = urlFilters !== undefined ? parseFilters(urlFilters) : current?.filters ?? [];
+  const shown = sortRows(searchRows(applyFilters(rows, working), qp.q ?? ""), qp.sort);
+  return { rows, collections, current, working, shown };
+}

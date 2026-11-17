@@ -3,16 +3,19 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/server/auth";
 import { Logo } from "@/components/Logo";
 import { SignInButton } from "./SignInButton";
+import { safeBack } from "@/lib/mcp";
 
 const ERRORS: Record<string, string> = {
-  AccessDenied: "That Google account isn't on the Petty Homes team. Sign in with your @pettyhomes.com account, or ask Luke to add you in Admin → Users & roles.",
+  AccessDenied: "That Google account isn't on the Petty Homes team. Sign in with your @pettyhomes.com account, or ask Luke to add you in Admin → Users & permissions.",
   Default: "Sign-in didn't work. Try again.",
 };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; callbackUrl?: string }> }) {
+  const { error, callbackUrl } = await searchParams;
+  // Back to the page that sent you here (only a page on HQ itself), e.g. the Claude connector's Allow page.
+  const next = safeBack(callbackUrl);
   const session = await getServerSession(authOptions);
-  if (session?.user?.id) redirect("/");
-  const { error } = await searchParams;
+  if (session?.user?.id) redirect(next);
   return (
     <main className="grid min-h-screen place-items-center px-4">
       <div className="w-full max-w-sm rounded-xl border border-misty bg-white p-8 text-center shadow-sm">
@@ -26,7 +29,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             {ERRORS[error] ?? ERRORS.Default}
           </p>
         )}
-        <SignInButton />
+        <SignInButton next={next} />
       </div>
     </main>
   );

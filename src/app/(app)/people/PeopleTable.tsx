@@ -1,0 +1,298 @@
+"use client";
+
+import { BulkEmail } from "./BulkEmail";
+import { BulkText } from "./BulkText";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { bulkDelete, bulkUpdate } from "./actions";
+import { saveColumns } from "./listActions";
+import { Modal } from "@/components/Modal";
+import { COLUMNS, columnLabel } from "@/lib/columns";
+import { CallLink } from "@/components/CallCenter";
+
+export type Row = {
+  id: string; name: string; phone: string | null; email: string | null; stage: string | null; type: string | null; company: string | null; address: string | null; mailingName: string | null; kids: string | null;
+  assigned: string | null; source: string | null; tags: string[]; followUpDays: number | null; dueForTouch: boolean;
+  lastDays: number | null; callDays: number | null; textDays: number | null; emailDays: number | null; created: string | null;
+  birthdayIn: number | null; birthday: string | null; homeiversary: string | null;
+  nextTask: { title: string; due: string | null } | null; today: string;
+};
+type Opt = { stages: { id: string; name: string }[]; tags: string[]; followUp: number[]; team: { id: string; name: string }[] };
+
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const md = (mmdd: string | null) => (mmdd ? `${MON[+mmdd.slice(0, 2) - 1]} ${+mmdd.slice(3, 5)}` : null);
+const ago = (d: number | null) => (d === null ? null : d === 0 ? "Today" : `${d}d ago`);
+const dash = <span className="text-rabbit">—</span>;
+/** "Emily & Clayton Beck" → "EB": first name + last name. */
+const initials = (name: string) => { const w = name.replace(/[^\p{L}\s'-]/gu, " ").trim().split(/\s+/).filter(Boolean); return ((w[0]?.[0] ?? "") + (w.length > 1 ? w[w.length - 1][0] : "")).toUpperCase(); };
+// Look (owner-approved mockup 2026-10-30): stage as a colored label, a dot on last contact, a red "Due" on follow-ups.
+const STAGE_COLORS = ["bg-[#ece7f3] text-[#5b4a7a]", "bg-[#e3eef0] text-[#2f6470]", "bg-[#fbe9df] text-[#9a4f2e]", "bg-accent-soft text-accent", "bg-[#f6efd9] text-[#7a5d12]", "bg-[#f3e3e8] text-[#8a3b55]"];
+const stageColor = (name: string) => STAGE_COLORS[[...name].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7) % STAGE_COLORS.length];
+const stageChip = (name: string) => <span className={`inline-block max-w-full truncate rounded-full px-2.5 text-xs font-semibold leading-5 ${stageColor(name)}`}>{name}</span>;
+/** "12d ago" with a dot: green this month, yellow 1–3 months, gray older (or "Never"). */
+const agoDot = (d: number | null) => d === null
+  ? <span className="text-rabbit"><i aria-hidden="true" className="mr-1.5 inline-block size-1.5 rounded-full bg-misty align-middle" />Never</span>
+  : <><i aria-hidden="true" className={`mr-1.5 inline-block size-1.5 rounded-full align-middle ${d <= 30 ? "bg-[#7fa36f]" : d <= 90 ? "bg-[#d9a441]" : "bg-rabbit"}`} />{ago(d)}</>;
+/** What a column shows for a person, and the value it sorts by. */
+function cellOf(k: string, r: Row): [React.ReactNode, string | number] {
+  switch (k) {
+    case "stage": return [r.stage ? stageChip(r.stage) : dash, r.stage ?? "~"];
+    case "type": return [r.type ?? dash, r.type ?? "~"]; // already the label (Realtor, Lender…)
+    case "company": return [r.company ?? dash, r.company ?? "~"];
+    case "phone": return [r.phone ?? dash, r.phone ?? "~"];
+    case "email": return [r.email ?? dash, r.email ?? "~"];
+    case "lastContact": return [agoDot(r.lastDays), -(r.lastDays ?? 1e9)];
+    case "lastCall": return [agoDot(r.callDays), -(r.callDays ?? 1e9)];
+    case "lastText": return [agoDot(r.textDays), -(r.textDays ?? 1e9)];
+    case "lastEmail": return [agoDot(r.emailDays), -(r.emailDays ?? 1e9)];
+    case "followUp": return [r.followUpDays ? <>Every {r.followUpDays}d{r.dueForTouch && <span className="ml-1.5 rounded bg-[#f7e2de] px-1.5 text-[11px] font-bold text-bad">Due</span>}</> : dash, r.followUpDays ?? 1e9];
+    case "tags": return [r.tags.length ? <div key="t" className="flex items-center gap-1 overflow-hidden" title={r.tags.join(", ")}>{r.tags.slice(0, 2).map((t) => <span key={t} className="truncate rounded-md bg-sunken px-1.5 text-xs leading-5">{t}</span>)}{r.tags.length > 2 && <span className="flex-none text-xs muted">+{r.tags.length - 2}</span>}</div> : dash, r.tags.join(",") || "~"];
+    case "source": return [r.source ?? dash, r.source ?? "~"];
+    case "assigned": return [r.assigned ?? dash, r.assigned ?? "~"];
+    case "address": return [r.address ?? dash, r.address ?? "~"];
+    case "mailingName": return [r.mailingName ?? dash, r.mailingName ?? "~"];
+    case "kids": return [r.kids ?? dash, r.kids ?? "~"];
+    case "birthday": return [r.birthday ? <>{md(r.birthday)}{r.birthdayIn !== null && r.birthdayIn <= 14 ? <span className="text-xs text-accent"> · in {r.birthdayIn}d</span> : null}</> : dash, r.birthdayIn ?? 1e9];
+    case "homeiversary": return [md(r.homeiversary) ?? dash, r.homeiversary ?? "~"];
+    case "nextTask": {
+      const t = r.nextTask; if (!t) return [dash, "~"];
+      const when = !t.due ? null : t.due === r.today ? "Today" : t.due < r.today ? "Overdue" : md(t.due.slice(5));
+      return [<span key="n" className="block truncate" title={t.title}>{when && <span className={`mr-1.5 text-xs font-semibold ${t.due! < r.today ? "text-bad" : t.due === r.today ? "text-accent" : "muted"}`}>{when}</span>}{t.title}</span>, t.due ?? "9999"];
+    }
+    case "created": return [r.created ? new Date(r.created).toLocaleDateString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", year: "numeric" }) : dash, r.created ? -Date.parse(r.created) : 0];
+    default: return [dash, "~"];
+  }
+}
+
+export function PeopleTable({ rows, options, canDelete, canExport, canText, exportHref, emptyText, listId, columns, sort, page, pages, total, viewQuery, allIds }: {
+  rows: Row[]; options: Opt; canDelete: boolean; canExport: boolean; canText?: boolean; exportHref: string; emptyText: string; listId: string | null; columns: string[];
+  sort: string; page: number; pages: number; total: number; viewQuery: string; allIds: string[];
+}) {
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  // Sorting and pages are in the address, so Back from a contact returns to the same spot.
+  const href = (p: Record<string, string | null>) => { const q = new URLSearchParams(viewQuery); for (const [k, v] of Object.entries(p)) { if (v) q.set(k, v); else q.delete(k); } return `/people${q.size ? `?${q}` : ""}`; };
+  const back = (() => { const q = new URLSearchParams(viewQuery); if (page > 1) q.set("page", String(page)); return q.toString(); })();
+  // Click a column to sort by it; click it again to flip the order (owner request 2026-10-29).
+  const setSort = (k: string) => { const next = sort === k ? `-${k}` : k; router.push(href({ sort: next === "name" ? null : next, page: null })); };
+  const [editCols, setEditCols] = useState(false);
+  const [selecting, setSelecting] = useState(false); // phone: checkboxes only after "Select"
+  // Column widths: drag a header's right edge. Remembered per list in this browser.
+  const widthKey = `hq-colw-${listId ?? "all"}`;
+  const [widths, setWidths] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const t = setTimeout(() => { try { setWidths(JSON.parse(localStorage.getItem(widthKey) ?? "{}")); } catch { /* private window */ } }, 0);
+    return () => clearTimeout(t);
+  }, [widthKey]);
+  const drag = useRef<{ k: string; x: number; w: number } | null>(null);
+  const startResize = (k: string, e: React.PointerEvent<HTMLSpanElement>) => {
+    e.preventDefault(); e.stopPropagation();
+    const th = e.currentTarget.parentElement!;
+    drag.current = { k, x: e.clientX, w: th.getBoundingClientRect().width };
+    const move = (ev: PointerEvent) => { const d = drag.current; if (d) setWidths((w) => ({ ...w, [d.k]: Math.max(70, Math.round(d.w + ev.clientX - d.x)) })); };
+    const up = () => {
+      drag.current = null; window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up);
+      setWidths((w) => { try { localStorage.setItem(widthKey, JSON.stringify(w)); } catch { /* private window */ } return w; });
+    };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+  };
+  const widthOf = (k: string) => widths[k] ?? (k === "name" ? 240 : k === "tags" || k === "address" || k === "email" ? 220 : 150);
+  const [action, setAction] = useState<null | "addTag" | "removeTag" | "stage" | "followUp" | "assign" | "contacted">(null);
+  const [value, setValue] = useState("");
+  const [confirm, setConfirm] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [emailing, setEmailing] = useState(false);
+  const [texting, setTexting] = useState(false);
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  const sorted = rows; // already in order (HQ sorts the whole list, not just this page)
+  const all = rows.length > 0 && rows.every((r) => sel.has(r.id));
+  const everyone = sel.size >= allIds.length && allIds.length > 0;
+  const toggle = (id: string) => { const n = new Set(sel); if (n.has(id)) n.delete(id); else n.add(id); setSel(n); setConfirm(false); };
+  const ids = [...sel];
+
+  function apply() {
+    if (!action) return;
+    start(async () => {
+      const r = await bulkUpdate({ ids, action, value });
+      if (!r.ok) { setMsg(r.error); return; }
+      setMsg((r.data as { message?: string } | undefined)?.message ?? `Updated ${ids.length} ${ids.length === 1 ? "person" : "people"}.`); setAction(null); setValue(""); router.refresh();
+    });
+  }
+  // Remove tag picks from the real tags, so a typo can't quietly remove nothing (owner 2026-10-27).
+  const valueInput = action === "removeTag" ? (
+    <select className="input w-auto" value={value} onChange={(e) => setValue(e.target.value)} aria-label="Tag to remove" autoFocus><option value="">Pick a tag…</option>{options.tags.map((t) => <option key={t} value={t}>{t}</option>)}</select>
+  ) : action === "addTag" ? (
+    <><input className="input w-40" list="bulk-tags" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Tag" aria-label="Tag" autoFocus /><datalist id="bulk-tags">{options.tags.map((t) => <option key={t} value={t} />)}</datalist></>
+  ) : action === "stage" ? (
+    <select className="input w-auto" value={value} onChange={(e) => setValue(e.target.value)} aria-label="Stage"><option value="">No stage</option>{options.stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+  ) : action === "followUp" ? (
+    <select className="input w-auto" value={value} onChange={(e) => setValue(e.target.value)} aria-label="Follow-up"><option value="">Not set</option>{options.followUp.map((d) => <option key={d} value={d}>Every {d} days</option>)}</select>
+  ) : action === "contacted" ? (
+    <label className="flex items-center gap-1.5 text-white">Texted on <input type="date" className="input w-auto text-charcoal" value={value} max={new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" })} onChange={(e) => setValue(e.target.value)} aria-label="Contacted on" /></label>
+  ) : action === "assign" ? (
+    <select className="input w-auto" value={value} onChange={(e) => setValue(e.target.value)} aria-label="Assign to"><option value="">No one</option>{options.team.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select>
+  ) : null;
+  const th = (k: string, l: string) => (
+    <th key={k} aria-sort={sort === k ? "ascending" : sort === `-${k}` ? "descending" : undefined} className="sticky top-0 z-10 whitespace-nowrap border-b border-misty bg-sunken px-3 py-2" style={{ width: widthOf(k) }}>
+      <button type="button" title={sort === k ? "Click to flip the order" : `Sort by ${l.toLowerCase()}`}
+        className={`group inline-flex items-center gap-1 rounded px-1 -mx-1 uppercase tracking-wide hover:bg-sunken hover:text-charcoal ${sort.replace(/^-/, "") === k ? "font-bold text-charcoal" : ""}`} onClick={() => setSort(k)}>
+        {l}<span aria-hidden="true" className={sort.replace(/^-/, "") === k ? "" : "opacity-0 group-hover:opacity-50"}>{sort === `-${k}` ? "↑" : "↓"}</span>
+      </button>
+      <span role="separator" aria-orientation="vertical" aria-label={`Resize ${l}`} title="Drag left or right to resize; double-click to reset" onPointerDown={(e) => startResize(k, e)}
+        onDoubleClick={() => setWidths((w) => { const n = { ...w }; delete n[k]; try { localStorage.setItem(widthKey, JSON.stringify(n)); } catch { /* private window */ } return n; })}
+        className="absolute -right-1 top-0 bottom-0 z-10 flex w-3 cursor-col-resize justify-center after:my-1.5 after:w-px after:bg-misty hover:after:w-0.5 hover:after:bg-coral" />
+    </th>
+  );
+
+  return (
+    <>
+      {emailing && <BulkEmail ids={ids} onClose={() => setEmailing(false)} />}
+      {texting && <BulkText ids={ids} onClose={() => setTexting(false)} />}
+      {(ids.length > 0 || msg) && (
+        <div className="fixed bottom-4 left-1/2 z-30 flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-nowrap items-center gap-1.5 overflow-x-auto whitespace-nowrap rounded-xl md:flex-wrap md:whitespace-normal bg-charcoal px-3 py-2 text-sm text-white shadow-[0_8px_24px_rgba(0,0,0,.25)]">
+          {ids.length > 0 && <b className="mr-2">{ids.length.toLocaleString()} selected</b>}
+          {all && !everyone && total > rows.length && !action && <button type="button" className="rounded-md px-2 py-1 underline hover:bg-white/15" onClick={() => setSel(new Set(allIds))}>Select all {total.toLocaleString()}</button>}
+          {ids.length > 0 && !action && <>
+            {([["addTag", "Add tag"], ["removeTag", "Remove tag"], ["stage", "Change stage"], ["followUp", "Set follow-up"], ["assign", "Assign"], ["contacted", "Mark texted"]] as const).map(([k, l]) => (
+              <button key={k} type="button" className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" onClick={() => { setAction(k); setValue(k === "contacted" ? new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" }) : ""); setMsg(""); }}>{l}</button>
+            ))}
+            <button type="button" className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" onClick={() => { setEmailing(true); setMsg(""); }}>Email</button>
+            {canText && <button type="button" className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" onClick={() => { setTexting(true); setMsg(""); }}>Text</button>}
+            {canExport && <a className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" href={`/api/export/people?ids=${ids.join(",")}`}>Export</a>}
+            {canExport && <a className="rounded-md bg-white/15 px-2.5 py-1 font-semibold hover:bg-white/25" title="Mailing name and mailing address for direct mail" href={`/api/export/people?mail=1&ids=${ids.join(",")}`}>Mailing list</a>}
+            {canDelete && <button type="button" className="rounded-md bg-white/15 px-2.5 py-1 font-semibold text-red-200 hover:bg-white/25" disabled={pending}
+              onClick={() => { if (!confirm) { setConfirm(true); return; } start(async () => { const r = await bulkDelete(ids); if (!r.ok) setMsg(r.error); else { setMsg(`Moved ${r.data?.count} to Trash.`); setSel(new Set()); setConfirm(false); router.refresh(); } }); }}>
+              {confirm ? `Click again to delete ${ids.length}` : "Delete"}</button>}
+            <button type="button" className="ml-auto rounded-md px-2.5 py-1 hover:bg-white/15" onClick={() => { setSel(new Set()); setConfirm(false); }}>Clear</button>
+          </>}
+          {action && <span className="flex flex-wrap items-center gap-1.5 text-charcoal">{valueInput}<button type="button" className="btn btn-primary" disabled={pending || ((action === "addTag" || action === "removeTag") && !value.trim())} onClick={apply}>{pending ? "Working…" : "Apply"}</button><button type="button" className="btn" onClick={() => setAction(null)}>Cancel</button></span>}
+          {msg && <span className="ml-2">{msg}</span>}
+        </div>
+      )}
+      <div className="mt-1 hidden justify-end md:flex"><button type="button" className="inline-flex items-center gap-1 text-sm font-semibold text-accent hover:underline" onClick={() => setEditCols(true)}>
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>Columns</button></div>
+      {editCols && <ColumnsModal listId={listId} columns={columns} onClose={() => setEditCols(false)} />}
+      <div className="card mt-3 overflow-hidden md:mt-1">
+      {/* Phone (owner report 2026-11-02): a list of cards instead of the table; the list's own columns show as a short
+          line under each name, Call / Text stay visible, and Select shows checkboxes for the bulk bar. */}
+      {rows.length > 0 && (
+        <div className="flex items-center justify-between border-b border-misty bg-sunken px-3 py-2 text-xs muted md:hidden">
+          <span>Sorted by {sort.replace(/^-/, "") === "name" ? "name" : columnLabel(sort.replace(/^-/, "")).toLowerCase()}{sort.startsWith("-") ? " (reversed)" : ""}</span>
+          <button type="button" className="font-semibold text-accent" onClick={() => { setSelecting(!selecting); if (selecting) setSel(new Set()); }}>{selecting ? "Done" : "Select"}</button>
+        </div>
+      )}
+      <ul className="md:hidden">
+        {sorted.map((r) => {
+          const bits = columns.filter((k) => k !== "phone").map((k) => [k, cellOf(k, r)[0]] as const).filter(([, v]) => v !== dash).slice(0, 4);
+          return (
+            <li key={r.id} className={`flex items-start gap-3 border-b border-misty/50 px-3 py-3 last:border-0 ${sel.has(r.id) ? "bg-accent-soft/70" : ""}`}>
+              {selecting && <input type="checkbox" className="mt-2.5 size-5 flex-none" aria-label={`Select ${r.name}`} checked={sel.has(r.id)} onChange={() => toggle(r.id)} />}
+              <span aria-hidden="true" className="mt-0.5 grid size-9 flex-none place-items-center rounded-full bg-accent-soft text-xs font-bold text-accent">{initials(r.name)}</span>
+              <Link href={`/people/${r.id}?back=${encodeURIComponent(back)}&pos=${(page - 1) * 100 + sorted.indexOf(r)}`} className="min-w-0 flex-1">
+                <span className="block font-semibold leading-snug text-accent">{r.name}</span>
+                {r.phone && <span className="block text-sm muted">{r.phone}</span>}
+                {bits.length > 0 && <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">{bits.map(([k, v]) => <span key={k} className="whitespace-nowrap">{v}</span>)}</span>}
+              </Link>
+              <span className="flex flex-none gap-1.5">
+                {r.phone && <CallLink number={r.phone} name={r.name} className="grid size-9 place-items-center rounded-lg border border-misty bg-white"><span className="sr-only">Call {r.name}</span><Icon d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" /></CallLink>}
+                {r.phone && <Link href={`/people/${r.id}?compose=text&back=${encodeURIComponent(back)}`} className="grid size-9 place-items-center rounded-lg border border-misty bg-white"><span className="sr-only">Text {r.name}</span><Icon d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></Link>}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="hidden max-h-[calc(100vh-210px)] min-h-64 overflow-auto md:block">
+        <table className="text-left text-sm" style={{ tableLayout: "fixed", width: 40 + widthOf("name") + columns.reduce((n, k) => n + widthOf(k), 0), minWidth: "100%" }}>
+          <thead className="text-[11px] uppercase tracking-wider muted">
+            <tr>
+              <th className="sticky top-0 z-10 border-b border-misty bg-sunken px-3 py-2" style={{ width: 40 }}><input type="checkbox" aria-label="Select all" checked={all} onChange={(e) => setSel(e.target.checked ? new Set(rows.map((r) => r.id)) : new Set())} /></th>
+              {th("name", "Name")}{columns.map((k) => th(k, columnLabel(k)))}
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((r) => (
+              <tr key={r.id} className={`group border-b border-misty/50 last:border-0 ${sel.has(r.id) ? "bg-accent-soft/70" : "hover:bg-paper"}`}>
+                <td className="px-3 py-1.5"><input type="checkbox" aria-label={`Select ${r.name}`} checked={sel.has(r.id)} onChange={() => toggle(r.id)} /></td>
+                <td className="px-3 py-1.5">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span aria-hidden="true" className="grid size-7 flex-none place-items-center rounded-full bg-accent-soft text-[11px] font-bold text-accent">{initials(r.name)}</span>
+                    <span className="min-w-0 flex-1 leading-tight">
+                      <Link href={`/people/${r.id}?back=${encodeURIComponent(back)}&pos=${(page - 1) * 100 + sorted.indexOf(r)}`} className="link block truncate font-semibold">{r.name}</Link>
+                      {r.phone && !columns.includes("phone") && <span className="block truncate text-xs muted">{r.phone}</span>}
+                    </span>
+                    {/* Quick Call / Text / Email on hover (or keyboard focus). */}
+                    <span className="flex flex-none gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                      {r.phone && <CallLink number={r.phone} name={r.name} className="grid size-6 place-items-center rounded-md border border-misty bg-white hover:bg-sunken"><span className="sr-only">Call {r.name}</span><Icon d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" /></CallLink>}
+                      {r.phone && <Link href={`/people/${r.id}?compose=text&back=${encodeURIComponent(back)}`} title={`Text ${r.name}`} className="grid size-6 place-items-center rounded-md border border-misty bg-white hover:bg-sunken"><span className="sr-only">Text {r.name}</span><Icon d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></Link>}
+                      {r.email && <Link href={`/people/${r.id}?compose=email&back=${encodeURIComponent(back)}`} title={`Email ${r.name}`} className="grid size-6 place-items-center rounded-md border border-misty bg-white hover:bg-sunken"><span className="sr-only">Email {r.name}</span><Icon d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm18 2-10 7L2 6" /></Link>}
+                    </span>
+                  </div>
+                </td>
+                {columns.map((k) => <td key={k} className="truncate px-3 py-1.5">{cellOf(k, r)[0]}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {rows.length === 0 && <p className="p-8 text-center muted">{emptyText}</p>}
+      {rows.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 border-t border-misty px-4 py-2.5 text-sm muted">
+          <span>Showing {((page - 1) * 100 + 1).toLocaleString()}–{((page - 1) * 100 + rows.length).toLocaleString()} of {total.toLocaleString()}</span>
+          {canExport && <span className="flex flex-wrap gap-x-3"><a href={exportHref} className="font-semibold text-accent hover:underline">Export these {total.toLocaleString()} to CSV</a>
+            <a href={`${exportHref}&mail=1`} title="Mailing name and mailing address (street, city, state, ZIP) for direct mail; people without an address are left out" className="font-semibold text-accent hover:underline">Mailing list</a></span>}
+          {pages > 1 && (
+            <nav aria-label="Pages" className="ml-auto flex items-center gap-2">
+              {page > 1 ? <Link className="btn py-1" href={href({ page: page > 2 ? String(page - 1) : null })}>‹ Previous</Link> : <span className="btn py-1 opacity-40">‹ Previous</span>}
+              <span>Page {page} of {pages}</span>
+              {page < pages ? <Link className="btn py-1" href={href({ page: String(page + 1) })}>Next ›</Link> : <span className="btn py-1 opacity-40">Next ›</span>}
+            </nav>
+          )}
+        </div>
+      )}
+      </div>
+    </>
+  );
+}
+
+/** Pick and order the columns for this list (Save / Cancel). */
+function ColumnsModal({ listId, columns, onClose }: { listId: string | null; columns: string[]; onClose: () => void }) {
+  const router = useRouter();
+  const [cols, setCols] = useState(columns);
+  const [error, setError] = useState("");
+  const [pending, start] = useTransition();
+  const move = (i: number, d: number) => { const n = [...cols]; [n[i], n[i + d]] = [n[i + d], n[i]]; setCols(n); };
+  const rest = COLUMNS.filter(([k]) => !cols.includes(k));
+  return (
+    <Modal title={listId ? "Columns for this list" : "Columns for All people"} onClose={onClose}>
+      <div className="flex flex-col gap-3">
+        <p className="text-sm muted">Name is always first. Use the arrows to change the order.</p>
+        <ul className="flex flex-col gap-1">
+          {cols.map((k, i) => (
+            <li key={k} className="flex items-center gap-2 rounded-md bg-sunken px-2.5 py-1.5 text-sm">
+              <span className="flex-1 font-semibold">{columnLabel(k)}</span>
+              <button type="button" className="px-1.5 disabled:opacity-30" aria-label={`Move ${columnLabel(k)} up`} disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
+              <button type="button" className="px-1.5 disabled:opacity-30" aria-label={`Move ${columnLabel(k)} down`} disabled={i === cols.length - 1} onClick={() => move(i, 1)}>↓</button>
+              <button type="button" className="px-1.5 muted hover:text-bad" aria-label={`Remove ${columnLabel(k)}`} onClick={() => setCols(cols.filter((x) => x !== k))}>×</button>
+            </li>
+          ))}
+        </ul>
+        {rest.length > 0 && (
+          <div>
+            <span className="text-xs font-semibold muted">Add a column:</span>
+            <div className="mt-1 flex flex-wrap gap-1.5">{rest.map(([k, l]) => <button key={k} type="button" className="chip hover:bg-misty" onClick={() => setCols([...cols, k])}>+ {l}</button>)}</div>
+          </div>
+        )}
+        {error && <p role="alert" className="text-sm text-bad">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <button type="button" className="btn" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn btn-primary" disabled={pending || !cols.length} onClick={() => start(async () => { const r = await saveColumns(listId, cols); if (!r.ok) { setError(r.error); return; } onClose(); router.refresh(); })}>Save</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function Icon({ d }: { d: string }) {
+  return <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
+}

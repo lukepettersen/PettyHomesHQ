@@ -1,0 +1,69 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { db } from "@/server/db";
+import { guarded, UserError } from "@/server/safe";
+import { logActivity } from "@/server/activity";
+import { callChanged, consultChanged, redateConsult } from "@/server/automation";
+import { syncAppointment } from "@/server/google";
+import { loadApptTypes } from "@/server/appointments";
+import { bookAppt } from "@/server/booking";
+import { dateFromIso, isoFromDate } from "@/lib/normalize";
+import { formatTime, longIso } from "@/lib/tasks";
+
+const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Pick a time").nullable();
+const bookSchema = z.object({
+  personId: z.string().min(1).max(40),
+  type: z.string().regex(/^(call|buyer|seller|showing|other|c_[a-z0-9]{4,12})$/, "Pick a type"),
+  title: z.string().trim().min(1, "Give the appointment a name").max(160).refine((t) => !/-\s*$/.test(t), "Give the appointment a name"),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date"),
+  start: time, end: time,
+  location: z.string().trim().max(300).default(""),
+  invitees: z.array(z.string().trim().min(1).max(120)).max(20),
+});
+
+/** Book an appointment. A phone call also starts the "phone call booked" templates and is logged on the timeline. */
+export async function bookAppointment(input: z.input<typeof bookSchema>) {
+  return guarded(null, async (user) => {
+    const v = bookSchema.parse(input);
+    if (v.start && v.end && v.end <= v.start) throw new UserError("The end time is before the start.");
+    if (!(await loadApptTypes()).some((t) => t.key === v.type)) throw new UserError("That appointment type was removed. Pick another.");
+    const person = await db.person.findFirst({ where: { id: v.personId, deletedAt: null }, select: { id: true, name: true } });
+    if (!person) throw new UserError("That person was deleted.");
+    const result = await bookAppt(user.id, v);
+    revalidatePath(`/people/${v.personId}`); revalidatePath("/tasks");
+    return result;
+  });
+}
+
+export async function deleteAppointment(id: string) {
+  return guarded(null, async (user) => {
+    const a = await db.appointment.update({ where: { id: z.string().min(1).max(40).parse(id), deletedAt: null }, data: { deletedAt: new Date() } });
+    if (a.type === "buyer" || a.type === "seller") await consultChanged(db, a.personId, user.id);
+    if (a.type === "call") await callChanged(db, a.personId, user.id);
+    await logActivity(user.id, "delete", "appointment", a.id, `Deleted appointment "${a.title}"`);
+    await syncAppointment(a.id);
+    revalidatePath(`/people/${a.personId}`); revalidatePath("/tasks");
+  });
+}
+
+const editSchema = bookSchema.omit({ personId: true, type: true }).extend({ id: z.string().min(1).max(40) });
+
+/** Edit an appointment's title, date, times, location or invitees. */
+export async function updateAppointment(input: z.input<typeof editSchema>) {
+  return guarded(null, async (user) => {
+    const v = editSchema.parse(input);
+    if (v.start && v.end && v.end <= v.start) throw new UserError("The end time is before the start.");
+    const before = await db.appointment.findFirst({ where: { id: v.id, deletedAt: null } });
+    if (!before) throw new UserError("That appointment was deleted.");
+    const a = await db.appointment.update({ where: { id: v.id }, data: { title: v.title, date: dateFromIso(v.date), start: v.start, end: v.end, location: v.location, invitees: v.invitees } });
+    const moved = isoFromDate(before.date) !== v.date || before.start !== v.start;
+    // A moved call re-dates the open steps timed from it.
+    if (moved && a.type === "call") await callChanged(db, a.personId, user.id);
+    if (moved && (a.type === "buyer" || a.type === "seller")) await redateConsult(db, a.personId);
+    await syncAppointment(a.id);
+    await logActivity(user.id, "update", "appointment", a.id, `Updated appointment "${a.title}"${moved ? ` (now ${longIso(v.date)}${v.start ? ` ${formatTime(v.start)}` : ""})` : ""}`);
+    revalidatePath(`/people/${a.personId}`); revalidatePath("/tasks");
+  });
+}

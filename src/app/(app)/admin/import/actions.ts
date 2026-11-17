@@ -1,0 +1,228 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { db } from "@/server/db";
+import { guarded, UserError } from "@/server/safe";
+import { logActivity } from "@/server/activity";
+import { cachedFubPeople, fubKeySet, loadFromFub } from "@/server/fub";
+import { applyPlan, fubDate, kidsOf, lastActivityOf, lastTextOf, partnerOf, summarize, type HqPerson, type Plan } from "@/lib/fubImport";
+import { isPartnerType } from "@/lib/partners";
+import { coupleName, dateFromIso, formatPhone, normalizeEmail, normalizePhone } from "@/lib/normalize";
+
+// Admin → Import from Follow Up Boss (SPEC.md §15). Admins only. Nothing in Follow Up Boss is changed.
+
+export async function loadFub() {
+  return guarded("manageUsers", async (user) => {
+    if (!fubKeySet()) throw new UserError("Add FUB_API_KEY in Railway → your HQ app → Variables first.");
+    const n = await loadFromFub().catch((e: Error) => { throw new UserError(e.message); });
+    await logActivity(user.id, "update", "import", "fub", `Loaded ${n} people from Follow Up Boss (read only)`);
+    revalidatePath("/admin/import");
+    return { count: n };
+  });
+}
+
+const label = z.string().max(200);
+const planSchema = z.object({
+  fields: z.object({ mailingName: label, homeiversary: label, referredBy: label, birthdays: z.array(label).max(12) }),
+  relationships: z.record(label, z.enum(["merge", "kids", "skip"])).optional(),
+  stages: z.record(z.string().max(200), z.object({ action: z.enum(["import", "skip"]), stage: z.string().trim().max(80), followUp: z.number().int().min(1).max(3650).nullable(), type: z.string().max(20).nullable() })),
+  tags: z.record(z.string().max(200), z.string().regex(/^(keep|skip|type:\w+)$/)),
+  sources: z.record(z.string().max(200), z.object({ source: z.string().trim().max(80), type: z.string().max(20).nullable() })),
+  agents: z.record(z.string().max(200), z.string().max(40).nullable()),
+});
+
+export async function savePlan(input: unknown) {
+  return guarded("manageUsers", async (user) => {
+    const plan = planSchema.parse(input);
+    for (const r of Object.values(plan.stages)) if (r.action === "import" && !r.stage) throw new UserError("Every imported FUB stage needs an HQ stage.");
+    await db.appSetting.upsert({ where: { key: "fub.plan" }, update: { value: plan }, create: { key: "fub.plan", value: plan } });
+    await logActivity(user.id, "update", "import", "fub", "Saved the Follow Up Boss matching");
+    revalidatePath("/admin/import");
+  });
+}
+
+async function savedPlan(): Promise<Plan> {
+  const row = await db.appSetting.findUnique({ where: { key: "fub.plan" } });
+  if (!row) throw new UserError("Save the matching first.");
+  return planSchema.parse(row.value) as Plan;
+}
+
+/** Who is already in HQ: FUB ids, emails and phones, so nobody is added twice. */
+async function existing() {
+  const [ids, emails, phones] = await Promise.all([
+    db.person.findMany({ where: { fubId: { not: null } }, select: { fubId: true } }),
+    db.email.findMany({ where: { person: { deletedAt: null } }, select: { normalized: true } }),
+    db.phone.findMany({ where: { person: { deletedAt: null } }, select: { normalized: true } }),
+  ]);
+  return { ids: new Set(ids.map((x) => x.fubId!)), emails: new Set(emails.map((x) => x.normalized)), phones: new Set(phones.map((x) => x.normalized).filter((x) => x.length >= 7)) };
+}
+const isDuplicate = (p: HqPerson, ex: Awaited<ReturnType<typeof existing>>) =>
+  ex.ids.has(p.fubId) || p.emails.some((e) => ex.emails.has(normalizeEmail(e.address))) || p.phones.some((x) => ex.phones.has(normalizePhone(x.number)));
+
+/** Totals and sample people exactly as they'll be saved, using the saved matching. */
+export async function previewImport() {
+  return guarded("manageUsers", async () => {
+    const plan = await savedPlan();
+    const { people } = await cachedFubPeople();
+    const ex = await existing();
+    const out = { total: people.length, willAdd: 0, skipped: 0, duplicates: 0, byStage: {} as Record<string, number>, byType: {} as Record<string, number> };
+    const samples: HqPerson[] = [];
+    const seenStage = new Map<string, number>();
+    for (const p of people) {
+      const h = applyPlan(p, plan);
+      if (!h) { out.skipped++; continue; }
+      if (isDuplicate(h, ex)) { out.duplicates++; continue; }
+      out.willAdd++;
+      out.byStage[h.stage] = (out.byStage[h.stage] ?? 0) + 1;
+      if (h.partnerType) out.byType[h.partnerType] = (out.byType[h.partnerType] ?? 0) + 1;
+      // A few of each stage, so every kind of person shows in the preview.
+      const n = seenStage.get(h.stage) ?? 0;
+      if (n < 4 && samples.length < 30) { samples.push(h); seenStage.set(h.stage, n + 1); }
+    }
+    return { ...out, samples };
+  });
+}
+
+const CHUNK = 150;
+/** Adds the next group of people (the screen calls this repeatedly and shows progress). */
+export async function runImport(input: { batchId: string | null; offset: number }) {
+  return guarded("manageUsers", async (user) => {
+    const v = z.object({ batchId: z.string().max(40).nullable(), offset: z.number().int().min(0) }).parse(input);
+    const plan = await savedPlan();
+    const { people } = await cachedFubPeople();
+    const batch = v.batchId ? await db.importBatch.findUnique({ where: { id: v.batchId } }) : await db.importBatch.create({ data: { createdById: user.id } });
+    if (!batch || batch.undoneAt) throw new UserError("That import was undone. Start again.");
+    const ex = await existing();
+    // Stages, sources and tags HQ doesn't have yet are created (named as on the matching screen).
+    const [stages, sources, tags] = await Promise.all([db.stage.findMany(), db.source.findMany(), db.tag.findMany()]);
+    const idOf = async <T extends { id: string; name: string }>(list: T[], name: string, make: (n: string) => Promise<T>) => {
+      if (!name) return null;
+      const hit = list.find((x) => x.name.toLowerCase() === name.toLowerCase());
+      if (hit) return hit.id;
+      const made = await make(name); list.push(made); return made.id;
+    };
+    let added = 0, dupes = 0;
+    const slice = people.slice(v.offset, v.offset + CHUNK);
+    for (const p of slice) {
+      const h = applyPlan(p, plan);
+      if (!h) continue;
+      if (isDuplicate(h, ex)) { dupes++; continue; }
+      const stageId = await idOf(stages, h.stage, (n) => db.stage.create({ data: { name: n, position: stages.length } }));
+      const sourceId = await idOf(sources, h.source, (n) => db.source.create({ data: { name: n, position: sources.length } }));
+      const tagIds = (await Promise.all(h.tags.map((t) => idOf(tags, t, (n) => db.tag.create({ data: { name: n } }))))).filter((x): x is string => !!x);
+      const emails = [...new Map(h.emails.map((e) => [normalizeEmail(e.address), e])).entries()];
+      const phones = [...new Map(h.phones.map((x) => [normalizePhone(x.number), x])).entries()];
+      await db.person.create({
+        data: {
+          name: h.name, mailingName: h.mailingName || h.name, kids: h.kids || null, lastContactAt: h.lastContactAt ? new Date(h.lastContactAt) : null, lastTextAt: h.lastTextAt ? new Date(h.lastTextAt) : null, referredBy: h.referredBy || null, address: h.address || null,
+          stageId, sourceId, followUpDays: h.followUpDays, partnerType: h.partnerType && isPartnerType(h.partnerType) ? h.partnerType : null,
+          assignedToId: h.assignedToId, createdById: user.id, fubId: h.fubId, importBatchId: batch.id,
+          emails: { create: emails.map(([n, e], i) => ({ address: e.address, normalized: n, label: e.label, position: i })) },
+          phones: { create: phones.map(([n, x], i) => ({ number: formatPhone(x.number), normalized: n, label: x.label || "Mobile", position: i })) },
+          tags: { create: tagIds.map((tagId) => ({ tagId })) },
+          dates: { create: [...h.birthdays.map((b) => ({ kind: "birthday", whose: b.whose, date: dateFromIso(b.date) })), ...(h.homeiversary ? [{ kind: "homeiversary", date: dateFromIso(h.homeiversary) }] : [])] },
+        },
+      });
+      ex.ids.add(h.fubId); emails.forEach(([n]) => ex.emails.add(n)); phones.forEach(([n]) => n.length >= 7 && ex.phones.add(n));
+      added++;
+    }
+    await db.importBatch.update({ where: { id: batch.id }, data: { added: { increment: added }, duplicates: { increment: dupes } } });
+    const next = v.offset + slice.length, done = next >= people.length;
+    if (done) {
+      const b = await db.importBatch.findUnique({ where: { id: batch.id } });
+      await logActivity(user.id, "create", "import", batch.id, `Imported ${b?.added ?? 0} people from Follow Up Boss (${b?.duplicates ?? 0} already in HQ)`);
+      revalidatePath("/admin/import"); revalidatePath("/people");
+    }
+    return { batchId: batch.id, next, total: people.length, done, added, dupes };
+  });
+}
+
+/** Undo import: removes everyone that import added (anyone with files attached since is kept). */
+export async function undoImport(batchId: string) {
+  return guarded("manageUsers", async (user) => {
+    const id = z.string().min(1).max(40).parse(batchId);
+    const b = await db.importBatch.findUnique({ where: { id } });
+    if (!b || b.undoneAt) throw new UserError("That import was already undone.");
+    const removed = await db.person.deleteMany({ where: { importBatchId: id, documents: { none: {} } } });
+    await db.importBatch.update({ where: { id }, data: { undoneAt: new Date() } });
+    await logActivity(user.id, "delete", "import", id, `Undid a Follow Up Boss import: removed ${removed.count} people`);
+    revalidatePath("/admin/import"); revalidatePath("/people");
+    return { removed: removed.count };
+  });
+}
+
+export async function fubSummary() {
+  return guarded("manageUsers", async () => summarize((await cachedFubPeople()).people));
+}
+
+/**
+ * People imported before relationships came over: add their spouse/partner (name "Sam & Lena Ortiz", and the
+ * partner's phone and email) and their kids. A contact whose name was changed in HQ keeps its name; kids are
+ * only filled in where the Kids line is empty.
+ */
+export async function addPartnersToImported() {
+  return guarded("manageUsers", async (user) => {
+    const plan = await savedPlan();
+    const { people } = await cachedFubPeople();
+    // Last contact from FUB's last activity, so people contacted recently aren't all "due for a touch".
+    let lastContacts = 0, lastTexts = 0;
+    const byFub = new Map((await db.person.findMany({ where: { fubId: { not: null }, deletedAt: null }, select: { id: true, fubId: true, lastContactAt: true, lastTextAt: true } })).map((x) => [x.fubId!, x]));
+    for (const p of people) {
+      const hqP = byFub.get(p.id);
+      if (!hqP) continue;
+      const at = lastActivityOf(p), tx = lastTextOf(p);
+      const data: { lastContactAt?: Date; lastTextAt?: Date } = {};
+      if (at && !(hqP.lastContactAt && hqP.lastContactAt >= new Date(at))) { data.lastContactAt = new Date(at); lastContacts++; }
+      if (tx && !(hqP.lastTextAt && hqP.lastTextAt >= new Date(tx))) { data.lastTextAt = new Date(tx); lastTexts++; }
+      if (data.lastContactAt || data.lastTextAt) await db.person.update({ where: { id: hqP.id }, data });
+    }
+    const found = people.map((p) => ({ p, rel: partnerOf(p, plan), kids: kidsOf(p, plan) })).filter((x) => x.rel || x.kids);
+    const hq = await db.person.findMany({ where: { fubId: { in: found.map((x) => x.p.id) }, deletedAt: null }, include: { emails: true, phones: true } });
+    let updated = 0, kept = 0, kidsAdded = 0, birthdaysNamed = 0;
+    for (const person of hq) {
+      const { p, rel, kids } = found.find((x) => x.p.id === person.fubId)!;
+      if (kids && !person.kids) { await db.person.update({ where: { id: person.id }, data: { kids } }); kidsAdded++; }
+      if (!rel) continue;
+      // Birthday 2 belongs to the spouse/partner: name it where it's still unnamed. By its FUB date first; otherwise,
+      // when nobody has the partner's birthday yet and exactly one birthday is unnamed, that one is theirs.
+      const partnerName = rel.firstName.trim();
+      const bdays = await db.importantDate.findMany({ where: { personId: person.id, kind: "birthday" } });
+      if (!bdays.some((b) => b.whose.toLowerCase() === partnerName.toLowerCase())) {
+        const second = plan.fields.birthdays[1] ? fubDate(p.custom?.[plan.fields.birthdays[1]] ?? "") : null;
+        const unnamed = bdays.filter((b) => !b.whose.trim());
+        const pick = (second && unnamed.find((b) => b.date.toISOString().slice(0, 10) === second)) || (unnamed.length === 1 ? unnamed[0] : null);
+        if (pick) { await db.importantDate.update({ where: { id: pick.id }, data: { whose: partnerName } }); birthdaysNamed++; }
+      }
+      const first = p.firstName.trim(), last = p.lastName.trim();
+      const original = [first, last].filter(Boolean).join(" ");
+      const name = coupleName({ first, last }, { first: rel.firstName.trim(), last: rel.lastName.trim() });
+      if (person.name === name) {
+        // Joined already (earlier version labeled both phones/emails with the first name): give the second to the partner.
+        // Of the ones still labeled with the first person's name (their record's own), the second is the partner's.
+        const fix = (list: { id: string; position: number; label: string }[]) => list.filter((x) => x.label === first).sort((x, y) => x.position - y.position)[1];
+        const e2 = fix(person.emails), p2 = fix(person.phones);
+        if (e2) await db.email.update({ where: { id: e2.id }, data: { label: rel.firstName.trim() } });
+        if (p2) await db.phone.update({ where: { id: p2.id }, data: { label: rel.firstName.trim() } });
+        continue;
+      }
+      if (person.name !== original) { kept++; continue; } // renamed in HQ
+      const haveE = new Set(person.emails.map((e) => e.normalized)), haveP = new Set(person.phones.map((x) => x.normalized));
+      const emails = rel.emails.filter((e) => e.value.includes("@") && !haveE.has(normalizeEmail(e.value)));
+      const phones = rel.phones.filter((x) => normalizePhone(x.value).length >= 7 && !haveP.has(normalizePhone(x.value)));
+      await db.$transaction([
+        db.person.update({ where: { id: person.id }, data: { name, ...(!person.mailingName || person.mailingName === original ? { mailingName: name } : {}) } }),
+        // Whose is whose: the first phone/email on the record is theirs, the second is the partner's.
+        ...[...person.emails].sort((a, b) => a.position - b.position).map((e, i) => db.email.update({ where: { id: e.id }, data: { label: i === 1 ? rel.firstName.trim() : first } })),
+        ...[...person.phones].sort((a, b) => a.position - b.position).map((x, i) => db.phone.update({ where: { id: x.id }, data: { label: i === 1 ? rel.firstName.trim() : first } })),
+        ...emails.map((e, i) => db.email.create({ data: { personId: person.id, address: e.value.trim(), normalized: normalizeEmail(e.value), label: rel.firstName.trim(), position: person.emails.length + i } })),
+        ...phones.map((x, i) => db.phone.create({ data: { personId: person.id, number: formatPhone(x.value), normalized: normalizePhone(x.value), label: rel.firstName.trim(), position: person.phones.length + i } })),
+      ]);
+      updated++;
+    }
+    await logActivity(user.id, "update", "import", "fub", `Updated imported contacts from Follow Up Boss: partners ${updated}, kids ${kidsAdded}, last contact dates ${lastContacts}`);
+    revalidatePath("/people"); revalidatePath("/admin/import");
+    return { updated, kept, kidsAdded, birthdaysNamed, lastContacts, lastTexts };
+  });
+}
+

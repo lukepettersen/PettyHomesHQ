@@ -1,0 +1,149 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { playAlert } from "@/components/sounds";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useDropdown } from "@/components/useDropdown";
+import { markAllNotificationsRead, markNotificationRead } from "@/app/notificationActions";
+import type { BellItem } from "@/server/notifications";
+import { alertHeading } from "@/lib/alerts";
+
+type Bell = { unread: number; items: BellItem[] };
+
+// Alerts already shown on this device.
+const seen = () => { try { return new Set<string>(JSON.parse(localStorage.getItem("hq-alerts-seen") ?? "[]")); } catch { return new Set<string>(); } };
+const markSeen = (ids: string[]) => { try { localStorage.setItem("hq-alerts-seen", JSON.stringify([...seen(), ...ids].slice(-200))); } catch { /* private window */ } };
+
+// Each alert's title (website lead, offer, text, missed call…); texts and missed calls open Messages, the rest the contact.
+const heading = (n: BellItem) => alertHeading(n);
+
+/** @mentions for the signed-in user: unread count, Mark all read, click to open the person. */
+export function Bell({ initial }: { initial: Bell }) {
+  const [data, setData] = useState(initial);
+  const { open, setOpen, ref } = useDropdown<HTMLDivElement>();
+  const router = useRouter();
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch("/api/notifications", { cache: "no-store" });
+      if (r.ok) setData(await r.json());
+    } catch { /* offline: keep what we have */ }
+  }, []);
+  // Alerts (like a submitted offer) pop up over the page with a chime, once per device, until opened or dismissed.
+  const [popup, setPopup] = useState<BellItem[]>([]);
+  const audio = useRef<AudioContext | null>(null);
+  const rung = useRef(new Set<string>());
+  const hovering = useRef(false);
+  useEffect(() => {
+    const s = seen();
+    // Nothing pops up for the conversation already open on screen; those count as seen (owner request 2026-10-27).
+    const here = `${window.location.pathname}${window.location.search}`;
+    const onScreen = data.items.filter((n) => n.alert && !n.read && !s.has(n.id) && n.link && here.startsWith(n.link));
+    if (onScreen.length) markSeen(onScreen.map((n) => n.id));
+    const fresh = data.items.filter((n) => n.alert && !n.read && !s.has(n.id) && !onScreen.includes(n));
+    const t = setTimeout(() => setPopup((cur) => (fresh.length && fresh.map((x) => x.id).join() !== cur.map((x) => x.id).join() ? fresh : cur)), 0);
+    return () => clearTimeout(t);
+  }, [data]);
+  useEffect(() => {
+    const unlock = () => { if (!audio.current) { try { audio.current = new AudioContext(); } catch { /* no audio */ } } else void audio.current.resume(); };
+    window.addEventListener("pointerdown", unlock); window.addEventListener("keydown", unlock);
+    return () => { window.removeEventListener("pointerdown", unlock); window.removeEventListener("keydown", unlock); };
+  }, []);
+  const groups = Object.values(popup.reduce<Record<string, { key: string; items: BellItem[] }>>((acc, n) => {
+    const key = n.link ?? n.personId ?? n.id;
+    (acc[key] ??= { key, items: [] }).items.push(n);
+    return acc;
+  }, {}));
+  const dismiss = () => { markSeen(popup.map((n) => n.id)); setPopup([]); };
+
+  useEffect(() => {
+    const t = setInterval(load, 30000);
+    window.addEventListener("focus", load);
+    return () => { clearInterval(t); window.removeEventListener("focus", load); };
+  }, [load]);
+
+  const openItem = async (n: BellItem) => {
+    setOpen(false);
+    if (!n.read) { setData((d) => ({ unread: Math.max(0, d.unread - 1), items: d.items.map((x) => (x.id === n.id ? { ...x, read: true } : x)) })); await markNotificationRead(n.id); }
+    if (n.link) router.push(n.link);
+    else if (n.personId) router.push(`/people/${n.personId}`);
+  };
+  useEffect(() => {
+    if (!popup.length) return;
+    const chime = () => {
+      const ctx = audio.current;
+      if (ctx) playAlert(ctx); // at their Alerts volume (My settings)
+    };
+    // One chime per new alert (no repeating), and a desktop notification when HQ is in a background tab (owner 2026-10-28).
+    const fresh = popup.filter((n) => !rung.current.has(n.id));
+    if (!fresh.length) return;
+    fresh.forEach((n) => rung.current.add(n.id));
+    chime();
+    if (document.hidden && typeof Notification !== "undefined" && Notification.permission === "granted") {
+      for (const n of fresh.slice(0, 3)) {
+        const d = new Notification(heading(n), { body: n.text, tag: n.link ?? n.id });
+        d.onclick = () => { window.focus(); markSeen([n.id]); setPopup((p) => p.filter((x) => x.id !== n.id)); void openItem(n); d.close(); };
+      }
+    }
+    // The corner card goes away by itself after 20 seconds unless the mouse is on it; the bell keeps them.
+    const t = setTimeout(() => { if (!hovering.current) dismiss(); }, 20000);
+    return () => clearTimeout(t);
+  }, [popup]); // eslint-disable-line react-hooks/exhaustive-deps
+  const readAll = async () => {
+    setData((d) => ({ unread: 0, items: d.items.map((x) => ({ ...x, read: true })) }));
+    await markAllNotificationsRead();
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      {popup.length > 0 && createPortal(
+        // A small card in the corner that never blocks the page (owner request 2026-10-28): one line per conversation.
+        <div role="status" aria-live="polite" onMouseEnter={() => { hovering.current = true; }} onMouseLeave={() => { hovering.current = false; }}
+          className="fixed bottom-4 right-4 z-[60] w-[min(360px,calc(100vw-32px))] overflow-hidden rounded-xl border border-misty bg-white text-charcoal shadow-2xl">
+          <div className="flex items-center justify-between bg-moss px-3 py-1.5 text-sm font-bold text-white">
+            <span>{groups.length === 1 && groups[0].items.length === 1 ? heading(popup[0]) : `${popup.length} new · ${groups.length} conversation${groups.length === 1 ? "" : "s"}`}</span>
+            <button type="button" aria-label="Dismiss" className="rounded px-1.5 text-lg leading-none hover:bg-white/20" onClick={dismiss}>×</button>
+          </div>
+          <ul className="divide-y divide-misty">
+            {groups.slice(0, 3).map(({ key, items }) => {
+              const n = items[0];
+              return (
+                <li key={key} className="flex items-center gap-2 px-3 py-2">
+                  <span className="min-w-0 flex-1 text-sm"><span className="line-clamp-2">{n.text}</span>{items.length > 1 && <span className="text-xs muted"> +{items.length - 1} more</span>}</span>
+                  {(n.link || n.personId) && <button type="button" className="btn btn-primary flex-none px-2.5 py-1 text-sm" onClick={() => { markSeen(items.map((x) => x.id)); setPopup((p) => p.filter((x) => !items.includes(x))); void openItem(n); }}>Open</button>}
+                </li>
+              );
+            })}
+          </ul>
+          {groups.length > 3 && <p className="px-3 pb-2 text-xs muted">And {groups.length - 3} more in the bell.</p>}
+        </div>, document.body)}
+      <button type="button" aria-expanded={open} aria-label={data.unread ? `Notifications, ${data.unread} unread` : "Notifications"} onClick={() => { setOpen(!open); if (!open) load(); }}
+        className="relative grid h-9 w-9 place-items-center rounded-md text-white hover:bg-white/10">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
+        {data.unread > 0 && <span className="absolute -right-0.5 -top-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-coral px-1 text-[10px] font-bold text-white">{data.unread > 9 ? "9+" : data.unread}</span>}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-40 mt-1 w-[min(340px,calc(100vw-24px))] max-sm:fixed max-sm:inset-x-3 max-sm:top-auto max-sm:w-auto rounded-lg border border-misty bg-white text-charcoal shadow-xl">
+          <div className="flex items-center justify-between border-b border-misty px-3 py-2">
+            <b className="text-sm">Notifications</b>
+            {data.unread > 0 && <button type="button" className="link text-xs" onClick={readAll}>Mark all read</button>}
+          </div>
+          <ul className="max-h-[60vh] overflow-y-auto">
+            {data.items.map((n) => (
+              <li key={n.id}>
+                <button type="button" onClick={() => openItem(n)} className={`flex w-full gap-2 border-b border-misty/60 px-3 py-2 text-left text-sm last:border-0 hover:bg-sunken ${n.read ? "muted" : ""}`}>
+                  <span aria-hidden="true" className={`mt-1.5 h-2 w-2 flex-none rounded-full ${n.read ? "bg-transparent" : "bg-coral"}`} />
+                  <span className="min-w-0">
+                    <span className="block break-words">{n.text}</span>
+                    <span className="text-xs muted">{new Date(n.at).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).replace(/ (AM|PM)$/, (m) => m.trim().toLowerCase())}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+            {data.items.length === 0 && <li className="px-3 py-5 text-center text-sm muted">No mentions yet. When someone types @ and your name in a note, it shows up here.</li>}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
