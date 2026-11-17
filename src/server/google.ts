@@ -7,6 +7,8 @@ import { inviteContext, loadInviteRules } from "@/server/contractInvites";
 import { acceptForTeam, apptEvent, contractKey, inviteeEmails, type GEvent } from "@/lib/calendar";
 import { addressesIn, buildMime, messageFullText, messageText, buildMimeRaw, type Attachment } from "@/lib/email";
 import { splitCouple } from "@/lib/normalize";
+import { logActivity } from "@/server/activity";
+import { callChanged, consultChanged } from "@/server/automation";
 
 // Google Calendar (SPEC.md §12). Off until configured: every call here quietly does nothing when Google
 // isn't connected, and a Google error never stops HQ from saving.
@@ -170,6 +172,57 @@ export async function removeCalendarEvent(eventId: string): Promise<boolean> {
     const r = await call("DELETE", `/${encodeURIComponent(eventId)}?sendUpdates=all`);
     return !!r && (r.ok || r.status === 404 || r.status === 410);
   } catch { return false; }
+}
+
+/**
+ * An appointment deleted in Google Calendar is deleted in HQ too (owner request 2026-11-17). Every 3 minutes, HQ asks
+ * the connected calendar for events changed since the last look, including deleted ones; a deleted one that is an HQ
+ * appointment is deleted, the same as its Delete button (consult and call checklists react the same way). Only the
+ * connected calendar counts: a teammate removing it from their own calendar doesn't. Returns appointments removed.
+ */
+export async function pullCalendarDeletes(now = new Date()): Promise<number> {
+  try {
+    const conn = await calendarConnection();
+    if (!conn) return 0;
+    const KEY = "calendar.pulledAt";
+    const row = await db.appSetting.findUnique({ where: { key: KEY } });
+    const last = typeof row?.value === "string" ? new Date(row.value) : null;
+    if (last && now.getTime() - last.getTime() < SYNC_EVERY) return 0;
+    // Claim the run so two tabs don't do it at once.
+    if (row) { const c = await db.appSetting.updateMany({ where: { key: KEY, value: { equals: row.value as string } }, data: { value: now.toISOString() } }); if (!c.count) return 0; }
+    else if (!(await db.appSetting.create({ data: { key: KEY, value: now.toISOString() } }).then(() => true, () => false))) return 0;
+    const since = new Date((last ?? now).getTime() - (last ? 5 * 60000 : 60 * 60000));
+    const gone: string[] = [];
+    let page: string | undefined;
+    for (let i = 0; i < 10; i++) {
+      const r = await call("GET", `?${new URLSearchParams({ updatedMin: since.toISOString(), showDeleted: "true", maxResults: "250", fields: "items(id,status),nextPageToken", ...(page ? { pageToken: page } : {}) })}`);
+      if (!r?.ok) { if (r) console.error("Google Calendar: reading changes failed", r.status); break; }
+      const j = (await r.json()) as { items?: { id: string; status?: string }[]; nextPageToken?: string };
+      for (const ev of j.items ?? []) if (ev.status === "cancelled") gone.push(ev.id);
+      if (!j.nextPageToken) break;
+      page = j.nextPageToken;
+    }
+    if (!gone.length) return 0;
+    const links = await db.calendarLink.findMany({ where: { eventId: { in: gone }, key: { startsWith: "appt:" } } });
+    let removed = 0;
+    for (const l of links) {
+      const id = l.key.slice("appt:".length);
+      await db.calendarLink.delete({ where: { key: l.key } }).catch(() => null);
+      const a = await db.appointment.findFirst({ where: { id, deletedAt: null } });
+      if (!a) continue;
+      await db.$transaction(async (tx) => {
+        await tx.appointment.update({ where: { id }, data: { deletedAt: new Date() } });
+        if (a.type === "buyer" || a.type === "seller") await consultChanged(tx, a.personId, conn.userId);
+        if (a.type === "call") await callChanged(tx, a.personId, conn.userId);
+      });
+      await logActivity(conn.userId, "delete", "appointment", id, `Deleted appointment "${a.title}" (deleted in Google Calendar)`);
+      removed++;
+    }
+    return removed;
+  } catch (e) {
+    console.error("Google Calendar: reading changes failed", e instanceof Error ? e.message : "unknown");
+    return 0;
+  }
 }
 
 /** A Google API call as the shared connected account (the owner's): used for the sales sheet. */

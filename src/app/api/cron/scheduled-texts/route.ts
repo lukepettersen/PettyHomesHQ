@@ -3,7 +3,7 @@ import { cronKey, sendDueTexts } from "@/server/scheduledTexts";
 import { sendDueAutoTasks } from "@/server/autoSend";
 import { sendDueEmails } from "@/server/scheduledEmails";
 import { sendDueAsks } from "@/server/askByText";
-import { syncGmail } from "@/server/google";
+import { pullCalendarDeletes, syncGmail } from "@/server/google";
 import { sendBulkJobs } from "@/server/bulkEmail";
 import { sendBulkTexts } from "@/server/bulkText";
 import { sendDueDigest } from "@/server/deadlineDigest";
@@ -25,5 +25,6 @@ export async function POST(req: Request) {
   const bulk = await run("mass emails", () => sendBulkJobs()), bulkTexts = await run("mass texts", () => sendBulkTexts());
   const digest = await run("weekly deadlines email", () => sendDueDigest());
   const gmail = await run("Gmail", syncGmail);
-  return Response.json({ sent, auto, emails, asks, bulk, bulkTexts, digest, gmail });
+  const calendar = await run("Google Calendar deletes", () => pullCalendarDeletes());
+  return Response.json({ sent, auto, emails, asks, bulk, bulkTexts, digest, gmail, calendar });
 }
