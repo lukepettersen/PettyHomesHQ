@@ -19,3 +19,16 @@
 
 html, body { background: var(--color-paper); color: var(--color-charcoal); }
 :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* Shared building blocks (match the mockup) */
+@layer components {
+  .card { @apply rounded-xl border border-misty bg-white; }
+  .btn { @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-misty bg-white px-3 py-1.5 text-sm font-semibold text-charcoal hover:bg-sunken disabled:opacity-50; }
+  .btn-primary { @apply border-accent bg-accent text-white hover:bg-moss; }
+  .btn-danger { @apply text-bad; }
+  .input { @apply w-full rounded-md border border-misty bg-paper px-2.5 py-1.5 text-sm text-charcoal outline-none focus:border-accent; }
+  .label { @apply flex flex-col gap-1 text-xs font-semibold text-muted; }
+  .chip { @apply inline-flex items-center gap-1 rounded-full bg-sunken px-2.5 py-0.5 text-xs font-semibold text-charcoal; }
+  .muted { @apply text-muted; }
+  .link { @apply font-semibold text-accent hover:underline; }
+}

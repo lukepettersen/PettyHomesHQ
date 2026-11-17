@@ -18,6 +18,7 @@ describe("who can sign in", () => {
 
 describe("default roles", () => {
   it("lets Admins see commissions", () => expect(hasPermission(DEFAULT_ROLES.Admin, "seeCommissions")).toBe(true));
-  it("hides commissions from Assistants", () => expect(hasPermission(DEFAULT_ROLES.Assistant, "seeCommissions")).toBe(false));
+  it("lets Assistants see commissions (owner decision 2026-10-16)", () => expect(hasPermission(DEFAULT_ROLES.Assistant, "seeCommissions")).toBe(true));
+  it("hides commissions from a role without the permission", () => expect(hasPermission(["sendTexts"], "seeCommissions")).toBe(false));
   it("keeps user management Admin-only", () => expect(hasPermission(DEFAULT_ROLES.Assistant, "manageUsers")).toBe(false));
 });

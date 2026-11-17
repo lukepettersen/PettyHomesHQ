@@ -1,4 +1,4 @@
-// PettyHomes HQ database. Phase 0: team members, roles and the activity log.
+// PettyHomes HQ database. See SPEC.md for what each part does.
 // Migrations must be non-destructive (see CLAUDE.md).
 
 generator client {
@@ -27,17 +27,28 @@ model Role {
 }
 
 model User {
-  id          String        @id @default(cuid())
-  email       String        @unique
-  name        String
-  isOwner     Boolean       @default(false)
-  status      UserStatus    @default(INVITED)
-  roleId      String
-  role        Role          @relation(fields: [roleId], references: [id])
-  lastLoginAt DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  activity    ActivityLog[]
+  id              String          @id @default(cuid())
+  email           String          @unique
+  name            String
+  isOwner         Boolean         @default(false)
+  status          UserStatus      @default(INVITED)
+  roleId          String
+  role            Role            @relation(fields: [roleId], references: [id])
+  lastLoginAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  activity        ActivityLog[]
+  assignedPeople  Person[]        @relation("PersonAssignee")
+  createdPeople   Person[]        @relation("PersonCreator")
+  timeline        TimelineEntry[]
+  tasksAssigned   Task[]          @relation("TaskAssignee")
+  filesCreated    ClientFile[]
+  tasksCreated    Task[]          @relation("TaskCreator")
+  notifications   Notification[]  @relation("NotificationTo")
+  notificationsBy Notification[]  @relation("NotificationFrom")
+  textNumber      String?         @unique // their Twilio texting number, +16125550100 (Admin → Integrations; owner 2026-10-20: one number each)
+  forwardTo       String? // calls to their texting number ring this cell; empty = missed call only
+  textsSent       TextMessage[]   @relation("TextSender")
 }
 
 model ActivityLog {
@@ -52,4 +63,789 @@ model ActivityLog {
 
   @@index([entity, entityId])
   @@index([createdAt])
+}
+
+// ---------- Settings (editable in Admin) ----------
+
+model Stage {
+  id       String   @id @default(cuid())
+  name     String   @unique
+  position Int      @default(0)
+  people   Person[]
+}
+
+model Source {
+  id       String   @id @default(cuid())
+  name     String   @unique
+  position Int      @default(0)
+  people   Person[]
+}
+
+model FollowUpOption {
+  id       String @id @default(cuid())
+  days     Int    @unique
+  position Int    @default(0)
+}
+
+model Tag {
+  id        String      @id @default(cuid())
+  name      String      @unique
+  createdAt DateTime    @default(now())
+  people    PersonTag[]
+}
+
+model ToolLink {
+  id       String @id @default(cuid())
+  name     String
+  url      String
+  position Int    @default(0)
+}
+
+// Birthday / homeiversary rules that create Important dates tasks.
+model DateReminder {
+  id        String @id @default(cuid())
+  dateKind  String // "birthday" | "homeiversary"
+  title     String
+  days      Int    @default(0)
+  direction String @default("on") // "before" | "on" | "after"
+  assignee  String @default("") // team member first name, "" = person's assignee
+  kind      String @default("task") // "task" | "text" | "email"
+  appliesTo String @default("Everyone") // "Everyone" or a stage name
+  position  Int    @default(0)
+}
+
+model CustomField {
+  id       String        @id @default(cuid())
+  name     String
+  type     String        @default("text") // text | number | date | dropdown | checkbox
+  options  String[]
+  position Int           @default(0)
+  values   CustomValue[]
+}
+
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+// ---------- People ----------
+
+model Person {
+  id            String          @id @default(cuid())
+  name          String
+  mailingName   String?
+  legalNames    String? // "Nicole Marie Hess, Garrett James Hess": for contracts (owner request 2026-11-14)
+  address       String?
+  stageId       String?
+  stage         Stage?          @relation(fields: [stageId], references: [id])
+  sourceId      String?
+  source        Source?         @relation(fields: [sourceId], references: [id])
+  referredBy    String?
+  fubId         Int?            @unique // the Follow Up Boss person this came from (import)
+  importBatchId String? // which import added them (Undo import)
+  kids          String? // "Mia, Leo": children's first names (Details card; from FUB relationships)
+  partnerType   String? // industry partners: realtor | lender | title | inspector | tc | attorney | other (src/lib/partners.ts)
+  company       String?
+  followUpDays  Int?
+  assignedToId  String?
+  assignedTo    User?           @relation("PersonAssignee", fields: [assignedToId], references: [id])
+  createdById   String?
+  createdBy     User?           @relation("PersonCreator", fields: [createdById], references: [id])
+  lastContactAt DateTime?
+  lastTextAt    DateTime? // last text either way: "Due for a touch" counts from this (owner, 2026-10-14)
+  touchAfter    DateTime? @db.Date // Spread out: kept off "Due for a touch" until this day (owner, 2026-10-15)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  deletedAt     DateTime?
+  phones        Phone[]
+  emails        Email[]
+  addresses     Address[]
+  dates         ImportantDate[]
+  tags          PersonTag[]
+  timeline      TimelineEntry[]
+  tasks         Task[]
+  customValues  CustomValue[]
+  notifications Notification[]
+  files         ClientFile[]
+  appointments  Appointment[]
+  showings      Showing[]       @relation("ShowingAgent")
+  sellerShowings Showing[]      @relation("ShowingSeller")
+  documents     Document[]
+  partnerOn     PaPartner[]
+  texts         TextMessage[]
+
+  @@index([deletedAt])
+  @@index([name])
+}
+
+model Phone {
+  id         String @id @default(cuid())
+  personId   String
+  person     Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  label      String @default("Mobile")
+  number     String
+  normalized String // digits only, for matching texts and calls
+  position   Int    @default(0)
+
+  @@index([normalized])
+}
+
+model Email {
+  id         String @id @default(cuid())
+  personId   String
+  person     Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  label      String @default("")
+  address    String
+  normalized String // lowercase, for matching emails
+  position   Int    @default(0)
+
+  @@index([normalized])
+}
+
+// A contact's addresses (owner request 2026-10-27): labelled, one marked mailing when there are two or more.
+// Person.address keeps the mailing (or only) address so mailers, merge fields and calendar events keep working.
+model Address {
+  id       String  @id @default(cuid())
+  personId String
+  person   Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+  label    String  @default("")
+  value    String
+  mailing  Boolean @default(false)
+  position Int     @default(0)
+
+  @@index([personId])
+}
+
+model ImportantDate {
+  id       String   @id @default(cuid())
+  personId String
+  person   Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  kind     String // "birthday" | "homeiversary"
+  whose    String   @default("")
+  date     DateTime @db.Date
+}
+
+model PersonTag {
+  personId String
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  tagId    String
+  tag      Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([personId, tagId])
+}
+
+model CustomValue {
+  personId String
+  person   Person      @relation(fields: [personId], references: [id], onDelete: Cascade)
+  fieldId  String
+  field    CustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  value    String
+
+  @@id([personId, fieldId])
+}
+
+// Notes, logged calls and texts (later: emails, texts from Messages, deal activity).
+model TimelineEntry {
+  id        String    @id @default(cuid())
+  personId  String
+  person    Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  kind      String // "note" | "call" | "text" | "email" | "system" | "task" (a completed task)
+  taskId    String? // for "task" entries: the task that was completed
+  gmailId   String?   @unique // for "email" entries: the Gmail message, so syncing never adds it twice
+  fubKey    String?   @unique // copied from Follow Up Boss ("note:123", "call:45", "text:67"), never added twice
+  body      String
+  outcome   String?
+  authorId  String?
+  author    User?     @relation(fields: [authorId], references: [id])
+  lineUserId String? // calls, texts and emails that came in: whose HQ number or Gmail it was (owner 2026-11-06: "last call / text / email" count the owner's only)
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  @@index([personId, createdAt])
+}
+
+// @mentions in notes.
+model Notification {
+  id        String    @id @default(cuid())
+  toId      String
+  to        User      @relation("NotificationTo", fields: [toId], references: [id], onDelete: Cascade)
+  fromId    String?
+  from      User?     @relation("NotificationFrom", fields: [fromId], references: [id])
+  personId  String?
+  person    Person?   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  text      String
+  alert     Boolean   @default(false) // pop up with a chime (e.g. an offer was submitted), not just the bell
+  link      String? // where "Open" goes when it isn't a contact page (e.g. a text from an unknown number)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([toId, readAt])
+}
+
+// ---------- Smart lists ----------
+
+model Collection {
+  id       String      @id @default(cuid())
+  name     String
+  position Int         @default(0)
+  lists    SmartList[]
+}
+
+model SmartList {
+  id           String     @id @default(cuid())
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  name         String
+  position     Int        @default(0)
+  filters      Json       @default("[]")
+  columns      Json? // People table columns for this list (src/lib/columns.ts); empty = the default set
+}
+
+// ---------- Tasks ----------
+
+model TaskList {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  builtin     String? @unique // clients | touch | dates | recurring | misc (computed lists); null = a user list
+  position    Int     @default(0)
+  showOnToday Boolean @default(true)
+  tasks       Task[]
+}
+
+model Task {
+  id              String             @id @default(cuid())
+  title           String
+  notes           String             @default("")
+  kind            String             @default("task") // task | followup | call | text | email | showing | closing | other
+  dueDate         DateTime?          @db.Date
+  dueTime         String? // "14:00"
+  repeat          String? // DAILY | WEEKLY | BIWEEKLY | MONTHLY | QUARTERLY | YEARLY
+  priority        Int                @default(0)
+  subtasks        Json               @default("[]")
+  listId          String?
+  list            TaskList?          @relation(fields: [listId], references: [id], onDelete: SetNull)
+  personId        String?
+  showingId       String? // a showing on our listing (ShowingTime) this step is about; anchors "showing" / "showingEnd"
+  person          Person?            @relation(fields: [personId], references: [id], onDelete: Cascade)
+  assigneeId      String?
+  assignee        User?              @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdById     String?
+  createdBy       User?              @relation("TaskCreator", fields: [createdById], references: [id])
+  sourceKey       String?            @unique // "date:<importantDateId>:<reminderId>:<year>" for Important dates tasks
+  // Checklist steps (SPEC.md §8): which file/contract and template step made this task,
+  // and what its due date counts from, so it re-dates when that date changes.
+  fileId          String?
+  file            ClientFile?        @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  paId            String?
+  pa              PurchaseAgreement? @relation(fields: [paId], references: [id], onDelete: Cascade)
+  templateId      String?
+  stepId          String?
+  phase           String?
+  anchor          String? // start | phoneCall | finalAcceptance | inspection | writtenStatement | hoaRescission | closing
+  offsetDays      Int?
+  offsetMinutes   Int? // "N minutes before" the anchor's time (phone call); the due time moves with it
+  advanceStatusId String? // move the file to this status when done
+  completedAt     DateTime?
+  autoSend        Json? // checklist step that sends by itself: { from, to, time } (owner request 2026-10-29)
+  autoState       String? // pending | sending | sent | failed | off (turned off by someone)
+  autoError       String?
+  askState      String? // "Ask by text": pending | asked | answered | off (owner request 2026-10-30)
+  askedAt       DateTime?
+  askKind       String? // "done" (YES checks it off) | "consult" (a reply books a consult)
+  askReply      String? // a consult reply so far ("friday 4:30pm"), so the next reply only needs what was missing
+  completedById   String? // who checked it off (Done today, owner request 2026-10-28); empty when closed automatically
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  deletedAt       DateTime?
+
+  @@index([dueDate])
+  @@index([personId])
+  @@index([assigneeId, completedAt])
+  @@index([autoState, dueDate])
+  @@index([askState, dueDate])
+  @@index([fileId])
+  @@index([paId])
+}
+
+// ---------- Pipeline (Phase 2) ----------
+
+// Editable statuses: Buyer Pipeline, Seller Pipeline, Under Contract/Pending Pipeline (SPEC.md §7.2).
+model PipelineStatus {
+  id        String       @id @default(cuid())
+  kind      String // buyer | listing | uc
+  name      String
+  position  Int          @default(0)
+  untilDate String? // uc only: inspection | hoaRescission | writtenStatement | closing
+  files     ClientFile[]
+
+  @@unique([kind, name])
+}
+
+// A buyer representation or a listing for one person (SPEC.md §7.1).
+model ClientFile {
+  id          String              @id @default(cuid())
+  personId    String
+  person      Person              @relation(fields: [personId], references: [id], onDelete: Cascade)
+  kind        String // buyer | listing
+  statusId    String?
+  status      PipelineStatus?     @relation(fields: [statusId], references: [id])
+  statusSince DateTime            @default(now())
+  address     String? // listing
+  price       Int? // listing: list price or estimated value, whole dollars
+  info        Json                @default("{}") // status questions (areas, range, dates…), validated in src/lib/files.ts
+  closedAt    DateTime?
+  notes       String              @default("") // Deal notes: free text about this deal (SPEC.md §7.1)
+  notesAt     DateTime?
+  notesBy     String? // name of who last changed the notes
+  social      Json                @default("{}") // social post descriptions by slot (src/lib/social.ts)
+  createdById String?
+  createdBy   User?               @relation(fields: [createdById], references: [id])
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  deletedAt   DateTime?
+  commission  FileCommission?
+  contracts   PurchaseAgreement[]
+  tasks       Task[]
+  offers      Offer[]
+
+  @@index([personId])
+  @@index([kind, closedAt])
+}
+
+// An offer submitted from HQ (Submit offer, ported from Relay; SPEC.md §7.5): the organized terms and the note text.
+model Offer {
+  id          String     @id @default(cuid())
+  fileId      String
+  file        ClientFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  personId    String
+  data        Json // terms, see src/lib/offer.ts OfferData
+  summary     String // the "RELAY: OFFER INSTRUCTIONS" note
+  createdById String?
+  createdAt   DateTime   @default(now())
+  deletedAt   DateTime?
+
+  @@index([fileId])
+  @@index([personId])
+}
+
+// Commission and BAC, kept apart so they're only read for users with "See commissions".
+model FileCommission {
+  fileId     String     @id
+  file       ClientFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  commission String     @default("")
+  bac        String     @default("")
+}
+
+// Purchase agreement form definitions, editable in Admin (one per side). Sections JSON: see src/lib/pa.ts.
+model PaForm {
+  side      String   @id // buyer | seller
+  sections  Json
+  updatedAt DateTime @updatedAt
+}
+
+// A contract under a buyer or listing file (SPEC.md §7.4). Key dates are typed date columns.
+model PurchaseAgreement {
+  id                 String        @id @default(cuid())
+  fileId             String
+  file               ClientFile    @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  side               String // buyer | seller
+  state              String        @default("active") // active | closed | fell_through
+  address            String
+  price              Int
+  answers            Json          @default("{}") // other form answers, validated against PaForm
+  finalAcceptance    DateTime?     @db.Date
+  inspection         DateTime?     @db.Date
+  writtenStatement   DateTime?     @db.Date
+  writtenStatementNA Boolean       @default(false)
+  hoaRescission      DateTime?     @db.Date
+  closing            DateTime?     @db.Date
+  dateStatus         Json          @default("{}") // { inspection: "met" | "waived" | "extended" | "pending" }
+  originalDates      Json          @default("{}") // date before an extension
+  endedOn            DateTime?     @db.Date // closed or fell through
+  createdById        String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  deletedAt          DateTime?
+  commission         PaCommission?
+  partners           PaPartner[]
+  tasks              Task[]
+
+  @@index([fileId])
+  @@index([state])
+}
+
+// Commission % and BAC for a contract, only read for users with "See commissions".
+// Which partner contact (lender, title, other agent…) was picked for a purchase agreement's people section.
+model PaPartner {
+  paId      String
+  pa        PurchaseAgreement @relation(fields: [paId], references: [id], onDelete: Cascade)
+  sectionId String
+  personId  String
+  person    Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([paId, sectionId])
+  @@index([personId])
+}
+
+model PaCommission {
+  paId       String            @id
+  pa         PurchaseAgreement @relation(fields: [paId], references: [id], onDelete: Cascade)
+  commission String            @default("")
+  bac        String            @default("")
+}
+
+// Task templates: phases of steps that become tasks (SPEC.md §8). Phases JSON: see src/lib/templates.ts.
+model TaskTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  trigger   String? // status:<id> | pa:buyer | pa:seller | closed:buyer | closed:seller | phonecall | null (apply by hand)
+  folder    String   @default("") // to organize templates in Admin
+  phases    Json     @default("[]")
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Appointments booked from a contact (SPEC.md §10). Stored in HQ; Google Calendar events come in Phase 3.
+model Appointment {
+  id            String    @id @default(cuid())
+  personId      String
+  person        Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  type          String // call | buyer | seller | showing | other
+  title         String
+  date          DateTime  @db.Date
+  start         String? // "14:00"
+  end           String?
+  location      String    @default("")
+  invitees      Json      @default("[]") // names ticked to invite
+  googleEventId String?
+  createdById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  @@index([personId, date])
+}
+
+// Buyer and listing form definitions (the status questions), editable in Admin. Sections JSON: see src/lib/files.ts.
+model FileFormDef {
+  kind      String   @id // buyer | listing
+  sections  Json
+  updatedAt DateTime @updatedAt
+}
+
+// Google Calendar connection for the team (one, approved by an Admin). The refresh token is encrypted
+// with a key derived from NEXTAUTH_SECRET (src/server/crypto.ts); it is never shown or logged.
+model GoogleConnection {
+  id            String    @id @default("calendar")
+  userId        String
+  email         String
+  refreshToken  String
+  scopes        String    @default("") // what Google allowed, space separated (Calendar; Gmail send/read)
+  gmailSyncedAt DateTime? // emails up to this time are on timelines
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// Which Google Calendar event belongs to which HQ item ("appt:<id>", "pa:<id>:closing", …).
+model CalendarLink {
+  key       String   @id
+  eventId   String
+  updatedAt DateTime @updatedAt
+}
+
+// Text and email templates (SPEC.md §13 Messaging). Bodies use merge fields like {first_name}; see src/lib/merge.ts.
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  kind      String // email | text
+  name      String
+  folder    String   @default("") // e.g. BPC, BUC, SPC, SUC, Leads
+  subject   String   @default("") // email only
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fubKey String? @unique // copied from a Follow Up Boss template
+
+  @@unique([kind, name])
+}
+
+// Files on a contact (SPEC.md §6.3 Files card), stored in the private bucket under `key`.
+model Document {
+  id           String    @id @default(cuid())
+  personId     String
+  person       Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  name         String
+  size         Int
+  contentType  String
+  key          String    @unique
+  uploadedById String?
+  createdAt    DateTime  @default(now())
+  deletedAt    DateTime?
+
+  @@index([personId])
+}
+
+// One run of Admin → Import from Follow Up Boss; Undo removes the people it added.
+model ImportBatch {
+  id          String    @id @default(cuid())
+  kind        String    @default("fub") // fub | addresses (Import address list; its undo record is AppSetting "addressImport.<id>")
+  createdAt   DateTime  @default(now())
+  createdById String
+  added       Int       @default(0)
+  duplicates  Int       @default(0)
+  undoneAt    DateTime?
+}
+
+/// Business texting (SPEC.md §11): texts and missed calls on a team member's Twilio number.
+model TextMessage {
+  id          String    @id @default(cuid())
+  ourNumber   String // the team member's Twilio number, +16125550100
+  theirNumber String // the other person's number, digits only (normalizePhone)
+  personId    String?
+  person      Person?   @relation(fields: [personId], references: [id], onDelete: SetNull)
+  direction   String // in | out
+  kind        String    @default("sms") // sms | missed_call
+  body        String    @default("")
+  fromNumber  String? // group texts: who sent it (digits); theirNumber is then the group's Conversation SID (CH…)
+  reactions   Json      @default("[]") // iPhone tapbacks on this message: [{ emoji, by (digits) }] (owner 2026-10-22)
+  media       Json      @default("[]") // photos: [{ url | service+sid, type }] (src/lib/textMedia.ts; owner 2026-10-23)
+  twilioSid   String?   @unique
+  status      String    @default("") // queued | sent | delivered | failed | undelivered | received
+  error       String?
+  sentById    String?
+  sentBy      User?     @relation("TextSender", fields: [sentById], references: [id])
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([ourNumber, theirNumber, createdAt])
+  @@index([personId])
+}
+
+/// Open tracking for mass emails only (owner decision 2026-10-21): a tiny image in the email reports the first open.
+model EmailTrack {
+  id        String    @id @default(cuid()) // also the image address, so it's unguessable
+  batch     String // one mass email send
+  subject   String
+  personId  String
+  entryId   String? // the timeline entry for this email
+  sentById  String?
+  sentAt    DateTime  @default(now())
+  openedAt  DateTime?
+  opens     Int       @default(0)
+
+  @@index([batch])
+  @@index([personId])
+}
+
+/// Answered calls on a team member's Twilio number (owner request 2026-10-22): length, recording, timeline entry.
+model PhoneCall {
+  id               String   @id @default(cuid())
+  callSid          String   @unique
+  ourNumber        String   @default("") // the team member's Twilio number
+  theirNumber      String   @default("") // digits only (normalizePhone)
+  personId         String?
+  seconds          Int      @default(0)
+  recordingSid     String? // played through /api/calls/<id>/audio after a sign-in check; stored in Twilio
+  recordingSeconds Int?
+  entryId          String? // the timeline entry for this call
+  createdAt        DateTime @default(now())
+
+  @@index([personId])
+  @@index([theirNumber])
+}
+
+/// A text set to go out later from someone's own number (owner request 2026-10-28). Sent by the app's background loop
+/// (src/instrumentation.ts) within a minute of sendAt; two or more numbers go as one group text when group texting is on.
+model ScheduledText {
+  id          String    @id @default(cuid())
+  personId    String?
+  numbers     String[] // digits only
+  body        String
+  media       Json      @default("[]")
+  sendAt      DateTime
+  taskId      String? // a checklist step checked off when it sends
+  createdById String
+  status      String    @default("pending") // pending | sending | sent | failed | canceled
+  error       String?
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([status, sendAt])
+  @@index([personId])
+}
+
+/// An email set to go out later from the scheduler's Gmail (owner request 2026-10-29), sent by the minute timer.
+model ScheduledEmail {
+  id          String    @id @default(cuid())
+  personId    String
+  to          String[]
+  subject     String
+  body        String
+  signature   Boolean   @default(true)
+  attachments Json      @default("[]")
+  sendAt      DateTime
+  taskId      String? // a checklist step checked off when it sends
+  createdById String
+  status      String    @default("pending") // pending | sending | sent | failed | canceled
+  error       String?
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([status, sendAt])
+  @@index([personId])
+}
+
+/// A conversation in Messages someone archived, like an email (owner request 2026-10-28). It comes back to the inbox
+/// when a new text or missed call arrives after archivedAt.
+model TextArchive {
+  ourNumber    String
+  theirNumber  String // digits, or a group key
+  archivedAt   DateTime @default(now())
+  archivedById String?
+
+  @@id([ourNumber, theirNumber])
+}
+
+/// A Twilio Conversation on a team number (group texting, owner request 2026-10-22): which line, and for a group
+/// text the other people in it. One-to-one conversations are kept too, so turning group texting off can close them.
+model TextThread {
+  sid       String   @id // group key: a Twilio Conversation SID (CH…) or, for a group that texted in, G + 32 hex
+  ourNumber String
+  group     Boolean  @default(false)
+  members   String[] // the other people's numbers, digits only
+  sender    String? // our projected-address identity in a group ("hq:+1…"), once added
+  conversationSid String? @unique // the Twilio Conversation HQ sends this group's texts through (made on first reply)
+  createdAt DateTime @default(now())
+
+  @@index([ourNumber])
+}
+
+/// The text assistant's short memory (owner request 2026-10-30): a team member's texts to their HQ number and its replies,
+/// so a follow-up like "the second Jack" makes sense. Only the last 30 minutes are used.
+model TextAgentTurn {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String // "user" | "assistant"
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// What the text assistant did (so "undo" can reverse it) or is waiting on a YES for (texting a client).
+model TextAgentAction {
+  id        String   @id @default(cuid())
+  userId    String
+  kind      String // appt | event | moveAppt | cancelAppt | task | note | text
+  status    String // confirm | done | undone | canceled
+  summary   String
+  payload   Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// A showing on one of our listings, from ShowingTime's emails (owner request 2026-11-01). On the buyer's agent's
+/// contact; its checklist steps carry showingId.
+model Showing {
+  id          String   @id @default(cuid())
+  key         String   @unique // ShowingTime's confirmation number, else address|date|start
+  agentId     String
+  agent       Person   @relation("ShowingAgent", fields: [agentId], references: [id], onDelete: Cascade)
+  sellerId    String?
+  seller      Person?  @relation("ShowingSeller", fields: [sellerId], references: [id], onDelete: SetNull)
+  address     String
+  mlsId       String?
+  date        DateTime @db.Date
+  start       String // "12:30"
+  end         String?
+  status      String   @default("confirmed") // confirmed | cancelled | rescheduled
+  total       Int? // "Total # of Showings" on this listing, from the email
+  side        String   @default("listing") // listing: someone showing our listing (agentId = their buyer's agent) | buyer: one we booked (agentId = the listing agent)
+  noTexts     Boolean  @default(false) // the listing's instructions say no text messages
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([agentId])
+}
+
+/// A mass email being sent in the background by the minute timer (owner report 2026-11-02: a send from the browser
+/// stopped at 55 of 241 when HQ restarted). One row per send; recipients are worked through a group at a time.
+/// Mass text from People (owner request 2026-11-06): one text per contact (a couple's numbers as one group text),
+/// sent slowly by the minute timer 9am–7pm Central within the sender's daily cap.
+model BulkTextJob {
+  id          String    @id @default(cuid())
+  userId      String // who it sends as (their HQ number)
+  body        String // as typed, merge fields not yet filled; the opt-out line is added when sent
+  media       Json      @default("[]") // photo urls (our email-images uploads)
+  personIds   Json // everyone it's for, in order
+  doneIds     Json      @default("[]") // handled so far (sent, skipped or failed)
+  sent        Int       @default(0)
+  skipped     Int       @default(0) // STOP or no phone by the time their turn came
+  failed      Json      @default("[]") // [{ name, error }]
+  state       String    @default("sending") // sending | done | stopped
+  error       String?
+  nextAt      DateTime  @default(now()) // the next text goes at or after this (gap, hours, daily cap)
+  lockedUntil DateTime? // a timer tick is working on it
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([state])
+}
+
+model BulkEmailJob {
+  id          String    @id @default(cuid())
+  userId      String // who it sends as (their Gmail)
+  kind        String // the kind of mass email, for unsubscribe choices
+  subject     String
+  body        String
+  address     String // business mailing address in the footer
+  signature   Boolean   @default(true)
+  batch       String // EmailTrack batch, for open counts
+  attachments Json      @default("[]")
+  personIds   Json // everyone it's for, in order
+  doneIds     Json      @default("[]") // handled so far (sent, skipped or failed)
+  sent        Int       @default(0)
+  skipped     Int       @default(0) // already got it in the last 24 hours
+  failed      Json      @default("[]") // [{ name, error }]
+  state       String    @default("sending") // sending | done | stopped
+  error       String?
+  waitUntil   DateTime? // Gmail asked to slow down
+  lockedUntil DateTime? // a timer tick is working on it
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([state])
+}
+
+/// Claude app connector (owner request 2026-11-17): apps that registered to sign in to HQ (OAuth dynamic client
+/// registration). Only Claude's own callback addresses are accepted (src/lib/mcp.ts).
+model McpClient {
+  id           String     @id @default(cuid())
+  name         String
+  redirectUris Json // ["https://claude.ai/api/mcp/auth_callback"]
+  createdAt    DateTime   @default(now())
+  grants       McpGrant[]
+}
+
+/// One sign-in code, access token or refresh token for the Claude app connector. Only a hash of the token is kept.
+/// Disconnect (My settings) revokes them all.
+model McpGrant {
+  id            String    @id @default(cuid())
+  clientId      String
+  client        McpClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId        String
+  kind          String // code | access | refresh
+  tokenHash     String    @unique
+  codeChallenge String? // code: PKCE S256 challenge
+  redirectUri   String? // code: where it was sent
+  expiresAt     DateTime
+  usedAt        DateTime? // code / refresh: exchanged (one use only)
+  revokedAt     DateTime?
+  lastUsedAt    DateTime? // access: last call from Claude
+  createdAt     DateTime  @default(now())
+
+  @@index([userId, kind])
 }

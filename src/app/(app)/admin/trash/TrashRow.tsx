@@ -1,0 +1,27 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { deleteDocumentForeverAction, deleteFileForever, deleteForever, deleteTaskForever, restoreDocument, restoreFile, restorePerson, restoreTask } from "./actions";
+
+export function TrashRow({ id, name, left, kind = "person", detail }: { id: string; name: string; left: number; kind?: "person" | "task" | "file" | "document"; detail?: string }) {
+  const restore = { task: restoreTask, file: restoreFile, document: restoreDocument, person: restorePerson }[kind];
+  const purge = { task: deleteTaskForever, file: deleteFileForever, document: deleteDocumentForeverAction, person: deleteForever }[kind];
+  const [confirm, setConfirm] = useState(false);
+  const [error, setError] = useState("");
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  const run = (fn: () => Promise<{ ok: boolean; error?: string }>) => start(async () => { const r = await fn(); if (!r.ok) setError(r.error ?? "Error"); else router.refresh(); });
+  return (
+    <div className="flex flex-wrap items-center gap-3 border-b border-misty/60 px-4 py-3 last:border-0">
+      <span className="font-semibold">{name}</span>
+      {detail && <span className="text-sm muted">{detail}</span>}
+      <span className="text-sm muted">{left > 0 ? `${left} day${left === 1 ? "" : "s"} left` : "Removing today"}</span>
+      <span className="ml-auto flex gap-2">
+        <button type="button" className="btn" disabled={pending} onClick={() => run(() => restore(id))}>Restore</button>
+        <button type="button" className="btn btn-danger" disabled={pending} onBlur={() => setConfirm(false)} onClick={() => confirm ? run(() => purge(id)) : setConfirm(true)}>{confirm ? "Click again to delete forever" : "Delete forever"}</button>
+      </span>
+      {error && <p role="alert" className="w-full text-sm text-bad">{error}</p>}
+    </div>
+  );
+}

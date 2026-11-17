@@ -7,7 +7,7 @@ the source of truth for behavior. The approved screens are in `mockups/` (open
 ## Status
 
 SPEC.md approved 2026-10-13. Build in the phases in SPEC.md §16, one pull request at a time.
-Current phase: **0** (scaffold, sign-in, CI, Railway, ops docs).
+Current phase: **1**. Done: Phase 0; piece 1 (People list, Add person, contact page cards + timeline, Admin users/roles, stages/sources/follow-up, tags); piece 2 (smart list editing, bulk actions, search, Trash, CSV export); piece 3 (Tasks page, quick add, contact Tasks card, Create task pop-up); piece 4 (@mentions + bell, Date reminders, Tools menu, custom fields, phone layout). Phase 1 is complete. Phase 2 in progress: 2.1 done (client files, statuses, Pipeline board, Admin → Client statuses); 2.2 done (purchase agreements, Admin forms editor, key dates, Under Contract, Mark closed / Fell through); 2.3 done (task templates, automations, Admin → Task templates, Admin → Integrations); 2.4 in progress: appointments done, Buyer & listing forms editable (Admin); Google Calendar done; message templates + drafts done; Files card done; task alarms done; Ask Claude done; next worker (pg-boss). Texting (Messages) built 2026-10-20 (one Twilio number per person); texting and calls (incl. calling in the browser) confirmed working for Luke and Alyssa 2026-10-28.
 
 ## Working with the owner
 
@@ -27,7 +27,7 @@ Current phase: **0** (scaffold, sign-in, CI, Railway, ops docs).
   (add columns/tables; backfill; never drop data without an explicit owner-approved plan).
 - Auth.js with Google; only `@pettyhomes.com` emails may sign in (check `hd` claim and the
   email domain server-side).
-- Worker service (from Phase 1): pg-boss for queued and scheduled jobs (date-based task due dates,
+- Worker service (from Phase 2): pg-boss for queued and scheduled jobs (date-based task due dates,
   reminders, notification emails, nightly backups).
 - Files: private S3-compatible bucket; signed URLs that expire.
 - Tests: Vitest (unit/integration), Playwright (key flows).
@@ -47,12 +47,13 @@ Current phase: **0** (scaffold, sign-in, CI, Railway, ops docs).
 - Write an activity-log row for every create/update/delete (who, what, before/after summary).
 - Integrations are **off until configured**: if Twilio or Google env vars are missing, the
   feature shows "not connected" and never errors. Texting also has an Admin on/off switch.
-- Texting safety: honor STOP, skip Unsubscribed, quiet hours 8am–8pm Central, daily cap.
+- Texting safety: honor STOP (the "Text Unsubscribed" tag blocks texts; "Email Unsubscribed" is email-only, owner 2026-10-24), quiet hours 8am–8pm Central, daily cap.
 - No SSNs, bank or wiring details stored anywhere.
 
 ## Data model notes
 
-- `Person` with child tables `Phone`, `Email`, `ImportantDate`, `PersonTag`.
+- `Person.legalNames` (Details → Legal names, owner 2026-11-14): `{legal}` in paperwork steps, `{legal_names}` merge field
+- `Person` with child tables `Phone`, `Email`, `Address` (labelled; `mailing` flag, mirrored into `Person.address`; `src/lib/addresses.ts`), `ImportantDate`, `PersonTag`.
 - `ClientFile` (kind: buyer | listing, status, info JSON) → `PurchaseAgreement` (side, form
   answers JSON validated against the form definition, key dates as typed columns:
   finalAcceptance, inspection, writtenStatement, hoaRescission, closing; per-date status:
@@ -67,6 +68,7 @@ Current phase: **0** (scaffold, sign-in, CI, Railway, ops docs).
 ## Conventions
 
 - Match the mockup's wording and layout; branding tokens in SPEC.md §5.
+- Times always show on a 12-hour clock in Central time ("8:00pm"), never 24-hour. Time pickers use 15-minute steps.
 - Explicit Save/Cancel for edits (SPEC.md §5 save rule); two-step confirm on deletes.
 - Accessible: real buttons/labels, keyboard reachable, visible focus.
 - Keep components small; server logic in `src/server/*`, UI in `src/app` and
@@ -80,14 +82,59 @@ Current phase: **0** (scaffold, sign-in, CI, Railway, ops docs).
 - Production start: `prisma migrate deploy && prisma db seed && next start`
 - Release gate: `npm audit --omit=dev --audit-level=high`
 
-## Code map (Phase 0)
+## Code map
 
 - `src/server/auth.ts` — Auth.js options, `requireUser()`, `requirePermission()`
 - `src/server/access.ts` — who may sign in (unit tested)
 - `src/server/permissions.ts` — permission keys and default roles
 - `src/server/db.ts` — Prisma client (pg adapter); generated client in `src/generated/` (gitignored)
 - `src/proxy.ts` — redirects signed-out users to /login
+- `src/lib/tasks.ts` — task rules: lists, quick-add parser, repeats, Important dates (unit tested)
+- `src/server/tasks.ts` — loads the Tasks board and a person's tasks; actions in `src/app/(app)/tasks/actions.ts`
 - `prisma/schema.prisma`, `prisma/migrations/`, `prisma/seed.ts`, `prisma.config.ts`
+- `src/server/safe.ts` — `guarded(permission, fn)` wraps every server action (session, permission, friendly errors)
+- `src/server/activity.ts` — activity log writer; `src/server/people.ts` — People queries
+- `src/lib/normalize.ts`, `src/lib/filters.ts` — pure helpers (phones, names, dates in Central time, smart list filters), unit tested
+- `src/app/(app)/` — signed-in pages: `people/` (list, `[id]` contact page, `actions.ts`), `admin/` (users, lists, tags, `actions.ts`)
+- Local testing: mint a session cookie with `next-auth/jwt` `encode()` using `NEXTAUTH_SECRET` (no Google needed)
+- `src/lib/mentions.ts`, `src/server/notifications.ts`, `src/components/Bell.tsx` — @mentions and the bell
+- `src/components/AlarmCenter.tsx` + `src/app/api/alarms/route.ts` — task alarms (pop-up and chime when a timed task comes due)
+- `src/lib/files.ts` (questions per status, commission stripping via `toFileView`, tested), `src/server/files.ts`, actions in `src/app/(app)/pipeline/actions.ts`
+- `src/lib/pa.ts` (PA forms, Show only if, cleaning, key dates, UC column, `toPaView` commission stripping, Client name questions, one-time Notes upgrade run from `prisma/seed.ts`; tested), `src/server/pa.ts`, `src/app/(app)/pipeline/paActions.ts`
+- `src/lib/templates.ts` (steps, anchors, conditions, expand; tested), `src/server/automation.ts` (runTrigger, applyTemplate, redateContract, moveFile, `syncTemplateToOpen` for "Update the open deals", `advanceAfterDone`, `recheckConditions`, `restartConsultSteps`), `prisma/starterTemplates.ts`
+- Admin pages check their own permission with `adminGate()` in `src/app/(app)/admin/gate.tsx`; Admin home + menu groups from `src/app/(app)/admin/sections.ts` (`page.tsx`, `AdminNav.tsx`), Deal questions tabs `DealQuestionTabs.tsx`
+- `src/lib/appointments.ts` (names, contract dates; tested), `src/server/appointments.ts`, `src/app/(app)/people/apptActions.ts`
+- Contract calendar invites: `src/lib/contractInvites.ts` (rules, titles, defaults; tested), `src/server/contractInvites.ts` (rules in AppSetting, PA date options), Admin → Calendar invites in `src/app/(app)/admin/calendar/`
+- `src/lib/calendar.ts` (Google events; tested), `src/server/google.ts` (connect, encrypted token via `src/server/crypto.ts`, `syncAppointment`, `syncContract`, `pullCalendarDeletes` on the minute timer: an appointment deleted in Google Calendar is deleted in HQ), `src/app/api/google/*`
+- Sending email: `src/lib/email.ts` (MIME; tested), `sendGmail` in `src/server/google.ts` (sends as the user's own Gmail `GoogleConnection` id `gmail:<userId>` when connected via `/api/google/connect?mine=1`, else the shared `calendar` one), `src/app/(app)/people/emailActions.ts`, Timeline Email tab `people/[id]/EmailComposer.tsx`, email + text threads in `src/lib/timelineThreads.ts` (tested); merge values per person in `src/server/merge.ts` (`mergeFor`)
+- `src/lib/merge.ts` (merge fields; tested), Admin → Text templates / Email templates (`/admin/text-templates`, `/admin/email-templates`, shared `admin/messages/TemplatesPage.tsx` + `MessagesClient.tsx`; `/admin/messages` redirects), Draft email/text in `src/app/(app)/tasks/DraftModal.tsx` + `draftActions.ts`
+- Files card: `src/lib/documents.ts` (tested), `src/server/storage.ts` (S3 client, signed downloads), `src/app/api/documents/*`, Trash purge removes stored objects (`src/server/trash.ts`)
+- Industry partners: `src/lib/partners.ts` (types, section → type, fill/save; tested), `src/server/partners.ts` (`savePaPartners`), `/api/partners`, `pipeline/PartnerPicker.tsx`, `people/[id]/PartnerDeals.tsx`
+- Import address list (holiday cards CSV): `src/lib/addressList.ts` (CSV, headings, matching; tested), `src/server/addressList.ts` (preview, apply, undo record in AppSetting `addressImport.<batchId>`, `ImportBatch.kind` = addresses), Admin → Import address list `src/app/(app)/admin/address-list/`
+- FUB import: `src/lib/fubImport.ts` (summary, default matching from owner decisions, apply; tested), `src/server/fub.ts` (API, cached copy in AppSetting), Admin → Import from Follow Up Boss in `src/app/(app)/admin/import/`; templates + notes/calls/texts: `src/lib/fubHistory.ts` (tested), `admin/import/historyActions.ts`, `HistoryTemplates.tsx`
+- Ask Claude: `src/lib/assistant.ts` (proposal checks; tested), `src/server/assistant.ts` (Claude call with find_people / propose_task / propose_note tools; proposes only), `src/app/(app)/assistant/actions.ts`, `src/components/AskClaude.tsx` (mic, review cards, Save via createTask / addTimelineEntry)
+- Submit offer (Relay port): `src/lib/offer.ts` (offer fields, note format, PA prefill; tested), `src/server/offer.ts` + `src/server/offerPrompt.ts` (Relay's Claude prompt), `src/app/(app)/pipeline/offerActions.ts`, `people/[id]/OfferModal.tsx`, `src/components/useSpeech.ts`
+- Request paperwork (ClickContracts forms for Alyssa): `src/lib/paperwork.ts` (forms, title, details, text; tested), `src/server/paperwork.ts` (`requestPaperwork`: task due now, bell, timeline, text check-in; `paperworkDone` called from `advanceAfterDone` tells whoever asked it's ready to sign), `pipeline/paperworkActions.ts`, `people/[id]/PaperworkModal.tsx` (Request paperwork button in FileTabs); steps per form + owner's own forms in AppSetting `paperwork.steps` (`cleanConfig`, `paperSteps` → task subtasks), Admin → Paperwork steps `src/app/(app)/admin/paperwork/`; text assistant tools paperwork_forms / request_paperwork (YES to send)
+- Texting: `src/lib/texting.ts` (numbers, STOP words, TwiML, errors, day start; tested), `src/lib/twilioSig.ts` (webhook signature), `src/server/twilio.ts` (REST: send, connect number; tested), `src/server/texting.ts` (incoming, missed calls, `sendTextAs`, threads), `src/app/api/twilio/*` (sms, status, voice, voice/done, recording; outside sign-in, signature-checked), group texts via Twilio Conversations: `src/lib/groupText.ts` (tested), `src/server/groupText.ts`, `/api/twilio/conversation`, `TextThread`; photos in texts: `src/lib/textMedia.ts` (tested), `src/components/TextPhotos.tsx`, `/api/texts/[id]/photo/[n]`; reactions: `src/lib/reactions.ts` (tested); text commands ("task …" / "contact …" from your cell to your HQ number): `src/lib/textCommands.ts` (tested), `src/server/textCommands.ts`, quick add core in `src/server/quickAdd.ts`; calling in the browser (Twilio Voice SDK): `src/components/CallCenter.tsx` (`CallLink`), `/api/voice/token` + `src/server/voice.ts` (auto API key + TwiML App), `src/lib/voiceToken.ts` (tested), `/api/twilio/outbound` (+ `/done`, `/api/twilio/whisper`); answered calls + recordings in `PhoneCall` (played via `/api/calls/[id]/audio` after a sign-in check), `src/app/(app)/messages/` (page, MessagesApp, actions), `src/components/TextComposer.tsx`, Admin → Integrations `TextLines.tsx`
+- Scheduled texts: `src/lib/scheduledText.ts` (Central time, 8am–8pm half hours; tested), `src/server/scheduledTexts.ts` (`sendDueTexts`, `loadScheduledFor`), `src/components/ScheduleText.tsx` (Schedule button), actions `scheduleText` / `cancelScheduledText` in `messages/actions.ts`; sent every minute by `src/instrumentation.ts` → `/api/cron/scheduled-texts` (own key from NEXTAUTH_SECRET, outside sign-in)
+- Scheduled emails: `ScheduledEmail`, `src/server/scheduledEmails.ts` (`sendDueEmails`, `loadScheduledEmails`, rows `email:<id>`), shared send `deliverEmail` in `src/server/emailSend.ts`, actions `scheduleEmail` / `cancelScheduledEmail` in `people/emailActions.ts`, `ScheduleEmail` in `src/components/ScheduleText.tsx`
+- Text assistant (plain-English texts from the OWNER's cell to their HQ number only): `src/server/textAgent.ts` (`runTextAgent` with Claude tools find_people / person_details / my_schedule / book_event / move_event / cancel_event / add_task / add_note / add_contact / text_client (group text incl. the owner's cell) / add_to_whiteboard (`addBoardNote` in `src/server/whiteboard.ts`) / combine_contacts (`mergeContacts` in `src/server/mergePeople.ts`) / delete_contact / contract_details / edit_contract / paperwork_forms / request_paperwork (YES to save, via `saveContractAnswers` in `src/server/paEdit.ts`, shared with Edit); `answerConfirm` for YES; `undoLast`), `TextAgentTurn` (30-minute memory) and `TextAgentAction` (receipts, YES, undo), `src/lib/textAgent.ts` (tested), routing in `notACommand` in `src/server/textCommands.ts`, standalone events `addCalendarEvent` in `src/server/google.ts`; tested locally with a scripted fake Claude via `ANTHROPIC_BASE_URL`
+- Ask by text (check-in texts to the assignee; YES checks the step off): step `ask`, `Task.askState/askedAt`, `src/server/askByText.ts` (`sendDueAsks` on the minute timer, `answerAsk` from `runTextCommand` in `src/server/textCommands.ts`; `askBody` also previews it as `ask:<id>` rows in the contact's Scheduled box), `parseYesNo` / `askText` / `parseConsultReply` in `src/lib/textCommands.ts` (tested); consult booking shared with the Book button via `bookAppt` in `src/server/booking.ts`
+- Automatic checklist texts/emails: step `auto` (`AutoSend` in `src/lib/templates.ts`), editor `AutoSendFields` in `admin/templates/TemplatesClient.tsx`; `Task.autoSend/autoState/autoError` set by `applyTemplate`; recipients in `src/lib/autoSend.ts` (tested); sender `sendDueAutoTasks` in `src/server/autoSend.ts` (same minute timer); listed with scheduled texts as `task:<id>` rows, Turn off via `cancelScheduledText`
+- Contact page composer: `people/[id]/compose.ts` (`requestCompose`); FileTabs shows the Send text / Send email box above the current tab
+- Mass email: `src/lib/bulkEmail.ts` (recipients, kinds + "Unsubscribed: <kind>" tags, unsubscribe token, footer; tested), sent in the background by `sendBulkJobs` in `src/server/bulkEmail.ts` (model `BulkEmailJob`, minute timer), kinds in `src/server/emailKinds.ts` (AppSetting `email.kinds`, Admin → Email templates `EmailKinds.tsx`), `src/app/(app)/people/bulkEmailActions.ts` (start / status / stop) + `BulkEmail.tsx` (bulk bar → Email), public `src/app/unsubscribe/` + `src/app/api/unsubscribe/`; attachments: `src/server/attachments.ts`, `/api/email-attachments`, `src/components/AttachFiles.tsx` (MIME in `buildMimeRaw`, Gmail upload send); open tracking (mass only): `EmailTrack`, public `src/app/api/e/[id]` image, `people/emails` page; extra recipients on email/text: `src/components/AddRecipient.tsx`
+- Mass text: `src/lib/bulkText.ts` (recipients, opt-out line, 9am–7pm, 1–2 minute gaps; tested), `src/server/bulkText.ts` (`sendBulkTexts` on the minute timer, one per tick; couples via `textNumbersAsGroup`), model `BulkTextJob`, `people/bulkTextActions.ts` + `BulkText.tsx` (bulk bar → Text), `people/texts/` (Mass texts page). Last text counts the owner's texts only: `isOwnerNumber` / `textTouch` in `src/server/texting.ts`; last call / email too: `TimelineEntry.lineUserId` (whose number or Gmail an incoming one came in on), filtered in `src/server/people.ts`
+- Email images: `src/lib/emailImages.ts` (tested), Image button in `src/components/FormatBar.tsx`, upload `/api/email-images`, public `src/app/api/img/[name]` (only `email-images/` names); `![alt](https://…)` rendered by `toHtml` in `src/lib/email.ts`
+- Owner's sales Google Sheet: `src/lib/salesSheet.ts` (row building, tested), `src/server/salesSheet.ts` (`syncSalesRow` from paActions; Sheets API via `sharedGoogle`), Admin → Integrations `SalesSheetControls.tsx`
+- Address lookup: `src/server/places.ts` (Google Places API (New), key server-side), `/api/address` + `/api/address/details`, `src/components/AddressInput.tsx` (contact Address, PA and file `address` fields)
+- Social post descriptions on deals: `src/lib/social.ts` (slots; tested), `ClientFile.social` JSON, `saveSocialPost` in `pipeline/actions.ts`, `people/[id]/SocialPosts.tsx`
+- Website leads: `src/lib/leads.ts` (Elementor webhook fields, note; tested), `src/server/leads.ts` (secret link key in AppSetting `leads.key`, `receiveLead`), public `src/app/api/leads/` (key-checked), Admin → Integrations `WebsiteLeads.tsx`, trigger `lead:website`
+- Showings from ShowingTime: `src/lib/showingTime.ts` (email parsing, `streetKey`, `pickListingTemplate`; tested), `src/server/showings.ts` (`onShowingEmail` from `syncSince` in `src/server/google.ts`, `loadShowings`), model `Showing` (`side` listing|buyer, `noTexts`) + `Task.showingId`, triggers `showing:confirmed` and `showing:booked` (YOUR SHOWING CONFIRMED: listing agent; starter checklist seeded once in `prisma/seed.ts`), anchors `showing`/`showingEnd`, step `matchListing` (used in `autoMessage`), `people/[id]/ShowingsCard.tsx`; Gmail also synced by the minute timer
+- Whiteboard (owner only): `src/lib/whiteboard.ts` (items, `cleanBoard`, `boxOf`, `placeNew`, align, reshaped text, groups, bold/italic/underline + lists; tested), `src/server/whiteboard.ts`, `src/app/(app)/whiteboard/` (page, `WhiteboardApp.tsx`, `saveBoard`); top bar order `src/lib/nav.ts` (tested, AppSetting `nav.order`), `NavLinks.tsx`, Admin → Top bar `admin/topbar/`
+- Weekly emails (contingency deadlines, closings, listings): `src/lib/deadlineDigest.ts` (`REPORTS`, rows, emails, settings; tested), `src/server/deadlineDigest.ts` (`buildDigest`, `sendDueDigest` on the minute timer, AppSetting `digest.<kind>` + `digest.<kind>.sent`), Admin → Weekly emails `src/app/(app)/admin/weekly-emails/` (`/admin/deadline-email` redirects)
+- My settings (per person): `src/app/(app)/settings/` (⚙ in `TopBar`); sound volumes `src/lib/sounds.ts` (tested), `src/server/sounds.ts` (AppSetting `sounds.<userId>`), chimes in `src/components/sounds.ts` (used by AlarmCenter, Bell, CallCenter), put on the page by `SoundPrefsInit` in the app layout
+- Claude app connector (MCP, owner only; SPEC.md §12): `src/lib/mcp.ts` (tools, redirect + PKCE checks; tested), `src/server/mcp.ts` (OAuth clients/grants in `McpClient` / `McpGrant`, `callTool` reusing `runAssistantTool` from `src/server/textAgent.ts`), routes `src/app/api/mcp/` (MCP, `register`, `authorize` Allow page, `token`) and `src/app/.well-known/*`, My settings → Claude app (`settings/ClaudeConnector.tsx`, Disconnect)
+- `src/lib/customFields.ts` — custom field types and value cleaning
 - Owner setup and ops runbook: `docs/ops.md`
 
 ## Mockups

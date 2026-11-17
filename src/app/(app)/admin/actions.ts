@@ -1,0 +1,221 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { db } from "@/server/db";
+import { guarded, UserError } from "@/server/safe";
+import { logActivity } from "@/server/activity";
+import { ALL_PERMISSIONS } from "@/server/permissions";
+import { allowedDomain } from "@/server/access";
+import { FIELD_TYPES } from "@/lib/customFields";
+
+const item = z.object({ id: z.string().optional(), name: z.string().trim().min(1, "Names can't be empty").max(80) });
+const items = z.array(item).max(100);
+
+function noDuplicates(names: string[]) {
+  const seen = new Set<string>();
+  for (const n of names) { const k = n.toLowerCase(); if (seen.has(k)) throw new UserError(`"${n}" is listed twice.`); seen.add(k); }
+}
+
+/** Stages and sources: rename, reorder, add, remove. Removing one that people use is blocked. */
+export async function saveNamedList(kind: "stage" | "source", input: z.input<typeof items>) {
+  return guarded("manageUsers", async (user) => {
+    const list = items.parse(input);
+    noDuplicates(list.map((i) => i.name));
+    const model = kind === "stage" ? db.stage : db.source;
+    const existing: { id: string; name: string }[] = await (model as typeof db.stage).findMany();
+    const keep = new Set(list.filter((i) => i.id).map((i) => i.id));
+    for (const gone of existing.filter((e) => !keep.has(e.id))) {
+      const used = await db.person.count({ where: { deletedAt: null, ...(kind === "stage" ? { stageId: gone.id } : { sourceId: gone.id }) } });
+      if (used) throw new UserError(`${used} ${used === 1 ? "person has" : "people have"} the ${kind} "${gone.name}". Change them first.`);
+    }
+    await db.$transaction(async (tx) => {
+      const m = (kind === "stage" ? tx.stage : tx.source) as typeof tx.stage;
+      const removed = existing.filter((e) => !keep.has(e.id)).map((e) => e.id);
+      if (removed.length) {
+        // Clear the link on people already in Trash, then remove.
+        await tx.person.updateMany({ where: kind === "stage" ? { stageId: { in: removed } } : { sourceId: { in: removed } }, data: kind === "stage" ? { stageId: null } : { sourceId: null } });
+        await m.deleteMany({ where: { id: { in: removed } } });
+      }
+      // Two passes avoid unique-name clashes when names are swapped.
+      for (const [i, it] of list.entries()) if (it.id) await m.update({ where: { id: it.id }, data: { name: `__tmp_${i}_${it.id}` } });
+      for (const [i, it] of list.entries()) {
+        if (it.id) await m.update({ where: { id: it.id }, data: { name: it.name, position: i } });
+        else await m.create({ data: { name: it.name, position: i } });
+      }
+    });
+    await logActivity(user.id, "update", kind, null, `Updated ${kind}s: ${list.map((i) => i.name).join(", ")}`);
+    revalidatePath("/admin/lists");
+  });
+}
+
+export async function saveFollowUp(input: number[]) {
+  return guarded("manageUsers", async (user) => {
+    const days = z.array(z.coerce.number().int().min(1, "Use 1 day or more").max(3650)).max(30).parse(input);
+    const unique = [...new Set(days)];
+    await db.$transaction([db.followUpOption.deleteMany({}), db.followUpOption.createMany({ data: unique.map((d, position) => ({ days: d, position })) })]);
+    await logActivity(user.id, "update", "followUp", null, `Follow-up options: ${unique.join(", ")} days`);
+    revalidatePath("/admin/lists");
+  });
+}
+
+/** Tags: rename updates everyone (same row), delete removes the tag from everyone. */
+export async function saveTags(input: z.input<typeof items>) {
+  return guarded("manageUsers", async (user) => {
+    const list = items.parse(input);
+    noDuplicates(list.map((i) => i.name));
+    const existing = await db.tag.findMany();
+    const keep = new Set(list.filter((i) => i.id).map((i) => i.id));
+    await db.$transaction(async (tx) => {
+      await tx.tag.deleteMany({ where: { id: { in: existing.filter((e) => !keep.has(e.id)).map((e) => e.id) } } });
+      for (const it of list.filter((i) => i.id)) await tx.tag.update({ where: { id: it.id }, data: { name: `__tmp_${it.id}` } });
+      for (const it of list) {
+        if (it.id) await tx.tag.update({ where: { id: it.id }, data: { name: it.name } });
+        else await tx.tag.create({ data: { name: it.name } });
+      }
+    });
+    await logActivity(user.id, "update", "tag", null, `Updated tags (${list.length})`);
+    revalidatePath("/admin/tags");
+  });
+}
+
+// ---------- Users & roles ----------
+const userRow = z.object({ id: z.string().optional(), name: z.string().trim().min(1, "Add a name").max(80), email: z.string().trim().toLowerCase().email("Check the email address"), roleId: z.string(), disabled: z.boolean() });
+const roleRow = z.object({ id: z.string().optional(), name: z.string().trim().min(1, "Role names can't be empty").max(40), permissions: z.array(z.enum(ALL_PERMISSIONS as [string, ...string[]])) });
+
+export async function saveTeam(input: { users: z.input<typeof userRow>[]; roles: z.input<typeof roleRow>[] }) {
+  return guarded("manageUsers", async (me) => {
+    const users = z.array(userRow).max(50).parse(input.users);
+    const roles = z.array(roleRow).min(1).max(20).parse(input.roles);
+    noDuplicates(roles.map((r) => r.name));
+    noDuplicates(users.map((u) => u.email));
+    for (const u of users) if (!u.email.endsWith("@" + allowedDomain())) throw new UserError(`${u.email} isn't a @${allowedDomain()} address.`);
+    const owner = await db.user.findFirst({ where: { isOwner: true } });
+    const ownerRow = users.find((u) => u.id === owner?.id);
+    if (owner && (!ownerRow || ownerRow.disabled)) throw new UserError("The owner can't be removed or disabled.");
+
+    await db.$transaction(async (tx) => {
+      const existingRoles = await tx.role.findMany();
+      const idMap = new Map<string, string>(); // temp key → real id for new roles
+      for (const [i, r] of roles.entries()) {
+        if (r.id) { await tx.role.update({ where: { id: r.id }, data: { name: `__tmp_${i}`, permissions: r.permissions } }); idMap.set(r.id, r.id); }
+      }
+      for (const [i, r] of roles.entries()) {
+        if (r.id) await tx.role.update({ where: { id: r.id }, data: { name: r.name } });
+        else { const created = await tx.role.create({ data: { name: r.name, permissions: r.permissions } }); idMap.set(`new:${i}`, created.id); }
+      }
+      // Owner always keeps every permission through an Admin-equivalent role.
+      if (ownerRow) {
+        const ownerRole = roles.find((r, i) => (r.id ?? `new:${i}`) === ownerRow.roleId);
+        if (!ownerRole || ownerRole.permissions.length !== ALL_PERMISSIONS.length) throw new UserError("The owner's role must keep every permission.");
+      }
+      const existingUsers = await tx.user.findMany();
+      for (const u of users) {
+        const roleId = idMap.get(u.roleId);
+        if (!roleId) throw new UserError(`Pick a role for ${u.name}.`);
+        const data = { name: u.name, email: u.email, roleId, status: u.disabled ? ("DISABLED" as const) : undefined };
+        if (u.id) {
+          const prev = existingUsers.find((x) => x.id === u.id);
+          await tx.user.update({ where: { id: u.id }, data: { ...data, status: u.disabled ? "DISABLED" : prev?.status === "DISABLED" ? "INVITED" : prev?.status } });
+        } else await tx.user.create({ data: { ...data, status: "INVITED" } });
+      }
+      const keepRoles = new Set(idMap.values());
+      for (const r of existingRoles.filter((r) => !keepRoles.has(r.id))) {
+        if (await tx.user.count({ where: { roleId: r.id } })) throw new UserError(`Someone still has the role "${r.name}". Change their role first.`);
+        await tx.role.delete({ where: { id: r.id } });
+      }
+    });
+    await logActivity(me.id, "update", "team", null, `Updated users (${users.length}) and roles (${roles.length})`);
+    revalidatePath("/admin/users");
+  });
+}
+
+// ---------- Date reminders (SPEC.md §9, §13) ----------
+const reminderRow = z.object({
+  id: z.string().optional(),
+  dateKind: z.enum(["birthday", "homeiversary"]),
+  title: z.string().trim().min(1, "Each reminder needs a task name").max(120),
+  days: z.coerce.number().int().min(0).max(365),
+  direction: z.enum(["before", "on", "after"]),
+  assignee: z.string().trim().max(40), // team member first name; "" = the person's assignee
+  kind: z.enum(["task", "text", "email"]),
+  appliesTo: z.string().trim().min(1).max(80), // "Everyone" or a stage name
+});
+
+export async function saveDateReminders(input: z.input<typeof reminderRow>[]) {
+  return guarded("manageUsers", async (user) => {
+    const rows = z.array(reminderRow).max(50).parse(input);
+    const existing = await db.dateReminder.findMany({ select: { id: true } });
+    const keep = new Set(rows.filter((r) => r.id).map((r) => r.id));
+    await db.$transaction(async (tx) => {
+      await tx.dateReminder.deleteMany({ where: { id: { in: existing.filter((e) => !keep.has(e.id)).map((e) => e.id) } } });
+      for (const [position, { id, ...r }] of rows.entries()) {
+        const data = { ...r, days: r.direction === "on" ? 0 : r.days, position };
+        if (id) await tx.dateReminder.update({ where: { id }, data });
+        else await tx.dateReminder.create({ data });
+      }
+    });
+    await logActivity(user.id, "update", "dateReminder", null, `Updated date reminders (${rows.length})`);
+    revalidatePath("/admin/reminders"); revalidatePath("/tasks");
+  });
+}
+
+// ---------- Custom fields ----------
+const fieldRow = z.object({
+  id: z.string().optional(),
+  name: z.string().trim().min(1, "Each field needs a name").max(60),
+  type: z.enum(FIELD_TYPES),
+  options: z.array(z.string().trim().min(1).max(60)).max(50),
+});
+
+export async function saveCustomFields(input: z.input<typeof fieldRow>[]) {
+  return guarded("manageUsers", async (user) => {
+    const rows = z.array(fieldRow).max(50).parse(input);
+    noDuplicates(rows.map((r) => r.name));
+    for (const r of rows) if (r.type === "dropdown" && !r.options.length) throw new UserError(`Add choices for "${r.name}".`);
+    const existing = await db.customField.findMany({ select: { id: true } });
+    const keep = new Set(rows.filter((r) => r.id).map((r) => r.id));
+    await db.$transaction(async (tx) => {
+      // Removing a field removes its values from everyone (the page warns first).
+      await tx.customField.deleteMany({ where: { id: { in: existing.filter((e) => !keep.has(e.id)).map((e) => e.id) } } });
+      for (const [position, { id, ...r }] of rows.entries()) {
+        const data = { ...r, options: r.type === "dropdown" ? r.options : [], position };
+        if (id) await tx.customField.update({ where: { id }, data });
+        else await tx.customField.create({ data });
+      }
+    });
+    await logActivity(user.id, "update", "customField", null, `Updated custom fields: ${rows.map((r) => r.name).join(", ") || "none"}`);
+    revalidatePath("/admin/fields");
+  });
+}
+
+// ---------- Tools menu ----------
+const toolRow = z.object({
+  id: z.string().optional(),
+  name: z.string().trim().min(1, "Each tool needs a name").max(60),
+  url: z.string().trim().max(500).transform((u) => (/^[a-z][a-z0-9+.-]*:/i.test(u) ? u : `https://${u}`)).pipe(
+    z.string().url("Check the link").refine((u) => /^https?:\/\//i.test(u), "Links must start with http:// or https://"),
+  ),
+});
+
+export async function saveTools(input: z.input<typeof toolRow>[]) {
+  return guarded("manageUsers", async (user) => {
+    const rows = z.array(toolRow).max(50).parse(input);
+    await db.$transaction([db.toolLink.deleteMany({}), db.toolLink.createMany({ data: rows.map(({ name, url }, position) => ({ name, url, position })) })]);
+    await logActivity(user.id, "update", "toolLink", null, `Updated Tools menu (${rows.length} links)`);
+    revalidatePath("/", "layout");
+  });
+}
+
+/** Kinds of mass email people can unsubscribe from one at a time (owner request 2026-11-02). */
+export async function saveEmailKinds(input: string[]) {
+  return guarded("editMessageTemplates", async (user) => {
+    const { cleanKinds } = await import("@/lib/bulkEmail");
+    const { EMAIL_KINDS_KEY } = await import("@/server/emailKinds");
+    const kinds = cleanKinds(z.array(z.string().max(60)).max(20).parse(input));
+    if (!kinds.length) throw new UserError("Keep at least one kind of email.");
+    await db.appSetting.upsert({ where: { key: EMAIL_KINDS_KEY }, update: { value: kinds }, create: { key: EMAIL_KINDS_KEY, value: kinds } });
+    await logActivity(user.id, "update", "emailKinds", null, `Mass email kinds: ${kinds.join(", ")}`);
+    revalidatePath("/admin/email-templates");
+  });
+}

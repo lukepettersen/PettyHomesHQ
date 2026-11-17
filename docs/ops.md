@@ -44,7 +44,7 @@ You need: your luke@pettyhomes.com Google account (Workspace admin) and your Git
    | `GOOGLE_CLIENT_SECRET` | from Google (A4) |
    | `ALLOWED_EMAIL_DOMAIN` | `pettyhomes.com` |
 
-   Leave the Twilio variables out. Texting stays off until you add them (Phase 4).
+   Leave the Twilio variables out. Texting stays off until you add them (see Business texting below).
 5. App service → **Settings → Networking → Generate Domain.** That's HQ's address. Put it in
    `NEXTAUTH_URL` and in Google's redirect URI (A4).
 6. Postgres service → **Backups** → turn on daily backups (if your plan shows the option).
@@ -91,6 +91,98 @@ current data with the backup, so export first if unsure.
 Phase 0: ask for a change (Admin → Users & roles arrives in Phase 1). Only people on the team
 list with an @pettyhomes.com Google account can sign in. Removing someone (status
 **Disabled**) signs them out on their next page load.
+
+### Connect another platform (Admin → Integrations)
+Admin → Integrations lists each platform (Google, Twilio texting, Follow Up Boss, file storage),
+whether it's connected, and the exact Railway variable names it needs. To connect one: Railway →
+HQ app service → **Variables** → **New Variable**, paste the name and value, save. Railway
+restarts HQ and the page shows **Connected**. To disconnect, delete the variables. Keys are never
+shown in HQ or stored in its database. Texting also has an on/off switch on that page.
+
+### Google Calendar
+One-time: Google Cloud → APIs & Services → Library → **Google Calendar API** → Enable; then
+Credentials → the HQ OAuth client → Authorized redirect URIs → add
+`https://<HQ address>/api/google/callback` → Save. In HQ: Admin → Integrations → **Connect Google
+Calendar** and approve. The connection is stored encrypted (key derived from `NEXTAUTH_SECRET`;
+changing that secret means connecting again). Disconnect from the same page.
+
+### Gmail (sending email from HQ)
+One-time: Google Cloud → APIs & Services → Library → **Gmail API** → Enable. In HQ: Admin →
+Integrations → **Reconnect Google** and approve (the approval screen also asks to send and read
+email; reading puts emails to/from contacts on their timelines and adds your Gmail signature).
+Emails send from the connected account (the one that clicked Connect), land in its Sent folder and
+go on the person's timeline. HQ only emails addresses saved on that person.
+
+### File storage (Files card)
+HQ stores files in a private S3-compatible bucket. Recommended: **Cloudflare R2** (low cost, no
+download fees).
+1. dash.cloudflare.com → sign up / sign in → **R2 Object Storage** → **Create bucket** → name it
+   `pettyhomes-hq-files` (location: automatic). Leave public access **off**.
+2. R2 → **Manage R2 API tokens** → **Create API token** → permission **Object Read & Write**,
+   limited to that bucket → Create. Keep the page open.
+3. Railway → HQ app → **Variables** → add (values from that page; never send them in chat):
+   `S3_ENDPOINT` = the "S3 API" endpoint (`https://<account id>.r2.cloudflarestorage.com`),
+   `S3_REGION` = `auto`, `S3_BUCKET` = `pettyhomes-hq-files`,
+   `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` = the token's access key and secret.
+4. Admin → Integrations shows File storage **Connected**; the Files card on contacts turns on.
+   Upload a test file. If it says the token isn't allowed into the bucket, the token was made with
+   "Object Read only": edit it (or make a new one) with **Object Read & Write**. Connected 2026-10-19.
+Uploads are limited to 100 MB and program files are refused. Downloads go through HQ (sign-in
+required) and use links that expire after 5 minutes. Deleted files sit in Trash for 30 days,
+then are removed from the bucket.
+
+### Ask Claude (talk to add tasks and notes)
+1. console.anthropic.com → sign in (or sign up with your pettyhomes.com Google account).
+2. **Billing** → add a little prepaid credit (for example $10; each request costs about a cent
+   or two). Optional: set a monthly spend limit there.
+3. **Settings → Workspaces** → open a workspace (e.g. Default) → **API keys → Create key** → name it
+   `PettyHomes HQ` → copy it (shown once). It must be a workspace key: an organization-wide key fails with
+   "This API key is not scoped to a workspace". The Relay app's key works too.
+4. Railway → HQ app → **Variables** → add `ANTHROPIC_API_KEY` = that key (never send it in chat).
+5. Admin → Integrations shows Ask Claude **Connected**; the mic button in the top bar works.
+
+### Business texting (Twilio)
+Set up 2026-10-20: business profile approved, brand registered, campaign "Low Volume Mixed" submitted
+(Messaging Service "Low Volume Mixed A2P Messaging Service"), test number 952-243-7646 in its Sender Pool.
+1. Each person who texts needs their own Twilio number: Phone Numbers → Manage → Buy a number (Local, SMS),
+   then Messaging → Services → Low Volume Mixed A2P Messaging Service → Sender Pool → Add Senders.
+2. Railway → HQ app → **Variables**: `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN` (Twilio Console → Account
+   Info; never send them in chat). Deploy.
+3. HQ → Admin → Integrations → Business texting: for each person click **Add number**, enter their Twilio
+   number and (optional) the cell their calls should ring; empty = callers hear "text us" and it's logged as a
+   missed call. **Save** points the number's texts and calls at HQ in Twilio automatically and says if
+   anything is left to do. Then turn the **Texting** switch on.
+4. Texts only deliver once the A2P 10DLC campaign is approved (Twilio emails you). Test by texting a contact
+   whose number is your own cell (Send text), then reply from your cell.
+5. Porting the Follow Up Boss number later: ask FUB support for the port-out details, submit a port in
+   Twilio (Phone Numbers → Port & Host) with a switch date, add the number to the Sender Pool when it arrives,
+   then change your number in Admin → Integrations to it. Keep FUB until the switch day.
+6. **Group texts:** Admin → Integrations → Business texting → turn on **Group texts**. Group texts that include a
+   team number arrive as plain texts listing the group's people (OtherRecipients); HQ groups them. Replies go out
+   through a Twilio Conversation per group (Twilio Console → Conversations shows them). The "Recent incoming texts
+   (troubleshooting)" list under the switch shows how each text arrived.
+7. **Text commands:** from your own cell (the "calls ring" cell on your row), text your own HQ number
+   "task …" (e.g. "task call lender re Ortiz Fri 9am") to add a task; HQ texts back what it added. "help" lists
+   commands. Your cell must match the one saved on your row in Admin → Integrations.
+8. **Call recording** is on by default (Admin → Integrations → Business texting → "Record answered calls").
+   Answered calls show on the contact's timeline with a player. Recordings live in Twilio (Monitor → Call
+   recordings), where they can be deleted. Turning the switch off stops new recordings and the notice.
+
+### Claude app connector (use HQ from the Claude app)
+
+No new keys needed. In HQ open ⚙ My settings → Claude app and press Copy. In the Claude app: Settings → Connectors →
+Add custom connector, paste the address, then Connect. HQ's Allow page opens (sign in with Google if asked); press
+Allow. To stop it, My settings → Claude app → Disconnect. Only the owner can connect. NEXTAUTH_URL in Railway must
+be HQ's public address (it already is for sign-in).
+
+### Address lookup (Google Maps)
+1. Google Cloud (same project as sign-in) → APIs & Services → Library → **Places API (New)** → Enable.
+   Billing must be on for the project; Google's monthly free allowance covers a small team.
+2. APIs & Services → Credentials → **Create credentials → API key**. Edit the key → API restrictions →
+   **Restrict key** → Places API (New) → Save.
+3. Railway → HQ app → Variables → `GOOGLE_MAPS_API_KEY` = that key (never in chat). Deploy.
+4. Admin → Integrations shows Address lookup **Connected**; address boxes (contact, purchase agreement,
+   listing) suggest full addresses with ZIP as you type.
 
 ### Rotate a secret
 Create the new value (Google: Credentials → the HQ client → reset secret), update the

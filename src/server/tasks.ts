@@ -1,0 +1,180 @@
+import "server-only";
+import { db } from "@/server/db";
+import { Prisma } from "@/generated/prisma/client";
+import { isDueForTouch } from "@/lib/filters";
+import { initials, isoFromDate, todayCentral } from "@/lib/normalize";
+import { centralDayStart } from "@/lib/texting";
+import { birthdayName, categoryOf, importantDateTasks, isWeekend, parseSubtasks, type Subtask } from "@/lib/tasks";
+import { CONTRACT_ANCHORS, timingLabel, type Anchor } from "@/lib/templates";
+
+/** A task checked off today: who did it and when. */
+export type DoneRow = TaskRow & { doneById: string | null; doneAt: string };
+
+export type TaskRow = {
+  id: string; // task id, or the sourceKey for an Important dates task not yet saved
+  virtual: boolean; // Important dates task computed from the rules (no row yet)
+  title: string;
+  notes: string;
+  kind: string;
+  due: string | null;
+  time: string | null;
+  repeat: string | null;
+  priority: number;
+  subtasks: Subtask[];
+  listId: string | null;
+  personId: string | null;
+  personName: string | null;
+  assigneeId: string | null;
+  sourceKey: string | null;
+  cat: string;
+  done: boolean;
+  fileId: string | null;
+  paId: string | null;
+  /** Checklist step details: "Buyer checklist", its phase and timing; due date locked when timed from a contract date. */
+  step: { source: string; phase: string | null; timing: string | null; locked: boolean } | null;
+  /** Checklist steps that send by themselves (owner request 2026-10-29): pending, sending, sent, failed or off. */
+  auto?: { state: string; error: string | null } | null;
+  /** Important dates (birthdays, homeiversaries): who to address the card to, without opening their page (owner 2026-10-27). */
+  mailTo?: { name: string; address: string | null } | null;
+};
+
+export type ListRow = { id: string; name: string; builtin: string | null; showOnToday: boolean };
+export type TouchRow = { personId: string; name: string; followUpDays: number; lastContact: string | null; assigneeId: string | null };
+export type TeamMember = { id: string; name: string; initials: string; isOwner: boolean };
+
+const taskInclude = { person: { select: { name: true } }, file: { select: { kind: true } }, pa: { select: { side: true } } } as const;
+type DbTask = Prisma.TaskGetPayload<{ include: typeof taskInclude }>;
+
+/** Steps from a closed or deleted file, or an ended contract, no longer show as open tasks. Neither do steps that send
+ *  by themselves (or text a check-in) while they're set to (owner request 2026-10-30: so nobody sends them twice by hand); they show in the
+ *  contact's Scheduled box and on the deal checklist, and come back as a task if they fail or are turned off. */
+export const LIVE_STEPS = {
+  AND: [
+    { OR: [{ fileId: null }, { file: { is: { closedAt: null, deletedAt: null } } }] },
+    { OR: [{ paId: null }, { pa: { is: { state: "active", deletedAt: null } } }] },
+    { OR: [{ autoState: { in: ["failed", "off", "sent"] } }, { autoState: null, autoSend: { equals: Prisma.DbNull } }] },
+    // Same for an "Ask by text" check-in until it's texted; once asked (or turned off) it's a task again.
+    { OR: [{ askState: { in: ["asked", "answered", "off"] } }, { askState: null, askKind: null }] },
+  ],
+} satisfies Prisma.TaskWhereInput;
+
+/** Steps someone scheduled a text or email for (Draft → Schedule): hidden from the task lists until it sends (then
+ *  it's checked off) or is cancelled. */
+export async function scheduledStepIds(): Promise<string[]> {
+  const [texts, emails] = await Promise.all([
+    db.scheduledText.findMany({ where: { status: { in: ["pending", "sending"] }, taskId: { not: null } }, select: { taskId: true } }),
+    db.scheduledEmail.findMany({ where: { status: { in: ["pending", "sending"] }, taskId: { not: null } }, select: { taskId: true } }),
+  ]);
+  return [...new Set([...texts, ...emails].map((x) => x.taskId!).filter((x) => !x.startsWith("date:")))];
+}
+
+export function toRow(t: DbTask): TaskRow {
+  return {
+    id: t.id, virtual: false, title: t.title, notes: t.notes, kind: t.kind,
+    due: t.dueDate ? isoFromDate(t.dueDate) : null, time: t.dueTime, repeat: t.repeat, priority: t.priority,
+    subtasks: parseSubtasks(t.subtasks), listId: t.listId, personId: t.personId, personName: t.person?.name ?? null,
+    assigneeId: t.assigneeId, sourceKey: t.sourceKey, cat: categoryOf(t), done: !!t.completedAt,
+    fileId: t.fileId, paId: t.paId, step: stepOf(t), auto: t.autoState && t.autoState !== "off" ? { state: t.autoState, error: t.autoError } : null,
+  };
+}
+
+function stepOf(t: DbTask): TaskRow["step"] {
+  if (!t.templateId) return null;
+  const source = t.pa ? (t.pa.side === "seller" ? "Seller contract" : "Buyer contract") : t.file ? (t.file.kind === "listing" ? "Seller checklist" : "Buyer checklist") : "Checklist";
+  const off = t.offsetDays ?? 0;
+  const timing = !t.anchor ? null : t.offsetMinutes != null ? timingLabel({ anchor: t.anchor as Anchor, days: 0, dir: t.offsetMinutes < 0 ? "minutesAfter" : "minutesBefore", minutes: Math.abs(t.offsetMinutes) })
+    : timingLabel({ anchor: t.anchor as Anchor, days: Math.abs(off), dir: off < 0 ? "before" : off > 0 ? "after" : "on" });
+  return { source, phase: t.phase, timing, locked: !!t.anchor && CONTRACT_ANCHORS.includes(t.anchor as Anchor) };
+}
+
+export async function loadTeam(): Promise<TeamMember[]> {
+  const users = await db.user.findMany({ where: { status: { not: "DISABLED" } }, orderBy: [{ isOwner: "desc" }, { name: "asc" }] });
+  return users.map((u) => ({ id: u.id, name: u.name, initials: initials(u.name), isOwner: u.isOwner }));
+}
+
+/** Important dates tasks for everyone not in Trash, minus the ones already saved (checked off, edited or deleted). */
+export async function loadDateTasks(team: TeamMember[], today: string, personId?: string): Promise<TaskRow[]> {
+  const [dates, reminders] = await Promise.all([
+    db.importantDate.findMany({ where: { person: { deletedAt: null, ...(personId ? { id: personId } : {}) } }, include: { person: { select: { name: true, assignedToId: true, stage: { select: { name: true } } } } } }),
+    db.dateReminder.findMany({ orderBy: { position: "asc" } }),
+  ]);
+  const computed = importantDateTasks(
+    dates.map((d) => ({ id: d.id, kind: d.kind, whose: d.whose, date: isoFromDate(d.date), personId: d.personId, personName: d.person.name, stage: d.person.stage?.name ?? null, assignedToId: d.person.assignedToId })),
+    reminders, team, today,
+  );
+  if (!computed.length) return [];
+  const saved = new Set((await db.task.findMany({ where: { sourceKey: { in: computed.map((c) => c.key) } }, select: { sourceKey: true } })).map((t) => t.sourceKey));
+  return computed.filter((c) => !saved.has(c.key)).map((c) => ({
+    id: c.key, virtual: true, title: c.title, notes: "", kind: c.kind, due: c.due, time: null, repeat: null, priority: 0, subtasks: [],
+    listId: null, personId: c.personId, personName: c.personName, assigneeId: c.assigneeId, sourceKey: c.key, cat: "dates", done: false, fileId: null, paId: null, step: null,
+  }));
+}
+
+/**
+ * Important dates tasks get who to address the card to (owner request 2026-10-27): a birthday goes to just the
+ * birthday person; a homeiversary to the household's mailing name. Both use the mailing address.
+ */
+async function withMailTo(rows: TaskRow[]): Promise<TaskRow[]> {
+  const dated = rows.filter((r) => r.cat === "dates" && r.personId);
+  if (!dated.length) return rows;
+  const dateId = (r: TaskRow) => /^date:([^:]+):/.exec(r.sourceKey ?? "")?.[1] ?? null;
+  const [people, dates] = await Promise.all([
+    db.person.findMany({ where: { id: { in: [...new Set(dated.map((r) => r.personId!))] } }, select: { id: true, name: true, mailingName: true, address: true } }),
+    db.importantDate.findMany({ where: { id: { in: dated.map(dateId).filter((x): x is string => !!x) } }, select: { id: true, kind: true, whose: true } }),
+  ]);
+  const person = new Map(people.map((p) => [p.id, p])), date = new Map(dates.map((d) => [d.id, d]));
+  return rows.map((r) => {
+    const p = r.cat === "dates" && r.personId ? person.get(r.personId) : undefined;
+    if (!p) return r;
+    const d = date.get(dateId(r) ?? "");
+    return { ...r, mailTo: { name: d?.kind === "birthday" ? birthdayName(p.name, d.whose) : p.mailingName || p.name, address: p.address } };
+  });
+}
+
+export async function loadTaskBoard() {
+  const today = isoFromDate(todayCentral());
+  const team = await loadTeam();
+  const [lists, tasks, dateTasks, people, done] = await Promise.all([
+    db.taskList.findMany({ orderBy: [{ position: "asc" }, { name: "asc" }] }),
+    db.task.findMany({ where: { completedAt: null, deletedAt: null, id: { notIn: await scheduledStepIds() }, OR: [{ personId: null }, { person: { deletedAt: null } }], ...LIVE_STEPS }, include: taskInclude, orderBy: [{ dueDate: "asc" }, { priority: "desc" }, { dueTime: "asc" }, { title: "asc" }, { id: "asc" }] }),
+    loadDateTasks(team, today),
+    db.person.findMany({ where: { deletedAt: null, followUpDays: { gt: 0 } }, select: { id: true, name: true, followUpDays: true, lastTextAt: true, touchAfter: true, assignedToId: true } }),
+    // Done today (owner request 2026-10-28): tasks someone checked off since midnight Central, newest first.
+    db.task.findMany({ where: { completedAt: { gte: centralDayStart() }, completedById: { not: null }, deletedAt: null }, include: taskInclude, orderBy: { completedAt: "desc" }, take: 200 }),
+  ]);
+  // Due for a touch shows Monday to Friday only (owner 2026-10-24); weekends start empty.
+  const weekend = isWeekend(todayCentral());
+  const touches: TouchRow[] = people
+    .filter((p) => !weekend && isDueForTouch(p))
+    .map((p) => ({ personId: p.id, name: p.name, followUpDays: p.followUpDays!, lastContact: p.lastTextAt ? p.lastTextAt.toISOString() : null, assigneeId: p.assignedToId }))
+    .sort((a, b) => (a.lastContact ?? "").localeCompare(b.lastContact ?? ""));
+  // People held back by Spread out who would otherwise be due now ("Show all now" puts them back).
+  const waiting = people.filter((p) => p.touchAfter && !isDueForTouch(p) && isDueForTouch({ ...p, touchAfter: null })).length;
+  // Everyone Spread out would (re)spread: due now or held back by an earlier spread, any day of the week.
+  const spreadable = people.filter((p) => isDueForTouch({ ...p, touchAfter: null })).length;
+  return {
+    today, team, touches, waiting, spreadable, weekend,
+    lists: lists.map((l): ListRow => ({ id: l.id, name: l.name, builtin: l.builtin, showOnToday: l.showOnToday })),
+    tasks: await withMailTo([...tasks.map(toRow), ...dateTasks]),
+    doneToday: done.map((t): DoneRow => ({ ...toRow(t), doneById: t.completedById, doneAt: t.completedAt!.toISOString() })),
+  };
+}
+
+/** Every checklist step (open and done) on a person's files, for the checklists on the contact page. */
+export async function loadChecklists(personId: string): Promise<TaskRow[]> {
+  const rows = await db.task.findMany({ where: { personId, deletedAt: null, templateId: { not: null }, fileId: { not: null } }, include: taskInclude, orderBy: [{ createdAt: "asc" }] });
+  return rows.map(toRow);
+}
+
+/** Open tasks for one person, soonest first (contact page Tasks card). */
+export async function loadPersonTasks(personId: string) {
+  const today = isoFromDate(todayCentral());
+  const team = await loadTeam();
+  // Birthday / homeiversary tasks aren't saved until checked off, so they're worked out here like on the Tasks page.
+  const [tasks, dateTasks] = await Promise.all([
+    db.task.findMany({ where: { personId, completedAt: null, deletedAt: null, id: { notIn: await scheduledStepIds() }, ...LIVE_STEPS }, include: taskInclude }),
+    loadDateTasks(team, today, personId),
+  ]);
+  const rows = (await withMailTo([...tasks.map(toRow), ...dateTasks])).sort((a, b) => (a.due ?? "9999").localeCompare(b.due ?? "9999") || (a.time ?? "99").localeCompare(b.time ?? "99") || a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
+  return { today, team, rows };
+}
