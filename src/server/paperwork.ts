@@ -27,7 +27,7 @@ const nowClock = () => new Date().toLocaleTimeString("en-GB", { timeZone: "Ameri
 const first = (n: string) => n.split(/\s+/)[0];
 
 /** Texts a team member on their cell from their own HQ number. False when they have none or texting is off. */
-async function textTeammate(userId: string, body: string): Promise<boolean> {
+export async function textTeammate(userId: string, body: string): Promise<boolean> {
   if (!(await textingEnabled())) return false;
   const u = await db.user.findUnique({ where: { id: userId }, select: { textNumber: true, forwardTo: true, status: true } });
   if (!u?.textNumber || !u.forwardTo || u.status === "DISABLED") return false;

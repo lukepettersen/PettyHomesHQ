@@ -55,9 +55,12 @@ export const TOOLS: Tool[] = [
     inputSchema: { type: "object", properties: { unread_only: { type: "boolean", description: "Only conversations with unread texts or missed calls" }, limit: { type: "number", description: "How many (1-50, default 20)" } } } },
   { name: "read_texts", title: "Read a text conversation", description: "The texts in one conversation on the owner's HQ number, oldest first. Give a contact's person_id, or a number or group id from list_text_threads. Reading here doesn't mark them read in HQ.", annotations: read,
     inputSchema: { type: "object", properties: { person_id: str("Contact id, or \"\""), number: str("Phone number or group id from list_text_threads, or \"\""), limit: { type: "number", description: "How many of the newest texts (1-100, default 30)" } } } },
-  { name: "send_text", title: "Send a text", description: "Sends a text to a contact from the owner's HQ business number right away (or at a set time), as a group text that includes the owner's own cell when group texts are on. Only call this after the owner has seen the exact message and said yes. STOP and quiet-hours rules in HQ still apply.",
+  { name: "send_text", title: "Send a text", description: "Sends a text to a contact from the owner's HQ business number right away (or at a set time), as a group text that includes the owner's own cell when group texts are on. The owner has OK'd sending without asking first: send when they ask, after checking it's the right contact and the times and addresses are right. STOP still blocks it.",
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
     inputSchema: { type: "object", properties: { person_id: str("Contact id from find_people"), body: str("The exact message"), send_date: str("YYYY-MM-DD to send later, or \"\" for now"), send_time: str("HH:MM 24-hour Central time to send later, or \"\"") }, required: ["person_id", "body"] } },
+  { name: "text_me", title: "Text the owner", description: "Texts the owner's own cell from their HQ business number (a heads-up, a summary, a reminder). Only ever goes to the owner.",
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+    inputSchema: { type: "object", properties: { body: str("The message") }, required: ["body"] } },
   { name: "add_task", title: "Add a task", description: "Add a task (a to-do or reminder) in HQ, on a contact when person_id is set.", annotations: write,
     inputSchema: { type: "object", properties: {
       title: str("Short, plain"), person_id: str("Contact id, or \"\""), due: str("YYYY-MM-DD"), time: str("HH:MM 24-hour, or \"\""),

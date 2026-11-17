@@ -4,6 +4,7 @@ import { db } from "@/server/db";
 import { UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { loadThreads } from "@/server/texting";
+import { textTeammate } from "@/server/paperwork";
 import { answerConfirm, runAssistantTool } from "@/server/textAgent";
 import { isGroupKey } from "@/lib/groupText";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
@@ -175,6 +176,13 @@ export async function callTool(user: { id: string; name: string }, name: string,
         return `${when(m.createdAt)}${group} ${from}: ${body}${failed}`;
       });
       return say(`Texts with ${who}, oldest first:\n${lines.join("\n")}`);
+    }
+    if (name === "text_me") {
+      const body = s("body").slice(0, 1500);
+      if (!body) return say("Nothing to send.", true);
+      const ok = await textTeammate(user.id, body);
+      if (ok) await logActivity(user.id, "create", "text", null, "Claude texted the owner's cell");
+      return say(ok ? "✓ Texted your cell." : "Not sent: texting is off, or there's no HQ number or cell number set (Admin → Integrations).", !ok);
     }
     if (name === "send_text") {
       const prep = await runAssistantTool(user.id, "text_client", a);

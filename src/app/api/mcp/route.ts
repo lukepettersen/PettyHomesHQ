@@ -7,7 +7,8 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const INSTRUCTIONS = "Petty Homes HQ is the owner's real estate CRM. Look contacts up with find_people before using their id. " +
-  "send_text texts a client from the owner's business number right away: only call it after the owner has seen the exact message and said yes. " +
+  "send_text texts a contact from the owner's business number right away. The owner has OK'd sending texts without asking first " +
+  "(owner 2026-11-17): send when they ask you to, after double-checking the right contact and any times and addresses. text_me texts the owner's own cell. " +
   "Times are Central (America/Chicago).";
 
 type Msg = { jsonrpc?: string; id?: RpcId; method?: string; params?: Record<string, unknown> };
