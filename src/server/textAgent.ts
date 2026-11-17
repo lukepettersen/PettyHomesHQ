@@ -416,7 +416,7 @@ const minutesBetween = (a: string, b: string) => { const [h1, m1] = a.split(":")
 
 /** Runs one of the assistant's tools for the Claude app connector (src/server/mcp.ts): any contact id may be used (HQ
  * still checks it exists), and the result is HQ's own receipt of what was done, or the tool's answer. Owner only. */
-export async function runAssistantTool(userId: string, name: string, args: Record<string, unknown>): Promise<{ text: string; confirmId: string | null }> {
+export async function runAssistantTool(userId: string, name: string, args: Record<string, unknown>): Promise<{ text: string; confirmId: string | null; confirmKind: string | null }> {
   const u = await db.user.findUnique({ where: { id: userId }, include: { role: true } });
   if (!u?.isOwner || u.status === "DISABLED") throw new UserError("Only the owner can use HQ from the Claude app.");
   const me: Me = { id: u.id, name: u.name, email: u.email, permissions: u.role.permissions, cell: u.forwardTo ? normalizePhone(u.forwardTo) : "" };
@@ -427,7 +427,7 @@ export async function runAssistantTool(userId: string, name: string, args: Recor
   const acts = await db.textAgentAction.findMany({ where: { userId: me.id, createdAt: { gte: started } }, orderBy: { createdAt: "asc" } });
   const confirm = acts.find((x) => x.status === "confirm");
   const done = acts.filter((x) => x.status === "done").map((x) => x.summary);
-  return { text: done.length ? done.join("\n") : answer, confirmId: confirm?.id ?? null };
+  return { text: done.length ? done.join("\n") : answer, confirmId: confirm?.id ?? null, confirmKind: confirm?.kind ?? null };
 }
 
 /** A plain-English text from a team member's cell. Returns the reply to text back. */

@@ -178,7 +178,8 @@ export async function callTool(user: { id: string; name: string }, name: string,
     }
     if (name === "send_text") {
       const prep = await runAssistantTool(user.id, "text_client", a);
-      if (!prep.confirmId) return say(`Not sent: ${prep.text}`, true);
+      // Only the text this call just prepared is sent, never some other action waiting for a YES by text.
+      if (!prep.confirmId || prep.confirmKind !== "text") return say(`Not sent: ${prep.text}`, true);
       const done = await answerConfirm(user, prep.confirmId, true);
       return say(done, !done.startsWith("✓"));
     }
