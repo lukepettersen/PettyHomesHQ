@@ -168,6 +168,13 @@ Set up 2026-10-20: business profile approved, brand registered, campaign "Low Vo
    Answered calls show on the contact's timeline with a player. Recordings live in Twilio (Monitor → Call
    recordings), where they can be deleted. Turning the switch off stops new recordings and the notice.
 
+### Claude app connector (use HQ from the Claude app)
+
+No new keys needed. In HQ open ⚙ My settings → Claude app and press Copy. In the Claude app: Settings → Connectors →
+Add custom connector, paste the address, then Connect. HQ's Allow page opens (sign in with Google if asked); press
+Allow. To stop it, My settings → Claude app → Disconnect. Only the owner can connect. NEXTAUTH_URL in Railway must
+be HQ's public address (it already is for sign-in).
+
 ### Address lookup (Google Maps)
 1. Google Cloud (same project as sign-in) → APIs & Services → Library → **Places API (New)** → Enable.
    Billing must be on for the project; Google's monthly free allowance covers a small team.

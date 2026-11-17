@@ -1136,6 +1136,22 @@ scrolls with it until its last card is on screen, then stays put while the middl
   first); picking one fills street, city, state and ZIP. You can still type anything. Off until
   GOOGLE_MAPS_API_KEY is set (Admin → Integrations), then they're plain text boxes.
 
+### Claude app connector *(owner request 2026-11-17)*
+
+HQ is a connector the owner adds in the Claude app (Settings → Connectors → Add custom connector, address
+`https://<HQ address>/api/mcp`, shown with a Copy button in My settings → Claude app). Owner only.
+- **Sign-in:** Claude opens HQ's Allow page; the owner must be signed in to HQ (Google, as usual) and press Allow.
+  Teammates see "Owner only". HQ only sends the sign-in back to Claude's own address (claude.ai / claude.com), or to
+  this computer for testing. Codes are one-use and last 5 minutes (PKCE required); access lasts an hour and renews
+  itself for 60 days of use. Only hashes of the codes and tokens are stored.
+- **What Claude can do:** find contacts, contact details, a day's schedule, list the text conversations on the
+  owner's HQ number, read one (doesn't mark it read), send a text, add a task, add a note, add a contact. These use
+  the text assistant's own code, so they behave the same (and show in its "undo"). A text Claude sends goes from the
+  owner's HQ number, typed (so quiet hours don't hold it), as a group text with the owner's cell when group texts are
+  on; STOP still blocks it. Claude is told to send only after the owner sees the message and says yes.
+- **Disconnect:** My settings → Claude app → Disconnect (two-step) stops every token right away. Connecting and
+  disconnecting are in the activity log.
+
 ## 13. Admin
 
 **Layout (owner-approved redesign 2026-10-29):** clicking Admin opens an **Admin home** page with five groups, each
@@ -1307,4 +1323,3 @@ None right now. New ones get added here.
 - Calendar page (everyone's appointments and contract dates for the week).
 - Caller ID: sync HQ contacts to Google Contacts so phones show names (Connect Google Contacts; per person).
 - Call transcripts + summaries (Twilio transcription + Claude; ~$2/month at current volume).
-- Claude app connector for HQ (start read-only, owner only).

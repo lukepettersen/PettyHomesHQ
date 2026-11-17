@@ -4,13 +4,13 @@ import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { REMEMBER_COOKIE } from "@/lib/session";
 
-export function SignInButton() {
+export function SignInButton({ next = "/" }: { next?: string }) {
   const [busy, setBusy] = useState(false);
   const [remember, setRemember] = useState(false);
   const go = () => {
     // Read by the server when Google sends you back; only says whether to keep this device signed in.
     document.cookie = remember ? `${REMEMBER_COOKIE}=1; path=/; max-age=900; samesite=lax${location.protocol === "https:" ? "; secure" : ""}` : `${REMEMBER_COOKIE}=; path=/; max-age=0`;
-    setBusy(true); signIn("google", { callbackUrl: "/" });
+    setBusy(true); signIn("google", { callbackUrl: next });
   };
   return (
     <>

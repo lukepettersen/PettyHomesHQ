@@ -819,3 +819,33 @@ model BulkEmailJob {
 
   @@index([state])
 }
+
+/// Claude app connector (owner request 2026-11-17): apps that registered to sign in to HQ (OAuth dynamic client
+/// registration). Only Claude's own callback addresses are accepted (src/lib/mcp.ts).
+model McpClient {
+  id           String     @id @default(cuid())
+  name         String
+  redirectUris Json // ["https://claude.ai/api/mcp/auth_callback"]
+  createdAt    DateTime   @default(now())
+  grants       McpGrant[]
+}
+
+/// One sign-in code, access token or refresh token for the Claude app connector. Only a hash of the token is kept.
+/// Disconnect (My settings) revokes them all.
+model McpGrant {
+  id            String    @id @default(cuid())
+  clientId      String
+  client        McpClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId        String
+  kind          String // code | access | refresh
+  tokenHash     String    @unique
+  codeChallenge String? // code: PKCE S256 challenge
+  redirectUri   String? // code: where it was sent
+  expiresAt     DateTime
+  usedAt        DateTime? // code / refresh: exchanged (one use only)
+  revokedAt     DateTime?
+  lastUsedAt    DateTime? // access: last call from Claude
+  createdAt     DateTime  @default(now())
+
+  @@index([userId, kind])
+}
