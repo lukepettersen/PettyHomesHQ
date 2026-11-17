@@ -1148,10 +1148,15 @@ HQ is a connector the owner adds in the Claude app (Settings → Connectors → 
   this computer for testing. Codes are one-use and last 5 minutes (PKCE required); access lasts an hour and renews
   itself for 60 days of use. Only hashes of the codes and tokens are stored.
 - **What Claude can do:** find contacts, contact details, a day's schedule, list the text conversations on the
-  owner's HQ number, read one (doesn't mark it read), send a text, add a task, add a note, add a contact. These use
+  owner's HQ number, read one (doesn't mark it read), send a text, text the owner, add a task, add a note, add a contact. These use
   the text assistant's own code, so they behave the same (and show in its "undo"). A text Claude sends goes from the
   owner's HQ number, typed (so quiet hours don't hold it), as a group text with the owner's cell when group texts are
   on; STOP still blocks it. Claude is told to send only after the owner sees the message and says yes.
+- **Text the owner** *(owner request 2026-11-17)*: Claude can also text the owner's **own cell** from the owner's HQ
+  number with no yes per text, so a routine (e.g. watching for showing requests) can answer him. The cell is the one
+  his HQ number's calls ring (Admin → Integrations), never a number Claude gives; always a plain 1:1 text, never a
+  group text. Up to 1000 characters, 6 per hour. It shows in his Messages thread with his cell and in the activity log
+  (no message text). Texts to clients still need his yes.
 - **Disconnect:** My settings → Claude app → Disconnect (two-step) stops every token right away. Connecting and
   disconnecting are in the activity log.
 

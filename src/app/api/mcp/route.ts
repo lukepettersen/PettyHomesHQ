@@ -8,6 +8,7 @@ export const maxDuration = 60;
 
 const INSTRUCTIONS = "Petty Homes HQ is the owner's real estate CRM. Look contacts up with find_people before using their id. " +
   "send_text texts a client from the owner's business number right away: only call it after the owner has seen the exact message and said yes. " +
+  "text_owner texts only the owner's own cell (never anyone else), so it needs no approval per text. " +
   "Times are Central (America/Chicago).";
 
 type Msg = { jsonrpc?: string; id?: RpcId; method?: string; params?: Record<string, unknown> };

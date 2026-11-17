@@ -58,6 +58,9 @@ export const TOOLS: Tool[] = [
   { name: "send_text", title: "Send a text", description: "Sends a text to a contact from the owner's HQ business number right away (or at a set time), as a group text that includes the owner's own cell when group texts are on. Only call this after the owner has seen the exact message and said yes. STOP and quiet-hours rules in HQ still apply.",
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
     inputSchema: { type: "object", properties: { person_id: str("Contact id from find_people"), body: str("The exact message"), send_date: str("YYYY-MM-DD to send later, or \"\" for now"), send_time: str("HH:MM 24-hour Central time to send later, or \"\"") }, required: ["person_id", "body"] } },
+  { name: "text_owner", title: "Text the owner", description: "Sends a plain one-to-one text from the owner's HQ business number to the owner's OWN cell (the cell set for their number in HQ), never to anyone else and never as a group text. Because it can only reach the owner, it needs no approval per text. Use it to answer the owner or let them know something. To text a client, use send_text, which still needs the owner's yes. Up to 1000 characters; a few per hour.",
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+    inputSchema: { type: "object", properties: { body: str("The exact message") }, required: ["body"], additionalProperties: false } },
   { name: "add_task", title: "Add a task", description: "Add a task (a to-do or reminder) in HQ, on a contact when person_id is set.", annotations: write,
     inputSchema: { type: "object", properties: {
       title: str("Short, plain"), person_id: str("Contact id, or \"\""), due: str("YYYY-MM-DD"), time: str("HH:MM 24-hour, or \"\""),
@@ -82,3 +85,17 @@ export function withDefaults(name: string, a: Record<string, unknown>): Record<s
 
 /** A number between lo and hi (default when missing or not a number). */
 export const clampInt = (v: unknown, lo: number, hi: number, dflt: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : dflt);
+
+// text_owner (owner request 2026-11-17: "lets do it so you can text without approval"): Claude texts the owner's own
+// cell only, so a routine can answer him. The recipient is never taken from Claude; these are its limits.
+export const OWNER_TEXT_MAX = 1000;
+export const OWNER_TEXTS_PER_HOUR = 6;
+
+/** Why a text to the owner can't go (empty, too long, too many this hour), or null when it can. */
+export function ownerTextProblem(body: unknown, sentLastHour: number): string | null {
+  const b = typeof body === "string" ? body.trim() : "";
+  if (!b) return "Write a message.";
+  if (b.length > OWNER_TEXT_MAX) return `Texts to the owner can be up to ${OWNER_TEXT_MAX} characters (this one is ${b.length}).`;
+  if (sentLastHour >= OWNER_TEXTS_PER_HOUR) return `Already sent ${OWNER_TEXTS_PER_HOUR} texts to the owner in the last hour. Try again later.`;
+  return null;
+}

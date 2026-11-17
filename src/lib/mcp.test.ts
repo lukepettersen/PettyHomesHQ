@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
-import { TOOLS, clampInt, pickVersion, pkceOk, redirectAllowed, rpcError, rpcResult, safeBack, withDefaults } from "./mcp";
+import { OWNER_TEXT_MAX, OWNER_TEXTS_PER_HOUR, TOOLS, clampInt, ownerTextProblem, pickVersion, pkceOk, redirectAllowed, rpcError, rpcResult, safeBack, withDefaults } from "./mcp";
 
 describe("redirectAllowed", () => {
   it("accepts Claude's own callback", () => {
@@ -66,5 +66,31 @@ describe("tools", () => {
     expect(withDefaults("add_task", { title: "Call", due: "2026-11-20" })).toEqual({ title: "Call", due: "2026-11-20", person_id: "", time: "", assignee: "", kind: "followup" });
     expect(withDefaults("add_note", { person_id: "p", body: "b", kind: "call" }).kind).toBe("call");
     expect(withDefaults("find_people", { query: "x" })).toEqual({ query: "x" });
+  });
+});
+
+describe("text_owner", () => {
+  const tool = TOOLS.find((t) => t.name === "text_owner")!;
+  const props = (tool.inputSchema as { properties: Record<string, unknown>; additionalProperties?: boolean });
+  it("takes only a message, never who to text", () => {
+    expect(Object.keys(props.properties)).toEqual(["body"]);
+    expect(props.additionalProperties).toBe(false);
+  });
+  it("says it reaches only the owner, and send_text still needs a yes", () => {
+    expect(tool.description).toMatch(/OWN cell/);
+    expect(tool.description).toMatch(/never to anyone else/);
+    expect(TOOLS.find((t) => t.name === "send_text")!.description).toMatch(/Only call this after the owner has seen the exact message and said yes/);
+  });
+  it("sends a normal message", () => expect(ownerTextProblem("Showing at 4 is confirmed", 0)).toBeNull());
+  it("rejects an empty message", () => {
+    for (const b of ["", "   ", undefined, null, 5]) expect(ownerTextProblem(b, 0), String(b)).toBe("Write a message.");
+  });
+  it("caps the length", () => {
+    expect(ownerTextProblem("x".repeat(OWNER_TEXT_MAX), 0)).toBeNull();
+    expect(ownerTextProblem("x".repeat(OWNER_TEXT_MAX + 1), 0)).toMatch(/up to 1000 characters/);
+  });
+  it("limits how many go out in an hour", () => {
+    expect(ownerTextProblem("hi", OWNER_TEXTS_PER_HOUR - 1)).toBeNull();
+    expect(ownerTextProblem("hi", OWNER_TEXTS_PER_HOUR)).toMatch(/last hour/);
   });
 });

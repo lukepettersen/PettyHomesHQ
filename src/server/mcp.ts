@@ -1,13 +1,17 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
+import { revalidatePath } from "next/cache";
 import { db } from "@/server/db";
 import { UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { loadThreads } from "@/server/texting";
+import { textingEnabled } from "@/server/integrations";
+import { sendSms } from "@/server/twilio";
+import { toE164 } from "@/lib/texting";
 import { answerConfirm, runAssistantTool } from "@/server/textAgent";
 import { isGroupKey } from "@/lib/groupText";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
-import { ACCESS_MINUTES, CODE_MINUTES, REFRESH_DAYS, SCOPE, TOOLS, clampInt, hashToken, pkceOk, redirectAllowed, withDefaults } from "@/lib/mcp";
+import { ACCESS_MINUTES, CODE_MINUTES, REFRESH_DAYS, SCOPE, TOOLS, clampInt, hashToken, ownerTextProblem, pkceOk, redirectAllowed, withDefaults } from "@/lib/mcp";
 
 // Claude app connector (owner request 2026-11-17; SPEC.md §12): HQ as a remote MCP server Claude signs in to with
 // OAuth, as the owner only. Tokens are random, kept only as SHA-256 hashes, and Disconnect (My settings) revokes them.
@@ -132,6 +136,35 @@ async function myNumber(userId: string) {
   return me.textNumber;
 }
 
+/**
+ * text_owner: a plain 1:1 text from the owner's HQ number to the owner's own cell (the "calls ring" cell in Admin →
+ * Integrations), the same way HQ answers the owner's "task …" texts. The recipient comes only from the owner's account,
+ * never from Claude. Never a group text. Saved in the owner's thread with their cell and in the activity log (no body).
+ */
+async function textOwner(user: { id: string; name: string }, body: unknown): Promise<string> {
+  if (!(await textingEnabled())) throw new UserError("Texting is off. An Admin can turn it on in Admin → Integrations.");
+  const me = await db.user.findUnique({ where: { id: user.id }, select: { textNumber: true, forwardTo: true } });
+  if (!me?.textNumber) throw new UserError("You don't have an HQ texting number yet (Admin → Integrations).");
+  const cell = me.forwardTo ? normalizePhone(me.forwardTo) : "";
+  const to = toE164(cell);
+  if (!to) throw new UserError("HQ doesn't know your cell: add it as the cell your HQ number's calls ring (Admin → Integrations).");
+  const ours = me.textNumber;
+  // One at a time per line and cell (a database lock), so the hourly limit holds even if two calls land together.
+  return db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`text:${ours}:${cell}`}))`;
+    const sentLastHour = await tx.activityLog.count({ where: { userId: user.id, entity: "ownerText", createdAt: { gte: minutes(-60) } } });
+    const problem = ownerTextProblem(body, sentLastHour);
+    if (problem) throw new UserError(`Not sent: ${problem}`);
+    const text = (body as string).trim();
+    const r = await sendSms({ from: ours, to, body: text });
+    if (!r.ok) throw new UserError(`Not sent: ${r.error}`);
+    await tx.textMessage.create({ data: { ourNumber: ours, theirNumber: cell, direction: "out", body: text, twilioSid: r.sid, status: r.status, sentById: user.id, readAt: new Date() } });
+    await tx.activityLog.create({ data: { userId: user.id, action: "create", entity: "ownerText", entityId: null, summary: "Claude texted the owner's cell from HQ" } });
+    revalidatePath("/messages");
+    return `✓ Texted your cell (${formatPhone(cell)}).`;
+  }, { timeout: 30000 });
+}
+
 const when = (d: Date) => d.toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
 /** Runs one connector tool for the owner. Errors the owner can act on come back as the tool's answer. */
@@ -183,6 +216,7 @@ export async function callTool(user: { id: string; name: string }, name: string,
       const done = await answerConfirm(user, prep.confirmId, true);
       return say(done, !done.startsWith("✓"));
     }
+    if (name === "text_owner") return say(await textOwner(user, a.body));
     const r = await runAssistantTool(user.id, name, a);
     return say(r.text);
   } catch (e) {
