@@ -10,7 +10,11 @@ export const soundPct = (k: SoundKind) => (typeof window === "undefined" ? 100 :
 
 type Tone = { at: number; freq: number; len: number; type?: OscillatorType };
 function tones(ctx: AudioContext, list: Tone[], usual: number, pct: number) {
-  if (pct <= 0 || ctx.state !== "running") return;
+  if (pct <= 0 || ctx.state === "closed") return;
+  // A player the browser paused (a background tab, a sleeping laptop) is woken first; owner report 2026-11-19: an offer
+  // alert popped up without its chime.
+  // Not played late: if the browser only allows it after the next click, that chime is skipped.
+  if (ctx.state !== "running") { const asked = Date.now(); ctx.resume().then(() => { if (ctx.state === "running" && Date.now() - asked < 3000) tones(ctx, list, usual, pct); }, () => {}); return; }
   const peak = Math.max(0.0002, peakGain(usual, pct));
   for (const t of list) {
     const o = ctx.createOscillator(), g = ctx.createGain();

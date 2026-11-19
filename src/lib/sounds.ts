@@ -4,7 +4,7 @@
 export type SoundKind = "alarms" | "alerts" | "calls";
 export type SoundPrefs = Record<SoundKind, number>;
 export const SOUND_KINDS: { key: SoundKind; label: string; hint: string }[] = [
-  { key: "alerts", label: "Alerts", hint: "New texts, offers, paperwork and other pop-ups (with the bell)" },
+  { key: "alerts", label: "Alerts", hint: "The chime when something pops up (pick which things below)" },
   { key: "alarms", label: "Task alarms", hint: "A timed task coming due (repeats until you handle it)" },
   { key: "calls", label: "Incoming calls", hint: "A call to your HQ number while HQ is open" },
 ];

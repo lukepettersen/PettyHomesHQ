@@ -375,6 +375,13 @@ scrolls with it until its last card is on screen, then stays put while the middl
   offers, paperwork…), **Task alarms** and **Incoming calls**. Explicit Save/Cancel; saved per person (AppSetting
   `sounds.<userId>`), so it follows them to their other devices. At 100% a call rings with Twilio's own ring; any other
   level uses HQ's ring at that volume. The computer's own volume still applies.
+- **Pop-up alerts** *(owner request 2026-11-19)*: a checkbox per kind of bell item: New texts, Group texts, Missed
+  calls, Offers submitted, Website leads, Paperwork, Showing emails, Didn't send (on by default, as before), Tasks given
+  to you and @mentions (off by default; when turned on, only ones from the last day pop up). A checked kind pops up in the
+  corner with the Alerts chime (and a computer notification in a background tab); everything stays in the bell either
+  way. Anything new HQ alerts about always pops up. Saved per person (AppSetting `alerts.<userId>`). A paused sound
+  player is woken before a chime (owner report 2026-11-19: an offer popped up silently); a chime the browser won't
+  allow until the next click is skipped rather than played late.
 
 - **A ShowingTime email HQ can't handle** gives the owner a bell alert with its subject and the reason (owner report
   2026-11-15: a confirmed showing never appeared); a one-time re-read of the last 3 days of Gmail picked up the missed one.

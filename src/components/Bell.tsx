@@ -1,13 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { playAlert } from "@/components/sounds";
+import { audioContext, playAlert } from "@/components/sounds";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useDropdown } from "@/components/useDropdown";
 import { markAllNotificationsRead, markNotificationRead } from "@/app/notificationActions";
 import type { BellItem } from "@/server/notifications";
-import { alertHeading } from "@/lib/alerts";
+import { ALERT_DEFAULTS, alertHeading, popsUp } from "@/lib/alerts";
 
 type Bell = { unread: number; items: BellItem[] };
 
@@ -31,24 +31,22 @@ export function Bell({ initial }: { initial: Bell }) {
   }, []);
   // Alerts (like a submitted offer) pop up over the page with a chime, once per device, until opened or dismissed.
   const [popup, setPopup] = useState<BellItem[]>([]);
-  const audio = useRef<AudioContext | null>(null);
   const rung = useRef(new Set<string>());
   const hovering = useRef(false);
   useEffect(() => {
     const s = seen();
     // Nothing pops up for the conversation already open on screen; those count as seen (owner request 2026-10-27).
     const here = `${window.location.pathname}${window.location.search}`;
-    const onScreen = data.items.filter((n) => n.alert && !n.read && !s.has(n.id) && n.link && here.startsWith(n.link));
+    // Which kinds pop up is each person's choice (My settings → Pop-up alerts). Mentions and tasks weren't alerts before,
+    // so only new ones pop up when turned on, never a backlog.
+    const prefs = window.hqAlerts ?? ALERT_DEFAULTS;
+    const wanted = (n: BellItem) => popsUp(n, prefs) && (n.alert || Date.now() - new Date(n.at).getTime() < 86400000);
+    const onScreen = data.items.filter((n) => wanted(n) && !n.read && !s.has(n.id) && n.link && here.startsWith(n.link));
     if (onScreen.length) markSeen(onScreen.map((n) => n.id));
-    const fresh = data.items.filter((n) => n.alert && !n.read && !s.has(n.id) && !onScreen.includes(n));
+    const fresh = data.items.filter((n) => wanted(n) && !n.read && !s.has(n.id) && !onScreen.includes(n));
     const t = setTimeout(() => setPopup((cur) => (fresh.length && fresh.map((x) => x.id).join() !== cur.map((x) => x.id).join() ? fresh : cur)), 0);
     return () => clearTimeout(t);
   }, [data]);
-  useEffect(() => {
-    const unlock = () => { if (!audio.current) { try { audio.current = new AudioContext(); } catch { /* no audio */ } } else void audio.current.resume(); };
-    window.addEventListener("pointerdown", unlock); window.addEventListener("keydown", unlock);
-    return () => { window.removeEventListener("pointerdown", unlock); window.removeEventListener("keydown", unlock); };
-  }, []);
   const groups = Object.values(popup.reduce<Record<string, { key: string; items: BellItem[] }>>((acc, n) => {
     const key = n.link ?? n.personId ?? n.id;
     (acc[key] ??= { key, items: [] }).items.push(n);
@@ -71,8 +69,9 @@ export function Bell({ initial }: { initial: Bell }) {
   useEffect(() => {
     if (!popup.length) return;
     const chime = () => {
-      const ctx = audio.current;
-      if (ctx) playAlert(ctx); // at their Alerts volume (My settings)
+      // HQ's one sound player (woken by any click or key press on the page), at their Alerts volume (My settings).
+      const ctx = audioContext();
+      if (ctx) playAlert(ctx);
     };
     // One chime per new alert (no repeating), and a desktop notification when HQ is in a background tab (owner 2026-10-28).
     const fresh = popup.filter((n) => !rung.current.has(n.id));

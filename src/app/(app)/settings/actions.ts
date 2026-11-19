@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { guarded, UserError } from "@/server/safe";
 import { disconnect } from "@/server/mcp";
-import { saveSoundPrefs } from "@/server/sounds";
+import { saveAlertPrefs, saveSoundPrefs } from "@/server/sounds";
+import { ALERT_KINDS } from "@/lib/alerts";
 
 const schema = z.object({ alerts: z.number().min(0).max(200), alarms: z.number().min(0).max(200), calls: z.number().min(0).max(200) });
 
@@ -12,6 +13,17 @@ const schema = z.object({ alerts: z.number().min(0).max(200), alarms: z.number()
 export async function saveSounds(input: z.input<typeof schema>) {
   return guarded(null, async (user) => {
     const r = await saveSoundPrefs(user.id, schema.parse(input));
+    revalidatePath("/", "layout");
+    return r;
+  });
+}
+
+const alertSchema = z.object(Object.fromEntries(ALERT_KINDS.map((k) => [k.key, z.boolean()])) as Record<string, z.ZodBoolean>);
+
+/** My settings: which alerts pop up with a chime for this person (they only change their own). */
+export async function saveAlerts(input: Record<string, boolean>) {
+  return guarded(null, async (user) => {
+    const r = await saveAlertPrefs(user.id, alertSchema.parse(input));
     revalidatePath("/", "layout");
     return r;
   });
