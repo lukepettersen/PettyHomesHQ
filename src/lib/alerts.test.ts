@@ -21,6 +21,13 @@ describe("which alerts pop up (owner request 2026-11-19)", () => {
     expect(alertKind({ text: "Luke gave you a task: Call", link: "/tasks?task=1" })).toBe("task");
     expect(alertKind({ text: 'HQ couldn\'t read a ShowingTime email ("x"): y', link: null })).toBe("showing");
     expect(alertKind({ text: 'Group text from Sam: "hi"', link: "/messages?g=1" })).toBe("group");
+    expect(alertKind({ text: "New showing: Jo Agent at 1 Main St, Sat Nov 21 9:45am", link: null })).toBe("newShowing");
+    expect(alertKind({ text: "Showing booked: 1 Main St, Sat Nov 21 9:45am (listing agent Jo Agent)", link: null })).toBe("newShowing");
+    expect(alertKind({ text: "Email from Sam Ortiz: Re: offer", link: null })).toBe("email");
+    expect(alertKind({ text: "Test (offer): Luke sent this to check", link: null })).toBe("offer");
+    expect(alertHeading({ text: "Test (offer): Luke sent this to check", link: null })).toBe("New offer submitted");
+    expect(alertKind({ text: "Test (nope): x", link: null })).toBe("other");
+    expect(alertKind({ text: "Mass text finished: sent to 40 contacts", link: null })).toBe("bulk");
   });
   it("keeps what HQ did before by default, and follows each person's choices", () => {
     expect(popsUp({ text: "Alyssa submitted an offer for Sam: 1 Main · $1", link: null }, ALERT_DEFAULTS)).toBe(true);

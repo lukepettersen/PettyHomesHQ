@@ -56,8 +56,8 @@ export function Bell({ initial }: { initial: Bell }) {
 
   useEffect(() => {
     const t = setInterval(load, 30000);
-    window.addEventListener("focus", load);
-    return () => { clearInterval(t); window.removeEventListener("focus", load); };
+    window.addEventListener("focus", load); window.addEventListener("hq-bell", load);
+    return () => { clearInterval(t); window.removeEventListener("focus", load); window.removeEventListener("hq-bell", load); };
   }, [load]);
 
   const openItem = async (n: BellItem) => {

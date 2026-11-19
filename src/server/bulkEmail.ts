@@ -2,6 +2,7 @@ import "server-only";
 import type { z } from "zod";
 import { db } from "@/server/db";
 import { logActivity } from "@/server/activity";
+import { alertIfWanted } from "@/server/sounds";
 import { mergeFor } from "@/server/merge";
 import { emailConnection, sendGmail } from "@/server/google";
 import { publicBase } from "@/server/twilio";
@@ -85,7 +86,11 @@ export async function sendBulkJobs(now = new Date()): Promise<number> {
       await db.bulkEmailJob.update({ where: { id: j.id }, data: {
         doneIds, sent: j.sent + r.sent, skipped: j.skipped + r.skipped, failed: [...(j.failed as object[]), ...r.failed].slice(0, 500),
         state, error: r.stop, waitUntil: r.slowDown ? new Date(Date.now() + 65000) : null, lockedUntil: null } });
-      if (state === "done") await logActivity(u.id, "create", "email", null, `Mass email (${j.kind}) "${j.subject}" sent to ${j.sent + r.sent} ${j.sent + r.sent === 1 ? "person" : "people"}`);
+      if (state === "done") {
+        const n = j.sent + r.sent;
+        await logActivity(u.id, "create", "email", null, `Mass email (${j.kind}) "${j.subject}" sent to ${n} ${n === 1 ? "person" : "people"}`);
+        await alertIfWanted("bulk", [u.id], { link: "/people/emails", text: `Mass email finished: "${j.subject.slice(0, 80)}" sent to ${n} ${n === 1 ? "person" : "people"}` });
+      }
     } catch (e) {
       await db.bulkEmailJob.update({ where: { id: j.id }, data: { lockedUntil: null, error: e instanceof Error ? e.message.slice(0, 300) : "Something went wrong; trying again." } });
     }

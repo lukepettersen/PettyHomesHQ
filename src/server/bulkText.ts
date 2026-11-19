@@ -5,6 +5,7 @@ import { mergeFor } from "@/server/merge";
 import { dailyCap, sendTextAs } from "@/server/texting";
 import { groupReady, textNumbersAsGroup } from "@/server/groupText";
 import { textingEnabled } from "@/server/integrations";
+import { alertIfWanted } from "@/server/sounds";
 import { UserError } from "@/server/safe";
 import type { SessionUser } from "@/server/auth";
 import { fill } from "@/lib/merge";
@@ -72,7 +73,11 @@ export async function sendBulkTexts(now = new Date()): Promise<number> {
       const finished = doneIds.length >= list(j.personIds).length;
       await save({ doneIds, sent: j.sent + sent, skipped: j.skipped + skipped, failed: failed.slice(-500), state: finished ? "done" : "sending", error: null, nextAt: nextAfterSend(now) });
       total += sent;
-      if (finished) await logActivity(u.id, "create", "text", null, `Mass text sent to ${j.sent + sent} ${j.sent + sent === 1 ? "contact" : "contacts"}`);
+      if (finished) {
+        const n = j.sent + sent, bad = failed.length;
+        await logActivity(u.id, "create", "text", null, `Mass text sent to ${n} ${n === 1 ? "contact" : "contacts"}`);
+        await alertIfWanted("bulk", [u.id], { link: "/people/texts", text: `Mass text finished: sent to ${n} ${n === 1 ? "contact" : "contacts"}${bad ? `, ${bad} didn't send` : ""}` });
+      }
     } catch (e) {
       await save({ error: e instanceof Error ? e.message.slice(0, 300) : "Something went wrong; trying again.", nextAt: new Date(now.getTime() + 5 * 60000) });
     }

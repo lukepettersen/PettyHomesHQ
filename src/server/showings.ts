@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/server/db";
 import { logActivity } from "@/server/activity";
 import { runTrigger } from "@/server/automation";
+import { alertIfWanted } from "@/server/sounds";
 import { dateFromIso, formatPhone, isoFromDate, normalizePhone, todayCentral } from "@/lib/normalize";
 import { centralToUtc } from "@/lib/scheduledText";
 import { formatTime, longIso } from "@/lib/tasks";
@@ -63,6 +64,13 @@ async function confirmed(e: ShowingEmail, ownerId: string, gmailId: string) {
     if (e.noTexts && tasks) await tx.task.updateMany({ where: { showingId: s.id, kind: "text", autoState: "pending" }, data: { autoState: "off", autoError: "Their listing says no text messages, so it wasn't texted. Email or call them instead." } });
     return { agentId, showingId: s.id, created: !existing, tasks };
   });
+  // Only showings still ahead (an old email read again doesn't alert).
+  if (future) {
+    const team = await db.user.findMany({ where: { status: { not: "DISABLED" } }, select: { id: true } });
+    await alertIfWanted("newShowing", team.map((u) => u.id), { personId: r.agentId, text: e.side === "buyer"
+      ? `Showing booked: ${e.address}, ${when(e)} (listing agent ${e.agent.name})`
+      : `New showing: ${e.agent.name} at ${e.address}, ${when(e)}` });
+  }
   await logActivity(ownerId, "create", "showing", r.agentId, `Showing from ShowingTime: ${e.agent.name} at ${e.address}, ${when(e)}${r.created ? " (agent added)" : ""}${r.tasks ? `, ${r.tasks} steps` : ""} [${gmailId.slice(0, 6)}]`);
 }
 

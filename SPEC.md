@@ -382,6 +382,13 @@ scrolls with it until its last card is on screen, then stays put while the middl
   way. Anything new HQ alerts about always pops up. Saved per person (AppSetting `alerts.<userId>`). A paused sound
   player is woken before a chime (owner report 2026-11-19: an offer popped up silently); a chime the browser won't
   allow until the next click is skipped rather than played late.
+- **More alert options** *(owner request 2026-11-19)*: **New showings** (a ShowingTime showing still ahead, on our
+  listing or one we're showing), **Client emails** (an email from a contact to your Gmail, received in the last hour)
+  and **Mass text or email finished** (to whoever started it). Off by default, and only put in the bell for people who
+  turned them on.
+- **Test** on each kind sends a pretend alert ("Test (offer): …") that pops up and chimes like the real one.
+- **The owner can change a teammate's settings:** "Settings for" picks whose sounds and alerts to change, and Test sends
+  the test alert to them. Everyone else only sees their own.
 
 - **A ShowingTime email HQ can't handle** gives the owner a bell alert with its subject and the reason (owner report
   2026-11-15: a confirmed showing never appeared); a one-time re-read of the last 3 days of Gmail picked up the missed one.

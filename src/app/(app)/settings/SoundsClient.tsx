@@ -9,7 +9,7 @@ const play = { alerts: playAlert, alarms: playAlarm, calls: playRing } as const;
 const word = (n: number) => (n === 0 ? "Off" : `${n}%`);
 
 /** Sound volumes with a Test button each; Save to keep them (they apply right away, on this and your other devices). */
-export function SoundsClient({ initial }: { initial: SoundPrefs }) {
+export function SoundsClient({ initial, forId }: { initial: SoundPrefs; forId?: string }) {
   const [v, setV] = useState(initial);
   const [saved, setSaved] = useState(initial);
   const [msg, setMsg] = useState("");
@@ -19,9 +19,9 @@ export function SoundsClient({ initial }: { initial: SoundPrefs }) {
   const test = (k: SoundKind) => { const ctx = audioContext(); if (!ctx) { setError("This browser can't play sounds."); return; } setTimeout(() => play[k](ctx, v[k]), 60); };
   const save = () => start(async () => {
     setError("");
-    const r = await saveSounds(v);
+    const r = await saveSounds(v, forId);
     if (!r.ok) { setError(r.error); return; }
-    setSaved(r.data!); setV(r.data!); window.hqSounds = r.data!; window.dispatchEvent(new Event("hq-sounds")); setMsg("Saved.");
+    setSaved(r.data!); setV(r.data!); if (!forId) { window.hqSounds = r.data!; window.dispatchEvent(new Event("hq-sounds")); } setMsg("Saved.");
   });
   return (
     <section className="card p-5" aria-labelledby="sounds-h">

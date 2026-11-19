@@ -408,6 +408,11 @@ async function syncSince(fromMs: number, accountEmail: string, accountUserId: st
         await db.timelineEntry.create({ data: { personId, kind: "email", gmailId: `${id}:${personId}`, body: `${line} · ${subject}\n\n${text}`, createdAt: at, authorId: outbound ? accountUserId : null, lineUserId: accountUserId } });
         await db.person.updateMany({ where: { id: personId, OR: [{ lastContactAt: null }, { lastContactAt: { lt: at } }] }, data: { lastContactAt: at } });
         added++;
+        // From a client to this mailbox, received in the last hour (a re-read of older mail doesn't alert).
+        if (!outbound && Date.now() - at.getTime() < 3600000) {
+          const name = (await db.person.findUnique({ where: { id: personId }, select: { name: true } }))?.name ?? from[0];
+          await (await import("@/server/sounds")).alertIfWanted("email", [accountUserId], { personId, text: `Email from ${name}: ${subject.slice(0, 120)}` });
+        }
       } catch { /* already added by another run */ }
     }
   }
