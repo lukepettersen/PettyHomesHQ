@@ -1156,7 +1156,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
 ### Claude app connector *(owner request 2026-11-17)*
 
 HQ is a connector the owner adds in the Claude app (Settings → Connectors → Add custom connector, address
-`https://<HQ address>/api/mcp`, shown with a Copy button in My settings → Claude app). Owner only.
+`https://<HQ address>/api/mcp`, shown with a Copy button in Admin → Integrations → Claude app (moved from My settings, owner request 2026-11-19)). Owner only.
 - **Sign-in:** Claude opens HQ's Allow page; the owner must be signed in to HQ (Google, as usual) and press Allow.
   Teammates see "Owner only". HQ only sends the sign-in back to Claude's own address (claude.ai / claude.com), or to
   this computer for testing. Codes are one-use and last 5 minutes (PKCE required); access lasts an hour and renews
@@ -1167,7 +1167,7 @@ HQ is a connector the owner adds in the Claude app (Settings → Connectors → 
   owner's HQ number, typed (so quiet hours don't hold it), as a group text with the owner's cell when group texts are
   on; STOP still blocks it. Texts send without asking first (owner decision 2026-11-17: Claude double-checks the contact, times and
   addresses, then sends when asked); text_me only ever goes to the owner's own cell.
-- **Disconnect:** My settings → Claude app → Disconnect (two-step) stops every token right away. Connecting and
+- **Disconnect:** Admin → Integrations → Claude app → Disconnect (two-step) stops every token right away. Connecting and
   disconnecting are in the activity log.
 
 ## 13. Admin

@@ -15,6 +15,7 @@ export function ClaudeConnector({ url, connected, lastUsedAt }: { url: string; c
   const off = () => start(async () => { setError(""); const r = await disconnectClaude(); if (!r.ok) setError(r.error); setSure(false); });
   return (
     <section className="card mt-4 p-5" aria-labelledby="claude-h">
+      {/* Moved here from My settings (owner request 2026-11-19). Owner only. */}
       <h2 id="claude-h" className="font-bold">Claude app</h2>
       <p className="mt-1 text-sm muted">Lets Claude look up contacts, read and send texts on your HQ number, and add tasks, notes and contacts. In Claude: Settings → Connectors → Add custom connector, paste this address, then sign in to HQ and press Allow.</p>
       <div className="mt-3 flex items-center gap-2">

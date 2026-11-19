@@ -14,6 +14,8 @@ import { requireUser } from "@/server/auth";
 import { SalesSheetControls } from "./SalesSheetControls";
 import { WebsiteLeads } from "./WebsiteLeads";
 import { leadLink } from "@/server/leads";
+import { ClaudeConnector } from "./ClaudeConnector";
+import { baseUrl, connectorStatus } from "@/server/mcp";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +81,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ g
         ))}
       </div>
       <WebsiteLeads link={await leadLink()} />
+      {owner && <ClaudeConnector url={`${baseUrl()}/api/mcp`} {...await connectorStatus((await requireUser()).id)} />}
     </>
   );
 }

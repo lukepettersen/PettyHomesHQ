@@ -4,8 +4,6 @@ import { loadAlertPrefs, loadSoundPrefs } from "@/server/sounds";
 import { SoundsClient } from "./SoundsClient";
 import { AlertsClient } from "./AlertsClient";
 import { WhoseSettings } from "./WhoseSettings";
-import { ClaudeConnector } from "./ClaudeConnector";
-import { baseUrl, connectorStatus } from "@/server/mcp";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +16,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ f
   const target = team.find((t) => t.id === asked && t.id !== user.id) ?? null;
   const forId = target?.id ?? user.id;
   const [prefs, alerts] = await Promise.all([loadSoundPrefs(forId), loadAlertPrefs(forId)]);
-  const claude = user.isOwner && !target ? await connectorStatus(user.id) : null;
   const other = target ? target.name.split(" ")[0] : null;
   return (
     <div className="mx-auto max-w-2xl px-4 py-4">
@@ -27,7 +24,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ f
       {team.length > 1 && <WhoseSettings team={team} me={user.id} current={forId} />}
       <SoundsClient key={`s${forId}`} initial={prefs} forId={target?.id} />
       <AlertsClient key={`a${forId}`} initial={alerts} forId={target?.id} who={other} />
-      {claude && <ClaudeConnector url={`${baseUrl()}/api/mcp`} {...claude} />}
     </div>
   );
 }

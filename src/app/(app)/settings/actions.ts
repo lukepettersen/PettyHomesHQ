@@ -5,7 +5,6 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
-import { disconnect } from "@/server/mcp";
 import { saveAlertPrefs, saveSoundPrefs } from "@/server/sounds";
 import { ALERT_KINDS, testText, type AlertKind } from "@/lib/alerts";
 import type { SessionUser } from "@/server/auth";
@@ -51,14 +50,5 @@ export async function sendTestAlert(kind: string, forId?: string) {
     const id = await whose(user, forId);
     await db.notification.create({ data: { toId: id, fromId: user.id, alert: true, text: testText(k, user.name.split(" ")[0]) } });
     await logActivity(user.id, "create", "notification", null, `Sent a test alert (${k})${id !== user.id ? " to a teammate" : ""}`);
-  });
-}
-
-/** My settings → Claude app: the owner disconnects Claude (every token stops working right away). */
-export async function disconnectClaude() {
-  return guarded(null, async (user) => {
-    if (!user.isOwner) throw new UserError("Only the owner can connect Claude to HQ.");
-    await disconnect(user.id);
-    revalidatePath("/settings");
   });
 }

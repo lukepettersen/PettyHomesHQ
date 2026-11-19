@@ -1,5 +1,6 @@
 "use server";
 
+import { disconnect as disconnectMcp } from "@/server/mcp";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/server/db";
@@ -127,6 +128,15 @@ export async function saveSalesSheet(link: string | null) {
       await db.appSetting.upsert({ where: { key: SHEET_KEY }, update: { value: { link, ...s } }, create: { key: SHEET_KEY, value: { link, ...s } } });
       await logActivity(user.id, "update", "integration", "sales-sheet", "Set the sales sheet");
     }
+    revalidatePath("/admin/integrations");
+  });
+}
+
+/** Admin → Integrations → Claude app: the owner disconnects Claude (every token stops working right away). */
+export async function disconnectClaude() {
+  return guarded(null, async (user) => {
+    if (!user.isOwner) throw new UserError("Only the owner can connect Claude to HQ.");
+    await disconnectMcp(user.id);
     revalidatePath("/admin/integrations");
   });
 }
