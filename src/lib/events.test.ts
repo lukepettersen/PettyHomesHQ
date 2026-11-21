@@ -103,6 +103,13 @@ describe("events: Wolves waitlist and the season spreadsheet (owner request 2026
       [5, "2027-01-14", "Nuggets", "Dana Lee", ""], [5, "2027-01-14", "Nuggets", "Jamie Newperson", ""],
     ]);
     expect(readAssignmentCsv("Opponent,Name\nLakers,Sam").problem).toMatch(/Date/);
+    // The owner's sheet: Assigned per game, and Interested lists down the side (B and C clients waiting).
+    const sheet = readAssignmentCsv("DATE,OPPONENT,TIME,Assigned,B Clients Interested,C Clients Interested\n,,,,Dana Possley,Donna Dent\nSun Oct 25 2026,Toronto Raptors,6:00 PM,\"Alyce LaCoursiere\nMaxwell Becker\",\"Brad Dreis\nRenee Dreis\",\nWed Jan 27 2027,Denver Nuggets,8:30 PM,,,\n");
+    expect(sheet.rows.map((x) => [x.date, x.name, x.wait])).toEqual([
+      ["", "Dana Possley", "B Clients Interested"], ["", "Donna Dent", "C Clients Interested"],
+      ["", "Brad Dreis", "B Clients Interested"], ["", "Renee Dreis", "B Clients Interested"],
+      ["2026-10-25", "Alyce LaCoursiere", ""], ["2026-10-25", "Maxwell Becker", ""],
+    ]);
     expect(readAssignmentCsv("Date,Opponent\n1/1/2027,Lakers").problem).toMatch(/people/);
   });
   it("matches names to contacts, couples included", () => {

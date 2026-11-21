@@ -230,7 +230,9 @@ export function stillWaiting<T extends { personId: string }>(interests: T[], att
 
 // ---------- Importing who's going (the season spreadsheet) ----------
 
-export type AssignmentRow = { line: number; date: string; time: string | null; opponent: string; name: string; phone: string; email: string; seats: string };
+/** `wait`: from an "Interested" / "Waitlist" column (its heading, e.g. "B Clients Interested"): onto the waitlist, no game. */
+export type AssignmentRow = { line: number; date: string; time: string | null; opponent: string; name: string; phone: string; email: string; seats: string; wait: string };
+const WAIT_HEAD = /interest|wait ?list|wants?\b|waiting/;
 const NAME_HEAD = /\b(names?|guests?|clients?|who|assigned|attendees?|people|going|tickets? (to|for)|given to|recipients?)\b/;
 
 /**
@@ -246,16 +248,20 @@ export function readAssignmentCsv(text: string): { rows: AssignmentRow[]; proble
   const find = (re: RegExp) => head.findIndex((h) => re.test(h));
   const c = { date: find(/\bdate\b/), time: find(/\b(time|tip)\b/), opp: find(/opponent|\bvs\b|versus|away|matchup|\bgame\b/), phone: find(/phone|cell|mobile/), email: find(/e-?mail/), seats: find(/seat|section|row/) };
   const used = new Set(Object.values(c).filter((i) => i >= 0));
-  const names = head.map((h, i) => (!used.has(i) && NAME_HEAD.test(h) ? i : -1)).filter((i) => i >= 0);
-  if (!names.length) return { rows: [], problem: 'The file needs a column with the people (Name, Guest, Client, Who or Assigned).', skipped: 0 };
+  const waits = head.map((h, i) => (!used.has(i) && WAIT_HEAD.test(h) ? i : -1)).filter((i) => i >= 0);
+  const names = head.map((h, i) => (!used.has(i) && !waits.includes(i) && NAME_HEAD.test(h) ? i : -1)).filter((i) => i >= 0);
+  if (!names.length && !waits.length) return { rows: [], problem: 'The file needs a column with the people (Name, Guest, Client, Who or Assigned).', skipped: 0 };
   let skipped = 0;
   const rows: AssignmentRow[] = [];
+  const split = (v: string) => v.split(/\n|;|\s\/\s|\s{2,}/).map((n) => n.replace(/\s+/g, " ").trim()).filter((n) => n && !/^(open|tbd|n\/?a|available|none|skip|-+|\?+)$/i.test(n));
   all.slice(headAt + 1).forEach((r, k) => {
     const get = (i: number) => (i >= 0 ? (r[i] ?? "").trim() : "");
+    // Interested columns run down the side, with or without a game on the row.
+    for (const i of waits) for (const name of split(get(i))) rows.push({ line: headAt + k + 2, date: "", time: null, opponent: "", name, phone: "", email: "", seats: "", wait: all[headAt][i].trim() });
     const date = readDate(get(c.date));
-    const people = names.flatMap((i) => get(i).split(/\n|;|\s\/\s|\s{2,}/)).map((n) => n.replace(/\s+/g, " ").trim()).filter((n) => n && !/^(open|tbd|n\/?a|available|none|-+|\?+)$/i.test(n));
+    const people = names.flatMap((i) => split(get(i)));
     if (!date) { if (people.length) skipped++; return; }
-    for (const name of people) rows.push({ line: headAt + k + 2, date, time: readTime(get(c.time)), opponent: get(c.opp).replace(/^(vs\.?|@)\s*/i, ""), name, phone: get(c.phone), email: get(c.email).toLowerCase(), seats: get(c.seats) });
+    for (const name of people) rows.push({ line: headAt + k + 2, date, time: readTime(get(c.time)), opponent: get(c.opp).replace(/^(vs\.?|@)\s*/i, ""), name, phone: get(c.phone), email: get(c.email).toLowerCase(), seats: get(c.seats), wait: "" });
   });
   return { rows, problem: rows.length ? null : "No games with names could be read from that file.", skipped };
 }

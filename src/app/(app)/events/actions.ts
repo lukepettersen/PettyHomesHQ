@@ -172,7 +172,7 @@ export async function readAssignments(eventId: string, csv: string) {
 
 export async function saveAssignments(eventId: string, input: unknown) {
   return guarded("manageEvents", async (user) => {
-    const v = z.object({ status, items: z.array(z.object({ slotId: id, personId: id.nullable(), name: z.string().max(120), phone: z.string().max(40), email: z.string().max(200), seats: z.string().max(500) })).min(1, "Nothing to save.").max(2000) }).parse(input);
+    const v = z.object({ status, items: z.array(z.object({ slotId: id.nullable(), wait: z.string().max(200), personId: id.nullable(), name: z.string().max(120), phone: z.string().max(40), email: z.string().max(200), seats: z.string().max(500) })).min(1, "Nothing to save.").max(2000) }).parse(input);
     const r = await applyAssignments(user.id, id.parse(eventId), v.items, v.status);
     refresh(eventId);
     return r;

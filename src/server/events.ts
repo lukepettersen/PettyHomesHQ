@@ -189,9 +189,13 @@ export async function importSlots(userId: string, eventId: string, slots: Import
   if (!e.multiSlot) throw new UserError("This event has a single date. Importing is for events with many dates.");
   let added = 0, updated = 0;
   for (const s of slots.slice(0, 200)) {
-    const same = e.slots.find((x) => (s.externalId && x.externalId === s.externalId) || (!s.externalId && isoFromDate(x.date) === s.date && x.title.toLowerCase() === s.title.toLowerCase()));
+    const onDay = e.slots.filter((x) => isoFromDate(x.date) === s.date);
+    const same = e.slots.find((x) => s.externalId && x.externalId === s.externalId)
+      ?? (s.externalId ? undefined : onDay.find((x) => x.title.toLowerCase() === s.title.toLowerCase()) ?? (onDay.length === 1 ? onDay[0] : undefined));
     // Seats typed in HQ stay when the schedule is imported again.
-    const data = { ...slotData({ ...s, details: s.details || same?.details || "", location: s.location || same?.location || "" }), externalId: s.externalId ?? same?.externalId ?? null };
+    // A spreadsheet doesn't rename a game the NBA import already named.
+    const data = { ...slotData({ ...s, title: same?.externalId && !s.externalId ? same.title : s.title, opponent: same?.externalId && !s.externalId ? same.opponent : s.opponent,
+      details: s.details || same?.details || "", location: s.location || same?.location || "" }), externalId: s.externalId ?? same?.externalId ?? null };
     if (same) { await db.eventSlot.update({ where: { id: same.id }, data }); updated++; }
     else { await db.eventSlot.create({ data: { eventId, ...data } }); added++; }
   }
@@ -530,7 +534,7 @@ export async function offerGame(userId: string, eventId: string, slotId: string,
 
 // ---------- Importing who's going (the season spreadsheet) ----------
 
-export type AssignmentPreview = { line: number; name: string; slotId: string | null; game: string; candidates: { id: string; name: string; detail: string }[]; phone: string; email: string; seats: string; problem: string | null };
+export type AssignmentPreview = { line: number; name: string; wait: string; slotId: string | null; game: string; candidates: { id: string; name: string; detail: string }[]; phone: string; email: string; seats: string; problem: string | null };
 
 /** Reads the spreadsheet and finds each row's game and contact (matched by phone, email, or name), for review before saving. */
 export async function previewAssignments(eventId: string, csv: string) {
@@ -542,26 +546,27 @@ export async function previewAssignments(eventId: string, csv: string) {
   const people = await db.person.findMany({ where: { deletedAt: null }, select: { id: true, name: true, phones: { select: { normalized: true, number: true } }, emails: { select: { normalized: true } } } });
   const detail = (p: (typeof people)[number]) => p.phones[0]?.number ?? "";
   const out: AssignmentPreview[] = rows.map((r) => {
-    const g = gameFor(r, slots);
+    const g = r.wait ? null : gameFor(r, slots);
     const digits = normalizePhone(r.phone);
     const byContact = people.filter((p) => (digits.length === 10 && p.phones.some((x) => x.normalized === digits)) || (r.email && p.emails.some((x) => x.normalized === r.email)));
     const found = byContact.length ? byContact : matchName(r.name, people);
-    return { line: r.line, name: r.name, slotId: g?.id ?? null, game: g ? slotLine(g, e.name) : `${r.date}${r.opponent ? ` ${r.opponent}` : ""}`,
+    return { line: r.line, name: r.name, wait: r.wait, slotId: g?.id ?? null, game: r.wait ? `${e.waitlistLabel || "Waitlist"} (${r.wait})` : g ? slotLine(g, e.name) : `${r.date}${r.opponent ? ` ${r.opponent}` : ""}`,
       candidates: found.slice(0, 5).map((p) => ({ id: p.id, name: p.name, detail: detail(p) })), phone: r.phone, email: r.email, seats: r.seats,
-      problem: g ? null : `No game on ${r.date}${r.opponent ? ` vs ${r.opponent}` : ""} in this event.` };
+      problem: r.wait || g ? null : `No game on ${r.date}${r.opponent ? ` vs ${r.opponent}` : ""} in this event. Import the dates first (Import dates; the same file works).` };
   });
   return { rows: out, skipped };
 }
 
 /** Saves the reviewed rows: each person on their game with the status picked; "new" makes a contact first. */
-export async function applyAssignments(userId: string, eventId: string, items: { slotId: string; personId: string | null; name: string; phone: string; email: string; seats: string }[], status: string) {
+export async function applyAssignments(userId: string, eventId: string, items: { slotId: string | null; wait: string; personId: string | null; name: string; phone: string; email: string; seats: string }[], status: string) {
   const e = await db.event.findFirst({ where: { id: eventId, deletedAt: null }, include: { slots: true } });
   if (!e) throw new UserError("That event was removed.");
-  let added = 0, updated = 0, created = 0;
+  let added = 0, updated = 0, created = 0, waiting = 0;
+  const made = new Map<string, string>(); // a new contact named twice in the file is made once
   for (const it of items) {
     const slot = e.slots.find((s) => s.id === it.slotId);
-    if (!slot) continue;
-    let personId = it.personId;
+    if (!slot && !it.wait) continue;
+    let personId = it.personId ?? made.get(it.name.trim().toLowerCase()) ?? null;
     if (!personId) {
       const digits = normalizePhone(it.phone), email = it.email.trim().toLowerCase();
       const name = it.name.trim().slice(0, 120);
@@ -569,7 +574,15 @@ export async function applyAssignments(userId: string, eventId: string, items: {
       personId = (await db.person.create({ data: { name, mailingName: name, createdById: userId,
         phones: digits.length === 10 ? { create: [{ label: "Mobile", number: formatPhone(digits), normalized: digits, position: 0 }] } : undefined,
         emails: email ? { create: [{ label: "", address: email, normalized: email, position: 0 }] } : undefined } })).id;
+      made.set(name.toLowerCase(), personId);
       created++;
+    }
+    if (!slot) {
+      // Interested column: onto the waitlist, its heading ("B Clients Interested") kept as the note.
+      const had = await db.eventInterest.findUnique({ where: { eventId_personId: { eventId, personId } } });
+      if (!had) { await db.eventInterest.create({ data: { eventId, personId, note: it.wait.slice(0, 200), source: "import" } }); waiting++; }
+      revalidatePath(`/people/${personId}`);
+      continue;
     }
     const had = await db.eventAttendee.findUnique({ where: { slotId_personId: { slotId: slot.id, personId } } });
     if (had) { if (had.status !== status) { await db.eventAttendee.update({ where: { id: had.id }, data: { status } }); updated++; } }
@@ -577,8 +590,8 @@ export async function applyAssignments(userId: string, eventId: string, items: {
     if (it.seats && !slot.details) { await db.eventSlot.update({ where: { id: slot.id }, data: { details: it.seats.slice(0, 500) } }); slot.details = it.seats; }
     revalidatePath(`/people/${personId}`);
   }
-  await logActivity(userId, "create", "event", eventId, `Imported who's going on "${e.name}" from a spreadsheet: ${added} added, ${updated} updated, ${created} new contacts`);
+  await logActivity(userId, "create", "event", eventId, `Imported who's going on "${e.name}" from a spreadsheet: ${added} added, ${updated} updated, ${waiting} onto the waitlist, ${created} new contacts`);
   await syncEventReminders(eventId);
   await syncWaitlistTag(eventId);
-  return { added, updated, created };
+  return { added, updated, created, waiting };
 }

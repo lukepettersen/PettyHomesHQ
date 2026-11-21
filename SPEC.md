@@ -460,7 +460,10 @@ scrolls with it until its last card is on screen, then stays put while the middl
   Assigned…; several in a cell on separate lines or split by ";"), optional Opponent, Phone, Email, Seats. Each name is
   matched to its game (date, then opponent) and contact (phone, email, then name, couples included); the owner reviews
   every row (pick among matches, New contact, or Skip), picks the status, then Save. Seats fill in a game's seat info
-  when it has none.
+  when it has none. Columns named **Interested** / **Waitlist** (the owner's "B Clients Interested", "C Clients
+  Interested") put those names on the waitlist with the column name as the note. **Import dates** reads the same file
+  (Date, Opponent, Time); a game already on that date (e.g. from the NBA import) is updated, not doubled, and keeps the
+  NBA's name for it.
 
 ## 7. Pipeline
 

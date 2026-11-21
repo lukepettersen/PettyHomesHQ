@@ -146,7 +146,7 @@ function OfferForm({ e, slot, waiting, onDone }: { e: EventView; slot: Slot; wai
   );
 }
 
-type Row = { line: number; name: string; slotId: string | null; game: string; candidates: { id: string; name: string; detail: string }[]; phone: string; email: string; seats: string; problem: string | null; pick: string };
+type Row = { line: number; name: string; wait: string; slotId: string | null; game: string; candidates: { id: string; name: string; detail: string }[]; phone: string; email: string; seats: string; problem: string | null; pick: string };
 
 /** Import who's going from the season spreadsheet: read it, check each name's contact, then save. */
 export function ImportGoing({ e }: { e: EventView }) {
@@ -168,16 +168,16 @@ export function ImportGoing({ e }: { e: EventView }) {
   const save = () => start(async () => {
     if (!rows) return;
     setError("");
-    const items = rows.filter((r) => r.slotId && r.pick && r.pick !== "skip").map((r) => ({ slotId: r.slotId!, personId: r.pick === "new" ? null : r.pick, name: r.name, phone: r.phone, email: r.email, seats: r.seats }));
+    const items = rows.filter((r) => (r.slotId || r.wait) && r.pick && r.pick !== "skip").map((r) => ({ slotId: r.slotId, wait: r.wait, personId: r.pick === "new" ? null : r.pick, name: r.name, phone: r.phone, email: r.email, seats: r.seats }));
     const x = await saveAssignments(e.id, { status, items });
     if (!x.ok) { setError(x.error); return; }
-    setMsg(`Saved: ${x.data!.added} added, ${x.data!.updated} updated, ${x.data!.created} new contacts.`); setRows(null); router.refresh();
+    setMsg(`Saved: ${x.data!.added} added to games, ${x.data!.updated} updated, ${x.data!.waiting} onto the waitlist, ${x.data!.created} new contacts.`); setRows(null); router.refresh();
   });
   const undecided = rows?.filter((r) => r.pick === "").length ?? 0;
   return (
     <details className="mt-2 rounded-lg border border-misty px-3 py-2 text-sm">
       <summary className="cursor-pointer font-semibold">Import who&apos;s going (season spreadsheet)</summary>
-      <p className="mt-1 text-xs muted">A CSV with a <b>Date</b> column and the people (Name, Guest, Client, Who or Assigned; several names in a cell on separate lines or split by &quot;;&quot;). Optional: Opponent, Phone, Email, Seats. You check every name before anything is saved.</p>
+      <p className="mt-1 text-xs muted">A CSV with a <b>Date</b> column and the people (Name, Guest, Client, Who or Assigned; several names in a cell on separate lines or split by &quot;;&quot;). Optional: Opponent, Phone, Email, Seats. Columns named &quot;Interested&quot; or &quot;Waitlist&quot; go onto the waitlist. You check every name before anything is saved.</p>
       <input type="file" accept=".csv,text/csv" className="mt-1 block text-sm" disabled={pending} onChange={(x) => { read(x.target.files?.[0]); x.target.value = ""; }} />
       {rows && (
         <div className="mt-2">
@@ -205,7 +205,7 @@ export function ImportGoing({ e }: { e: EventView }) {
             </table>
           </div>
           <div className="mt-2 flex flex-wrap items-end justify-end gap-2">
-            <label className="label">Save them as<select className="input mt-1" value={status} onChange={(x) => setStatus(x.target.value)}>{STATUS_KEYS.map((k) => <option key={k} value={k}>{statusLabel(k, e.doneLabel)}</option>)}</select></label>
+            <label className="label">Save people on games as<select className="input mt-1" value={status} onChange={(x) => setStatus(x.target.value)}>{STATUS_KEYS.map((k) => <option key={k} value={k}>{statusLabel(k, e.doneLabel)}</option>)}</select></label>
             <button type="button" className="btn" onClick={() => setRows(null)}>Cancel</button>
             <button type="button" className="btn btn-primary" disabled={pending || undecided > 0} onClick={save}>{pending ? "Saving…" : undecided ? `Pick ${undecided} contacts first` : "Save"}</button>
           </div>
