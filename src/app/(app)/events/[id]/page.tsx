@@ -4,6 +4,7 @@ import { isoFromDate } from "@/lib/normalize";
 import { eventsGate } from "../gate";
 import { EventHeader, EventSlots } from "./EventClient";
 import { Reminders, SignupSettings } from "./EventSide";
+import { WaitlistCard } from "./Waitlist";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       <div className="mt-3 grid grid-cols-1 items-start gap-3 lg:grid-cols-[minmax(0,1fr)_380px]">
         <EventSlots e={e} today={isoFromDate(new Date())} />
         <div className="flex flex-col gap-3">
+          {e.multiSlot && <WaitlistCard e={e} />}
           <SignupSettings key={`s${e.signupKey}${e.signupOn}`} e={e} />
           <Reminders e={e} />
         </div>

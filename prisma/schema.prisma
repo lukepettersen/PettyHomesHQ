@@ -175,6 +175,7 @@ model Person {
   partnerOn     PaPartner[]
   texts         TextMessage[]
   eventsAttended EventAttendee[]
+  eventInterests EventInterest[]
 
   @@index([deletedAt])
   @@index([name])
@@ -866,6 +867,8 @@ model EventTemplate {
   reminders Json      @default("[]") // [{ name, body, daysBefore, time }]
   location  String    @default("")
   intro     String    @default("") // shown on the signup page
+  waitlistLabel String @default("") // a many-dates event's waitlist name ("Wants Wolves Tickets"); also the tag on people waiting
+  offerText String    @default("") // the text offering a game to people on the waitlist
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
@@ -884,6 +887,8 @@ model Event {
   location       String          @default("")
   notes          String          @default("")
   intro          String          @default("")
+  waitlistLabel  String          @default("")
+  offerText      String          @default("")
   senderId       String? // whose HQ number its reminders go from
   signupKey      String?         @unique // the private signup page's long random link
   signupOn       Boolean         @default(false)
@@ -896,6 +901,7 @@ model Event {
   slots          EventSlot[]
   attendees      EventAttendee[]
   reminders      EventReminder[]
+  interests      EventInterest[]
 }
 
 /// One date of an event (a home game), or the only one (Pi Day).
@@ -951,4 +957,22 @@ model EventReminder {
   updatedAt  DateTime @updatedAt
 
   @@index([eventId])
+}
+
+/// Someone who wants tickets (the "Wants Wolves Tickets" waitlist, owner request 2026-11-21). They're waiting until
+/// they're Confirmed or Tickets sent on a game of the event; computed, so a removed or declined assignment puts them back.
+model EventInterest {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  personId  String
+  person    Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  slotIds   String[] // games they said they'd like (optional)
+  note      String   @default("")
+  source    String   @default("manual") // manual | signup | import
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, personId])
+  @@index([personId])
 }

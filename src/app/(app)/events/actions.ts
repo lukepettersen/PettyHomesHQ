@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { guarded, UserError } from "@/server/safe";
 import {
-  addAttendees, createEvent, deleteEvent, deleteReminder, deleteSlot, deleteTemplate, fetchWolvesSchedule, importSlots, previewReminder, removeAttendee,
+  addAttendees, addInterest, applyAssignments, createEvent, offerGame, previewAssignments, previewOffer, removeInterest, deleteEvent, deleteReminder, deleteSlot, deleteTemplate, fetchWolvesSchedule, importSlots, previewReminder, removeAttendee,
   saveReminder, saveSlot, saveTemplate, setSignup, updateAttendee, updateEvent,
 } from "@/server/events";
 import { readSlotCsv, STATUS_KEYS } from "@/lib/events";
@@ -24,7 +24,7 @@ const refresh = (eventId?: string) => { revalidatePath("/events"); if (eventId) 
 export async function saveEventTemplate(input: unknown) {
   return guarded("manageEvents", async (user) => {
     const v = z.object({ id: id.nullable().optional(), name: z.string().max(120), type: z.string().max(60), multiSlot: z.boolean(), doneLabel: z.string().max(40), location: z.string().max(200),
-      intro: z.string().max(2000), fields, reminders: z.array(tplReminder).max(10) }).parse(input);
+      intro: z.string().max(2000), waitlistLabel: z.string().max(60), offerText: z.string().max(1000), fields, reminders: z.array(tplReminder).max(10) }).parse(input);
     const saved = await saveTemplate(user.id, v);
     revalidatePath("/events/templates");
     return saved;
@@ -47,7 +47,7 @@ export async function newEvent(input: unknown) {
 export async function editEvent(eventId: string, input: unknown) {
   return guarded("manageEvents", async (user) => {
     const v = z.object({ name: z.string().max(120), type: z.string().max(60), location: z.string().max(200), notes: z.string().max(4000), intro: z.string().max(2000), doneLabel: z.string().max(40),
-      fields, senderId: id.nullable() }).parse(input);
+      fields, senderId: id.nullable(), waitlistLabel: z.string().max(60), offerText: z.string().max(1000) }).parse(input);
     await updateEvent(user.id, id.parse(eventId), v);
     refresh(eventId);
   });
@@ -134,5 +134,47 @@ export async function saveEventSignup(eventId: string, input: unknown) {
     const key = await setSignup(user.id, id.parse(eventId), { on: v.on, opensAt: v.opens ? centralToUtc(v.opens, "00:00") : null, closesAt: v.closes ? centralToUtc(v.closes, "23:59") : null, newLink: v.newLink });
     refresh(eventId);
     return key;
+  });
+}
+
+// ---------- Waitlist ("Wants Wolves Tickets") ----------
+
+export async function addToWaitlist(eventId: string, input: unknown) {
+  return guarded("manageEvents", async (user) => {
+    const v = z.object({ personIds: z.array(id).min(1, "Pick at least one contact.").max(50), slotIds: z.array(id).max(200).optional(), note: z.string().max(500).optional() }).parse(input);
+    await addInterest(user.id, id.parse(eventId), v.personIds, { slotIds: v.slotIds, note: v.note });
+    refresh(eventId);
+  });
+}
+
+export async function removeFromWaitlist(eventId: string, interestId: string) {
+  return guarded("manageEvents", async (user) => { await removeInterest(user.id, id.parse(interestId)); refresh(eventId); });
+}
+
+export async function previewGameOffer(eventId: string, slotId: string, personId: string | null, body: string) {
+  return guarded("manageEvents", async () => previewOffer(id.parse(eventId), id.parse(slotId), personId ? id.parse(personId) : null, z.string().max(1000).parse(body)));
+}
+
+/** Texts a game to people on the waitlist (needs Send texts too). */
+export async function sendGameOffer(eventId: string, slotId: string, input: unknown) {
+  return guarded("manageEvents", async (user) => {
+    if (!user.permissions.includes("sendTexts")) throw new UserError("You don't have permission to send texts.");
+    const v = z.object({ personIds: z.array(id).min(1, "Pick who to text.").max(100), body: z.string().trim().min(1, "Write the text.").max(1000), markInvited: z.boolean() }).parse(input);
+    const r = await offerGame(user.id, id.parse(eventId), id.parse(slotId), v.personIds, v.body, v.markInvited);
+    refresh(eventId);
+    return r;
+  });
+}
+
+export async function readAssignments(eventId: string, csv: string) {
+  return guarded("manageEvents", async () => previewAssignments(id.parse(eventId), z.string().max(1_000_000).parse(csv)));
+}
+
+export async function saveAssignments(eventId: string, input: unknown) {
+  return guarded("manageEvents", async (user) => {
+    const v = z.object({ status, items: z.array(z.object({ slotId: id, personId: id.nullable(), name: z.string().max(120), phone: z.string().max(40), email: z.string().max(200), seats: z.string().max(500) })).min(1, "Nothing to save.").max(2000) }).parse(input);
+    const r = await applyAssignments(user.id, id.parse(eventId), v.items, v.status);
+    refresh(eventId);
+    return r;
   });
 }

@@ -444,6 +444,23 @@ scrolls with it until its last card is on screen, then stays put while the middl
   contact's timeline like any text. A reminder whose time has already passed when someone is added isn't sent. STOP,
   no textable number (office / fax lines are skipped) and the daily cap still apply. Couples with two numbers get one
   group text when group texting is on. The starter texts end with Luke's cell, **612-702-0295** (owner request).
+- **Waitlist ("Wants Wolves Tickets", owner request 2026-11-21):** a many-dates event has a waitlist, named in Edit
+  details (the Wolves season and template: **Wants Wolves Tickets**). Signups on its page go **onto the waitlist** (the
+  games they tick are kept as "would like", optional; no game is given yet), and people can be added by hand. Someone is
+  **waiting** until they're Confirmed or Tickets sent on any game of the event (computed, so taking them off a game or
+  marking Declined puts them back; Invited means offered, still waiting). The **waitlist card** shows who's waiting
+  (since when, games they'd like, games offered) with Text (opens Messages) and Remove, plus "Show people with a game".
+  **Each game** lists **Still waiting** (people who asked for that game first, ★) with **Assign** (Confirmed on that game,
+  which takes them off every other game's list) and Text, and **Text them about this game**: pick people, edit the
+  offer text (the event's "Text offering a game", merge fields as reminders), Preview, two-step Send; it goes now (8am
+  if after hours) from the event's sender as scheduled texts (key `evo:`), and can mark them Invited for that game.
+  The waitlist name is also a **tag** kept on exactly the people waiting, so they can be picked in People lists, mass
+  texts and anywhere tags are used. A contact's Events card shows "Wants Wolves Tickets · Waiting / Has a game".
+- **Import who's going (season spreadsheet):** a CSV with a Date column and the people (Name, Guest, Client, Who,
+  Assigned…; several in a cell on separate lines or split by ";"), optional Opponent, Phone, Email, Seats. Each name is
+  matched to its game (date, then opponent) and contact (phone, email, then name, couples included); the owner reviews
+  every row (pick among matches, New contact, or Skip), picks the status, then Save. Seats fill in a game's seat info
+  when it has none.
 
 ## 7. Pipeline
 

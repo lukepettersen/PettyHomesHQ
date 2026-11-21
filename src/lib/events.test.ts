@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { answerSummary, answersProblem, cleanAnswers, cleanFields, cleanTemplateReminders, cleanTime, eventMergeValues, parseNbaSchedule, readDate, readSlotCsv, readTime,
-  reminderSendAt, reminderWhen, shortEventDate, longEventDate, signupState, slotLine, statusLabel } from "./events";
+  reminderSendAt, reminderWhen, shortEventDate, longEventDate, signupState, slotLine, statusLabel, gameFor, matchName, namesIn, readAssignmentCsv, stillWaiting } from "./events";
 
 const pie = cleanFields([{ label: "Number of pies", type: "number", required: true }, { label: "Pie flavor", type: "select", options: "Apple, Cherry\nFrench Silk" }, { label: "Notes", type: "long" }]);
 
@@ -85,5 +85,40 @@ describe("events: Timberwolves schedule and CSV", () => {
     expect(r.skipped).toBe(1);
     expect(r.slots).toEqual([{ externalId: null, date: "2027-01-14", time: "19:00", title: "Wolves vs Lakers", opponent: "Los Angeles Lakers", location: "", details: "Sec 104 Row 3" }]);
     expect(readSlotCsv("Opponent\nLakers").problem).toMatch(/Date/);
+  });
+});
+
+describe("events: Wolves waitlist and the season spreadsheet (owner request 2026-11-21)", () => {
+  it("knows who's still waiting", () => {
+    const want = [{ personId: "a" }, { personId: "b" }, { personId: "c" }];
+    expect(stillWaiting(want, [{ personId: "a", status: "confirmed" }, { personId: "b", status: "invited" }, { personId: "c", status: "declined" }]).map((w) => w.personId)).toEqual(["b", "c"]);
+  });
+  it("reads a season sheet: several people per game, blanks and 'Open' skipped", () => {
+    const csv = "2026-27 Wolves season,,,\nDate,Opponent,Tickets to,Seats\n11/24/2026,Lakers,\"Tony & Laura Wagner\nSam Ortiz\",Sec 104\n12/3/2026,Warriors,Open,\n1/14/2027,Nuggets,Dana Lee; Jamie Newperson,\n,,Extra Person,\n";
+    const r = readAssignmentCsv(csv);
+    expect(r.problem).toBeNull();
+    expect(r.skipped).toBe(1);
+    expect(r.rows.map((x) => [x.line, x.date, x.opponent, x.name, x.seats])).toEqual([
+      [3, "2026-11-24", "Lakers", "Tony & Laura Wagner", "Sec 104"], [3, "2026-11-24", "Lakers", "Sam Ortiz", "Sec 104"],
+      [5, "2027-01-14", "Nuggets", "Dana Lee", ""], [5, "2027-01-14", "Nuggets", "Jamie Newperson", ""],
+    ]);
+    expect(readAssignmentCsv("Opponent,Name\nLakers,Sam").problem).toMatch(/Date/);
+    expect(readAssignmentCsv("Date,Opponent\n1/1/2027,Lakers").problem).toMatch(/people/);
+  });
+  it("matches names to contacts, couples included", () => {
+    expect(namesIn("Tony Wagner & Laura Schmidt")).toEqual(["tony wagner & laura schmidt", "tony wagner", "laura schmidt"]);
+    expect(namesIn("Tony & Laura Wagner")).toContain("laura wagner");
+    const people = [{ id: "1", name: "Tony Wagner & Laura Schmidt" }, { id: "2", name: "Sam Ortiz" }, { id: "3", name: "Sam Ortiz" }, { id: "4", name: "Kevin Wagner" }];
+    expect(matchName("Tony Wagner", people).map((p) => p.id)).toEqual(["1"]);
+    expect(matchName("laura schmidt", people).map((p) => p.id)).toEqual(["1"]);
+    expect(matchName("Sam Ortiz", people).map((p) => p.id)).toEqual(["2", "3"]);
+    expect(matchName("Wagner", people)).toEqual([]);
+  });
+  it("finds the game by date, and by opponent when two share a date", () => {
+    const slots = [{ id: "a", date: "2027-01-14", opponent: "Denver Nuggets", title: "Wolves vs Nuggets" }, { id: "b", date: "2027-01-14", opponent: "Boston Celtics", title: "Wolves vs Celtics" }, { id: "c", date: "2027-01-20", opponent: "Utah Jazz", title: "" }];
+    expect(gameFor({ date: "2027-01-20", opponent: "" }, slots)?.id).toBe("c");
+    expect(gameFor({ date: "2027-01-14", opponent: "Celtics" }, slots)?.id).toBe("b");
+    expect(gameFor({ date: "2027-01-14", opponent: "" }, slots)).toBeNull();
+    expect(gameFor({ date: "2027-02-01", opponent: "" }, slots)).toBeNull();
   });
 });

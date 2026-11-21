@@ -8,9 +8,9 @@ import { hasTextStop } from "@/server/texting";
 import { fill, mergeValues } from "@/lib/merge";
 import { canText } from "@/lib/texting";
 import { formatPhone, isoFromDate, dateFromIso, normalizePhone } from "@/lib/normalize";
-import { scheduleLabel } from "@/lib/scheduledText";
+import { centralToUtc, quietNow, scheduleLabel } from "@/lib/scheduledText";
 import {
-  answerSummary, cleanAnswers, cleanFields, cleanTemplateReminders, eventMergeValues, NBA_HEADERS, nbaScheduleUrl, parseNbaSchedule, reminderSendAt, slotLine, statusLabel,
+  answerSummary, ASSIGNED, cleanAnswers, cleanFields, gameFor, matchName, readAssignmentCsv, stillWaiting, cleanTemplateReminders, eventMergeValues, NBA_HEADERS, nbaScheduleUrl, parseNbaSchedule, reminderSendAt, slotLine, statusLabel,
   type Answers, type EventField, type ImportedSlot, type TemplateReminder,
 } from "@/lib/events";
 
@@ -31,15 +31,16 @@ export const newSignupKey = () => randomBytes(24).toString("base64url");
 
 export async function loadTemplates() {
   const rows = await db.eventTemplate.findMany({ where: { deletedAt: null }, orderBy: { name: "asc" }, include: { _count: { select: { events: { where: { deletedAt: null } } } } } });
-  return rows.map((t) => ({ id: t.id, name: t.name, type: t.type, multiSlot: t.multiSlot, doneLabel: t.doneLabel, location: t.location, intro: t.intro,
+  return rows.map((t) => ({ id: t.id, name: t.name, type: t.type, multiSlot: t.multiSlot, doneLabel: t.doneLabel, location: t.location, intro: t.intro, waitlistLabel: t.waitlistLabel, offerText: t.offerText,
     fields: fieldsOf(t.fields), reminders: cleanTemplateReminders(t.reminders), events: t._count.events }));
 }
 export type TemplateView = Awaited<ReturnType<typeof loadTemplates>>[number];
 
-export type TemplateInput = { id?: string | null; name: string; type: string; multiSlot: boolean; doneLabel: string; location: string; intro: string; fields: unknown; reminders: unknown };
+export type TemplateInput = { id?: string | null; name: string; type: string; multiSlot: boolean; doneLabel: string; location: string; intro: string; waitlistLabel: string; offerText: string; fields: unknown; reminders: unknown };
 export async function saveTemplate(userId: string, t: TemplateInput) {
   const data = { name: t.name.trim().slice(0, 120), type: t.type.trim().slice(0, 60), multiSlot: t.multiSlot, doneLabel: t.doneLabel.trim().slice(0, 40) || "Tickets sent",
-    location: t.location.trim().slice(0, 200), intro: t.intro.trim().slice(0, 2000), fields: cleanFields(t.fields), reminders: cleanTemplateReminders(t.reminders) };
+    location: t.location.trim().slice(0, 200), intro: t.intro.trim().slice(0, 2000), waitlistLabel: t.waitlistLabel.trim().slice(0, 60), offerText: t.offerText.trim().slice(0, 1000),
+    fields: cleanFields(t.fields), reminders: cleanTemplateReminders(t.reminders) };
   if (!data.name) throw new UserError("Give the template a name.");
   const saved = t.id
     ? await db.eventTemplate.update({ where: { id: t.id, deletedAt: null }, data })
@@ -66,7 +67,7 @@ export async function createEvent(userId: string, o: { templateId: string | null
   const e = await db.$transaction(async (tx) => {
     const e = await tx.event.create({ data: {
       templateId: t?.id ?? null, name, type: t?.type ?? "", multiSlot: multi, doneLabel: t?.doneLabel ?? "Confirmed", fields: t ? cleanFields(t.fields) : [],
-      location: t?.location ?? "", intro: t?.intro ?? "", senderId: sender?.id ?? userId, createdById: userId,
+      location: t?.location ?? "", intro: t?.intro ?? "", waitlistLabel: t?.waitlistLabel ?? "", offerText: t?.offerText ?? "", senderId: sender?.id ?? userId, createdById: userId,
     } });
     if (!multi && o.date) await tx.eventSlot.create({ data: { eventId: e.id, date: dateFromIso(o.date), time: o.time, location: t?.location ?? "" } });
     for (const r of t ? cleanTemplateReminders(t.reminders) : []) await tx.eventReminder.create({ data: { eventId: e.id, name: r.name, body: r.body, daysBefore: r.daysBefore, time: r.time } });
@@ -95,8 +96,11 @@ export async function loadEvent(id: string) {
     slots: { orderBy: [{ date: "asc" }, { time: "asc" }] },
     attendees: { orderBy: { createdAt: "asc" }, include: { person: { select: { id: true, name: true, deletedAt: true, phones: { orderBy: { position: "asc" }, select: { number: true, label: true } } } } } },
     reminders: { orderBy: [{ daysBefore: "desc" }, { time: "asc" }] },
+    interests: { orderBy: { createdAt: "asc" }, include: { person: { select: { id: true, name: true, deletedAt: true, phones: { orderBy: { position: "asc" }, select: { number: true, label: true } } } } } },
   } });
   if (!e) return null;
+  const live = e.interests.filter((i) => !i.person.deletedAt);
+  const waiting = new Set(stillWaiting(live, e.attendees).map((i) => i.id));
   const texts = await db.scheduledText.findMany({ where: { eventKey: { startsWith: `evt:${e.id}:` } }, select: { eventKey: true, status: true, sendAt: true } });
   const counts = (rid: string) => {
     const mine = texts.filter((t) => t.eventKey!.split(":")[2] === rid);
@@ -107,6 +111,11 @@ export async function loadEvent(id: string) {
   const team = await db.user.findMany({ where: { status: { not: "DISABLED" }, textNumber: { not: null } }, orderBy: [{ isOwner: "desc" }, { name: "asc" }], select: { id: true, name: true, textNumber: true } });
   return {
     id: e.id, name: e.name, type: e.type, multiSlot: e.multiSlot, doneLabel: e.doneLabel, fields: fieldsOf(e.fields), location: e.location, notes: e.notes, intro: e.intro,
+    waitlistLabel: e.waitlistLabel, offerText: e.offerText,
+    waitlist: live.map((i) => ({ id: i.id, personId: i.person.id, name: i.person.name, phone: i.person.phones.find((p) => canText(p.label))?.number ?? null, slotIds: i.slotIds, note: i.note,
+      source: i.source, since: isoFromDate(i.createdAt), waiting: waiting.has(i.id),
+      offered: e.attendees.filter((a) => a.personId === i.personId && a.status === "invited").map((a) => a.slotId),
+      games: e.attendees.filter((a) => a.personId === i.personId && ASSIGNED.includes(a.status)).map((a) => a.slotId) })),
     senderId: e.senderId, signupKey: e.signupKey, signupOn: e.signupOn, signupOpensAt: e.signupOpensAt?.toISOString() ?? null, signupClosesAt: e.signupClosesAt?.toISOString() ?? null,
     slots: e.slots.map((s) => ({ id: s.id, date: isoFromDate(s.date), time: s.time, title: s.title, opponent: s.opponent, location: s.location, details: s.details, imported: !!s.externalId })),
     attendees: e.attendees.filter((a) => !a.person.deletedAt).map((a) => ({ id: a.id, slotId: a.slotId, personId: a.person.id, name: a.person.name, status: a.status, source: a.source,
@@ -117,7 +126,7 @@ export async function loadEvent(id: string) {
 }
 export type EventView = NonNullable<Awaited<ReturnType<typeof loadEvent>>>;
 
-export type EventInput = { name: string; type: string; location: string; notes: string; intro: string; doneLabel: string; fields: unknown; senderId: string | null };
+export type EventInput = { name: string; type: string; location: string; notes: string; intro: string; doneLabel: string; fields: unknown; senderId: string | null; waitlistLabel: string; offerText: string };
 export async function updateEvent(userId: string, id: string, v: EventInput) {
   const name = v.name.trim().slice(0, 120);
   if (!name) throw new UserError("Give the event a name.");
@@ -125,9 +134,12 @@ export async function updateEvent(userId: string, id: string, v: EventInput) {
   const before = await db.event.findFirst({ where: { id, deletedAt: null } });
   if (!before) throw new UserError("That event was removed.");
   await db.event.update({ where: { id }, data: { name, type: v.type.trim().slice(0, 60), location: v.location.trim().slice(0, 200), notes: v.notes.trim().slice(0, 4000), intro: v.intro.trim().slice(0, 2000),
-    doneLabel: v.doneLabel.trim().slice(0, 40) || "Confirmed", fields: cleanFields(v.fields), senderId: v.senderId } });
+    doneLabel: v.doneLabel.trim().slice(0, 40) || "Confirmed", fields: cleanFields(v.fields), senderId: v.senderId,
+    waitlistLabel: v.waitlistLabel.trim().slice(0, 60), offerText: v.offerText.trim().slice(0, 1000) } });
+  if (before.waitlistLabel !== v.waitlistLabel.trim().slice(0, 60)) await syncWaitlistTag(id, before.waitlistLabel);
   await logActivity(userId, "update", "event", id, `Edited event "${name}"${before.name !== name ? ` (was "${before.name}")` : ""}`);
   await syncEventReminders(id);
+  await syncWaitlistTag(id);
 }
 
 export async function deleteEvent(userId: string, id: string) {
@@ -167,6 +179,7 @@ export async function deleteSlot(userId: string, eventId: string, id: string) {
   await cancelEventTexts(eventId, { attendeeIds: s.attendees.map((a) => a.id) });
   await db.eventSlot.delete({ where: { id } });
   await logActivity(userId, "delete", "event", eventId, `Removed ${slotLine({ title: s.title, date: isoFromDate(s.date) }, e.name)} from "${e.name}" (${s.attendees.length} attendees)`);
+  await syncWaitlistTag(eventId);
 }
 
 /** Dates from the NBA schedule or a spreadsheet: a game already there (same NBA id, or same date and title) is updated, not doubled. */
@@ -221,6 +234,7 @@ export async function addAttendees(userId: string, eventId: string, slotIds: str
   }
   await logActivity(userId, "create", "event", eventId, `Added ${people.map((p) => p.name).join(", ")} to "${e.name}" (${e.slots.length} ${e.slots.length === 1 ? "date" : "dates"}, ${statusLabel(status, e.doneLabel)})`);
   await syncEventReminders(eventId);
+  await syncWaitlistTag(eventId);
   for (const p of people) revalidatePath(`/people/${p.id}`);
   return added;
 }
@@ -232,6 +246,7 @@ export async function updateAttendee(userId: string, id: string, v: { status: st
   await db.eventAttendee.update({ where: { id }, data: { status: v.status, answers } });
   await logActivity(userId, "update", "event", a.eventId, `${a.person.name} on "${a.event.name}": ${statusLabel(a.status, a.event.doneLabel)} → ${statusLabel(v.status, a.event.doneLabel)}`);
   await syncEventReminders(a.eventId);
+  await syncWaitlistTag(a.eventId);
   revalidatePath(`/people/${a.personId}`);
 }
 
@@ -241,7 +256,14 @@ export async function removeAttendee(userId: string, id: string) {
   await cancelEventTexts(a.eventId, { attendeeIds: [id] });
   await db.eventAttendee.delete({ where: { id } });
   await logActivity(userId, "delete", "event", a.eventId, `Took ${a.person.name} off ${slotLine({ title: a.slot.title, date: isoFromDate(a.slot.date) }, a.event.name)}`);
+  await syncWaitlistTag(a.eventId);
   revalidatePath(`/people/${a.personId}`);
+}
+
+/** A contact's waitlists ("Wants Wolves Tickets"): waiting, or has a game. */
+export async function loadPersonWaitlists(personId: string) {
+  const rows = await db.eventInterest.findMany({ where: { personId, event: { deletedAt: null } }, include: { event: { include: { attendees: { where: { personId }, select: { personId: true, status: true } } } } } });
+  return rows.map((i) => ({ id: i.id, eventId: i.eventId, label: i.event.waitlistLabel || `Waitlist: ${i.event.name}`, since: isoFromDate(i.createdAt), waiting: stillWaiting([i], i.event.attendees).length > 0 }));
 }
 
 /** A contact's events, newest first, for the Events card on their page. */
@@ -374,14 +396,17 @@ export async function receiveSignup(eventId: string, v: { first: string; last: s
     emails: email ? { create: [{ label: "", address: email, normalized: email, position: 0 }] } : undefined,
   }, select: { id: true, name: true } });
   const slotIds = e.multiSlot ? v.slotIds.filter((id) => e.slots.some((s) => s.id === id)) : e.slots.map((s) => s.id).slice(0, 1);
-  if (!slotIds.length) throw new UserError(e.multiSlot ? "Pick at least one game or date." : "This event doesn't have a date yet.");
+  if (!e.multiSlot && !slotIds.length) throw new UserError("This event doesn't have a date yet.");
   const answers = cleanAnswers(fieldsOf(e.fields), v.answers);
-  await addAttendees(by, eventId, slotIds, [person.id], e.multiSlot ? "invited" : "confirmed", answers, "signup");
+  // Games (many dates): onto the waitlist, with the games they'd like; Luke assigns games from there (owner 2026-11-21).
+  if (e.multiSlot) await addInterest(by, eventId, [person.id], { slotIds, note: fieldsOf(e.fields).filter((f) => answers[f.key]).map((f) => `${f.label} ${answers[f.key]}`).join(" · "), source: "signup" });
+  else await addAttendees(by, eventId, slotIds, [person.id], "confirmed", answers, "signup");
   const picked = e.slots.filter((s) => slotIds.includes(s.id)).map((s) => slotLine({ title: s.title, date: isoFromDate(s.date) }, e.name));
   const summary = answerSummary(fieldsOf(e.fields), answers);
   const long = fieldsOf(e.fields).filter((f) => f.type === "long" && answers[f.key]).map((f) => `${f.label}: ${answers[f.key]}`);
-  await db.timelineEntry.create({ data: { personId: person.id, kind: "note", body: [`Signed up for ${e.name} (signup page)${e.multiSlot ? `: ${picked.join(", ")}` : ""}${summary ? ` · ${summary}` : ""}`, ...long].join("\n") } });
-  const text = `Event signup: ${person.name}${existing ? "" : " (new contact)"} for ${e.name}${summary ? ` · ${summary}` : ""}${e.multiSlot ? ` · ${picked.length} ${picked.length === 1 ? "date" : "dates"}` : ""}`;
+  const list = e.waitlistLabel || `the ${e.name} waitlist`;
+  await db.timelineEntry.create({ data: { personId: person.id, kind: "note", body: [`Signed up for ${e.name} (signup page)${e.multiSlot ? `: added to ${list}${picked.length ? `; would like ${picked.join(", ")}` : ""}` : ""}${summary ? ` · ${summary}` : ""}`, ...long].join("\n") } });
+  const text = `Event signup: ${person.name}${existing ? "" : " (new contact)"} for ${e.name}${summary ? ` · ${summary}` : ""}${e.multiSlot ? ` · on ${list}${picked.length ? `, would like ${picked.length} ${picked.length === 1 ? "game" : "games"}` : ""}` : ""}`;
   // In everyone's bell; whether it pops up is each person's choice (My settings → Pop-up alerts → Event signups).
   const team = await db.user.findMany({ where: { status: { not: "DISABLED" } }, select: { id: true } });
   for (const u of team) await db.notification.create({ data: { toId: u.id, personId: person.id, alert: true, link: `/events/${e.id}`, text: text.slice(0, 300) } });
@@ -389,3 +414,171 @@ export async function receiveSignup(eventId: string, v: { first: string; last: s
 }
 
 export const remindersOf = (v: unknown): TemplateReminder[] => cleanTemplateReminders(v);
+
+// ---------- Waitlist ("Wants Wolves Tickets", owner request 2026-11-21) ----------
+
+export async function addInterest(userId: string, eventId: string, personIds: string[], o: { slotIds?: string[]; note?: string; source?: string } = {}) {
+  const e = await db.event.findFirst({ where: { id: eventId, deletedAt: null }, include: { slots: { select: { id: true } } } });
+  if (!e) throw new UserError("That event was removed.");
+  const people = await db.person.findMany({ where: { id: { in: personIds }, deletedAt: null }, select: { id: true, name: true } });
+  if (!people.length) throw new UserError("Pick at least one contact.");
+  const slotIds = (o.slotIds ?? []).filter((id) => e.slots.some((s) => s.id === id));
+  for (const p of people) {
+    const had = await db.eventInterest.findUnique({ where: { eventId_personId: { eventId, personId: p.id } } });
+    if (had) await db.eventInterest.update({ where: { id: had.id }, data: { slotIds: [...new Set([...had.slotIds, ...slotIds])], ...(o.note ? { note: [had.note, o.note].filter(Boolean).join(" · ").slice(0, 1000) } : {}) } });
+    else await db.eventInterest.create({ data: { eventId, personId: p.id, slotIds, note: (o.note ?? "").slice(0, 1000), source: o.source ?? "manual" } });
+    revalidatePath(`/people/${p.id}`);
+  }
+  await logActivity(userId, "create", "event", eventId, `Added ${people.map((p) => p.name).join(", ")} to ${e.waitlistLabel || `the "${e.name}" waitlist`}`);
+  await syncWaitlistTag(eventId);
+}
+
+export async function removeInterest(userId: string, id: string) {
+  const i = await db.eventInterest.findUnique({ where: { id }, include: { event: true, person: { select: { name: true } } } });
+  if (!i) return;
+  await db.eventInterest.delete({ where: { id } });
+  await logActivity(userId, "delete", "event", i.eventId, `Took ${i.person.name} off ${i.event.waitlistLabel || `the "${i.event.name}" waitlist`}`);
+  await syncWaitlistTag(i.eventId);
+  revalidatePath(`/people/${i.personId}`);
+}
+
+/**
+ * The waitlist's tag ("Wants Wolves Tickets") on exactly the people still waiting, so they can be picked in People lists,
+ * mass texts and anywhere else tags are used. Someone waiting on another event with the same list name keeps it.
+ * `oldLabel`: the list was renamed; its old tag comes off the people this event put it on.
+ */
+export async function syncWaitlistTag(eventId: string, oldLabel?: string) {
+  const e = await db.event.findFirst({ where: { id: eventId }, select: { waitlistLabel: true } });
+  const labels = [...new Set([e?.waitlistLabel ?? "", oldLabel ?? ""].map((l) => l.trim()).filter(Boolean))];
+  for (const label of labels) {
+    const events = await db.event.findMany({ where: { waitlistLabel: label, deletedAt: null }, include: { interests: { include: { person: { select: { deletedAt: true } } } }, attendees: { select: { personId: true, status: true } } } });
+    const waiting = new Set(events.flatMap((ev) => stillWaiting(ev.interests.filter((i) => !i.person.deletedAt), ev.attendees).map((i) => i.personId)));
+    const listed = new Set([...events.flatMap((ev) => ev.interests.map((i) => i.personId)), ...(await db.eventInterest.findMany({ where: { eventId }, select: { personId: true } })).map((i) => i.personId)]);
+    const tag = await db.tag.upsert({ where: { name: label }, update: {}, create: { name: label } });
+    const tagged = new Set((await db.personTag.findMany({ where: { tagId: tag.id }, select: { personId: true } })).map((t) => t.personId));
+    for (const id of waiting) if (!tagged.has(id)) await db.personTag.create({ data: { personId: id, tagId: tag.id } }).catch(() => null);
+    // Only people this list put the tag on lose it; a tag added by hand to someone not on the list stays.
+    for (const id of tagged) if (listed.has(id) && !waiting.has(id)) await db.personTag.deleteMany({ where: { personId: id, tagId: tag.id } });
+  }
+}
+
+/** The next time a text may go out: now during 8am–8pm Central, else 8am the next morning. */
+function nextSendTime(now = new Date()): Date {
+  if (!quietNow(now)) return now;
+  const ct = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" }).formatToParts(now);
+  const g = (t: string) => ct.find((x) => x.type === t)?.value ?? "";
+  const today = `${g("year")}-${g("month")}-${g("day")}`;
+  const at = centralToUtc(today, "08:00");
+  return Number(g("hour")) < 8 ? at : new Date(centralToUtc(new Date(Date.UTC(+g("year"), +g("month") - 1, +g("day") + 1)).toISOString().slice(0, 10), "08:00").getTime());
+}
+
+async function offerParts(eventId: string, slotId: string) {
+  const e = await db.event.findFirst({ where: { id: eventId, deletedAt: null } });
+  if (!e) throw new UserError("That event was removed.");
+  const slot = await db.eventSlot.findFirst({ where: { id: slotId, eventId } });
+  if (!slot) throw new UserError("That game was removed.");
+  const senderId = e.senderId ?? (await owner())?.id;
+  if (!senderId) throw new UserError("Pick who the texts go from (Edit details).");
+  const sender = (await db.user.findUnique({ where: { id: senderId }, select: { name: true } }))?.name ?? "";
+  return { e, slot, senderId, sender };
+}
+
+/** The offer text filled in for one person and game, for the preview. */
+export async function previewOffer(eventId: string, slotId: string, personId: string | null, body: string) {
+  const { e, slot, sender } = await offerParts(eventId, slotId);
+  const p = personId ? await db.person.findFirst({ where: { id: personId, deletedAt: null }, select: personSelect }) : null;
+  const who: PersonForText = p ?? { id: "", name: "Sam & Lena Ortiz", mailingName: null, legalNames: null, address: null, phones: [], emails: [] };
+  const r = reminderText(body, who, e, slot, {}, sender);
+  return { text: r.text, missing: r.missing, who: p ? p.name : "a sample contact (Sam & Lena Ortiz)" };
+}
+
+/**
+ * Texts a game to people on the waitlist (owner request 2026-11-21: "who to text"): one text each, from the event's
+ * sender, now (or 8am if it's after hours), as scheduled texts so they show on the contact and in Messages. Optionally
+ * marks them Invited for that game. People who replied STOP or have no textable number are skipped and named.
+ */
+export async function offerGame(userId: string, eventId: string, slotId: string, personIds: string[], body: string, markInvited: boolean) {
+  const { e, slot, senderId, sender } = await offerParts(eventId, slotId);
+  if (!body.trim()) throw new UserError("Write the text.");
+  const people = await db.person.findMany({ where: { id: { in: personIds }, deletedAt: null }, select: personSelect });
+  if (!people.length) throw new UserError("Pick who to text.");
+  const sendAt = nextSendTime();
+  const skipped: string[] = [];
+  let queued = 0;
+  for (const p of people) {
+    const numbers = [...new Set(p.phones.filter((x) => canText(x.label) && x.normalized.length === 10).map((x) => x.normalized))];
+    if (!numbers.length) { skipped.push(`${p.name} (no textable number)`); continue; }
+    if (await hasTextStop(p.id)) { skipped.push(`${p.name} (replied STOP)`); continue; }
+    const text = reminderText(body, p, e, slot, {}, sender).text;
+    // "evo:" keys aren't touched by syncEventReminders (they're one-off offers, not reminders).
+    await db.scheduledText.create({ data: { personId: p.id, numbers, body: text, sendAt, createdById: senderId, eventKey: `evo:${e.id}:${slot.id}:${p.id}:${Date.now()}` } });
+    queued++;
+  }
+  const sentTo = people.filter((p) => !skipped.some((x) => x.startsWith(`${p.name} (`))).map((p) => p.id);
+  if (markInvited && sentTo.length) {
+    for (const id of sentTo) {
+      const had = await db.eventAttendee.findUnique({ where: { slotId_personId: { slotId: slot.id, personId: id } } });
+      if (!had) await db.eventAttendee.create({ data: { eventId: e.id, slotId: slot.id, personId: id, status: "invited" } });
+    }
+    await syncEventReminders(e.id);
+    await syncWaitlistTag(e.id);
+  }
+  await logActivity(userId, "create", "text", null, `Offered ${slotLine({ title: slot.title, date: isoFromDate(slot.date) }, e.name)} by text to ${queued} ${queued === 1 ? "person" : "people"}${skipped.length ? ` (${skipped.length} skipped)` : ""}`);
+  for (const p of people) revalidatePath(`/people/${p.id}`);
+  return { queued, skipped, when: quietNow() ? scheduleLabel(sendAt) : null };
+}
+
+// ---------- Importing who's going (the season spreadsheet) ----------
+
+export type AssignmentPreview = { line: number; name: string; slotId: string | null; game: string; candidates: { id: string; name: string; detail: string }[]; phone: string; email: string; seats: string; problem: string | null };
+
+/** Reads the spreadsheet and finds each row's game and contact (matched by phone, email, or name), for review before saving. */
+export async function previewAssignments(eventId: string, csv: string) {
+  const e = await db.event.findFirst({ where: { id: eventId, deletedAt: null }, include: { slots: true } });
+  if (!e) throw new UserError("That event was removed.");
+  const { rows, problem, skipped } = readAssignmentCsv(csv);
+  if (problem) throw new UserError(problem);
+  const slots = e.slots.map((s) => ({ id: s.id, date: isoFromDate(s.date), opponent: s.opponent, title: s.title }));
+  const people = await db.person.findMany({ where: { deletedAt: null }, select: { id: true, name: true, phones: { select: { normalized: true, number: true } }, emails: { select: { normalized: true } } } });
+  const detail = (p: (typeof people)[number]) => p.phones[0]?.number ?? "";
+  const out: AssignmentPreview[] = rows.map((r) => {
+    const g = gameFor(r, slots);
+    const digits = normalizePhone(r.phone);
+    const byContact = people.filter((p) => (digits.length === 10 && p.phones.some((x) => x.normalized === digits)) || (r.email && p.emails.some((x) => x.normalized === r.email)));
+    const found = byContact.length ? byContact : matchName(r.name, people);
+    return { line: r.line, name: r.name, slotId: g?.id ?? null, game: g ? slotLine(g, e.name) : `${r.date}${r.opponent ? ` ${r.opponent}` : ""}`,
+      candidates: found.slice(0, 5).map((p) => ({ id: p.id, name: p.name, detail: detail(p) })), phone: r.phone, email: r.email, seats: r.seats,
+      problem: g ? null : `No game on ${r.date}${r.opponent ? ` vs ${r.opponent}` : ""} in this event.` };
+  });
+  return { rows: out, skipped };
+}
+
+/** Saves the reviewed rows: each person on their game with the status picked; "new" makes a contact first. */
+export async function applyAssignments(userId: string, eventId: string, items: { slotId: string; personId: string | null; name: string; phone: string; email: string; seats: string }[], status: string) {
+  const e = await db.event.findFirst({ where: { id: eventId, deletedAt: null }, include: { slots: true } });
+  if (!e) throw new UserError("That event was removed.");
+  let added = 0, updated = 0, created = 0;
+  for (const it of items) {
+    const slot = e.slots.find((s) => s.id === it.slotId);
+    if (!slot) continue;
+    let personId = it.personId;
+    if (!personId) {
+      const digits = normalizePhone(it.phone), email = it.email.trim().toLowerCase();
+      const name = it.name.trim().slice(0, 120);
+      if (!name) continue;
+      personId = (await db.person.create({ data: { name, mailingName: name, createdById: userId,
+        phones: digits.length === 10 ? { create: [{ label: "Mobile", number: formatPhone(digits), normalized: digits, position: 0 }] } : undefined,
+        emails: email ? { create: [{ label: "", address: email, normalized: email, position: 0 }] } : undefined } })).id;
+      created++;
+    }
+    const had = await db.eventAttendee.findUnique({ where: { slotId_personId: { slotId: slot.id, personId } } });
+    if (had) { if (had.status !== status) { await db.eventAttendee.update({ where: { id: had.id }, data: { status } }); updated++; } }
+    else { await db.eventAttendee.create({ data: { eventId, slotId: slot.id, personId, status, source: "import" } }); added++; }
+    if (it.seats && !slot.details) { await db.eventSlot.update({ where: { id: slot.id }, data: { details: it.seats.slice(0, 500) } }); slot.details = it.seats; }
+    revalidatePath(`/people/${personId}`);
+  }
+  await logActivity(userId, "create", "event", eventId, `Imported who's going on "${e.name}" from a spreadsheet: ${added} added, ${updated} updated, ${created} new contacts`);
+  await syncEventReminders(eventId);
+  await syncWaitlistTag(eventId);
+  return { added, updated, created };
+}

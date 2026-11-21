@@ -1,0 +1,218 @@
+"use client";
+
+import Link from "next/link";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import type { EventView } from "@/server/events";
+import { shortEventDate, statusLabel, STATUS_KEYS } from "@/lib/events";
+import { normalizePhone } from "@/lib/normalize";
+import { PeoplePicker, useAction, type Hit } from "./EventClient";
+import { addEventAttendees, addToWaitlist, previewGameOffer, readAssignments, removeFromWaitlist, saveAssignments, sendGameOffer } from "../actions";
+
+type Slot = EventView["slots"][number];
+type Want = EventView["waitlist"][number];
+const gameName = (e: EventView, id: string) => { const s = e.slots.find((x) => x.id === id); return s ? `${(s.title || e.name).replace(/^Wolves vs /, "")} ${shortEventDate(s.date)}` : ""; };
+const textHref = (phone: string) => `/messages?n=${normalizePhone(phone)}`;
+
+/** The waitlist ("Wants Wolves Tickets", owner request 2026-11-21): who wants tickets, still waiting first. */
+export function WaitlistCard({ e }: { e: EventView }) {
+  const { error, pending, run } = useAction();
+  const [adding, setAdding] = useState(false);
+  const [people, setPeople] = useState<Hit[]>([]);
+  const [showAll, setShowAll] = useState(false);
+  const [sure, setSure] = useState("");
+  const waiting = e.waitlist.filter((w) => w.waiting), placed = e.waitlist.filter((w) => !w.waiting);
+  const label = e.waitlistLabel || "Waitlist";
+  const row = (w: Want) => (
+    <li key={w.id} className="flex flex-wrap items-start justify-between gap-2 py-1.5 text-sm">
+      <span className="min-w-0">
+        <Link href={`/people/${w.personId}?from=events`} className="font-semibold hover:underline">{w.name}</Link>
+        <span className="text-xs muted"> · since {shortEventDate(w.since)}{w.source === "signup" ? " · signed up" : ""}</span>
+        {w.slotIds.length > 0 && <span className="block text-xs">Would like: {w.slotIds.map((id) => gameName(e, id)).filter(Boolean).join(", ")}</span>}
+        {w.offered.length > 0 && <span className="block text-xs text-[#9a6400]">Offered: {w.offered.map((id) => gameName(e, id)).join(", ")}</span>}
+        {w.games.length > 0 && <span className="block text-xs text-accent">Has: {w.games.map((id) => gameName(e, id)).join(", ")}</span>}
+        {w.note && <span className="block text-xs muted">{w.note}</span>}
+      </span>
+      <span className="flex items-center gap-1.5">
+        {w.phone ? <Link href={textHref(w.phone)} className="btn px-2 py-0.5 text-xs">Text</Link> : <span className="text-xs text-[#9a6400]">no textable number</span>}
+        <button type="button" className="btn px-2 py-0.5 text-xs text-bad" onBlur={() => setSure("")} onClick={() => (sure === w.id ? run(() => removeFromWaitlist(e.id, w.id)) : setSure(w.id))}>{sure === w.id ? "Click again" : "Remove"}</button>
+      </span>
+    </li>
+  );
+  return (
+    <section className="card p-4" aria-labelledby="wl-h">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="wl-h" className="text-lg font-bold">{label} <span className="text-sm font-normal muted">{waiting.length} waiting{placed.length ? ` · ${placed.length} with a game` : ""}</span></h2>
+        {!adding && <button type="button" className="text-sm font-semibold text-accent hover:underline" onClick={() => setAdding(true)}>+ Add people</button>}
+      </div>
+      <p className="text-xs muted">Signups land here. Someone leaves &quot;waiting&quot; once they&apos;re Confirmed or {e.doneLabel} on a game{e.waitlistLabel ? `, and the "${e.waitlistLabel}" tag is kept on exactly the people waiting (for People lists and mass texts)` : ""}. Each game below shows who&apos;s still waiting.</p>
+      {adding && (
+        <div className="mt-2 rounded-lg border border-misty bg-paper p-3">
+          <PeoplePicker picked={people} onChange={setPeople} />
+          <div className="mt-2 flex justify-end gap-2">
+            <button type="button" className="btn" onClick={() => { setAdding(false); setPeople([]); }}>Cancel</button>
+            <button type="button" className="btn btn-primary" disabled={pending || !people.length} onClick={() => run(() => addToWaitlist(e.id, { personIds: people.map((p) => p.id) }), () => { setAdding(false); setPeople([]); })}>Add to list</button>
+          </div>
+        </div>
+      )}
+      <ul className="mt-1 divide-y divide-misty/60">{waiting.map(row)}</ul>
+      {!waiting.length && <p className="mt-1 text-sm muted">Nobody waiting.</p>}
+      {placed.length > 0 && (
+        <>
+          <button type="button" className="mt-1 text-sm font-semibold text-accent hover:underline" onClick={() => setShowAll(!showAll)}>{showAll ? "Hide" : "Show"} people with a game ({placed.length})</button>
+          {showAll && <ul className="divide-y divide-misty/60">{placed.map(row)}</ul>}
+        </>
+      )}
+      {error && <p role="alert" className="mt-2 text-sm text-bad">{error}</p>}
+    </section>
+  );
+}
+
+/** On each game: who's still waiting (those who asked for this game first), to assign or text. */
+export function GameWaiting({ e, slot }: { e: EventView; slot: Slot }) {
+  const { error, pending, run } = useAction();
+  const [offering, setOffering] = useState(false);
+  const here = new Set(e.attendees.filter((a) => a.slotId === slot.id).map((a) => a.personId));
+  const waiting = e.waitlist.filter((w) => w.waiting).sort((a, b) => Number(b.slotIds.includes(slot.id)) - Number(a.slotIds.includes(slot.id)));
+  if (!e.waitlist.length) return null;
+  return (
+    <div className="mt-3 border-t border-misty pt-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-bold">Still waiting ({waiting.length})</h3>
+        {waiting.length > 0 && !offering && <button type="button" className="btn text-xs" onClick={() => setOffering(true)}>Text them about this game</button>}
+      </div>
+      {offering && <OfferForm e={e} slot={slot} waiting={waiting} onDone={() => setOffering(false)} />}
+      <ul className="divide-y divide-misty/60">
+        {waiting.map((w) => (
+          <li key={w.id} className="flex flex-wrap items-center justify-between gap-2 py-1 text-sm">
+            <span>{w.slotIds.includes(slot.id) && <span title="Asked for this game" aria-label="Asked for this game">★ </span>}{w.name}
+              {w.offered.includes(slot.id) && <span className="ml-1 text-xs text-[#9a6400]">offered</span>}
+              {w.phone && <span className="ml-1 text-xs muted">{w.phone}</span>}</span>
+            <span className="flex gap-1.5">
+              {w.phone && <Link href={textHref(w.phone)} className="btn px-2 py-0.5 text-xs">Text</Link>}
+              <button type="button" className="btn btn-primary px-2 py-0.5 text-xs" disabled={pending}
+                onClick={() => run(() => addEventAttendees(e.id, { slotIds: [slot.id], personIds: [w.personId], status: "confirmed" }))}>{here.has(w.personId) ? "Confirm here" : "Assign"}</button>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {error && <p role="alert" className="text-sm text-bad">{error}</p>}
+    </div>
+  );
+}
+
+function OfferForm({ e, slot, waiting, onDone }: { e: EventView; slot: Slot; waiting: Want[]; onDone: () => void }) {
+  const router = useRouter();
+  const textable = waiting.filter((w) => w.phone);
+  const [picked, setPicked] = useState<string[]>(textable.filter((w) => w.slotIds.includes(slot.id)).map((w) => w.personId));
+  const [body, setBody] = useState(e.offerText || "Hi {first_name}! I have tickets for Wolves vs {opponent} on {event_date} at {event_time}. Want them? - Luke 612-702-0295");
+  const [invite, setInvite] = useState(true);
+  const [preview, setPreview] = useState<{ text: string; who: string; missing: string[] } | null>(null);
+  const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
+  const [sure, setSure] = useState(false);
+  const [pending, start] = useTransition();
+  const look = () => start(async () => { setError(""); const r = await previewGameOffer(e.id, slot.id, picked[0] ?? null, body); if (!r.ok) { setError(r.error); return; } setPreview(r.data!); });
+  const send = () => start(async () => {
+    setError(""); setMsg("");
+    const r = await sendGameOffer(e.id, slot.id, { personIds: picked, body, markInvited: invite });
+    if (!r.ok) { setError(r.error); setSure(false); return; }
+    setMsg(`${r.data!.queued} ${r.data!.queued === 1 ? "text" : "texts"} going out ${r.data!.when ? `at ${r.data!.when} (after hours now)` : "within a minute"}.${r.data!.skipped.length ? ` Skipped: ${r.data!.skipped.join(", ")}.` : ""}`);
+    setSure(false); router.refresh();
+  });
+  return (
+    <div className="mt-2 rounded-lg border border-misty bg-paper p-3 text-sm">
+      <fieldset>
+        <legend className="font-semibold">Text who? <button type="button" className="ml-2 text-xs font-semibold text-accent hover:underline" onClick={() => setPicked(textable.map((w) => w.personId))}>All {textable.length}</button>
+          <button type="button" className="ml-2 text-xs font-semibold text-accent hover:underline" onClick={() => setPicked([])}>None</button></legend>
+        <div className="mt-1 grid max-h-40 gap-1 overflow-auto sm:grid-cols-2">
+          {textable.map((w) => <label key={w.id} className="flex items-center gap-1.5"><input type="checkbox" checked={picked.includes(w.personId)} onChange={(x) => { setPicked(x.target.checked ? [...picked, w.personId] : picked.filter((p) => p !== w.personId)); setSure(false); }} />{w.slotIds.includes(slot.id) ? "★ " : ""}{w.name}</label>)}
+        </div>
+        {waiting.length > textable.length && <p className="text-xs muted">{waiting.length - textable.length} without a textable number aren&apos;t listed.</p>}
+      </fieldset>
+      <label className="label mt-2 block">Text<textarea className="input mt-1 w-full" rows={3} value={body} onChange={(x) => { setBody(x.target.value); setPreview(null); setSure(false); }} /></label>
+      <p className="text-xs muted">Fill-ins: {"{first_name} {opponent} {event_date} {event_time} {location} {seat_info} {slot_title}"}</p>
+      <label className="mt-2 flex items-center gap-2"><input type="checkbox" checked={invite} onChange={(x) => setInvite(x.target.checked)} />Mark them Invited for this game (they stay on the waitlist until Confirmed)</label>
+      {preview && <div className="mt-2 rounded-lg border border-misty bg-white p-2"><p className="text-xs muted">As {preview.who} would get it:</p><p className="whitespace-pre-wrap">{preview.text}</p></div>}
+      {error && <p role="alert" className="mt-2 text-bad">{error}</p>}
+      {msg && <p role="status" className="mt-2 text-accent">{msg}</p>}
+      <div className="mt-2 flex flex-wrap justify-end gap-2">
+        <button type="button" className="btn" onClick={onDone}>Close</button>
+        <button type="button" className="btn" disabled={pending || !body.trim()} onClick={look}>Preview</button>
+        <button type="button" className="btn btn-primary" disabled={pending || !picked.length || !body.trim()} onBlur={() => setSure(false)} onClick={() => (sure ? send() : setSure(true))}>
+          {pending ? "Sending…" : sure ? `Click again to text ${picked.length}` : `Send to ${picked.length}`}</button>
+      </div>
+    </div>
+  );
+}
+
+type Row = { line: number; name: string; slotId: string | null; game: string; candidates: { id: string; name: string; detail: string }[]; phone: string; email: string; seats: string; problem: string | null; pick: string };
+
+/** Import who's going from the season spreadsheet: read it, check each name's contact, then save. */
+export function ImportGoing({ e }: { e: EventView }) {
+  const router = useRouter();
+  const [rows, setRows] = useState<Row[] | null>(null);
+  const [skipped, setSkipped] = useState(0);
+  const [status, setStatus] = useState("confirmed");
+  const [error, setError] = useState("");
+  const [msg, setMsg] = useState("");
+  const [pending, start] = useTransition();
+  const read = (f: File | undefined) => { if (!f) return; void f.text().then((csv) => start(async () => {
+    setError(""); setMsg("");
+    const r = await readAssignments(e.id, csv);
+    if (!r.ok) { setError(r.error); return; }
+    setSkipped(r.data!.skipped);
+    // One match: picked. Several: you choose. None: a new contact.
+    setRows(r.data!.rows.map((x) => ({ ...x, pick: x.problem ? "skip" : x.candidates.length === 1 ? x.candidates[0].id : x.candidates.length ? "" : "new" })));
+  })); };
+  const save = () => start(async () => {
+    if (!rows) return;
+    setError("");
+    const items = rows.filter((r) => r.slotId && r.pick && r.pick !== "skip").map((r) => ({ slotId: r.slotId!, personId: r.pick === "new" ? null : r.pick, name: r.name, phone: r.phone, email: r.email, seats: r.seats }));
+    const x = await saveAssignments(e.id, { status, items });
+    if (!x.ok) { setError(x.error); return; }
+    setMsg(`Saved: ${x.data!.added} added, ${x.data!.updated} updated, ${x.data!.created} new contacts.`); setRows(null); router.refresh();
+  });
+  const undecided = rows?.filter((r) => r.pick === "").length ?? 0;
+  return (
+    <details className="mt-2 rounded-lg border border-misty px-3 py-2 text-sm">
+      <summary className="cursor-pointer font-semibold">Import who&apos;s going (season spreadsheet)</summary>
+      <p className="mt-1 text-xs muted">A CSV with a <b>Date</b> column and the people (Name, Guest, Client, Who or Assigned; several names in a cell on separate lines or split by &quot;;&quot;). Optional: Opponent, Phone, Email, Seats. You check every name before anything is saved.</p>
+      <input type="file" accept=".csv,text/csv" className="mt-1 block text-sm" disabled={pending} onChange={(x) => { read(x.target.files?.[0]); x.target.value = ""; }} />
+      {rows && (
+        <div className="mt-2">
+          <p className="text-xs">{rows.length} names{skipped ? ` · ${skipped} rows without a date skipped` : ""}{undecided ? ` · ${undecided} need you to pick the contact` : ""}</p>
+          <div className="mt-1 max-h-96 overflow-auto">
+            <table className="w-full text-left text-xs">
+              <thead><tr className="muted"><th className="py-1 pr-2">Row</th><th className="pr-2">Game</th><th className="pr-2">Name in file</th><th>HQ contact</th></tr></thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={i} className="border-t border-misty/60 align-top">
+                    <td className="py-1 pr-2">{r.line}</td>
+                    <td className="pr-2">{r.game}{r.problem && <span className="block text-bad">{r.problem}</span>}</td>
+                    <td className="pr-2">{r.name}{r.seats && <span className="block muted">{r.seats}</span>}</td>
+                    <td>
+                      <select aria-label={`Contact for ${r.name}`} className={`input py-0.5 text-xs ${r.pick === "" ? "border-[#9a6400]" : ""}`} value={r.pick} disabled={!!r.problem} onChange={(x) => setRows(rows.map((y, j) => (j === i ? { ...y, pick: x.target.value } : y)))}>
+                        {r.pick === "" && <option value="">Pick one…</option>}
+                        {r.candidates.map((c) => <option key={c.id} value={c.id}>{c.name}{c.detail ? ` · ${c.detail}` : ""}</option>)}
+                        <option value="new">New contact: {r.name}</option>
+                        <option value="skip">Skip</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-2 flex flex-wrap items-end justify-end gap-2">
+            <label className="label">Save them as<select className="input mt-1" value={status} onChange={(x) => setStatus(x.target.value)}>{STATUS_KEYS.map((k) => <option key={k} value={k}>{statusLabel(k, e.doneLabel)}</option>)}</select></label>
+            <button type="button" className="btn" onClick={() => setRows(null)}>Cancel</button>
+            <button type="button" className="btn btn-primary" disabled={pending || undecided > 0} onClick={save}>{pending ? "Saving…" : undecided ? `Pick ${undecided} contacts first` : "Save"}</button>
+          </div>
+        </div>
+      )}
+      {msg && <p role="status" className="mt-1 text-accent">{msg}</p>}
+      {error && <p role="alert" className="mt-1 text-bad">{error}</p>}
+    </details>
+  );
+}

@@ -40,7 +40,6 @@ export async function submitSignup(input: unknown): Promise<{ ok: true } | { ok:
     const answers = cleanAnswers(e.fields, v.answers);
     const problem = answersProblem(e.fields, answers);
     if (problem) return { ok: false, error: problem };
-    if (e.multiSlot && !v.slotIds.some((id) => e.slots.some((s) => s.id === id))) return { ok: false, error: "Please pick at least one date." };
     await receiveSignup(e.id, { first: v.first, last: v.last, phone: v.phone, email: v.email, slotIds: v.slotIds, answers });
     return { ok: true };
   } catch (e) {

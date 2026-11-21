@@ -8,9 +8,9 @@ import { FieldsEditor, fromDraft, toDraft, type FieldDraft } from "../FieldsEdit
 import { TimeSelect } from "../TimeSelect";
 import { removeEventTemplate, saveEventTemplate } from "../actions";
 
-type Draft = { id: string | null; name: string; type: string; multiSlot: boolean; doneLabel: string; location: string; intro: string; fields: FieldDraft[]; reminders: TemplateReminder[] };
-const blank: Draft = { id: null, name: "", type: "", multiSlot: false, doneLabel: "Order fulfilled", location: "", intro: "", fields: [], reminders: [] };
-const toDraftT = (t: TemplateView): Draft => ({ id: t.id, name: t.name, type: t.type, multiSlot: t.multiSlot, doneLabel: t.doneLabel, location: t.location, intro: t.intro, fields: t.fields.map(toDraft), reminders: t.reminders });
+type Draft = { id: string | null; name: string; type: string; multiSlot: boolean; doneLabel: string; location: string; intro: string; waitlistLabel: string; offerText: string; fields: FieldDraft[]; reminders: TemplateReminder[] };
+const blank: Draft = { id: null, name: "", type: "", multiSlot: false, doneLabel: "Order fulfilled", location: "", intro: "", waitlistLabel: "", offerText: "", fields: [], reminders: [] };
+const toDraftT = (t: TemplateView): Draft => ({ id: t.id, name: t.name, type: t.type, multiSlot: t.multiSlot, doneLabel: t.doneLabel, location: t.location, intro: t.intro, waitlistLabel: t.waitlistLabel, offerText: t.offerText, fields: t.fields.map(toDraft), reminders: t.reminders });
 
 export function TemplatesClient({ templates }: { templates: TemplateView[] }) {
   const router = useRouter();
@@ -41,6 +41,12 @@ export function TemplatesClient({ templates }: { templates: TemplateView[] }) {
         <label className="mr-4 inline-flex items-center gap-1.5 text-sm"><input type="radio" checked={!d.multiSlot} onChange={() => setD({ ...d, multiSlot: false })} />One date (like Pi Day)</label>
         <label className="inline-flex items-center gap-1.5 text-sm"><input type="radio" checked={d.multiSlot} onChange={() => setD({ ...d, multiSlot: true })} />Many dates (like home games)</label>
       </fieldset>
+      {d.multiSlot && (
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="label">Waitlist name (also a tag)<input className="input mt-1" value={d.waitlistLabel} onChange={(e) => setD({ ...d, waitlistLabel: e.target.value })} placeholder="Wants Wolves Tickets" /></label>
+          <label className="label sm:col-span-2">Text offering a game to the waitlist<textarea className="input mt-1 w-full text-sm" rows={2} value={d.offerText} onChange={(e) => setD({ ...d, offerText: e.target.value })} placeholder="Hi {first_name}! I have tickets for Wolves vs {opponent} on {event_date}. Want them?" /></label>
+        </div>
+      )}
       <label className="label mt-3 block">Signup page intro<textarea className="input mt-1 w-full" rows={3} value={d.intro} onChange={(e) => setD({ ...d, intro: e.target.value })} placeholder="Shown at the top of the signup page" /></label>
       <h3 className="mt-4 font-semibold">Signup questions</h3>
       <p className="text-xs muted">Name, phone and email are always asked.</p>

@@ -217,3 +217,72 @@ export function readSlotCsv(text: string, team = ""): { slots: ImportedSlot[]; p
   });
   return { slots, problem: slots.length ? null : "No dates in that file could be read (use 2027-01-14 or 1/14/2027).", skipped };
 }
+
+// ---------- Waitlist ("Wants Wolves Tickets", owner request 2026-11-21) ----------
+
+/** Statuses that mean someone has a game: they're off the waitlist. Invited (offered) and Declined still wait. */
+export const ASSIGNED: readonly string[] = ["confirmed", "sent"];
+/** People on the waitlist who don't have a game yet. */
+export function stillWaiting<T extends { personId: string }>(interests: T[], attendees: { personId: string; status: string }[]): T[] {
+  const has = new Set(attendees.filter((a) => ASSIGNED.includes(a.status)).map((a) => a.personId));
+  return interests.filter((i) => !has.has(i.personId));
+}
+
+// ---------- Importing who's going (the season spreadsheet) ----------
+
+export type AssignmentRow = { line: number; date: string; time: string | null; opponent: string; name: string; phone: string; email: string; seats: string };
+const NAME_HEAD = /\b(names?|guests?|clients?|who|assigned|attendees?|people|going|tickets? (to|for)|given to|recipients?)\b/;
+
+/**
+ * The season spreadsheet → one row per person per game. Needs a Date column and at least one name column (Name, Guest,
+ * Client, Who, Assigned…); several name columns, or several names in a cell on separate lines or split by ";" or "/",
+ * each count. "Tony & Laura Wagner" stays one name (a couple). Optional: Time, Opponent, Phone, Email, Seats.
+ */
+export function readAssignmentCsv(text: string): { rows: AssignmentRow[]; problem: string | null; skipped: number } {
+  const all = parseCsv(text).filter((r) => r.some((c) => c.trim()));
+  const headAt = all.findIndex((r) => r.some((c) => /\bdate\b/i.test(c)));
+  if (headAt < 0) return { rows: [], problem: 'The file needs a "Date" column (the game date).', skipped: 0 };
+  const head = all[headAt].map((h) => h.trim().toLowerCase());
+  const find = (re: RegExp) => head.findIndex((h) => re.test(h));
+  const c = { date: find(/\bdate\b/), time: find(/\b(time|tip)\b/), opp: find(/opponent|\bvs\b|versus|away|matchup|\bgame\b/), phone: find(/phone|cell|mobile/), email: find(/e-?mail/), seats: find(/seat|section|row/) };
+  const used = new Set(Object.values(c).filter((i) => i >= 0));
+  const names = head.map((h, i) => (!used.has(i) && NAME_HEAD.test(h) ? i : -1)).filter((i) => i >= 0);
+  if (!names.length) return { rows: [], problem: 'The file needs a column with the people (Name, Guest, Client, Who or Assigned).', skipped: 0 };
+  let skipped = 0;
+  const rows: AssignmentRow[] = [];
+  all.slice(headAt + 1).forEach((r, k) => {
+    const get = (i: number) => (i >= 0 ? (r[i] ?? "").trim() : "");
+    const date = readDate(get(c.date));
+    const people = names.flatMap((i) => get(i).split(/\n|;|\s\/\s|\s{2,}/)).map((n) => n.replace(/\s+/g, " ").trim()).filter((n) => n && !/^(open|tbd|n\/?a|available|none|-+|\?+)$/i.test(n));
+    if (!date) { if (people.length) skipped++; return; }
+    for (const name of people) rows.push({ line: headAt + k + 2, date, time: readTime(get(c.time)), opponent: get(c.opp).replace(/^(vs\.?|@)\s*/i, ""), name, phone: get(c.phone), email: get(c.email).toLowerCase(), seats: get(c.seats) });
+  });
+  return { rows, problem: rows.length ? null : "No games with names could be read from that file.", skipped };
+}
+
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z& ]+/g, " ").replace(/\s+/g, " ").trim();
+/** One person's names inside a contact's name: "Tony Wagner & Laura Schmidt" → ["tony wagner", "laura schmidt"]; "Tony & Laura Wagner" → ["tony wagner", "laura wagner"]. */
+export function namesIn(contact: string): string[] {
+  const parts = norm(contact).split(/\s*&\s*|\s+and\s+/).map((p) => p.trim()).filter(Boolean);
+  if (parts.length < 2) return [norm(contact)];
+  const last = parts[parts.length - 1].split(" ").slice(-1)[0];
+  return [...new Set([norm(contact), ...parts.map((p) => (p.includes(" ") ? p : `${p} ${last}`))])];
+}
+
+/** Contacts a spreadsheet name could be: the same full name, or one person of a couple. Best matches first. */
+export function matchName<T extends { id: string; name: string }>(name: string, people: T[]): T[] {
+  const n = norm(name);
+  if (!n) return [];
+  const exact = people.filter((p) => norm(p.name) === n);
+  if (exact.length) return exact;
+  const want = namesIn(name);
+  return people.filter((p) => { const have = namesIn(p.name); return want.some((w) => have.includes(w)); });
+}
+
+/** The game a spreadsheet row is about: same date, and (when two games share a date) the opponent. */
+export function gameFor<T extends { id: string; date: string; opponent: string; title: string }>(row: Pick<AssignmentRow, "date" | "opponent">, slots: T[]): T | null {
+  const same = slots.filter((s) => s.date === row.date);
+  if (same.length <= 1) return same[0] ?? null;
+  const o = norm(row.opponent);
+  return same.find((s) => o && (norm(s.opponent).includes(o) || norm(s.title).includes(o) || o.includes(norm(s.opponent).split(" ").slice(-1)[0]))) ?? null;
+}

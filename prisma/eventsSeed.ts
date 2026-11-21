@@ -15,6 +15,8 @@ const WOLVES = {
       body: "Hi {first_name}! Reminder: Wolves vs {opponent} is tomorrow, {event_date} at {event_time} at {location}. Enjoy the game! Any questions, text me at 612-702-0295. - Luke" },
   ],
 };
+const WAITLIST = "Wants Wolves Tickets";
+const OFFER = "Hi {first_name}! I have tickets for Wolves vs {opponent} on {event_date} at {event_time}. Want them? Just text me back. - Luke 612-702-0295";
 const PI_DAY = {
   name: "Pi Day", type: "Client appreciation", multiSlot: false, doneLabel: "Order fulfilled", location: "",
   intro: "Happy Pi Day! Order your free pie below and we'll bring it to you on Pi Day.",
@@ -55,6 +57,13 @@ export async function seedEvents(db: PrismaClient) {
       } });
     }
     await done(db, "seed.wolves2026Event");
+  }
+  // The "Wants Wolves Tickets" waitlist (owner request 2026-11-21) on the Wolves template and season, if not set yet.
+  if (!(await flag(db, "seed.wolvesWaitlist"))) {
+    const data = { waitlistLabel: WAITLIST, offerText: OFFER };
+    await db.eventTemplate.updateMany({ where: { name: WOLVES.name, waitlistLabel: "" }, data });
+    await db.event.updateMany({ where: { name: "Timberwolves 2026-27", waitlistLabel: "" }, data });
+    await done(db, "seed.wolvesWaitlist");
   }
   if (!(await flag(db, "seed.wolves2026Schedule"))) {
     const e = await db.event.findFirst({ where: { name: "Timberwolves 2026-27", deletedAt: null }, include: { slots: { select: { externalId: true } } } });

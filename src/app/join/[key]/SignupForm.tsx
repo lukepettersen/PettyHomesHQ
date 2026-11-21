@@ -21,7 +21,7 @@ export function SignupForm({ signupKey, multiSlot, fields, slots, eventName }: {
     if (!r.ok) { setError(r.error); return; }
     setDone(true);
   }); };
-  if (done) return <p className="card mt-6 p-5 text-center text-lg">Thanks, {v.first}! You&apos;re signed up for {eventName}{multiSlot ? `. We'll be in touch about ${picked.length === 1 ? "the game" : "the games"} you picked` : ""}.</p>;
+  if (done) return <p className="card mt-6 p-5 text-center text-lg">Thanks, {v.first}! {multiSlot ? `You're on the list for ${eventName}. We'll text you when we have tickets for you.` : `You're signed up for ${eventName}.`}</p>;
   const box = "input mt-1 w-full";
   return (
     <form onSubmit={send} className="card mt-6 flex flex-col gap-3 p-5">
@@ -35,7 +35,7 @@ export function SignupForm({ signupKey, multiSlot, fields, slots, eventName }: {
       <label className="absolute -left-[9999px]" aria-hidden="true">Website<input tabIndex={-1} autoComplete="off" value={v.website} onChange={(x) => setV({ ...v, website: x.target.value })} /></label>
       {multiSlot && (
         <fieldset>
-          <legend className="text-sm font-semibold">Which {slots.length === 1 ? "date" : "dates"} would you like?</legend>
+          <legend className="text-sm font-semibold">Any {slots.length === 1 ? "date" : "dates"} you&apos;d especially like? <span className="font-normal muted">(optional)</span></legend>
           {!slots.length && <p className="text-sm muted">No dates are open right now.</p>}
           <div className="mt-1 flex max-h-80 flex-col gap-1 overflow-auto">
             {slots.map((s) => (

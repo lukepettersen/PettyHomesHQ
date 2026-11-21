@@ -8,13 +8,14 @@ import { answerSummary, longEventDate, shortEventDate, statusLabel, STATUS_KEYS 
 import { formatTime } from "@/lib/tasks";
 import { FieldsEditor, fromDraft, toDraft, type FieldDraft } from "../FieldsEditor";
 import { TimeSelect } from "../TimeSelect";
+import { GameWaiting, ImportGoing } from "./Waitlist";
 import { addEventAttendees, editEvent, editEventAttendee, importSlotCsv, importWolvesSchedule, removeEvent, removeEventAttendee, removeEventSlot, saveEventSlot } from "../actions";
 
 type Slot = EventView["slots"][number];
 type Attendee = EventView["attendees"][number];
 const CHIP: Record<string, string> = { invited: "bg-sunken text-charcoal", confirmed: "bg-accent-soft text-accent", sent: "bg-[#e3ecf7] text-[#24507a]", declined: "bg-[#f7e2de] text-bad" };
 
-function useAction() {
+export function useAction() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
@@ -33,7 +34,7 @@ export function EventHeader({ e }: { e: EventView }) {
   const { error, pending, run } = useAction();
   const [editing, setEditing] = useState(false);
   const [sure, setSure] = useState(false);
-  const [d, setD] = useState({ name: e.name, type: e.type, location: e.location, notes: e.notes, intro: e.intro, doneLabel: e.doneLabel, senderId: e.senderId ?? "", fields: e.fields.map(toDraft) as FieldDraft[] });
+  const [d, setD] = useState({ name: e.name, type: e.type, location: e.location, notes: e.notes, intro: e.intro, doneLabel: e.doneLabel, senderId: e.senderId ?? "", waitlistLabel: e.waitlistLabel, offerText: e.offerText, fields: e.fields.map(toDraft) as FieldDraft[] });
   const save = () => run(() => editEvent(e.id, { ...d, senderId: d.senderId || null, fields: d.fields.map(fromDraft) }), () => setEditing(false));
   const remove = () => run(() => removeEvent(e.id), () => router.push("/events"));
   return (
@@ -64,6 +65,8 @@ export function EventHeader({ e }: { e: EventView }) {
               </select>
             </label>
             <label className="label sm:col-span-2">Notes (just for you)<textarea className="input mt-1 w-full" rows={2} value={d.notes} onChange={(x) => setD({ ...d, notes: x.target.value })} /></label>
+            {e.multiSlot && <label className="label">Waitlist name (also a tag on people waiting)<input className="input mt-1" value={d.waitlistLabel} onChange={(x) => setD({ ...d, waitlistLabel: x.target.value })} placeholder="Wants Wolves Tickets" /></label>}
+            {e.multiSlot && <label className="label sm:col-span-2">Text offering a game to the waitlist<textarea className="input mt-1 w-full" rows={2} value={d.offerText} onChange={(x) => setD({ ...d, offerText: x.target.value })} /></label>}
             <label className="label sm:col-span-2">Signup page intro<textarea className="input mt-1 w-full" rows={2} value={d.intro} onChange={(x) => setD({ ...d, intro: x.target.value })} /></label>
           </div>
           <h3 className="mt-3 font-semibold">Signup questions</h3>
@@ -128,9 +131,9 @@ function ImportDates({ e }: { e: EventView }) {
   );
 }
 
-type Hit = { id: string; name: string; detail: string };
+export type Hit = { id: string; name: string; detail: string };
 /** Find contacts and pick one or more (the same search as the top bar). */
-function PeoplePicker({ picked, onChange }: { picked: Hit[]; onChange: (h: Hit[]) => void }) {
+export function PeoplePicker({ picked, onChange }: { picked: Hit[]; onChange: (h: Hit[]) => void }) {
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
   useEffect(() => {
@@ -242,6 +245,7 @@ function Attendees({ e, slot }: { e: EventView; slot: Slot }) {
       </div>
       {adding && <div className="mt-2"><AddPeople e={e} slotIds={[slot.id]} onDone={() => setAdding(false)} /></div>}
       <ul className="divide-y divide-misty/60">{rows.map((a) => <AttendeeRow key={a.id} e={e} a={a} />)}</ul>
+      {e.multiSlot && <GameWaiting e={e} slot={slot} />}
     </div>
   );
 }
@@ -285,6 +289,7 @@ export function EventSlots({ e, today }: { e: EventView; today: string }) {
       {bulk && <div className="mt-2"><AddPeople e={e} slotIds={e.slots.filter((s) => s.date >= today).map((s) => s.id)} onDone={() => setBulk(false)} /></div>}
       {editing === "new" && <div className="mt-2"><SlotForm e={e} slot={null} onDone={() => setEditing(null)} /></div>}
       <ImportDates e={e} />
+      {e.slots.length > 0 && <ImportGoing e={e} />}
       {!e.slots.length && <p className="mt-2 text-sm muted">No dates yet. Add them one at a time, or import them.</p>}
       <ul className="mt-2 divide-y divide-misty">
         {shown.map((s) => (
