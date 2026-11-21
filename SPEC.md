@@ -444,6 +444,13 @@ scrolls with it until its last card is on screen, then stays put while the middl
   live phone-sized preview: headline (blank = the event's name), intro, for games whether to show the game list and
   the question above it, whether email is required (name and cell always are), the questions (same editor as
   templates), and the thank-you message (`{first}`, `{event}`). Save/Cancel; the preview's Sign up sends nothing.
+  **Email:** ask but optional (default), required, or **don't ask** (phone only; signups match contacts by cell first).
+  After signing up, that phone only ever sees the thank-you (refreshing or reopening the link doesn't show the form).
+- **Offering several games in one text** *(owner request 2026-11-22)*: tick games on the Games tab, then **Text people
+  about these games**: pick waiting people (those who asked for one of the games are ticked; anyone else can be added),
+  edit the text, Preview, two-step Send. `{games}` lists the games one per line ("Wed, Jan 27 - Denver Nuggets - 8:30
+  PM"); a warning offers to add it when the text has no list. Texts go from the sender's own HQ number (Alyssa's from
+  hers; the owner can pick another). Optionally marks them Invited for every game offered.
 - **Reminder texts** (on the event page): text with merge fields from the contact (`{first_name}`… as in templates) and
   the event (`{event_name}`, `{event_date}` "Thursday, January 14", `{event_short_date}` "1/14/27", `{event_time}`,
   `{opponent}`, `{location}`, `{seat_info}`, `{slot_title}`) plus the signup answers (`{pie_flavor}`); timing **N days

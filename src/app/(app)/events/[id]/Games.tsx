@@ -6,7 +6,7 @@ import type { EventView } from "@/server/events";
 import { statusLabel } from "@/lib/events";
 import { formatTime } from "@/lib/tasks";
 import { AddPeople, AttendeeRow, ImportDates, SlotForm, useAction } from "./EventClient";
-import { GameWaiting, ImportGoing } from "./Waitlist";
+import { GameWaiting, ImportGoing, OfferForm } from "./Waitlist";
 import { removeEventSlot } from "../actions";
 
 type Slot = EventView["slots"][number];
@@ -34,6 +34,9 @@ export function GamesTab({ e, today }: { e: EventView; today: string }) {
   const [filter, setFilter] = useState<Filter>("upcoming");
   const [open, setOpen] = useState<string | null>(null);
   const [adding, setAdding] = useState<"game" | "people" | null>(null);
+  // Tick several games, then text people about all of them at once (owner request 2026-11-22).
+  const [picked, setPicked] = useState<string[]>([]);
+  const [offering, setOffering] = useState(false);
   const people = useMemo(() => new Map(e.slots.map((s) => [s.id, e.attendees.filter((a) => a.slotId === s.id)])), [e]);
   const needs = (s: Slot) => s.date >= today && !(people.get(s.id) ?? []).some((a) => coming(a.status));
   const upcoming = e.slots.filter((s) => s.date >= today);
@@ -58,6 +61,19 @@ export function GamesTab({ e, today }: { e: EventView; today: string }) {
       </div>
       {adding === "people" && <div className="mt-2"><AddPeople e={e} slotIds={upcoming.map((s) => s.id)} onDone={() => setAdding(null)} /></div>}
       {adding === "game" && <div className="mt-2"><SlotForm e={e} slot={null} onDone={() => setAdding(null)} /></div>}
+      {picked.length > 0 && (
+        <div className="sticky top-2 z-10 mt-3 rounded-xl border border-accent/40 bg-white p-3 shadow-lg">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <b className="text-sm">{picked.length} {picked.length === 1 ? "game" : "games"} picked</b>
+            <span className="flex gap-2">
+              {!offering && <button type="button" className="btn btn-primary text-sm" onClick={() => setOffering(true)}>Text people about {picked.length === 1 ? "this game" : "these games"}</button>}
+              <button type="button" className="btn text-sm" onClick={() => { setPicked([]); setOffering(false); }}>Clear</button>
+            </span>
+          </div>
+          {offering && <OfferForm key={picked.join()} e={e} slots={e.slots.filter((s) => picked.includes(s.id))} waiting={e.waitlist.filter((w) => w.waiting)} onDone={() => setOffering(false)} />}
+        </div>
+      )}
+      {!picked.length && upcoming.length > 0 && <p className="mt-2 text-xs muted">Tick games to text people about several at once.</p>}
       {!e.slots.length && <p className="card mt-3 p-5 text-sm">No games yet. Add them one at a time, or use the <b>Import</b> tab to load the schedule.</p>}
       <ul className="mt-3 flex flex-col gap-2">
         {shown.map((s) => {
@@ -65,8 +81,15 @@ export function GamesTab({ e, today }: { e: EventView; today: string }) {
           const isOpen = open === s.id;
           const past = s.date < today;
           return (
-            <li key={s.id} className={`card overflow-hidden ${isOpen ? "ring-2 ring-accent/40" : ""}`}>
-              <button type="button" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : s.id)} className="flex w-full items-center gap-3 p-3 text-left hover:bg-sunken/60">
+            <li key={s.id} className={`card overflow-hidden ${isOpen ? "ring-2 ring-accent/40" : ""} ${picked.includes(s.id) ? "ring-2 ring-accent" : ""}`}>
+              <div className="flex items-stretch">
+              {!past && (
+                <label className="flex cursor-pointer items-center pl-3" title="Pick this game to text people about it">
+                  <input type="checkbox" className="h-5 w-5" aria-label={`Pick ${s.title || e.name} ${s.date}`} checked={picked.includes(s.id)}
+                    onChange={(x) => { setPicked(x.target.checked ? [...picked, s.id] : picked.filter((id) => id !== s.id)); setOffering(false); }} />
+                </label>
+              )}
+              <button type="button" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : s.id)} className="flex min-w-0 flex-1 items-center gap-3 p-3 text-left hover:bg-sunken/60">
                 <DateBlock iso={s.date} past={past} />
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-baseline gap-x-2">
@@ -82,6 +105,7 @@ export function GamesTab({ e, today }: { e: EventView; today: string }) {
                 </span>
                 <span aria-hidden="true" className={`text-lg muted transition-transform ${isOpen ? "rotate-90" : ""}`}>›</span>
               </button>
+              </div>
               {isOpen && <GamePanel e={e} slot={s} />}
             </li>
           );

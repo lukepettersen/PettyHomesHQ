@@ -74,7 +74,8 @@ export function EventHeader({ e, today }: { e: EventView; today: string }) {
             </label>
             <label className="label sm:col-span-2">Notes (just for you)<textarea className="input mt-1 w-full" rows={2} value={d.notes} onChange={(x) => setD({ ...d, notes: x.target.value })} /></label>
             {e.multiSlot && <label className="label">Waitlist name (also a tag on people waiting)<input className="input mt-1" value={d.waitlistLabel} onChange={(x) => setD({ ...d, waitlistLabel: x.target.value })} placeholder="Wants Wolves Tickets" /></label>}
-            {e.multiSlot && <label className="label sm:col-span-2">Text offering a game to the waitlist<textarea className="input mt-1 w-full" rows={2} value={d.offerText} onChange={(x) => setD({ ...d, offerText: x.target.value })} /></label>}
+            {e.multiSlot && <label className="label sm:col-span-2">Text offering games to the waitlist<textarea className="input mt-1 w-full" rows={6} value={d.offerText} onChange={(x) => setD({ ...d, offerText: x.target.value })} />
+              <span className="mt-1 block text-xs font-normal muted">Put <b>{"{games}"}</b> where the list of games should go (&quot;Wed, Jan 27 - Denver Nuggets - 8:30 PM&quot;, one per line). {"{first_name}"} works too.</span></label>}
           </div>
           <p className="mt-2 text-xs muted">The signup page&apos;s wording and questions are on the <b>Signup page</b> tab.</p>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-misty pt-3">

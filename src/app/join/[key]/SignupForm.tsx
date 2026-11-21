@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import type { EventField } from "@/lib/events";
 import { longEventDate } from "@/lib/events";
 import { formatTime } from "@/lib/tasks";
@@ -8,7 +8,7 @@ import { submitSignup } from "./actions";
 
 type Slot = { id: string; date: string; time: string | null; title: string; opponent: string; location: string };
 
-export type PageText = { gamesOn: boolean; gamesLabel: string; thanks: string; emailRequired: boolean };
+export type PageText = { gamesOn: boolean; gamesLabel: string; thanks: string; email: "required" | "optional" | "off" };
 /** The thank-you message with {first} and {event} filled in. */
 export const thanksText = (t: string, first: string, event: string) => t.replace(/\{first(_name)?\}/g, first).replace(/\{event(_name)?\}/g, event);
 
@@ -20,16 +20,26 @@ export function SignupForm({ signupKey, multiSlot, fields, slots, eventName, pag
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [pending, start] = useTransition();
+  // Signed up already on this phone: the thank-you, never the form again (owner 2026-11-22).
+  const seenKey = `hq-signed-up-${signupKey}`;
+  useEffect(() => {
+    if (preview) return;
+    let first = "";
+    try { first = localStorage.getItem(seenKey) ?? ""; } catch { /* private window */ }
+    if (!first) return;
+    const t = setTimeout(() => { setV((x) => ({ ...x, first })); setDone(true); }, 0);
+    return () => clearTimeout(t);
+  }, [preview, seenKey]);
   const send = (x: React.FormEvent) => { x.preventDefault(); if (preview) { setDone(true); return; } start(async () => {
     setError("");
     const r = await submitSignup({ key: signupKey, ...v, slotIds: picked, answers });
     if (!r.ok) { setError(r.error); return; }
+    try { localStorage.setItem(seenKey, v.first.trim() || "there"); } catch { /* private window */ }
     setDone(true);
   }); };
   if (done) return (
     <div className="card mt-6 p-5 text-center text-lg">
       <p className="whitespace-pre-wrap">{thanksText(page.thanks, v.first || "Sam", eventName)}</p>
-      {preview && <button type="button" className="btn mt-3 text-sm" onClick={() => setDone(false)}>Back to the form</button>}
     </div>
   );
   const box = "input mt-1 w-full";
@@ -40,7 +50,7 @@ export function SignupForm({ signupKey, multiSlot, fields, slots, eventName, pag
         <label className="label">Last name<input className={box} autoComplete="family-name" value={v.last} onChange={(x) => setV({ ...v, last: x.target.value })} /></label>
       </div>
       <label className="label">Cell phone<input className={box} required type="tel" autoComplete="tel" inputMode="tel" value={v.phone} onChange={(x) => setV({ ...v, phone: x.target.value })} /></label>
-      <label className="label">Email{!page.emailRequired && <span className="font-normal muted"> (optional)</span>}<input className={box} type="email" required={page.emailRequired} autoComplete="email" value={v.email} onChange={(x) => setV({ ...v, email: x.target.value })} /></label>
+      {page.email !== "off" && <label className="label">Email{page.email === "optional" && <span className="font-normal muted"> (optional)</span>}<input className={box} type="email" required={page.email === "required"} autoComplete="email" value={v.email} onChange={(x) => setV({ ...v, email: x.target.value })} /></label>}
       {/* Robots fill in every box; people never see this one. */}
       <label className="absolute -left-[9999px]" aria-hidden="true">Website<input tabIndex={-1} autoComplete="off" value={v.website} onChange={(x) => setV({ ...v, website: x.target.value })} /></label>
       {multiSlot && page.gamesOn && (

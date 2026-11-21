@@ -105,6 +105,8 @@ export const EVENT_MERGE_FIELDS: [string, string][] = [
   ["event_name", "Event name"], ["event_date", "Date (Thursday, January 14)"], ["event_short_date", "Date (1/14/27)"], ["event_time", "Time (7:00pm)"],
   ["opponent", "Opponent"], ["location", "Location"], ["seat_info", "Seats / ticket info"], ["slot_title", "Game or date title"],
 ];
+/** In a waitlist offer: the list of games offered (owner request 2026-11-22). */
+export const OFFER_MERGE_FIELDS: [string, string][] = [["games", "The games offered, one per line"], ...EVENT_MERGE_FIELDS];
 
 /** The event's merge values for one attendee: event, slot, and their signup answers. */
 export function eventMergeValues(e: { name: string; location: string }, s: SlotInfo, answers: Answers): Record<string, string> {
@@ -113,6 +115,17 @@ export function eventMergeValues(e: { name: string; location: string }, s: SlotI
     opponent: s.opponent, location: s.location || e.location, seat_info: s.details, slot_title: slotName(s, e.name), ...answers,
   };
 }
+
+/** One game as a line in an offer text, the way the owner writes them: "Wed, Jan 27 - Denver Nuggets - 8:30 PM". */
+export function gameLine(s: Pick<SlotInfo, "date" | "time" | "title" | "opponent">, eventName: string): string {
+  const p = parts(s.date);
+  const day = `${DOW[p.dow].slice(0, 3)}, ${MON[p.m - 1].slice(0, 3)} ${p.d}`;
+  const time = s.time ? formatTime(s.time).replace(/(am|pm)$/, (x) => ` ${x.toUpperCase()}`) : "time TBD";
+  return [day, s.opponent || slotName(s, eventName).replace(/^Wolves vs\.? /, ""), time].join(" - ");
+}
+/** `{games}`: every offered game, one per line, soonest first. */
+export const gamesList = (slots: Pick<SlotInfo, "date" | "time" | "title" | "opponent">[], eventName: string) =>
+  [...slots].sort((a, b) => (a.date + (a.time ?? "")).localeCompare(b.date + (b.time ?? ""))).map((s) => gameLine(s, eventName)).join("\n");
 
 const addDays = (iso: string, n: number) => { const p = parts(iso); return new Date(Date.UTC(p.y, p.m - 1, p.d + n)).toISOString().slice(0, 10); };
 /** When a reminder goes out for a slot: `daysBefore` days before its date, at `time` Central. */

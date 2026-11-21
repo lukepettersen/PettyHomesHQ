@@ -10,7 +10,7 @@ import { canText } from "@/lib/texting";
 import { formatPhone, isoFromDate, dateFromIso, normalizePhone } from "@/lib/normalize";
 import { centralToUtc, quietNow, scheduleLabel } from "@/lib/scheduledText";
 import {
-  answerSummary, ASSIGNED, cleanAnswers, cleanFields, gameFor, matchName, readAssignmentCsv, stillWaiting, cleanTemplateReminders, eventMergeValues, NBA_HEADERS, nbaScheduleUrl, parseNbaSchedule, reminderSendAt, slotLine, statusLabel,
+  answerSummary, ASSIGNED, cleanAnswers, gamesList, cleanFields, gameFor, matchName, readAssignmentCsv, stillWaiting, cleanTemplateReminders, eventMergeValues, NBA_HEADERS, nbaScheduleUrl, parseNbaSchedule, reminderSendAt, slotLine, statusLabel,
   type Answers, type EventField, type ImportedSlot, type TemplateReminder,
 } from "@/lib/events";
 
@@ -96,7 +96,7 @@ export async function loadEvents() {
   }).sort((a, b) => (a.next ? 0 : 1) - (b.next ? 0 : 1) || (a.next ?? b.last ?? "").localeCompare(b.next ?? a.last ?? ""));
 }
 
-export async function loadEvent(id: string) {
+export async function loadEvent(id: string, me?: { id: string; isOwner: boolean }) {
   const e = await db.event.findFirst({ where: { id, deletedAt: null }, include: {
     slots: { orderBy: [{ date: "asc" }, { time: "asc" }] },
     attendees: { orderBy: { createdAt: "asc" }, include: { person: { select: { id: true, name: true, deletedAt: true, phones: { orderBy: { position: "asc" }, select: { number: true, label: true } } } } } },
@@ -128,6 +128,7 @@ export async function loadEvent(id: string) {
       answers: answersOf(a.answers), phone: a.person.phones.find((p) => canText(p.label))?.number ?? null })),
     reminders: e.reminders.map((r) => ({ id: r.id, name: r.name, body: r.body, daysBefore: r.daysBefore, time: r.time, statuses: r.statuses, active: r.active, ...counts(r.id) })),
     senders: team.map((u) => ({ id: u.id, name: u.name, number: formatPhone(u.textNumber!) })),
+    me: me?.id ?? null, meIsOwner: !!me?.isOwner,
   };
 }
 export type EventView = NonNullable<Awaited<ReturnType<typeof loadEvent>>>;
@@ -368,18 +369,20 @@ export async function syncEventReminders(eventId: string, now = new Date()): Pro
 // ---------- Signup page ----------
 
 /** The signup page's wording, with the defaults filled in where it's blank. */
-export function pageOf(e: { name: string; intro: string; multiSlot: boolean; signupTitle: string; signupGamesOn: boolean; signupGamesLabel: string; signupThanks: string; signupEmailRequired: boolean }) {
-  return { title: e.signupTitle, intro: e.intro, gamesOn: e.multiSlot && e.signupGamesOn, gamesLabel: e.signupGamesLabel, thanks: e.signupThanks, emailRequired: e.signupEmailRequired,
+export function pageOf(e: { name: string; intro: string; multiSlot: boolean; signupTitle: string; signupGamesOn: boolean; signupGamesLabel: string; signupThanks: string; signupEmailRequired: boolean; signupEmailOn: boolean }) {
+  // email: "required" | "optional" | "off" (phone only: signups match by cell, owner 2026-11-22)
+  const email: "required" | "optional" | "off" = !e.signupEmailOn ? "off" : e.signupEmailRequired ? "required" : "optional";
+  return { title: e.signupTitle, intro: e.intro, gamesOn: e.multiSlot && e.signupGamesOn, gamesLabel: e.signupGamesLabel, thanks: e.signupThanks, emailRequired: email === "required", email,
     defaults: { title: e.name, gamesLabel: "Any dates you'd especially like? (optional)", thanks: e.multiSlot ? "Thanks, {first}! You're on the list for {event}. We'll text you when we have tickets for you." : "Thanks, {first}! You're signed up for {event}." } };
 }
 export type SignupPage = ReturnType<typeof pageOf>;
 
 /** Saves the signup page's wording and questions (owner request 2026-11-22: each signup page editable). */
-export async function saveSignupPage(userId: string, eventId: string, v: { title: string; intro: string; gamesOn: boolean; gamesLabel: string; thanks: string; emailRequired: boolean; fields: unknown }) {
+export async function saveSignupPage(userId: string, eventId: string, v: { title: string; intro: string; gamesOn: boolean; gamesLabel: string; thanks: string; email: "required" | "optional" | "off"; fields: unknown }) {
   const e = await db.event.findFirst({ where: { id: eventId, deletedAt: null } });
   if (!e) throw new UserError("That event was removed.");
   await db.event.update({ where: { id: eventId }, data: { signupTitle: v.title.trim().slice(0, 120), intro: v.intro.trim().slice(0, 2000), signupGamesOn: v.gamesOn,
-    signupGamesLabel: v.gamesLabel.trim().slice(0, 200), signupThanks: v.thanks.trim().slice(0, 500), signupEmailRequired: v.emailRequired, fields: cleanFields(v.fields) } });
+    signupGamesLabel: v.gamesLabel.trim().slice(0, 200), signupThanks: v.thanks.trim().slice(0, 500), signupEmailRequired: v.email === "required", signupEmailOn: v.email !== "off", fields: cleanFields(v.fields) } });
   await logActivity(userId, "update", "event", eventId, `Edited the signup page for "${e.name}"`);
   await syncEventReminders(eventId);
 }
@@ -499,33 +502,45 @@ function nextSendTime(now = new Date()): Date {
   return Number(g("hour")) < 8 ? at : new Date(centralToUtc(new Date(Date.UTC(+g("year"), +g("month") - 1, +g("day") + 1)).toISOString().slice(0, 10), "08:00").getTime());
 }
 
-async function offerParts(eventId: string, slotId: string) {
+/** The event, the games being offered (soonest first) and whose number the texts go from: the person sending when they
+ *  have an HQ number (Alyssa's offers come from Alyssa), else the event's sender. `fromId` picks another (owner only). */
+async function offerParts(user: { id: string }, eventId: string, slotIds: string[], fromId?: string | null) {
   const e = await db.event.findFirst({ where: { id: eventId, deletedAt: null } });
   if (!e) throw new UserError("That event was removed.");
-  const slot = await db.eventSlot.findFirst({ where: { id: slotId, eventId } });
-  if (!slot) throw new UserError("That game was removed.");
-  const senderId = e.senderId ?? (await owner())?.id;
+  const slots = await db.eventSlot.findMany({ where: { id: { in: slotIds }, eventId }, orderBy: [{ date: "asc" }, { time: "asc" }] });
+  if (!slots.length) throw new UserError("Pick at least one game.");
+  const me = await db.user.findUnique({ where: { id: user.id }, select: { textNumber: true, isOwner: true } });
+  let senderId = fromId || (me?.textNumber ? user.id : e.senderId ?? (await owner())?.id);
+  if (senderId && senderId !== user.id && senderId !== e.senderId && !me?.isOwner) senderId = user.id;
   if (!senderId) throw new UserError("Pick who the texts go from (Edit details).");
-  const sender = (await db.user.findUnique({ where: { id: senderId }, select: { name: true } }))?.name ?? "";
-  return { e, slot, senderId, sender };
+  const sender = (await db.user.findUnique({ where: { id: senderId }, select: { name: true, textNumber: true } }));
+  if (!sender?.textNumber) throw new UserError("That person doesn't have an HQ number to text from.");
+  return { e, slots, senderId, sender: sender.name };
 }
 
-/** The offer text filled in for one person and game, for the preview. */
-export async function previewOffer(eventId: string, slotId: string, personId: string | null, body: string) {
-  const { e, slot, sender } = await offerParts(eventId, slotId);
+/** The offer for one person: the first game's fill-ins, plus {games} listing every game offered. */
+function offerText(body: string, p: PersonForText, e: { name: string; location: string }, slots: { date: Date; time: string | null; title: string; opponent: string; location: string; details: string }[], sender: string) {
+  const games = gamesList(slots.map((s) => ({ date: isoFromDate(s.date), time: s.time, title: s.title, opponent: s.opponent })), e.name);
+  return reminderText(body.replace(/\{games\}/g, games), p, e, slots[0], {}, sender);
+}
+
+/** The offer text filled in for one person, for the preview. */
+export async function previewOffer(user: { id: string }, eventId: string, slotIds: string[], personId: string | null, body: string, fromId?: string | null) {
+  const { e, slots, sender } = await offerParts(user, eventId, slotIds, fromId);
   const p = personId ? await db.person.findFirst({ where: { id: personId, deletedAt: null }, select: personSelect }) : null;
   const who: PersonForText = p ?? { id: "", name: "Sam & Lena Ortiz", mailingName: null, legalNames: null, address: null, phones: [], emails: [] };
-  const r = reminderText(body, who, e, slot, {}, sender);
+  const r = offerText(body, who, e, slots, sender);
   return { text: r.text, missing: r.missing, who: p ? p.name : "a sample contact (Sam & Lena Ortiz)" };
 }
 
 /**
- * Texts a game to people on the waitlist (owner request 2026-11-21: "who to text"): one text each, from the event's
- * sender, now (or 8am if it's after hours), as scheduled texts so they show on the contact and in Messages. Optionally
- * marks them Invited for that game. People who replied STOP or have no textable number are skipped and named.
+ * Texts one or more games to people on the waitlist (owner requests 2026-11-21, 2026-11-22: pick several games, then who
+ * to text; {games} lists them): one text each, now (or 8am if it's after hours), as scheduled texts so they show on the
+ * contact and in Messages. Optionally marks them Invited for each game. People who replied STOP or have no textable
+ * number are skipped and named.
  */
-export async function offerGame(userId: string, eventId: string, slotId: string, personIds: string[], body: string, markInvited: boolean) {
-  const { e, slot, senderId, sender } = await offerParts(eventId, slotId);
+export async function offerGame(userId: string, eventId: string, slotIds: string[], personIds: string[], body: string, markInvited: boolean, fromId?: string | null) {
+  const { e, slots, senderId, sender } = await offerParts({ id: userId }, eventId, slotIds, fromId);
   if (!body.trim()) throw new UserError("Write the text.");
   const people = await db.person.findMany({ where: { id: { in: personIds }, deletedAt: null }, select: personSelect });
   if (!people.length) throw new UserError("Pick who to text.");
@@ -536,21 +551,22 @@ export async function offerGame(userId: string, eventId: string, slotId: string,
     const numbers = [...new Set(p.phones.filter((x) => canText(x.label) && x.normalized.length === 10).map((x) => x.normalized))];
     if (!numbers.length) { skipped.push(`${p.name} (no textable number)`); continue; }
     if (await hasTextStop(p.id)) { skipped.push(`${p.name} (replied STOP)`); continue; }
-    const text = reminderText(body, p, e, slot, {}, sender).text;
+    const text = offerText(body, p, e, slots, sender).text;
     // "evo:" keys aren't touched by syncEventReminders (they're one-off offers, not reminders).
-    await db.scheduledText.create({ data: { personId: p.id, numbers, body: text, sendAt, createdById: senderId, eventKey: `evo:${e.id}:${slot.id}:${p.id}:${Date.now()}` } });
+    await db.scheduledText.create({ data: { personId: p.id, numbers, body: text, sendAt, createdById: senderId, eventKey: `evo:${e.id}:${slots[0].id}:${p.id}:${Date.now()}` } });
     queued++;
   }
   const sentTo = people.filter((p) => !skipped.some((x) => x.startsWith(`${p.name} (`))).map((p) => p.id);
   if (markInvited && sentTo.length) {
-    for (const id of sentTo) {
+    for (const slot of slots) for (const id of sentTo) {
       const had = await db.eventAttendee.findUnique({ where: { slotId_personId: { slotId: slot.id, personId: id } } });
       if (!had) await db.eventAttendee.create({ data: { eventId: e.id, slotId: slot.id, personId: id, status: "invited" } });
     }
     await syncEventReminders(e.id);
     await syncWaitlistTag(e.id);
   }
-  await logActivity(userId, "create", "text", null, `Offered ${slotLine({ title: slot.title, date: isoFromDate(slot.date) }, e.name)} by text to ${queued} ${queued === 1 ? "person" : "people"}${skipped.length ? ` (${skipped.length} skipped)` : ""}`);
+  const what = slots.length === 1 ? slotLine({ title: slots[0].title, date: isoFromDate(slots[0].date) }, e.name) : `${slots.length} games of "${e.name}"`;
+  await logActivity(userId, "create", "text", null, `Offered ${what} by text to ${queued} ${queued === 1 ? "person" : "people"}${skipped.length ? ` (${skipped.length} skipped)` : ""}`);
   for (const p of people) revalidatePath(`/people/${p.id}`);
   return { queued, skipped, when: quietNow() ? scheduleLabel(sendAt) : null };
 }

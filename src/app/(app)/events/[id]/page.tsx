@@ -9,9 +9,9 @@ export const dynamic = "force-dynamic";
 
 /** One event: a summary at the top, then tabs (Games / Waitlist / Reminder texts / Signup page / Import). */
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
-  const { denied } = await eventsGate();
+  const { user, denied } = await eventsGate();
   if (denied) return denied;
-  const e = await loadEvent((await params).id);
+  const e = await loadEvent((await params).id, user);
   if (!e) notFound();
   const today = isoFromDate(new Date());
   return (

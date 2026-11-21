@@ -900,6 +900,7 @@ model Event {
   signupGamesLabel String        @default("")
   signupThanks   String          @default("")
   signupEmailRequired Boolean    @default(false)
+  signupEmailOn  Boolean         @default(true) // false: the page doesn't ask for email (phone only, owner 2026-11-22)
   createdById    String?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt

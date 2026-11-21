@@ -12,12 +12,13 @@ import { cleanFields } from "@/lib/events";
 export function SignupEditor({ e, today }: { e: EventView; today: string }) {
   const router = useRouter();
   const p = e.page;
-  const start0 = { title: p.title, intro: p.intro, gamesOn: p.gamesOn || !e.multiSlot, gamesLabel: p.gamesLabel, thanks: p.thanks, emailRequired: p.emailRequired, fields: e.fields.map(toDraft) as FieldDraft[] };
+  const start0 = { title: p.title, intro: p.intro, gamesOn: p.gamesOn || !e.multiSlot, gamesLabel: p.gamesLabel, thanks: p.thanks, email: p.email, fields: e.fields.map(toDraft) as FieldDraft[] };
   const [d, setD] = useState(start0);
   const [saved, setSaved] = useState(start0);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
   const [pending, start] = useTransition();
+  const [reset, setReset] = useState(0);
   const dirty = JSON.stringify(d) !== JSON.stringify(saved);
   const set = (x: Partial<typeof d>) => { setMsg(""); setD({ ...d, ...x }); };
   const save = () => start(async () => {
@@ -43,7 +44,13 @@ export function SignupEditor({ e, today }: { e: EventView; today: string }) {
               <p className="mt-1 text-xs muted">Only games still ahead are listed.</p>
             </div>
           )}
-          <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={d.emailRequired} onChange={(x) => set({ emailRequired: x.target.checked })} />Email is required (name and cell phone always are)</label>
+          <fieldset className="text-sm">
+            <legend className="font-semibold">Email</legend>
+            {([["optional", "Ask, but optional"], ["required", "Required"], ["off", "Don't ask (phone only)"]] as const).map(([k, l]) => (
+              <label key={k} className="mr-4 inline-flex items-center gap-1.5"><input type="radio" name="signup-email" checked={d.email === k} onChange={() => set({ email: k })} />{l}</label>
+            ))}
+            <p className="text-xs muted">Name and cell phone are always asked. Signups are matched to contacts by cell phone first.</p>
+          </fieldset>
           <div>
             <h3 className="font-semibold">Questions</h3>
             <div className="mt-1"><FieldsEditor fields={d.fields} onChange={(fields) => set({ fields })} /></div>
@@ -58,14 +65,15 @@ export function SignupEditor({ e, today }: { e: EventView; today: string }) {
           </div>
         </div>
         <div className="lg:sticky lg:top-4">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide muted">Preview{dirty ? " (not saved yet)" : ""}</p>
+          <p className="mb-1 flex justify-between text-xs font-semibold uppercase tracking-wide muted"><span>Preview{dirty ? " (not saved yet)" : ""}</span>
+            <button type="button" className="normal-case tracking-normal text-accent hover:underline" onClick={() => setReset(reset + 1)}>Preview only: show the form again</button></p>
           <div className="max-h-[80vh] overflow-auto rounded-2xl border-4 border-charcoal/80 bg-paper px-3 py-5">
             <p className="text-center text-xs font-bold tracking-wide text-accent">PETTY HOMES</p>
             <h3 className="mt-1 text-center text-xl font-extrabold">{d.title || p.defaults.title}</h3>
             {d.intro && <p className="mt-2 whitespace-pre-wrap text-center text-sm">{d.intro}</p>}
-            <SignupForm key={JSON.stringify(d.fields)} preview signupKey="preview" multiSlot={e.multiSlot} eventName={e.name}
+            <SignupForm key={`${JSON.stringify(d.fields)}${reset}`} preview signupKey="preview" multiSlot={e.multiSlot} eventName={e.name}
               fields={cleanFields(d.fields.map(fromDraft))} slots={upcoming.slice(0, 6).map((s) => ({ id: s.id, date: s.date, time: s.time, title: s.title, opponent: s.opponent, location: s.location }))}
-              page={{ gamesOn: e.multiSlot && d.gamesOn, gamesLabel: d.gamesLabel || p.defaults.gamesLabel, thanks: d.thanks || p.defaults.thanks, emailRequired: d.emailRequired }} />
+              page={{ gamesOn: e.multiSlot && d.gamesOn, gamesLabel: d.gamesLabel || p.defaults.gamesLabel, thanks: d.thanks || p.defaults.thanks, email: d.email }} />
             {upcoming.length > 6 && e.multiSlot && d.gamesOn && <p className="mt-1 text-center text-xs muted">…and {upcoming.length - 6} more games</p>}
             <p className="mt-4 text-center text-xs muted">Questions? Text Luke at 612-702-0295.</p>
           </div>

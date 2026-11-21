@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { answerSummary, answersProblem, cleanAnswers, cleanFields, cleanTemplateReminders, cleanTime, eventMergeValues, parseNbaSchedule, readDate, readSlotCsv, readTime,
-  reminderSendAt, reminderWhen, shortEventDate, longEventDate, signupState, slotLine, statusLabel, gameFor, matchName, namesIn, readAssignmentCsv, stillWaiting } from "./events";
+  reminderSendAt, reminderWhen, gameLine, gamesList, shortEventDate, longEventDate, signupState, slotLine, statusLabel, gameFor, matchName, namesIn, readAssignmentCsv, stillWaiting } from "./events";
 
 const pie = cleanFields([{ label: "Number of pies", type: "number", required: true }, { label: "Pie flavor", type: "select", options: "Apple, Cherry\nFrench Silk" }, { label: "Notes", type: "long" }]);
 
@@ -127,5 +127,15 @@ describe("events: Wolves waitlist and the season spreadsheet (owner request 2026
     expect(gameFor({ date: "2027-01-14", opponent: "Celtics" }, slots)?.id).toBe("b");
     expect(gameFor({ date: "2027-01-14", opponent: "" }, slots)).toBeNull();
     expect(gameFor({ date: "2027-02-01", opponent: "" }, slots)).toBeNull();
+  });
+});
+
+describe("events: offering several games in one text (owner request 2026-11-22)", () => {
+  it("lists the games like the owner's text", () => {
+    const g = (date: string, time: string | null, opponent: string) => ({ date, time, opponent, title: "" });
+    expect(gameLine(g("2027-01-27", "20:30", "Denver Nuggets"), "Wolves")).toBe("Wed, Jan 27 - Denver Nuggets - 8:30 PM");
+    expect(gameLine({ date: "2027-01-31", time: null, opponent: "", title: "Wolves vs Suns" }, "Wolves")).toBe("Sun, Jan 31 - Suns - time TBD");
+    expect(gamesList([g("2027-01-31", "17:00", "Phoenix Suns"), g("2027-01-27", "20:30", "Denver Nuggets"), g("2027-01-29", "20:30", "Charlotte Hornets")], "Wolves"))
+      .toBe("Wed, Jan 27 - Denver Nuggets - 8:30 PM\nFri, Jan 29 - Charlotte Hornets - 8:30 PM\nSun, Jan 31 - Phoenix Suns - 5:00 PM");
   });
 });

@@ -151,16 +151,16 @@ export async function removeFromWaitlist(eventId: string, interestId: string) {
   return guarded("manageEvents", async (user) => { await removeInterest(user.id, id.parse(interestId)); refresh(eventId); });
 }
 
-export async function previewGameOffer(eventId: string, slotId: string, personId: string | null, body: string) {
-  return guarded("manageEvents", async () => previewOffer(id.parse(eventId), id.parse(slotId), personId ? id.parse(personId) : null, z.string().max(1000).parse(body)));
+export async function previewGameOffer(eventId: string, slotIds: string[], personId: string | null, body: string, fromId?: string | null) {
+  return guarded("manageEvents", async (user) => previewOffer(user, id.parse(eventId), z.array(id).min(1).max(100).parse(slotIds), personId ? id.parse(personId) : null, z.string().max(1500).parse(body), fromId ? id.parse(fromId) : null));
 }
 
-/** Texts a game to people on the waitlist (needs Send texts too). */
-export async function sendGameOffer(eventId: string, slotId: string, input: unknown) {
+/** Texts one or more games to people on the waitlist (needs Send texts too). */
+export async function sendGameOffer(eventId: string, slotIds: string[], input: unknown) {
   return guarded("manageEvents", async (user) => {
     if (!user.permissions.includes("sendTexts")) throw new UserError("You don't have permission to send texts.");
-    const v = z.object({ personIds: z.array(id).min(1, "Pick who to text.").max(100), body: z.string().trim().min(1, "Write the text.").max(1000), markInvited: z.boolean() }).parse(input);
-    const r = await offerGame(user.id, id.parse(eventId), id.parse(slotId), v.personIds, v.body, v.markInvited);
+    const v = z.object({ personIds: z.array(id).min(1, "Pick who to text.").max(100), body: z.string().trim().min(1, "Write the text.").max(1500), markInvited: z.boolean(), fromId: id.nullable().optional() }).parse(input);
+    const r = await offerGame(user.id, id.parse(eventId), z.array(id).min(1, "Pick at least one game.").max(100).parse(slotIds), v.personIds, v.body, v.markInvited, v.fromId);
     refresh(eventId);
     return r;
   });
@@ -182,7 +182,7 @@ export async function saveAssignments(eventId: string, input: unknown) {
 /** The signup page's wording and questions. */
 export async function saveEventSignupPage(eventId: string, input: unknown) {
   return guarded("manageEvents", async (user) => {
-    const v = z.object({ title: z.string().max(120), intro: z.string().max(2000), gamesOn: z.boolean(), gamesLabel: z.string().max(200), thanks: z.string().max(500), emailRequired: z.boolean(), fields }).parse(input);
+    const v = z.object({ title: z.string().max(120), intro: z.string().max(2000), gamesOn: z.boolean(), gamesLabel: z.string().max(200), thanks: z.string().max(500), email: z.enum(["required", "optional", "off"]), fields }).parse(input);
     await saveSignupPage(user.id, id.parse(eventId), v);
     refresh(eventId);
   });

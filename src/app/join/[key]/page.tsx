@@ -21,7 +21,7 @@ export default async function Page({ params }: { params: Promise<{ key: string }
         <>
           {e.intro && <p className="mt-3 whitespace-pre-wrap text-center">{e.intro}</p>}
           <SignupForm signupKey={key} multiSlot={e.multiSlot} fields={e.fields} slots={e.slots} eventName={e.name}
-            page={{ gamesOn: e.page.gamesOn, gamesLabel: e.page.gamesLabel || e.page.defaults.gamesLabel, thanks: e.page.thanks || e.page.defaults.thanks, emailRequired: e.page.emailRequired }} />
+            page={{ gamesOn: e.page.gamesOn, gamesLabel: e.page.gamesLabel || e.page.defaults.gamesLabel, thanks: e.page.thanks || e.page.defaults.thanks, email: e.page.email }} />
         </>
       )}
       <p className="mt-6 text-center text-xs muted">Questions? Text Luke at 612-702-0295.</p>
