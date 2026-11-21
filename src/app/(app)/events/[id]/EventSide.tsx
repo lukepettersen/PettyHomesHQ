@@ -34,7 +34,7 @@ export function SignupSettings({ e }: { e: EventView }) {
   return (
     <section className="card p-4" aria-labelledby="su-h">
       <h2 id="su-h" className="text-lg font-bold">Signup page</h2>
-      <p className="text-xs muted">Private: only people with the link can open it, and search engines are told not to list it. Signups are matched to contacts by phone or email (or added as new contacts).</p>
+      <p className="text-sm muted">A private page people fill out to sign up. Only people with the link can open it; search engines skip it.</p>
       <label className="mt-2 flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={on} onChange={(x) => setOn(x.target.checked)} />Page is on</label>
       <div className="mt-2 grid grid-cols-2 gap-2">
         <label className="label">Opens (optional)<input type="date" className="input mt-1" value={opens} onChange={(x) => setOpens(x.target.value)} /></label>
@@ -128,7 +128,10 @@ export function Reminders({ e }: { e: EventView }) {
         <h2 id="rem-h" className="text-lg font-bold">Reminder texts</h2>
         {editing === null && <button type="button" className="text-sm font-semibold text-accent hover:underline" onClick={() => setEditing("new")}>+ Add</button>}
       </div>
-      <p className="text-xs muted">From {sender ? `${sender.name}'s HQ number (${sender.number})` : "the owner's HQ number"}, 8am–8pm only. Each text shows in the contact&apos;s Scheduled box (turn one off there) and in Messages once sent. People who replied STOP, or have no textable number, are skipped.</p>
+      <p className="text-sm muted">Sent automatically before each date, from {sender ? `${sender.name}'s HQ number` : "the owner's HQ number"}. Everyone added later gets them too.</p>
+      <details className="mt-1 text-xs muted"><summary className="cursor-pointer">How they work</summary>
+        <p className="mt-1">From {sender ? `${sender.number}` : "the owner's HQ number"}, 8am–8pm only. Each one shows in the contact&apos;s Scheduled box (turn one off there) and in Messages once sent. People who replied STOP, or with no textable number, are skipped.</p>
+      </details>
       {editing === "new" && <div className="mt-2"><ReminderForm e={e} r={null} onDone={() => setEditing(null)} /></div>}
       <ul className="mt-2 space-y-2">
         {e.reminders.map((r) => editing === r.id ? <li key={r.id}><ReminderForm e={e} r={r} onDone={() => setEditing(null)} /></li> : (

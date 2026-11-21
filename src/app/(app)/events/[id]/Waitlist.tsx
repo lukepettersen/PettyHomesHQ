@@ -14,38 +14,25 @@ type Want = EventView["waitlist"][number];
 const gameName = (e: EventView, id: string) => { const s = e.slots.find((x) => x.id === id); return s ? `${(s.title || e.name).replace(/^Wolves vs /, "")} ${shortEventDate(s.date)}` : ""; };
 const textHref = (phone: string) => `/messages?n=${normalizePhone(phone)}`;
 
-/** The waitlist ("Wants Wolves Tickets", owner request 2026-11-21): who wants tickets, still waiting first. */
+/** The waitlist tab ("Wants Wolves Tickets", owner request 2026-11-21; friendlier layout 2026-11-22): who wants
+ *  tickets, still waiting first, with search. */
 export function WaitlistCard({ e }: { e: EventView }) {
   const { error, pending, run } = useAction();
   const [adding, setAdding] = useState(false);
   const [people, setPeople] = useState<Hit[]>([]);
-  const [showAll, setShowAll] = useState(false);
+  const [show, setShow] = useState<"waiting" | "placed">("waiting");
+  const [q, setQ] = useState("");
   const [sure, setSure] = useState("");
   const waiting = e.waitlist.filter((w) => w.waiting), placed = e.waitlist.filter((w) => !w.waiting);
+  const list = (show === "waiting" ? waiting : placed).filter((w) => !q.trim() || `${w.name} ${w.note}`.toLowerCase().includes(q.trim().toLowerCase()));
   const label = e.waitlistLabel || "Waitlist";
-  const row = (w: Want) => (
-    <li key={w.id} className="flex flex-wrap items-start justify-between gap-2 py-1.5 text-sm">
-      <span className="min-w-0">
-        <Link href={`/people/${w.personId}?from=events`} className="font-semibold hover:underline">{w.name}</Link>
-        <span className="text-xs muted"> · since {shortEventDate(w.since)}{w.source === "signup" ? " · signed up" : ""}</span>
-        {w.slotIds.length > 0 && <span className="block text-xs">Would like: {w.slotIds.map((id) => gameName(e, id)).filter(Boolean).join(", ")}</span>}
-        {w.offered.length > 0 && <span className="block text-xs text-[#9a6400]">Offered: {w.offered.map((id) => gameName(e, id)).join(", ")}</span>}
-        {w.games.length > 0 && <span className="block text-xs text-accent">Has: {w.games.map((id) => gameName(e, id)).join(", ")}</span>}
-        {w.note && <span className="block text-xs muted">{w.note}</span>}
-      </span>
-      <span className="flex items-center gap-1.5">
-        {w.phone ? <Link href={textHref(w.phone)} className="btn px-2 py-0.5 text-xs">Text</Link> : <span className="text-xs text-[#9a6400]">no textable number</span>}
-        <button type="button" className="btn px-2 py-0.5 text-xs text-bad" onBlur={() => setSure("")} onClick={() => (sure === w.id ? run(() => removeFromWaitlist(e.id, w.id)) : setSure(w.id))}>{sure === w.id ? "Click again" : "Remove"}</button>
-      </span>
-    </li>
-  );
   return (
     <section className="card p-4" aria-labelledby="wl-h">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="wl-h" className="text-lg font-bold">{label} <span className="text-sm font-normal muted">{waiting.length} waiting{placed.length ? ` · ${placed.length} with a game` : ""}</span></h2>
-        {!adding && <button type="button" className="text-sm font-semibold text-accent hover:underline" onClick={() => setAdding(true)}>+ Add people</button>}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="wl-h" className="text-lg font-bold">{label}</h2>
+        {!adding && <button type="button" className="btn btn-primary text-sm" onClick={() => setAdding(true)}>+ Add people</button>}
       </div>
-      <p className="text-xs muted">Signups land here. Someone leaves &quot;waiting&quot; once they&apos;re Confirmed or {e.doneLabel} on a game{e.waitlistLabel ? `, and the "${e.waitlistLabel}" tag is kept on exactly the people waiting (for People lists and mass texts)` : ""}. Each game below shows who&apos;s still waiting.</p>
+      <p className="text-sm muted">Signups land here. When someone gets a game (Confirmed or {e.doneLabel}) they move to &quot;Has a game&quot;{e.waitlistLabel ? `, and the "${e.waitlistLabel}" tag comes off` : ""}.</p>
       {adding && (
         <div className="mt-2 rounded-lg border border-misty bg-paper p-3">
           <PeoplePicker picked={people} onChange={setPeople} />
@@ -55,14 +42,34 @@ export function WaitlistCard({ e }: { e: EventView }) {
           </div>
         </div>
       )}
-      <ul className="mt-1 divide-y divide-misty/60">{waiting.map(row)}</ul>
-      {!waiting.length && <p className="mt-1 text-sm muted">Nobody waiting.</p>}
-      {placed.length > 0 && (
-        <>
-          <button type="button" className="mt-1 text-sm font-semibold text-accent hover:underline" onClick={() => setShowAll(!showAll)}>{showAll ? "Hide" : "Show"} people with a game ({placed.length})</button>
-          {showAll && <ul className="divide-y divide-misty/60">{placed.map(row)}</ul>}
-        </>
-      )}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {([["waiting", `Waiting ${waiting.length}`], ["placed", `Has a game ${placed.length}`]] as const).map(([k, l]) => (
+          <button key={k} type="button" aria-pressed={show === k} onClick={() => setShow(k)} className={`rounded-full border px-3 py-1 text-sm font-semibold ${show === k ? "border-accent bg-accent text-white" : "border-misty bg-white hover:bg-sunken"}`}>{l}</button>
+        ))}
+        <input className="input ml-auto w-full py-1 text-sm sm:w-56" aria-label="Find on the list" placeholder="Find a name" value={q} onChange={(x) => setQ(x.target.value)} />
+      </div>
+      <ul className="mt-2 divide-y divide-misty/60">
+        {list.map((w) => (
+          <li key={w.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">
+            <span className="min-w-[12rem] flex-1">
+              <Link href={`/people/${w.personId}?from=events`} className="font-semibold hover:underline">{w.name}</Link>
+              {w.note && <span className="ml-2 rounded-full bg-sunken px-2 py-0.5 text-xs">{w.note.replace(/ Clients? Interested$/i, " client")}</span>}
+              {w.source === "signup" && <span className="ml-2 rounded-full bg-accent-soft px-2 py-0.5 text-xs text-accent">signed up</span>}
+              <span className="block text-xs muted">
+                {[w.games.length ? `Has: ${w.games.map((id) => gameName(e, id)).join(", ")}` : "",
+                  w.offered.length ? `Offered: ${w.offered.map((id) => gameName(e, id)).join(", ")}` : "",
+                  w.slotIds.length ? `Would like: ${w.slotIds.map((id) => gameName(e, id)).filter(Boolean).join(", ")}` : "",
+                  `on the list since ${shortEventDate(w.since)}`].filter(Boolean).join(" · ")}
+              </span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              {w.phone ? <Link href={textHref(w.phone)} className="btn px-2 py-0.5 text-xs" title={w.phone}>Text</Link> : <span className="text-xs muted" title="No textable number on their contact">No cell</span>}
+              <button type="button" className="btn px-2 py-0.5 text-xs text-bad" onBlur={() => setSure("")} onClick={() => (sure === w.id ? run(() => removeFromWaitlist(e.id, w.id)) : setSure(w.id))}>{sure === w.id ? "Click again" : "Remove"}</button>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {!list.length && <p className="mt-2 text-sm muted">{q ? "No one by that name." : show === "waiting" ? "Nobody waiting." : "Nobody has a game yet."}</p>}
       {error && <p role="alert" className="mt-2 text-sm text-bad">{error}</p>}
     </section>
   );
@@ -72,18 +79,19 @@ export function WaitlistCard({ e }: { e: EventView }) {
 export function GameWaiting({ e, slot }: { e: EventView; slot: Slot }) {
   const { error, pending, run } = useAction();
   const [offering, setOffering] = useState(false);
+  const [all, setAll] = useState(false);
   const here = new Set(e.attendees.filter((a) => a.slotId === slot.id).map((a) => a.personId));
   const waiting = e.waitlist.filter((w) => w.waiting).sort((a, b) => Number(b.slotIds.includes(slot.id)) - Number(a.slotIds.includes(slot.id)));
   if (!e.waitlist.length) return null;
   return (
-    <div className="mt-3 border-t border-misty pt-2">
+    <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-bold">Still waiting ({waiting.length})</h3>
+        <h3 className="font-bold">Still waiting <span className="text-sm font-normal muted">{waiting.length}</span></h3>
         {waiting.length > 0 && !offering && <button type="button" className="btn text-xs" onClick={() => setOffering(true)}>Text them about this game</button>}
       </div>
       {offering && <OfferForm e={e} slot={slot} waiting={waiting} onDone={() => setOffering(false)} />}
       <ul className="divide-y divide-misty/60">
-        {waiting.map((w) => (
+        {(all ? waiting : waiting.slice(0, 8)).map((w) => (
           <li key={w.id} className="flex flex-wrap items-center justify-between gap-2 py-1 text-sm">
             <span>{w.slotIds.includes(slot.id) && <span title="Asked for this game" aria-label="Asked for this game">★ </span>}{w.name}
               {w.offered.includes(slot.id) && <span className="ml-1 text-xs text-[#9a6400]">offered</span>}
@@ -96,6 +104,7 @@ export function GameWaiting({ e, slot }: { e: EventView; slot: Slot }) {
           </li>
         ))}
       </ul>
+      {waiting.length > 8 && <button type="button" className="mt-1 text-sm font-semibold text-accent hover:underline" onClick={() => setAll(!all)}>{all ? "Show fewer" : `Show all ${waiting.length}`}</button>}
       {error && <p role="alert" className="text-sm text-bad">{error}</p>}
     </div>
   );
@@ -149,7 +158,7 @@ function OfferForm({ e, slot, waiting, onDone }: { e: EventView; slot: Slot; wai
 type Row = { line: number; name: string; wait: string; slotId: string | null; game: string; candidates: { id: string; name: string; detail: string }[]; phone: string; email: string; seats: string; problem: string | null; pick: string };
 
 /** Import who's going from the season spreadsheet: read it, check each name's contact, then save. */
-export function ImportGoing({ e }: { e: EventView }) {
+export function ImportGoing({ e, open = false }: { e: EventView; open?: boolean }) {
   const router = useRouter();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [skipped, setSkipped] = useState(0);
@@ -175,8 +184,8 @@ export function ImportGoing({ e }: { e: EventView }) {
   });
   const undecided = rows?.filter((r) => r.pick === "").length ?? 0;
   return (
-    <details className="mt-2 rounded-lg border border-misty px-3 py-2 text-sm">
-      <summary className="cursor-pointer font-semibold">Import who&apos;s going (season spreadsheet)</summary>
+    <details open={open} className="mt-2 rounded-lg border border-misty px-3 py-2 text-sm">
+      <summary className="cursor-pointer font-semibold">Who&apos;s going (season spreadsheet)</summary>
       <p className="mt-1 text-xs muted">A CSV with a <b>Date</b> column and the people (Name, Guest, Client, Who or Assigned; several names in a cell on separate lines or split by &quot;;&quot;). Optional: Opponent, Phone, Email, Seats. Columns named &quot;Interested&quot; or &quot;Waitlist&quot; go onto the waitlist. You check every name before anything is saved.</p>
       <input type="file" accept=".csv,text/csv" className="mt-1 block text-sm" disabled={pending} onChange={(x) => { read(x.target.files?.[0]); x.target.value = ""; }} />
       {rows && (

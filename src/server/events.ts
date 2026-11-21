@@ -80,14 +80,19 @@ export async function createEvent(userId: string, o: { templateId: string | null
 export async function loadEvents() {
   const today = dateFromIso(isoFromDate(new Date()));
   const rows = await db.event.findMany({ where: { deletedAt: null }, orderBy: { createdAt: "desc" }, include: {
-    slots: { orderBy: [{ date: "asc" }, { time: "asc" }], select: { date: true } },
-    _count: { select: { attendees: true } },
+    slots: { orderBy: [{ date: "asc" }, { time: "asc" }], select: { id: true, date: true, time: true, title: true } },
+    attendees: { select: { slotId: true, personId: true, status: true } },
+    interests: { where: { person: { deletedAt: null } }, select: { personId: true } },
   } });
   return rows.map((e) => {
     const next = e.slots.find((s) => s.date >= today) ?? null;
     const last = e.slots[e.slots.length - 1] ?? null;
-    return { id: e.id, name: e.name, type: e.type, multiSlot: e.multiSlot, slots: e.slots.length, attendees: e._count.attendees, signupOn: e.signupOn,
-      first: e.slots[0] ? isoFromDate(e.slots[0].date) : null, next: next ? isoFromDate(next.date) : null, last: last ? isoFromDate(last.date) : null };
+    const going = (id: string) => e.attendees.filter((a) => a.slotId === id && ASSIGNED.includes(a.status)).length;
+    const upcoming = e.slots.filter((s) => s.date >= today);
+    return { id: e.id, name: e.name, type: e.type, multiSlot: e.multiSlot, slots: e.slots.length, attendees: new Set(e.attendees.map((a) => a.personId)).size, signupOn: e.signupOn,
+      first: e.slots[0] ? isoFromDate(e.slots[0].date) : null, next: next ? isoFromDate(next.date) : null, last: last ? isoFromDate(last.date) : null,
+      nextTitle: next?.title ?? "", nextTime: next?.time ?? null, nextGoing: next ? going(next.id) : 0,
+      upcoming: upcoming.length, needPeople: upcoming.filter((s) => !going(s.id)).length, waiting: stillWaiting(e.interests, e.attendees).length };
   }).sort((a, b) => (a.next ? 0 : 1) - (b.next ? 0 : 1) || (a.next ?? b.last ?? "").localeCompare(b.next ?? a.last ?? ""));
 }
 

@@ -403,6 +403,14 @@ scrolls with it until its last card is on screen, then stays put while the middl
 
 ### 6.7 Events *(owner request 2026-11-21; replaces the Google Sheets and Forms used for client events)*
 
+- **Layout** *(owner request 2026-11-22: friendlier)*: the Events list shows a card per event (date block, next game,
+  "N need people", "N waiting"). An event opens to a summary strip (next game, games that need people, waiting, signup
+  page) and tabs: **Games** (or **People** for a one-date event), **Waitlist**, **Reminder texts**, **Signup page**,
+  **Import**. Games are filtered Upcoming / Need people / Past / All; each shows its date, time, seats and the names
+  going as colored chips (a "Needs people" flag when nobody's confirmed); clicking one opens Going (status, answers,
+  + Add people) beside Still waiting (8 shown, "Show all"), with Edit game / Remove game. Remove event is inside
+  Edit details.
+
 - **Who:** the **Events** permission (Admin → Users & permissions); Luke and Alyssa both have it (given to every role
   once). The top bar's **Events** tab comes right after Pipeline (Admin → Top bar can move it).
 - **Event templates** (Events → Event templates): name, kind, location, what "done" is called ("Tickets sent", "Order

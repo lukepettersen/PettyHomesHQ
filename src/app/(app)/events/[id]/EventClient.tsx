@@ -29,7 +29,18 @@ export function useAction() {
 }
 
 /** The top of an event: its name and details (Edit), and Remove. */
-export function EventHeader({ e }: { e: EventView }) {
+/** One number in the header's summary strip. */
+function Stat({ label, value, sub, tone = "" }: { label: string; value: string; sub?: string; tone?: string }) {
+  return (
+    <div className="min-w-0 rounded-lg border border-misty bg-paper px-2.5 py-1.5 sm:px-3 sm:py-2">
+      <div className="text-[11px] font-semibold uppercase tracking-wide muted">{label}</div>
+      <div className={`truncate text-base font-extrabold sm:text-lg ${tone}`}>{value}</div>
+      {sub && <div className="truncate text-xs muted">{sub}</div>}
+    </div>
+  );
+}
+
+export function EventHeader({ e, today }: { e: EventView; today: string }) {
   const router = useRouter();
   const { error, pending, run } = useAction();
   const [editing, setEditing] = useState(false);
@@ -43,15 +54,12 @@ export function EventHeader({ e }: { e: EventView }) {
       <div className="mt-1 flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h1 id="ev-h" className="text-2xl font-extrabold">{e.name}</h1>
-          <p className="text-sm muted">{[e.type, e.location, e.multiSlot ? `${e.slots.length} dates` : e.slots[0] ? `${longEventDate(e.slots[0].date)}${e.slots[0].time ? ` · ${formatTime(e.slots[0].time)}` : ""}` : "No date yet"].filter(Boolean).join(" · ")}</p>
+          <p className="text-sm muted">{[e.type, e.location, e.multiSlot ? `${e.slots.length} games` : e.slots[0] ? `${longEventDate(e.slots[0].date)}${e.slots[0].time ? ` · ${formatTime(e.slots[0].time)}` : ""}` : "No date yet"].filter(Boolean).join(" · ")}</p>
           {e.notes && <p className="mt-1 whitespace-pre-wrap text-sm">{e.notes}</p>}
-          {e.fields.length > 0 && <p className="mt-1 text-xs muted">Questions: {e.fields.map((f) => f.label).join(" · ")}</p>}
         </div>
-        <span className="flex gap-2">
-          <button type="button" className="btn text-sm" onClick={() => setEditing(!editing)}>{editing ? "Close" : "Edit details"}</button>
-          <button type="button" className="btn text-sm text-bad" onBlur={() => setSure(false)} onClick={() => (sure ? remove() : setSure(true))}>{sure ? "Click again to remove" : "Remove event"}</button>
-        </span>
+        <button type="button" className="btn text-sm" onClick={() => setEditing(!editing)}>{editing ? "Close" : "Edit details"}</button>
       </div>
+      <Summary e={e} today={today} />
       {editing && (
         <div className="mt-3 border-t border-misty pt-3">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -71,9 +79,12 @@ export function EventHeader({ e }: { e: EventView }) {
           </div>
           <h3 className="mt-3 font-semibold">Signup questions</h3>
           <div className="mt-1"><FieldsEditor fields={d.fields} onChange={(fields) => setD({ ...d, fields })} /></div>
-          <div className="mt-3 flex justify-end gap-2">
-            <button type="button" className="btn" onClick={() => setEditing(false)}>Cancel</button>
-            <button type="button" className="btn btn-primary" disabled={pending} onClick={save}>{pending ? "Saving…" : "Save"}</button>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-misty pt-3">
+            <button type="button" className="btn text-sm text-bad" onBlur={() => setSure(false)} onClick={() => (sure ? remove() : setSure(true))}>{sure ? "Click again to remove the event" : "Remove event"}</button>
+            <span className="flex gap-2">
+              <button type="button" className="btn" onClick={() => setEditing(false)}>Cancel</button>
+              <button type="button" className="btn btn-primary" disabled={pending} onClick={save}>{pending ? "Saving…" : "Save"}</button>
+            </span>
           </div>
         </div>
       )}
@@ -82,8 +93,34 @@ export function EventHeader({ e }: { e: EventView }) {
   );
 }
 
+/** At a glance: the next date, games that still need people, who's waiting, the signup page. */
+function Summary({ e, today }: { e: EventView; today: string }) {
+  const going = (id: string) => e.attendees.filter((a) => a.slotId === id && (a.status === "confirmed" || a.status === "sent")).length;
+  const upcoming = e.slots.filter((s) => s.date >= today);
+  const next = upcoming[0];
+  const open = upcoming.filter((s) => !going(s.id)).length;
+  const waiting = e.waitlist.filter((w) => w.waiting).length;
+  const nextName = next ? shortDay(next.date) : "None";
+  const nextWho = next && e.multiSlot ? `${(next.title || e.name).replace(/^Wolves /, "")} · ` : "";
+  return (
+    <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2">
+      <Stat label={e.multiSlot ? "Next game" : "Date"} value={nextName} sub={next ? `${nextWho}${next.time ? formatTime(next.time) : "Time TBD"} · ${going(next.id)} going` : e.slots.length ? "All past" : "No date yet"} />
+      {e.multiSlot
+        ? <Stat label="Need people" value={`${open} of ${upcoming.length}`} sub="upcoming games" tone={open ? "text-[#9a6400]" : "text-accent"} />
+        : <Stat label="Coming" value={String(next ? going(next.id) : e.attendees.filter((a) => a.status === "confirmed" || a.status === "sent").length)} sub={`${e.attendees.length} on the list`} />}
+      {e.multiSlot
+        ? <Stat label={e.waitlistLabel ? "Waiting" : "Waitlist"} value={String(waiting)} sub={e.waitlistLabel || "people"} />
+        : <Stat label="Reminders" value={String(e.reminders.filter((r) => r.active).length)} sub={(() => { const n = e.reminders.reduce((t, r) => t + r.pending, 0); return `${n} ${n === 1 ? "text" : "texts"} scheduled`; })()} />}
+      <Stat label="Signup page" value={e.signupOn ? "On" : "Off"} tone={e.signupOn ? "text-accent" : ""} sub={e.signupKey ? "link ready" : "no link yet"} />
+    </div>
+  );
+}
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], MONS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** "Mon Nov 23" */
+export const shortDay = (iso: string) => { const [y, m, d] = iso.split("-").map(Number); return `${DAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]} ${MONS[m - 1]} ${d}`; };
+
 const emptySlot = { date: "", time: "", title: "", opponent: "", location: "", details: "" };
-function SlotForm({ e, slot, onDone }: { e: EventView; slot: Slot | null; onDone: () => void }) {
+export function SlotForm({ e, slot, onDone }: { e: EventView; slot: Slot | null; onDone: () => void }) {
   const { error, pending, run } = useAction();
   const [s, setS] = useState(slot ? { date: slot.date, time: slot.time ?? "", title: slot.title, opponent: slot.opponent, location: slot.location, details: slot.details } : emptySlot);
   const save = () => run(() => saveEventSlot(e.id, slot?.id ?? null, { ...s, time: s.time || null }), onDone);
@@ -107,7 +144,7 @@ function SlotForm({ e, slot, onDone }: { e: EventView; slot: Slot | null; onDone
 }
 
 /** Import the Timberwolves' home games (NBA schedule) or any dates from a spreadsheet. */
-function ImportDates({ e }: { e: EventView }) {
+export function ImportDates({ e, open = false }: { e: EventView; open?: boolean }) {
   const { error, pending, run } = useAction();
   const [season, setSeason] = useState("2026-27");
   const [msg, setMsg] = useState("");
@@ -115,8 +152,8 @@ function ImportDates({ e }: { e: EventView }) {
   const nba = () => run(async () => { const r = await importWolvesSchedule(e.id, season); if (r.ok) setMsg(`Imported: ${r.data!.added} games added, ${r.data!.updated} updated.`); return r; });
   const csv = (f: File | undefined) => { if (!f) return; void f.text().then((text) => run(async () => { const r = await importSlotCsv(e.id, text, wolves ? "Wolves" : ""); if (r.ok) setMsg(`Imported: ${r.data!.added} added, ${r.data!.updated} updated${r.data!.skipped ? `, ${r.data!.skipped} rows skipped (no date)` : ""}.`); return r; })); };
   return (
-    <details className="mt-2 rounded-lg border border-misty px-3 py-2 text-sm">
-      <summary className="cursor-pointer font-semibold">Import dates</summary>
+    <details open={open} className="mt-2 rounded-lg border border-misty px-3 py-2 text-sm">
+      <summary className="cursor-pointer font-semibold">{wolves ? "Games (schedule)" : "Import dates"}</summary>
       <div className="mt-2 flex flex-wrap items-end gap-2">
         <label className="label">Season<input className="input mt-1 w-28" value={season} onChange={(x) => setSeason(x.target.value)} /></label>
         <button type="button" className="btn" disabled={pending} onClick={nba}>{pending ? "Importing…" : "Import Timberwolves home games (NBA schedule)"}</button>
@@ -158,7 +195,7 @@ export function PeoplePicker({ picked, onChange }: { picked: Hit[]; onChange: (h
   );
 }
 
-function AddPeople({ e, slotIds, onDone }: { e: EventView; slotIds: string[]; onDone: () => void }) {
+export function AddPeople({ e, slotIds, onDone }: { e: EventView; slotIds: string[]; onDone: () => void }) {
   const { error, pending, run } = useAction();
   const [people, setPeople] = useState<Hit[]>([]);
   const [status, setStatus] = useState("invited");
@@ -187,7 +224,7 @@ function AddPeople({ e, slotIds, onDone }: { e: EventView; slotIds: string[]; on
   );
 }
 
-function AttendeeRow({ e, a }: { e: EventView; a: Attendee }) {
+export function AttendeeRow({ e, a }: { e: EventView; a: Attendee }) {
   const { error, pending, run } = useAction();
   const [edit, setEdit] = useState(false);
   const [answers, setAnswers] = useState(a.answers);
@@ -233,7 +270,7 @@ function AttendeeRow({ e, a }: { e: EventView; a: Attendee }) {
   );
 }
 
-function Attendees({ e, slot }: { e: EventView; slot: Slot }) {
+export function Attendees({ e, slot }: { e: EventView; slot: Slot }) {
   const [adding, setAdding] = useState(false);
   const rows = e.attendees.filter((a) => a.slotId === slot.id);
   const count = (k: string) => rows.filter((a) => a.status === k).length;
