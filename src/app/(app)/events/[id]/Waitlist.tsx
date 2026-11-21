@@ -144,6 +144,23 @@ export function GameWaiting({ e, slot }: { e: EventView; slot: Slot }) {
   );
 }
 
+/** Exactly which numbers each text goes to (owner 2026-11-22: "how do I know both numbers get texted?"). */
+function GoesTo({ e, ids, waiting, extra }: { e: EventView; ids: string[]; waiting: Want[]; extra: Hit[] }) {
+  const rows = ids.map((id) => { const w = waiting.find((x) => x.personId === id); return w ? { id, name: w.name, phones: w.phones } : { id, name: extra.find((x) => x.id === id)?.name ?? "", phones: [] as string[] }; });
+  return (
+    <div className="mt-2 rounded-lg border border-misty bg-white p-2 text-xs">
+      <p className="font-semibold">Goes to</p>
+      <ul className="mt-1 space-y-0.5">
+        {rows.map((r) => (
+          <li key={r.id}><b>{r.name}</b>: {r.phones.length ? r.phones.join(" and ") : "their textable numbers"}
+            {r.phones.length > 1 && <span className="muted"> {e.groupsOn ? "(one group text with both)" : "(each gets their own text)"}</span>}</li>
+        ))}
+      </ul>
+      <p className="mt-1 muted">Office, fax and landline numbers are never texted.</p>
+    </div>
+  );
+}
+
 const DEFAULT_OFFER = "Hi {first_name}! Luke has Timberwolves tickets he'd love to share. Would you be interested in any of these games?\n\n{games}\n\nThey're free; we'd just need a good email to transfer them to you. - Luke 612-702-0295";
 
 /**
@@ -187,7 +204,8 @@ export function OfferForm({ e, slots, waiting, onDone, people }: { e: EventView;
           <button type="button" className="ml-2 text-xs font-semibold text-accent hover:underline" onClick={() => setPicked([])}>None</button></legend>
         {textable.length > 0 ? (
           <div className="mt-1 grid max-h-48 gap-1 overflow-auto sm:grid-cols-2">
-            {textable.map((w) => <label key={w.id} className="flex items-center gap-1.5"><input type="checkbox" checked={picked.includes(w.personId)} onChange={(x) => { setPicked(x.target.checked ? [...picked, w.personId] : picked.filter((p) => p !== w.personId)); setSure(false); }} />{wanted(w) ? "★ " : ""}{w.name}{w.note ? <span className="text-xs muted"> · {w.note.replace(/ Clients? Interested$/i, "")}</span> : null}</label>)}
+            {textable.map((w) => <label key={w.id} className="flex items-center gap-1.5" title={w.phones.join(", ")}><input type="checkbox" checked={picked.includes(w.personId)} onChange={(x) => { setPicked(x.target.checked ? [...picked, w.personId] : picked.filter((p) => p !== w.personId)); setSure(false); }} />{wanted(w) ? "★ " : ""}{w.name}{w.note ? <span className="text-xs muted"> · {w.note.replace(/ Clients? Interested$/i, "")}</span> : null}
+              <span className={`text-xs ${w.phones.length > 1 ? "font-semibold text-accent" : "muted"}`}> · {w.phones.length > 1 ? `${w.phones.length} numbers` : "1 number"}</span></label>)}
           </div>
         ) : <p className="mt-1 text-xs muted">Nobody on the waitlist has a textable number. Add people below.</p>}
         {waiting.length > textable.length && <p className="text-xs muted">{waiting.length - textable.length} on the waitlist without a textable number aren&apos;t listed.</p>}
@@ -208,6 +226,7 @@ export function OfferForm({ e, slots, waiting, onDone, people }: { e: EventView;
         <label className="flex items-center gap-2 pb-2"><input type="checkbox" checked={invite} onChange={(x) => setInvite(x.target.checked)} />Mark them Invited for {slots.length === 1 ? "this game" : "these games"}</label>
       </div>
       {preview && <div className="mt-2 rounded-lg border border-misty bg-white p-2"><p className="text-xs muted">As {preview.who} would get it:</p><p className="whitespace-pre-wrap">{preview.text}</p></div>}
+      {everyone.length > 0 && <GoesTo e={e} ids={everyone} waiting={waiting} extra={extra} />}
       {error && <p role="alert" className="mt-2 text-bad">{error}</p>}
       {msg && <p role="status" className="mt-2 text-accent">{msg}</p>}
       <div className="mt-2 flex flex-wrap justify-end gap-2">

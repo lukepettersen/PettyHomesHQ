@@ -5,6 +5,7 @@ import { db } from "@/server/db";
 import { logActivity } from "@/server/activity";
 import { UserError } from "@/server/safe";
 import { hasTextStop } from "@/server/texting";
+import { groupReady } from "@/server/groupText";
 import { fill, mergeValues } from "@/lib/merge";
 import { canText } from "@/lib/texting";
 import { formatPhone, isoFromDate, dateFromIso, normalizePhone } from "@/lib/normalize";
@@ -117,7 +118,9 @@ export async function loadEvent(id: string, me?: { id: string; isOwner: boolean 
   return {
     id: e.id, name: e.name, type: e.type, multiSlot: e.multiSlot, doneLabel: e.doneLabel, fields: fieldsOf(e.fields), location: e.location, notes: e.notes, intro: e.intro,
     waitlistLabel: e.waitlistLabel, offerText: e.offerText,
-    waitlist: live.map((i) => ({ id: i.id, personId: i.person.id, name: i.person.name, phone: i.person.phones.find((p) => canText(p.label))?.number ?? null, slotIds: i.slotIds, note: i.note,
+    waitlist: live.map((i) => ({ id: i.id, personId: i.person.id, name: i.person.name, phone: i.person.phones.find((p) => canText(p.label))?.number ?? null,
+      // Every number a text goes to (office / fax lines left out), shown before sending (owner 2026-11-22).
+      phones: [...new Map(i.person.phones.filter((p) => canText(p.label)).map((p) => [normalizePhone(p.number), formatPhone(p.number)])).values()].filter((n) => normalizePhone(n).length === 10), slotIds: i.slotIds, note: i.note,
       source: i.source, since: isoFromDate(i.createdAt), waiting: waiting.has(i.id),
       offered: e.attendees.filter((a) => a.personId === i.personId && a.status === "invited").map((a) => a.slotId),
       games: e.attendees.filter((a) => a.personId === i.personId && ASSIGNED.includes(a.status)).map((a) => a.slotId) })),
@@ -128,7 +131,7 @@ export async function loadEvent(id: string, me?: { id: string; isOwner: boolean 
       answers: answersOf(a.answers), phone: a.person.phones.find((p) => canText(p.label))?.number ?? null })),
     reminders: e.reminders.map((r) => ({ id: r.id, name: r.name, body: r.body, daysBefore: r.daysBefore, time: r.time, statuses: r.statuses, active: r.active, ...counts(r.id) })),
     senders: team.map((u) => ({ id: u.id, name: u.name, number: formatPhone(u.textNumber!) })),
-    me: me?.id ?? null, meIsOwner: !!me?.isOwner,
+    me: me?.id ?? null, meIsOwner: !!me?.isOwner, groupsOn: await groupReady(),
   };
 }
 export type EventView = NonNullable<Awaited<ReturnType<typeof loadEvent>>>;
