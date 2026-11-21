@@ -23,6 +23,12 @@ export function WaitlistCard({ e }: { e: EventView }) {
   const [show, setShow] = useState<"waiting" | "placed">("waiting");
   const [q, setQ] = useState("");
   const [sure, setSure] = useState("");
+  // Tick people, pick games, text them (owner request 2026-11-22: "text people from here").
+  const [chosen, setChosen] = useState<string[]>([]);
+  const [games, setGames] = useState<string[]>([]);
+  const [writing, setWriting] = useState(false);
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+  const upcoming = e.slots.filter((s) => s.date >= today);
   const waiting = e.waitlist.filter((w) => w.waiting), placed = e.waitlist.filter((w) => !w.waiting);
   const list = (show === "waiting" ? waiting : placed).filter((w) => !q.trim() || `${w.name} ${w.note}`.toLowerCase().includes(q.trim().toLowerCase()));
   const label = e.waitlistLabel || "Waitlist";
@@ -48,9 +54,37 @@ export function WaitlistCard({ e }: { e: EventView }) {
         ))}
         <input className="input ml-auto w-full py-1 text-sm sm:w-56" aria-label="Find on the list" placeholder="Find a name" value={q} onChange={(x) => setQ(x.target.value)} />
       </div>
+      {show === "waiting" && waiting.length > 0 && (
+        <div className={`mt-3 rounded-lg border p-3 text-sm ${chosen.length ? "border-accent/50 bg-accent-soft/40" : "border-misty bg-paper"}`}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span>{chosen.length ? <b>{chosen.length} {chosen.length === 1 ? "person" : "people"} picked</b> : "Tick people below to text them about games."}</span>
+            <span className="flex flex-wrap gap-2">
+              <button type="button" className="btn px-2 py-1 text-xs" onClick={() => setChosen(waiting.filter((w) => w.phone).map((w) => w.personId))}>Pick everyone with a cell ({waiting.filter((w) => w.phone).length})</button>
+              {chosen.length > 0 && <button type="button" className="btn px-2 py-1 text-xs" onClick={() => { setChosen([]); setWriting(false); }}>Clear</button>}
+            </span>
+          </div>
+          {chosen.length > 0 && !writing && (
+            <div className="mt-2">
+              <p className="font-semibold">Which games are you offering?</p>
+              <div className="mt-1 grid max-h-56 gap-1 overflow-auto sm:grid-cols-2">
+                {upcoming.map((s) => <label key={s.id} className="flex items-center gap-1.5"><input type="checkbox" checked={games.includes(s.id)} onChange={(x) => setGames(x.target.checked ? [...games, s.id] : games.filter((g) => g !== s.id))} />{gameLine(s, e.name)}</label>)}
+              </div>
+              {!upcoming.length && <p className="text-xs muted">No games ahead. Add them on the Games tab.</p>}
+              <div className="mt-2 flex justify-end"><button type="button" className="btn btn-primary text-sm" disabled={!games.length} onClick={() => setWriting(true)}>Next: write the text</button></div>
+            </div>
+          )}
+          {chosen.length > 0 && writing && (
+            <OfferForm key={`${chosen.join()}|${games.join()}`} e={e} slots={upcoming.filter((s) => games.includes(s.id))} waiting={waiting} people={chosen} onDone={() => setWriting(false)} />
+          )}
+        </div>
+      )}
       <ul className="mt-2 divide-y divide-misty/60">
         {list.map((w) => (
           <li key={w.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">
+            {show === "waiting" && (
+              <input type="checkbox" className="h-5 w-5" aria-label={`Pick ${w.name}`} disabled={!w.phone} title={w.phone ? "Pick to text" : "No textable number"}
+                checked={chosen.includes(w.personId)} onChange={(x) => { setChosen(x.target.checked ? [...chosen, w.personId] : chosen.filter((c) => c !== w.personId)); setWriting(false); }} />
+            )}
             <span className="min-w-[12rem] flex-1">
               <Link href={`/people/${w.personId}?from=events`} className="font-semibold hover:underline">{w.name}</Link>
               {w.note && <span className="ml-2 rounded-full bg-sunken px-2 py-0.5 text-xs">{w.note.replace(/ Clients? Interested$/i, " client")}</span>}
@@ -117,12 +151,12 @@ const DEFAULT_OFFER = "Hi {first_name}! Luke has Timberwolves tickets he'd love 
  * "Wed, Jan 27 - Denver Nuggets - 8:30 PM"). People who asked for one of the games are ticked to start; anyone else can
  * be added. Goes from the sender's own HQ number.
  */
-export function OfferForm({ e, slots, waiting, onDone }: { e: EventView; slots: Slot[]; waiting: Want[]; onDone: () => void }) {
+export function OfferForm({ e, slots, waiting, onDone, people }: { e: EventView; slots: Slot[]; waiting: Want[]; onDone: () => void; people?: string[] }) {
   const router = useRouter();
   const ids = slots.map((s) => s.id);
   const textable = waiting.filter((w) => w.phone);
   const wanted = (w: Want) => w.slotIds.some((id) => ids.includes(id));
-  const [picked, setPicked] = useState<string[]>(textable.filter(wanted).map((w) => w.personId));
+  const [picked, setPicked] = useState<string[]>(people ?? textable.filter(wanted).map((w) => w.personId));
   const [extra, setExtra] = useState<Hit[]>([]);
   const [body, setBody] = useState(e.offerText || DEFAULT_OFFER);
   const mine = e.senders.find((x) => x.id === e.me);

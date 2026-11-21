@@ -451,6 +451,8 @@ scrolls with it until its last card is on screen, then stays put while the middl
   edit the text, Preview, two-step Send. `{games}` lists the games one per line ("Wed, Jan 27 - Denver Nuggets - 8:30
   PM"); a warning offers to add it when the text has no list. Texts go from the sender's own HQ number (Alyssa's from
   hers; the owner can pick another). Optionally marks them Invited for every game offered.
+  The **Waitlist tab** does the same from the other side: tick people (or "Pick everyone with a cell"), pick the games
+  being offered, then write and send.
 - **Reminder texts** (on the event page): text with merge fields from the contact (`{first_name}`… as in templates) and
   the event (`{event_name}`, `{event_date}` "Thursday, January 14", `{event_short_date}` "1/14/27", `{event_time}`,
   `{opponent}`, `{location}`, `{seat_info}`, `{slot_title}`) plus the signup answers (`{pie_flavor}`); timing **N days
