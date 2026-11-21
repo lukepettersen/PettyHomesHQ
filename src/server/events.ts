@@ -121,7 +121,7 @@ export async function loadEvent(id: string, me?: { id: string; isOwner: boolean 
     waitlist: live.map((i) => ({ id: i.id, personId: i.person.id, name: i.person.name, phone: i.person.phones.find((p) => canText(p.label))?.number ?? null,
       // Every number a text goes to (office / fax lines left out), shown before sending (owner 2026-11-22).
       phones: [...new Map(i.person.phones.filter((p) => canText(p.label)).map((p) => [normalizePhone(p.number), formatPhone(p.number)])).values()].filter((n) => normalizePhone(n).length === 10), slotIds: i.slotIds, note: i.note,
-      source: i.source, since: isoFromDate(i.createdAt), waiting: waiting.has(i.id),
+      source: i.source, since: isoFromDate(i.createdAt), waiting: waiting.has(i.id), tier: i.tier,
       offered: e.attendees.filter((a) => a.personId === i.personId && a.status === "invited").map((a) => a.slotId),
       games: e.attendees.filter((a) => a.personId === i.personId && ASSIGNED.includes(a.status)).map((a) => a.slotId) })),
     senderId: e.senderId, signupKey: e.signupKey, signupOn: e.signupOn, signupOpensAt: e.signupOpensAt?.toISOString() ?? null, signupClosesAt: e.signupClosesAt?.toISOString() ?? null,
@@ -466,6 +466,12 @@ export async function addInterest(userId: string, eventId: string, personIds: st
   await syncWaitlistTag(eventId);
 }
 
+/** A person's A/B/C tier on this event's waitlist (owner 2026-11-22: how tickets get doled out; this event only). */
+export async function setInterestTier(userId: string, id: string, tier: string) {
+  const i = await db.eventInterest.update({ where: { id }, data: { tier }, include: { person: { select: { name: true } }, event: { select: { name: true } } } });
+  await logActivity(userId, "update", "event", i.eventId, `${i.person.name} on the "${i.event.name}" waitlist: ${tier ? `${tier} client` : "no tier"}`);
+}
+
 export async function removeInterest(userId: string, id: string) {
   const i = await db.eventInterest.findUnique({ where: { id }, include: { event: true, person: { select: { name: true } } } });
   if (!i) return;
@@ -622,7 +628,9 @@ export async function applyAssignments(userId: string, eventId: string, items: {
     if (!slot) {
       // Interested column: onto the waitlist, its heading ("B Clients Interested") kept as the note.
       const had = await db.eventInterest.findUnique({ where: { eventId_personId: { eventId, personId } } });
-      if (!had) { await db.eventInterest.create({ data: { eventId, personId, note: it.wait.slice(0, 200), source: "import" } }); waiting++; }
+      // "B Clients Interested" → tier B.
+      const tier = it.wait.trim().match(/^([A-Za-z])\b/)?.[1]?.toUpperCase() ?? "";
+      if (!had) { await db.eventInterest.create({ data: { eventId, personId, tier: ["A", "B", "C"].includes(tier) ? tier : "", note: ["A", "B", "C"].includes(tier) ? "" : it.wait.slice(0, 200), source: "import" } }); waiting++; }
       revalidatePath(`/people/${personId}`);
       continue;
     }

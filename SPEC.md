@@ -451,8 +451,13 @@ scrolls with it until its last card is on screen, then stays put while the middl
   edit the text, Preview, two-step Send. `{games}` lists the games one per line ("Wed, Jan 27 - Denver Nuggets - 8:30
   PM"); a warning offers to add it when the text has no list. Texts go from the sender's own HQ number (Alyssa's from
   hers; the owner can pick another). Optionally marks them Invited for every game offered.
-  The **Waitlist tab** does the same from the other side: tick people (or "Pick everyone with a cell"), pick the games
-  being offered, then write and send.
+  The **Waitlist tab** does the same from the other side: tick people (or "+ All A/B/C", "Everyone with a cell"), pick
+  the games being offered (only **open** games: ahead, with nobody Confirmed or Tickets sent), then write and send.
+- **Tiers** *(owner request 2026-11-22)*: each person on a waitlist has an **A / B / C** tier (or none), set from a
+  dropdown on their row; it belongs to that event only (how the owner doles out tickets). The Waitlist tab is stacked A,
+  B, C, then no tier. The season sheet's "B Clients Interested" / "C Clients Interested" columns set the tier (a one-time
+  update moved earlier imports' notes into tiers). The Games tab opens on **Open** (upcoming games nobody has yet; only
+  those have a tick box), then All upcoming, Past, All.
 - **Reminder texts** (on the event page): text with merge fields from the contact (`{first_name}`… as in templates) and
   the event (`{event_name}`, `{event_date}` "Thursday, January 14", `{event_short_date}` "1/14/27", `{event_time}`,
   `{opponent}`, `{location}`, `{seat_info}`, `{slot_title}`) plus the signup answers (`{pie_flavor}`); timing **N days

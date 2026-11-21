@@ -7,12 +7,18 @@ import type { EventView } from "@/server/events";
 import { gameLine, OFFER_MERGE_FIELDS, shortEventDate, statusLabel, STATUS_KEYS } from "@/lib/events";
 import { normalizePhone } from "@/lib/normalize";
 import { PeoplePicker, useAction, type Hit } from "./EventClient";
-import { addEventAttendees, addToWaitlist, previewGameOffer, readAssignments, removeFromWaitlist, saveAssignments, sendGameOffer } from "../actions";
+import { addEventAttendees, addToWaitlist, setWaitlistTier, previewGameOffer, readAssignments, removeFromWaitlist, saveAssignments, sendGameOffer } from "../actions";
 
 type Slot = EventView["slots"][number];
 type Want = EventView["waitlist"][number];
 const gameName = (e: EventView, id: string) => { const s = e.slots.find((x) => x.id === id); return s ? `${(s.title || e.name).replace(/^Wolves vs /, "")} ${shortEventDate(s.date)}` : ""; };
 const textHref = (phone: string) => `/messages?n=${normalizePhone(phone)}`;
+
+const TIERS = ["A", "B", "C"] as const;
+/** The list stacked by tier: A, B, C, then no tier. */
+function groups(list: Want[]): [string, Want[]][] {
+  return [...TIERS, ""].map((t) => [t, list.filter((w) => ((TIERS as readonly string[]).includes(w.tier) ? w.tier : "") === t)] as [string, Want[]]).filter(([, r]) => r.length);
+}
 
 /** The waitlist tab ("Wants Wolves Tickets", owner request 2026-11-21; friendlier layout 2026-11-22): who wants
  *  tickets, still waiting first, with search. */
@@ -28,7 +34,8 @@ export function WaitlistCard({ e }: { e: EventView }) {
   const [games, setGames] = useState<string[]>([]);
   const [writing, setWriting] = useState(false);
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
-  const upcoming = e.slots.filter((s) => s.date >= today);
+  // Only games still available: ahead, and nobody Confirmed or Tickets sent on them yet (owner 2026-11-22).
+  const upcoming = e.slots.filter((s) => s.date >= today && !e.attendees.some((a) => a.slotId === s.id && (a.status === "confirmed" || a.status === "sent")));
   const waiting = e.waitlist.filter((w) => w.waiting), placed = e.waitlist.filter((w) => !w.waiting);
   const list = (show === "waiting" ? waiting : placed).filter((w) => !q.trim() || `${w.name} ${w.note}`.toLowerCase().includes(q.trim().toLowerCase()));
   const label = e.waitlistLabel || "Waitlist";
@@ -59,17 +66,20 @@ export function WaitlistCard({ e }: { e: EventView }) {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span>{chosen.length ? <b>{chosen.length} {chosen.length === 1 ? "person" : "people"} picked</b> : "Tick people below to text them about games."}</span>
             <span className="flex flex-wrap gap-2">
-              <button type="button" className="btn px-2 py-1 text-xs" onClick={() => setChosen(waiting.filter((w) => w.phone).map((w) => w.personId))}>Pick everyone with a cell ({waiting.filter((w) => w.phone).length})</button>
+              {TIERS.filter((t) => waiting.some((w) => w.tier === t && w.phone)).map((t) => (
+                <button key={t} type="button" className="btn px-2 py-1 text-xs" onClick={() => { setChosen([...new Set([...chosen, ...waiting.filter((w) => w.tier === t && w.phone).map((w) => w.personId)])]); setWriting(false); }}>+ All {t} ({waiting.filter((w) => w.tier === t && w.phone).length})</button>
+              ))}
+              <button type="button" className="btn px-2 py-1 text-xs" onClick={() => setChosen(waiting.filter((w) => w.phone).map((w) => w.personId))}>Everyone with a cell ({waiting.filter((w) => w.phone).length})</button>
               {chosen.length > 0 && <button type="button" className="btn px-2 py-1 text-xs" onClick={() => { setChosen([]); setWriting(false); }}>Clear</button>}
             </span>
           </div>
           {chosen.length > 0 && !writing && (
             <div className="mt-2">
-              <p className="font-semibold">Which games are you offering?</p>
+              <p className="font-semibold">Which games are you offering? <span className="font-normal muted">({upcoming.length} still open)</span></p>
               <div className="mt-1 grid max-h-56 gap-1 overflow-auto sm:grid-cols-2">
                 {upcoming.map((s) => <label key={s.id} className="flex items-center gap-1.5"><input type="checkbox" checked={games.includes(s.id)} onChange={(x) => setGames(x.target.checked ? [...games, s.id] : games.filter((g) => g !== s.id))} />{gameLine(s, e.name)}</label>)}
               </div>
-              {!upcoming.length && <p className="text-xs muted">No games ahead. Add them on the Games tab.</p>}
+              {!upcoming.length && <p className="text-xs muted">Every upcoming game already has someone.</p>}
               <div className="mt-2 flex justify-end"><button type="button" className="btn btn-primary text-sm" disabled={!games.length} onClick={() => setWriting(true)}>Next: write the text</button></div>
             </div>
           )}
@@ -78,31 +88,43 @@ export function WaitlistCard({ e }: { e: EventView }) {
           )}
         </div>
       )}
-      <ul className="mt-2 divide-y divide-misty/60">
-        {list.map((w) => (
-          <li key={w.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">
-            {show === "waiting" && (
-              <input type="checkbox" className="h-5 w-5" aria-label={`Pick ${w.name}`} disabled={!w.phone} title={w.phone ? "Pick to text" : "No textable number"}
-                checked={chosen.includes(w.personId)} onChange={(x) => { setChosen(x.target.checked ? [...chosen, w.personId] : chosen.filter((c) => c !== w.personId)); setWriting(false); }} />
-            )}
-            <span className="min-w-[12rem] flex-1">
-              <Link href={`/people/${w.personId}?from=events`} className="font-semibold hover:underline">{w.name}</Link>
-              {w.note && <span className="ml-2 rounded-full bg-sunken px-2 py-0.5 text-xs">{w.note.replace(/ Clients? Interested$/i, " client")}</span>}
-              {w.source === "signup" && <span className="ml-2 rounded-full bg-accent-soft px-2 py-0.5 text-xs text-accent">signed up</span>}
-              <span className="block text-xs muted">
-                {[w.games.length ? `Has: ${w.games.map((id) => gameName(e, id)).join(", ")}` : "",
-                  w.offered.length ? `Offered: ${w.offered.map((id) => gameName(e, id)).join(", ")}` : "",
-                  w.slotIds.length ? `Would like: ${w.slotIds.map((id) => gameName(e, id)).filter(Boolean).join(", ")}` : "",
-                  `on the list since ${shortEventDate(w.since)}`].filter(Boolean).join(" · ")}
-              </span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              {w.phone ? <Link href={textHref(w.phone)} className="btn px-2 py-0.5 text-xs" title={w.phone}>Text</Link> : <span className="text-xs muted" title="No textable number on their contact">No cell</span>}
-              <button type="button" className="btn px-2 py-0.5 text-xs text-bad" onBlur={() => setSure("")} onClick={() => (sure === w.id ? run(() => removeFromWaitlist(e.id, w.id)) : setSure(w.id))}>{sure === w.id ? "Click again" : "Remove"}</button>
-            </span>
-          </li>
-        ))}
-      </ul>
+      {groups(list).map(([tier, rows]) => (
+        <div key={tier || "none"} className="mt-3">
+          <h3 className="flex items-center gap-2 border-b border-misty pb-1 text-sm font-bold">
+            <span className={`grid h-6 min-w-6 place-items-center rounded-full px-1.5 text-xs ${tier ? "bg-accent text-white" : "bg-sunken"}`}>{tier || "–"}</span>
+            {tier ? `${tier} clients` : "No tier yet"} <span className="font-normal muted">{rows.length}</span>
+          </h3>
+          <ul className="divide-y divide-misty/60">
+            {rows.map((w) => (
+              <li key={w.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">
+                {show === "waiting" && (
+                  <input type="checkbox" className="h-5 w-5" aria-label={`Pick ${w.name}`} disabled={!w.phone} title={w.phone ? "Pick to text" : "No textable number"}
+                    checked={chosen.includes(w.personId)} onChange={(x) => { setChosen(x.target.checked ? [...chosen, w.personId] : chosen.filter((c) => c !== w.personId)); setWriting(false); }} />
+                )}
+                <span className="min-w-[12rem] flex-1">
+                  <Link href={`/people/${w.personId}?from=events`} className="font-semibold hover:underline">{w.name}</Link>
+                  {w.note && <span className="ml-2 rounded-full bg-sunken px-2 py-0.5 text-xs">{w.note}</span>}
+                  {w.source === "signup" && <span className="ml-2 rounded-full bg-accent-soft px-2 py-0.5 text-xs text-accent">signed up</span>}
+                  <span className="block text-xs muted">
+                    {[w.games.length ? `Has: ${w.games.map((id) => gameName(e, id)).join(", ")}` : "",
+                      w.offered.length ? `Offered: ${w.offered.map((id) => gameName(e, id)).join(", ")}` : "",
+                      w.slotIds.length ? `Would like: ${w.slotIds.map((id) => gameName(e, id)).filter(Boolean).join(", ")}` : "",
+                      `on the list since ${shortEventDate(w.since)}`].filter(Boolean).join(" · ")}
+                  </span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <select aria-label={`Tier for ${w.name}`} className="rounded border border-misty bg-white px-1 py-0.5 text-xs font-semibold" value={w.tier} disabled={pending}
+                    onChange={(x) => run(() => setWaitlistTier(e.id, w.id, x.target.value))}>
+                    <option value="">No tier</option>{TIERS.map((t) => <option key={t} value={t}>{t} client</option>)}
+                  </select>
+                  {w.phone ? <Link href={textHref(w.phone)} className="btn px-2 py-0.5 text-xs" title={w.phone}>Text</Link> : <span className="text-xs muted" title="No textable number on their contact">No cell</span>}
+                  <button type="button" className="btn px-2 py-0.5 text-xs text-bad" onBlur={() => setSure("")} onClick={() => (sure === w.id ? run(() => removeFromWaitlist(e.id, w.id)) : setSure(w.id))}>{sure === w.id ? "Click again" : "Remove"}</button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
       {!list.length && <p className="mt-2 text-sm muted">{q ? "No one by that name." : show === "waiting" ? "Nobody waiting." : "Nobody has a game yet."}</p>}
       {error && <p role="alert" className="mt-2 text-sm text-bad">{error}</p>}
     </section>
@@ -171,7 +193,7 @@ const DEFAULT_OFFER = "Hi {first_name}! Luke has Timberwolves tickets he'd love 
 export function OfferForm({ e, slots, waiting, onDone, people }: { e: EventView; slots: Slot[]; waiting: Want[]; onDone: () => void; people?: string[] }) {
   const router = useRouter();
   const ids = slots.map((s) => s.id);
-  const textable = waiting.filter((w) => w.phone);
+  const textable = waiting.filter((w) => w.phone).sort((a, b) => (a.tier || "Z").localeCompare(b.tier || "Z"));
   const wanted = (w: Want) => w.slotIds.some((id) => ids.includes(id));
   const [picked, setPicked] = useState<string[]>(people ?? textable.filter(wanted).map((w) => w.personId));
   const [extra, setExtra] = useState<Hit[]>([]);
@@ -204,7 +226,7 @@ export function OfferForm({ e, slots, waiting, onDone, people }: { e: EventView;
           <button type="button" className="ml-2 text-xs font-semibold text-accent hover:underline" onClick={() => setPicked([])}>None</button></legend>
         {textable.length > 0 ? (
           <div className="mt-1 grid max-h-48 gap-1 overflow-auto sm:grid-cols-2">
-            {textable.map((w) => <label key={w.id} className="flex items-center gap-1.5" title={w.phones.join(", ")}><input type="checkbox" checked={picked.includes(w.personId)} onChange={(x) => { setPicked(x.target.checked ? [...picked, w.personId] : picked.filter((p) => p !== w.personId)); setSure(false); }} />{wanted(w) ? "★ " : ""}{w.name}{w.note ? <span className="text-xs muted"> · {w.note.replace(/ Clients? Interested$/i, "")}</span> : null}
+            {textable.map((w) => <label key={w.id} className="flex items-center gap-1.5" title={w.phones.join(", ")}><input type="checkbox" checked={picked.includes(w.personId)} onChange={(x) => { setPicked(x.target.checked ? [...picked, w.personId] : picked.filter((p) => p !== w.personId)); setSure(false); }} />{wanted(w) ? "★ " : ""}{w.name}{w.tier ? <span className="text-xs muted"> · {w.tier}</span> : null}
               <span className={`text-xs ${w.phones.length > 1 ? "font-semibold text-accent" : "muted"}`}> · {w.phones.length > 1 ? `${w.phones.length} numbers` : "1 number"}</span></label>)}
           </div>
         ) : <p className="mt-1 text-xs muted">Nobody on the waitlist has a textable number. Add people below.</p>}

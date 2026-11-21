@@ -105,7 +105,7 @@ function Summary({ e, today }: { e: EventView; today: string }) {
     <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2">
       <Stat label={e.multiSlot ? "Next game" : "Date"} value={nextName} sub={next ? `${nextWho}${next.time ? formatTime(next.time) : "Time TBD"} · ${going(next.id)} going` : e.slots.length ? "All past" : "No date yet"} />
       {e.multiSlot
-        ? <Stat label="Need people" value={`${open} of ${upcoming.length}`} sub="upcoming games" tone={open ? "text-[#9a6400]" : "text-accent"} />
+        ? <Stat label="Open games" value={`${open} of ${upcoming.length}`} sub="upcoming games still open" tone={open ? "text-[#9a6400]" : "text-accent"} />
         : <Stat label="Coming" value={String(next ? going(next.id) : e.attendees.filter((a) => a.status === "confirmed" || a.status === "sent").length)} sub={`${e.attendees.length} on the list`} />}
       {e.multiSlot
         ? <Stat label={e.waitlistLabel ? "Waiting" : "Waitlist"} value={String(waiting)} sub={e.waitlistLabel || "people"} />

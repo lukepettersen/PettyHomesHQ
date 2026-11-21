@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { guarded, UserError } from "@/server/safe";
 import {
-  addAttendees, addInterest, saveSignupPage, applyAssignments, createEvent, offerGame, previewAssignments, previewOffer, removeInterest, deleteEvent, deleteReminder, deleteSlot, deleteTemplate, fetchWolvesSchedule, importSlots, previewReminder, removeAttendee,
+  addAttendees, addInterest, saveSignupPage, setInterestTier, applyAssignments, createEvent, offerGame, previewAssignments, previewOffer, removeInterest, deleteEvent, deleteReminder, deleteSlot, deleteTemplate, fetchWolvesSchedule, importSlots, previewReminder, removeAttendee,
   saveReminder, saveSlot, saveTemplate, setSignup, updateAttendee, updateEvent,
 } from "@/server/events";
 import { readSlotCsv, STATUS_KEYS } from "@/lib/events";
@@ -184,6 +184,14 @@ export async function saveEventSignupPage(eventId: string, input: unknown) {
   return guarded("manageEvents", async (user) => {
     const v = z.object({ title: z.string().max(120), intro: z.string().max(2000), gamesOn: z.boolean(), gamesLabel: z.string().max(200), thanks: z.string().max(500), email: z.enum(["required", "optional", "off"]), fields }).parse(input);
     await saveSignupPage(user.id, id.parse(eventId), v);
+    refresh(eventId);
+  });
+}
+
+/** A/B/C tier on the waitlist. */
+export async function setWaitlistTier(eventId: string, interestId: string, tier: string) {
+  return guarded("manageEvents", async (user) => {
+    await setInterestTier(user.id, id.parse(interestId), z.enum(["", "A", "B", "C"]).parse(tier));
     refresh(eventId);
   });
 }

@@ -31,7 +31,8 @@ type Filter = "upcoming" | "open" | "past" | "all";
 /** Games tab (owner request 2026-11-22: friendlier Events page): who's going on each game at a glance, games needing
  *  people flagged, click a game to manage it. */
 export function GamesTab({ e, today }: { e: EventView; today: string }) {
-  const [filter, setFilter] = useState<Filter>("upcoming");
+  // Opens on the games still open (owner 2026-11-22: hide upcoming games already given to someone).
+  const [filter, setFilter] = useState<Filter>("open");
   const [open, setOpen] = useState<string | null>(null);
   const [adding, setAdding] = useState<"game" | "people" | null>(null);
   // Tick several games, then text people about all of them at once (owner request 2026-11-22).
@@ -42,7 +43,7 @@ export function GamesTab({ e, today }: { e: EventView; today: string }) {
   const upcoming = e.slots.filter((s) => s.date >= today);
   const shown = e.slots.filter((s) => filter === "all" ? true : filter === "past" ? s.date < today : filter === "open" ? needs(s) : s.date >= today);
   const counts: Record<Filter, number> = { upcoming: upcoming.length, open: upcoming.filter(needs).length, past: e.slots.length - upcoming.length, all: e.slots.length };
-  const labels: Record<Filter, string> = { upcoming: "Upcoming", open: "Need people", past: "Past", all: "All" };
+  const labels: Record<Filter, string> = { open: "Open", upcoming: "All upcoming", past: "Past", all: "All" };
   return (
     <section aria-label="Games">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -83,7 +84,7 @@ export function GamesTab({ e, today }: { e: EventView; today: string }) {
           return (
             <li key={s.id} className={`card overflow-hidden ${isOpen ? "ring-2 ring-accent/40" : ""} ${picked.includes(s.id) ? "ring-2 ring-accent" : ""}`}>
               <div className="flex items-stretch">
-              {!past && (
+              {!past && needs(s) && (
                 <label className="flex cursor-pointer items-center pl-3" title="Pick this game to text people about it">
                   <input type="checkbox" className="h-5 w-5" aria-label={`Pick ${s.title || e.name} ${s.date}`} checked={picked.includes(s.id)}
                     onChange={(x) => { setPicked(x.target.checked ? [...picked, s.id] : picked.filter((id) => id !== s.id)); setOffering(false); }} />
@@ -98,7 +99,7 @@ export function GamesTab({ e, today }: { e: EventView; today: string }) {
                   </span>
                   <span className="mt-1 flex flex-wrap gap-1">
                     {rows.map((a) => <span key={a.id} className={`rounded-full px-2 py-0.5 text-xs font-semibold ${CHIP[a.status] ?? ""}`} title={statusLabel(a.status, e.doneLabel)}>{a.name}</span>)}
-                    {!rows.length && !past && <span className="rounded-full bg-[#f6efd9] px-2 py-0.5 text-xs font-semibold text-[#7a5d12]">Needs people</span>}
+                    {!rows.length && !past && <span className="rounded-full bg-[#f6efd9] px-2 py-0.5 text-xs font-semibold text-[#7a5d12]">Open</span>}
                     {!rows.length && past && <span className="text-xs muted">Nobody</span>}
                     {rows.length > 0 && needs(s) && <span className="rounded-full bg-[#f6efd9] px-2 py-0.5 text-xs font-semibold text-[#7a5d12]">Nobody confirmed</span>}
                   </span>
@@ -111,7 +112,7 @@ export function GamesTab({ e, today }: { e: EventView; today: string }) {
           );
         })}
       </ul>
-      {e.slots.length > 0 && !shown.length && <p className="mt-3 text-sm muted">{filter === "open" ? "Every upcoming game has someone. 🎉" : "No games here."}</p>}
+      {e.slots.length > 0 && !shown.length && <p className="mt-3 text-sm muted">{filter === "open" ? "Every upcoming game has someone." : "No games here."}</p>}
     </section>
   );
 }

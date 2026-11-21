@@ -975,6 +975,7 @@ model EventInterest {
   personId  String
   person    Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
   slotIds   String[] // games they said they'd like (optional)
+  tier      String   @default("") // "A" | "B" | "C" | "": how the owner doles out tickets (this event only, owner 2026-11-22)
   note      String   @default("")
   source    String   @default("manual") // manual | signup | import
   createdAt DateTime @default(now())
