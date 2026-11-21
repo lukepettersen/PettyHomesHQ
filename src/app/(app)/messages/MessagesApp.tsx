@@ -20,7 +20,7 @@ import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
 import { addPersonFromNumber, archiveThread, cancelScheduledText, deleteThread, fillTextTemplate, reactToText, linkNumber, markRead, sendGroup, startGroup } from "./actions";
 
 type Line = { userId: string; name: string; number: string };
-type Composer = { from: string | null; blocked: string | null; templates: { id: string; name: string }[] };
+type Composer = { from: string | null; blocked: string | null; templates: { id: string; name: string }[]; line?: string; fromName?: string | null; lines?: { userId: string; name: string; number: string }[] };
 
 const tz = "America/Chicago";
 const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" }).replace(" ", "").toLowerCase();
@@ -95,7 +95,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
           )}
         </div>
         <div className="flex flex-col gap-2 border-b border-misty p-3 max-md:border-0 max-md:px-4 max-md:pt-1">
-          {starting && <NewMessage templates={composer.templates} groupsOn={groupsOn} blocked={composer.blocked} onPick={(n) => { setStarting(false); router.push(href(n)); }} />}
+          {starting && <NewMessage templates={composer.templates} groupsOn={groupsOn} blocked={composer.blocked} lineId={line.userId} onPick={(n) => { setStarting(false); router.push(href(n)); }} />}
           <input className="input w-full max-md:rounded-full max-md:border-0 max-md:bg-[#ebe6df] max-md:px-4" type="search" aria-label="Search conversations" placeholder="Search name or number" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         {tab === "scheduled" ? <ScheduledList rows={scheduled} q={q} onChanged={() => router.refresh()} /> : shown.length ? (
@@ -195,8 +195,8 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
             </div>
             {/* Phone: room under the buttons for the iPhone's home bar (owner report 2026-11-02). */}
             <div className="border-t border-misty bg-white px-3 py-2.5 max-md:pb-9">
-              {group ? <GroupComposer key={open} sid={open} members={group.members.map((m) => m.digits)} templates={composer.templates} blocked={composer.blocked ?? (groupsOn ? null : "Group texting is off (Admin → Integrations), so HQ can't reply to the group.")} from={composer.from} onSent={() => router.refresh()} />
-                : <TextComposer key={open} personId={person?.id ?? null} phones={[open]} compact {...composer} />}
+              {group ? <GroupComposer key={open} sid={open} members={group.members.map((m) => m.digits)} templates={composer.templates} blocked={composer.blocked ?? (groupsOn ? null : "Group texting is off (Admin → Integrations), so HQ can't reply to the group.")} from={line.number} lineId={line.userId} onSent={() => router.refresh()} />
+                : <TextComposer key={`${line.userId}${open}`} personId={person?.id ?? null} phones={[open]} compact {...composer} lines={[]} />}
             </div>
           </>
         )}
@@ -210,7 +210,7 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
  * + New message: find a contact and pick their number. Pick more than one number (group texting on) to start a
  * group text: everyone gets it from your number and replies stay in one conversation.
  */
-function NewMessage({ onPick, groupsOn, blocked, templates }: { onPick: (key: string) => void; groupsOn: boolean; blocked: string | null; templates: Template[] }) {
+function NewMessage({ onPick, groupsOn, blocked, templates, lineId }: { onPick: (key: string) => void; groupsOn: boolean; blocked: string | null; templates: Template[]; lineId?: string }) {
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<{ id: string; name: string; phones: string[] }[]>([]);
   const [picked, setPicked] = useState<{ number: string; name: string }[]>([]);
@@ -233,7 +233,7 @@ function NewMessage({ onPick, groupsOn, blocked, templates }: { onPick: (key: st
   };
   const send = () => start(async () => {
     setError("");
-    const r = await startGroup({ numbers: picked.map((p) => p.number), body });
+    const r = await startGroup({ numbers: picked.map((p) => p.number), body, line: lineId });
     if (!r.ok) { setError(r.error); return; }
     onPick(r.data!.sid);
   });
@@ -310,7 +310,7 @@ function useGroupTemplates({ templates, box, body, setBody, start, setError }: {
 }
 
 /** Reply in a group text: everyone in the group gets it from your number. */
-function GroupComposer({ sid, members, blocked, from, onSent, templates }: { sid: string; members: string[]; blocked: string | null; from: string | null; onSent: () => void; templates: Template[] }) {
+function GroupComposer({ sid, members, blocked, from, onSent, templates, lineId }: { sid: string; members: string[]; blocked: string | null; from: string | null; onSent: () => void; templates: Template[]; lineId?: string }) {
   const [notice, setNotice] = useState("");
   const [body, setBody] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
@@ -321,7 +321,7 @@ function GroupComposer({ sid, members, blocked, from, onSent, templates }: { sid
   if (blocked) return <p className="rounded-md bg-sunken px-3 py-2 text-sm muted">{blocked}</p>;
   const send = () => start(async () => {
     setError("");
-    const r = await sendGroup({ sid, body, media: photos });
+    const r = await sendGroup({ sid, body, media: photos, line: lineId });
     if (!r.ok) { setError(r.error); return; }
     setBody(""); setPhotos([]); onSent();
   });

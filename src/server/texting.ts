@@ -201,10 +201,27 @@ export async function updateStatus(sid: string, status: string, errorCode?: stri
  * Sends a text from the user's own number, typed by them (so quiet hours don't apply; they hold only automatic
  * texts). To a phone saved on the contact, or back to a number that texted this line. Never to someone who replied STOP.
  */
-export async function sendTextAs(user: { id: string; name: string }, o: { personId: string | null; to: string; body: string; typed?: boolean; media?: string[] }) {
+/**
+ * Whose HQ number a text goes from: your own, or (the owner only, owner request 2026-11-21) a teammate's, picked in
+ * Messages or on the contact page. The text still shows who sent it.
+ */
+export async function lineFor(user: { id: string }, line?: string | null): Promise<{ userId: string; number: string | null; name: string }> {
+  if (!line || line === user.id) {
+    const me = await db.user.findUnique({ where: { id: user.id }, select: { textNumber: true, name: true } });
+    return { userId: user.id, number: me?.textNumber ?? null, name: me?.name ?? "" };
+  }
+  const me = await db.user.findUnique({ where: { id: user.id }, select: { isOwner: true } });
+  if (!me?.isOwner) throw new UserError("Only the owner can text from a teammate's number.");
+  const u = await db.user.findFirst({ where: { id: line, status: { not: "DISABLED" } }, select: { id: true, textNumber: true, name: true } });
+  if (!u?.textNumber) throw new UserError("That teammate doesn't have an HQ number.");
+  return { userId: u.id, number: u.textNumber, name: u.name };
+}
+
+export async function sendTextAs(user: { id: string; name: string }, o: { personId: string | null; to: string; body: string; typed?: boolean; media?: string[]; line?: string | null }) {
   if (!(await textingEnabled())) throw new UserError("Texting is off. An Admin can turn it on in Admin → Integrations.");
-  const me = await db.user.findUnique({ where: { id: user.id }, select: { textNumber: true } });
-  if (!me?.textNumber) throw new UserError("You don't have a texting number yet. An Admin can add it in Admin → Integrations.");
+  const from = await lineFor(user, o.line);
+  const me = { textNumber: from.number };
+  if (!me.textNumber) throw new UserError("You don't have a texting number yet. An Admin can add it in Admin → Integrations.");
   const photos = o.media ?? [];
   if (photos.length > MAX_TEXT_PHOTOS) throw new UserError(`Up to ${MAX_TEXT_PHOTOS} photos in one text.`);
   if (photos.some((u) => !isOurImage(u, publicBase()))) throw new UserError("Attach photos with the 📷 button.");
@@ -218,7 +235,7 @@ export async function sendTextAs(user: { id: string; name: string }, o: { person
   if (o.personId && !person) throw new UserError("That person was deleted.");
   if (person && !person.phones.some((p) => p.normalized === theirs)) throw new UserError(`HQ only texts numbers saved on ${person.name}. Add the number to their contact first.`);
   if (!person) {
-    const texted = await db.textMessage.count({ where: { ourNumber: me.textNumber, theirNumber: theirs, direction: "in" } });
+    const texted = await db.textMessage.count({ where: { ourNumber: me.textNumber!, theirNumber: theirs, direction: "in" } });
     // A number typed in on purpose ("+ Add" on Send text) is allowed; otherwise only replies to people who texted first.
     if (!texted && !o.typed) throw new UserError("HQ only texts saved contacts, or people who texted your number first.");
     const p = await personForNumber(theirs);
@@ -226,21 +243,21 @@ export async function sendTextAs(user: { id: string; name: string }, o: { person
   }
   if (person && (await hasTextStop(person.id))) throw new UserError(`${person.name} replied STOP to your texts, so HQ won't text them (they can text START to opt back in).`);
   const cap = await dailyCap();
-  const sentToday = await db.textMessage.count({ where: { ourNumber: me.textNumber, direction: "out", createdAt: { gte: centralDayStart() } } });
+  const sentToday = await db.textMessage.count({ where: { ourNumber: me.textNumber!, direction: "out", createdAt: { gte: centralDayStart() } } });
   if (sentToday >= cap) throw new UserError(`You've reached today's limit of ${cap} texts from your number. It resets at midnight (Admin → Integrations to change it).`);
 
-  const r = await sendSms({ from: me.textNumber, to, body, media: photos });
+  const r = await sendSms({ from: me.textNumber!, to, body, media: photos });
   if (!r.ok) throw new UserError(r.error);
   const saved = textWithPhotos(body, photos);
-  await db.textMessage.create({ data: { ourNumber: me.textNumber, theirNumber: theirs, personId: person?.id ?? null, direction: "out", body: saved, media: photos.map((url) => ({ url, type: "image" })), twilioSid: r.sid, status: r.status, sentById: user.id, readAt: new Date() } });
+  await db.textMessage.create({ data: { ourNumber: me.textNumber!, theirNumber: theirs, personId: person?.id ?? null, direction: "out", body: saved, media: photos.map((url) => ({ url, type: "image" })), twilioSid: r.sid, status: r.status, sentById: user.id, readAt: new Date() } });
   if (person) {
     await db.$transaction([
       db.timelineEntry.create({ data: { personId: person.id, kind: "text", outcome: "Sent", body: body && photos.length ? `${body}\n📷 Photo` : saved, authorId: user.id } }),
-      db.person.update({ where: { id: person.id }, data: textTouch(await isOwnerNumber(me.textNumber)) }),
+      db.person.update({ where: { id: person.id }, data: textTouch(await isOwnerNumber(me.textNumber!)) }),
     ]);
     revalidatePath(`/people/${person.id}`);
   }
-  await logActivity(user.id, "create", "text", person?.id ?? null, `Texted ${person?.name ?? formatPhone(theirs)}`);
+  await logActivity(user.id, "create", "text", person?.id ?? null, `Texted ${person?.name ?? formatPhone(theirs)}${from.userId !== user.id ? ` from ${from.name.split(" ")[0]}'s number` : ""}`);
   revalidatePath("/messages");
   return { name: person?.name ?? formatPhone(theirs) };
 }
@@ -317,7 +334,10 @@ export async function textComposerFor(user: SessionUser, unsubscribedName?: stri
   const groups = (await db.appSetting.findUnique({ where: { key: "texting.groups" } }))?.value === true;
   const owner = groups ? await db.user.findFirst({ where: { isOwner: true, forwardTo: { not: null } }, select: { id: true, name: true, forwardTo: true } }) : null;
   const ownerCell = owner?.forwardTo ? { value: normalizePhone(owner.forwardTo), label: owner.id === user.id ? "Your cell" : `${owner.name.split(" ")[0]}'s cell`, personId: (await personForNumber(normalizePhone(owner.forwardTo)))?.id ?? null } : null;
-  return { from: me?.textNumber ?? null, blocked, groupsOn: groups, ownerCell, templates: templates.map((t) => ({ id: t.id, name: t.folder ? `${t.folder} · ${t.name}` : t.name })) };
+  // The owner can send from a teammate's number too (owner request 2026-11-21).
+  const lines = user.isOwner ? (await db.user.findMany({ where: { status: { not: "DISABLED" }, textNumber: { not: null } }, orderBy: [{ isOwner: "desc" }, { name: "asc" }], select: { id: true, name: true, textNumber: true } }))
+    .map((u) => ({ userId: u.id, name: u.id === user.id ? "Your number" : `${u.name.split(" ")[0]}'s number`, number: u.textNumber! })) : [];
+  return { from: me?.textNumber ?? null, blocked, groupsOn: groups, ownerCell, lines: lines.length > 1 ? lines : [], templates: templates.map((t) => ({ id: t.id, name: t.folder ? `${t.folder} · ${t.name}` : t.name })) };
 }
 
 export type ThreadPerson = { id: string; name: string; stage: string | null; assignedTo: string | null; deals: { kind: "Buyer" | "Seller"; line: string; contract: string | null }[] };

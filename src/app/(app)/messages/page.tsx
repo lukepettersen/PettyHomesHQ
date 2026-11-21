@@ -43,6 +43,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
   const threadPeople = await loadThreadPeople(group ? group.members.map((m) => m.personId).filter((x): x is string => !!x) : person ? [person.id] : []);
   return (
     <MessagesApp threadPeople={threadPeople} scheduled={line ? await loadScheduledBy(line.userId, user.id, hasPermission(user.permissions, "deleteRecords")) : []} lines={lines} line={line} threads={threads} open={open} person={person} conversation={conversation} group={group} groupsOn={await groupTextingOn()}
-      composer={{ ...composer, blocked: composer.blocked ?? (mine ? null : `These are ${line?.name.split(" ")[0]}'s texts. Replies go from each person's own number, so switch to your number to text.`) }} />
+      composer={{ ...composer, line: line?.userId, from: line?.number ?? composer.from, fromName: mine ? null : `${line?.name.split(" ")[0]}'s number`, blocked: composer.blocked ?? (mine || user.isOwner ? null : `These are ${line?.name.split(" ")[0]}'s texts. Replies go from each person's own number, so switch to your number to text.`) }} />
   );
 }

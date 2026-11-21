@@ -26,13 +26,14 @@ const digits = z.string().trim().min(7).max(30).transform(normalizePhone);
 const threadKey = z.string().trim().min(7).max(40).transform((s) => (isGroupKey(s) ? s : normalizePhone(s)));
 
 const photos = z.array(z.string().trim().url().max(300)).max(MAX_TEXT_PHOTOS).optional();
-const sendSchema = z.object({ personId: id.nullable(), to: z.string().trim().min(7).max(30), body: z.string().trim().max(MAX_TEXT), taskId: z.string().trim().max(200).nullable().optional(), typed: z.boolean().optional(), media: photos });
+const line = id.nullable().optional();
+const sendSchema = z.object({ line, personId: id.nullable(), to: z.string().trim().min(7).max(30), body: z.string().trim().max(MAX_TEXT), taskId: z.string().trim().max(200).nullable().optional(), typed: z.boolean().optional(), media: photos });
 
 /** Send text (contact timeline, Messages, Draft text): from the user's own number. A task it came from is checked off. */
 export async function sendText(input: z.input<typeof sendSchema>) {
   return guarded("sendTexts", async (user) => {
     const v = sendSchema.parse(input);
-    const r = await sendTextAs(user, { personId: v.personId, to: v.to, body: v.body, typed: v.typed, media: v.media });
+    const r = await sendTextAs(user, { personId: v.personId, to: v.to, body: v.body, typed: v.typed, media: v.media, line: v.line });
     if (v.taskId && v.personId) {
       const t = await db.task.findFirst({ where: { id: v.taskId, personId: v.personId, deletedAt: null, completedAt: null } });
       if (t) await completeTask(t.id);
@@ -154,16 +155,18 @@ export async function reactToText(input: { messageId: string; emoji: string }) {
     const v = z.object({ messageId: id, emoji: z.enum(SEND_REACTIONS.map((k) => k.emoji) as [string, ...string[]]) }).parse(input);
     const m = await db.textMessage.findUnique({ where: { id: v.messageId } });
     if (!m || m.kind !== "sms") throw new UserError("That message wasn't found.");
-    const me = await db.user.findUnique({ where: { id: user.id }, select: { textNumber: true } });
-    if (m.ourNumber !== me?.textNumber) throw new UserError("You can react from your own number only.");
+    // From the number the text came in on: your own, or (the owner) a teammate's.
+    const lineUser = await db.user.findFirst({ where: { textNumber: m.ourNumber }, select: { id: true } });
+    if (!lineUser || (lineUser.id !== user.id && !user.isOwner)) throw new UserError("You can react from your own number only.");
+    const line = lineUser.id;
     const by = `hq:${user.id}`;
     const marks = (Array.isArray(m.reactions) ? m.reactions : []) as ReactionMark[];
     const removed = marks.some((x) => x.by === by && x.emoji === v.emoji);
     const body = reactionText(v.emoji, m.body, removed);
     if (!body) throw new UserError("Photos without words can't get a reaction from HQ.");
     const before = new Date();
-    if (isGroupKey(m.theirNumber)) await sendGroupText(user, { sid: m.theirNumber, body });
-    else await sendTextAs(user, { personId: m.personId, to: m.theirNumber, body });
+    if (isGroupKey(m.theirNumber)) await sendGroupText(user, { sid: m.theirNumber, body, line });
+    else await sendTextAs(user, { personId: m.personId, to: m.theirNumber, body, line });
     await db.$transaction([
       db.textMessage.updateMany({ where: { ourNumber: m.ourNumber, theirNumber: m.theirNumber, direction: "out", sentById: user.id, body, createdAt: { gte: before } }, data: { kind: "reaction" } }),
       db.textMessage.update({ where: { id: m.id }, data: { reactions: applyReaction(marks, { emoji: v.emoji, by, removed }) } }),
@@ -173,25 +176,25 @@ export async function reactToText(input: { messageId: string; emoji: string }) {
 }
 
 /** Reply in a group text (Messages). */
-export async function sendGroup(input: { sid: string; body: string; media?: string[] }) {
+export async function sendGroup(input: { sid: string; body: string; media?: string[]; line?: string | null }) {
   return guarded("sendTexts", async (user) => {
-    const v = z.object({ sid: z.string().trim().refine(isGroupKey, "That isn't a group text."), body: z.string().trim().max(MAX_TEXT), media: photos }).parse(input);
+    const v = z.object({ sid: z.string().trim().refine(isGroupKey, "That isn't a group text."), body: z.string().trim().max(MAX_TEXT), media: photos, line }).parse(input);
     await sendGroupText(user, v);
   });
 }
 
 /** + New message → Group text: two or more contacts' numbers and the first message. */
-export async function startGroup(input: { numbers: string[]; body: string }) {
+export async function startGroup(input: { numbers: string[]; body: string; line?: string | null }) {
   return guarded("sendTexts", async (user) => {
-    const v = z.object({ numbers: z.array(digits).min(2, "Pick at least two people.").max(MAX_GROUP - 1, `Up to ${MAX_GROUP - 1} people plus you.`), body: z.string().trim().min(1, "Write a message.").max(MAX_TEXT) }).parse(input);
+    const v = z.object({ line, numbers: z.array(digits).min(2, "Pick at least two people.").max(MAX_GROUP - 1, `Up to ${MAX_GROUP - 1} people plus you.`), body: z.string().trim().min(1, "Write a message.").max(MAX_TEXT) }).parse(input);
     return startGroupText(user, v);
   });
 }
 
 /** Send text to a contact plus others, as one group text (group texting on). A task it came from is checked off. */
-export async function sendTextGroup(input: { numbers: string[]; body: string; personId?: string | null; taskId?: string | null; media?: string[] }) {
+export async function sendTextGroup(input: { numbers: string[]; body: string; personId?: string | null; taskId?: string | null; media?: string[]; line?: string | null }) {
   return guarded("sendTexts", async (user) => {
-    const v = z.object({ numbers: z.array(digits).min(2).max(MAX_GROUP - 1, `Up to ${MAX_GROUP - 1} people plus you.`), body: z.string().trim().max(MAX_TEXT), personId: id.nullable().optional(), taskId: z.string().trim().max(200).nullable().optional(), media: photos }).parse(input);
+    const v = z.object({ line, numbers: z.array(digits).min(2).max(MAX_GROUP - 1, `Up to ${MAX_GROUP - 1} people plus you.`), body: z.string().trim().max(MAX_TEXT), personId: id.nullable().optional(), taskId: z.string().trim().max(200).nullable().optional(), media: photos }).parse(input);
     const r = await textNumbersAsGroup(user, v);
     if (v.taskId && v.personId) {
       const t = await db.task.findFirst({ where: { id: v.taskId, personId: v.personId, deletedAt: null, completedAt: null } });

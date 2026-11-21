@@ -15,11 +15,19 @@ import { ScheduleText } from "@/components/ScheduleText";
  * Write and send a text from your own business number (SPEC.md §11): a template (optional, or "/name" in the
  * message), then Send. `blocked` explains why texting isn't available (not connected, no number, they replied STOP…).
  */
-export function TextComposer({ personId, phones, phoneLabels = {}, templates, from, blocked, taskId, initial = "", compact, onSent, groupsOn, autoExtras = [] }: {
+export function TextComposer({ personId, phones, phoneLabels = {}, templates, from, blocked, taskId, initial = "", compact, onSent, groupsOn, autoExtras = [], line, fromName, lines = [] }: {
   personId: string | null; phones: string[]; phoneLabels?: Record<string, string>; templates: { id: string; name: string }[]; from: string | null; blocked: string | null;
   taskId?: string | null; initial?: string; compact?: boolean; onSent?: (name: string) => void; groupsOn?: boolean; autoExtras?: Extra[];
+  /** Whose HQ number it goes from (the owner can pick a teammate's: `lines`, owner request 2026-11-21). */
+  line?: string; fromName?: string | null; lines?: { userId: string; name: string; number: string }[];
 }) {
   const router = useRouter();
+  const [as, setAs] = useState(line ?? lines[0]?.userId ?? "");
+  const picked = lines.find((l) => l.userId === as);
+  const sendLine = picked ? picked.userId : line;
+  const fromNumber = picked?.number ?? from;
+  const fromLabel = picked ? picked.name.replace(/^Your number$/, "your number") : fromName ?? "your number";
+  const ownLine = !picked ? !fromName : picked.userId === lines[0]?.userId;
   // Every number on the contact starts ticked; × leaves one out (owner request 2026-10-28).
   const [skip, setSkip] = useState<string[]>([]);
   const chosen = phones.filter((n) => !skip.includes(n));
@@ -64,21 +72,21 @@ export function TextComposer({ personId, phones, phoneLabels = {}, templates, fr
     setError(""); setNotice("");
     if (!to) { setError("Pick at least one of their numbers."); return; }
     if (groupsOn && chosen.length + extras.length > 1) {
-      const g = await sendTextGroup({ numbers: [...chosen, ...extras.map((x) => x.value)], body, personId, taskId: taskId ?? null, media: photos });
+      const g = await sendTextGroup({ numbers: [...chosen, ...extras.map((x) => x.value)], body, personId, taskId: taskId ?? null, media: photos, line: sendLine });
       if (!g.ok) { setError(g.error); return; }
       setNotice(`Sent as a group text to ${chosen.length + extras.length} people.`);
       setBody(""); setPhotos([]); setTemplateId(""); setMissing([]); router.refresh(); onSent?.("the group");
       return;
     }
-    const r = await sendText({ personId, to, body, taskId: taskId ?? null, media: photos });
+    const r = await sendText({ personId, to, body, taskId: taskId ?? null, media: photos, line: sendLine });
     if (!r.ok) { setError(r.error); return; }
     const names = [r.data!.name], failed: string[] = [];
     for (const n of chosen.slice(1)) {
-      const e = await sendText({ personId, to: n, body, media: photos });
+      const e = await sendText({ personId, to: n, body, media: photos, line: sendLine });
       if (e.ok) names.push(formatPhone(n)); else failed.push(`${formatPhone(n)}: ${e.error}`);
     }
     for (const x of extras) {
-      const e = await sendText({ personId: x.personId, to: x.value, body, typed: !x.personId, media: photos });
+      const e = await sendText({ personId: x.personId, to: x.value, body, typed: !x.personId, media: photos, line: sendLine });
       if (e.ok) names.push(e.data!.name); else failed.push(`${x.label}: ${e.error}`);
     }
     setNotice(`Sent to ${names.join(", ")}.`); if (failed.length) setError(`Not sent to ${failed.join("; ")}`);
@@ -108,8 +116,9 @@ export function TextComposer({ personId, phones, phoneLabels = {}, templates, fr
       <TextPhotoButton photos={photos} onChange={setPhotos} disabled={pending} />
       <EmojiButton box={box} value={body} onChange={setBody} />
       {body && <button type="button" className="btn" disabled={pending} onClick={() => { setBody(""); setTemplateId(""); setMissing([]); }}>Clear</button>}
-      <ScheduleText numbers={[...chosen, ...extras.map((x) => x.value)]} body={body} media={photos} personId={personId} taskId={taskId} disabled={pending || !to || !body.trim()}
-        onScheduled={(when) => { setNotice(`Scheduled for ${when}.`); setBody(""); setPhotos([]); setTemplateId(""); setMissing([]); router.refresh(); }} />
+      {/* Scheduled texts go from your own number, so Schedule is only offered there. */}
+      {ownLine && <ScheduleText numbers={[...chosen, ...extras.map((x) => x.value)]} body={body} media={photos} personId={personId} taskId={taskId} disabled={pending || !to || !body.trim()}
+        onScheduled={(when) => { setNotice(`Scheduled for ${when}.`); setBody(""); setPhotos([]); setTemplateId(""); setMissing([]); router.refresh(); }} />}
       <button type="button" className="btn btn-primary" disabled={pending || (!body.trim() && !photos.length) || !to} onClick={send}>{pending ? "Sending…" : compact ? "Send" : "Send text"}</button>
     </span>
   );
@@ -131,7 +140,12 @@ export function TextComposer({ personId, phones, phoneLabels = {}, templates, fr
       {missing.length > 0 && <p className="text-sm text-[#9a6400]">Not filled in (nothing on file): {missing.join(", ")}. Check the text before sending.</p>}
       {/* Phone (owner request 2026-11-02): Messages keeps just the message box and one row of buttons; "/" still finds templates. */}
       <div className={`flex flex-wrap items-center justify-between gap-2 ${compact ? "max-md:hidden" : ""}`}>
-        <span className="flex flex-wrap items-center gap-x-2 text-xs muted">From your number {from ? formatPhone(from) : ""} · {count}
+        <span className="flex flex-wrap items-center gap-x-2 text-xs muted">
+          {lines.length > 1
+            ? <label className="flex items-center gap-1">From<select aria-label="Send from" className="rounded border border-misty bg-white px-1 py-0.5 text-xs font-semibold text-charcoal" value={as} onChange={(e) => setAs(e.target.value)}>
+                {lines.map((l) => <option key={l.userId} value={l.userId}>{l.name} {formatPhone(l.number)}</option>)}
+              </select></label>
+            : <>From {fromLabel} {fromNumber ? formatPhone(fromNumber) : ""}</>} · {count}
           {compact && <AddRecipient mode="phone" exclude={[...phones, ...extras.map((x) => x.value)]} onAdd={(x) => setExtras([...extras, x])} />}
         </span>
         {!compact && buttons}

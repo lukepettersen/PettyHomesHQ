@@ -6,7 +6,7 @@ import { UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { isConnected, textingEnabled } from "@/server/integrations";
 import { addGroupSender, closeConversation, conversationParticipants, createGroup, postGroupMessage, publicBase, setGroupAddress, uploadGroupPhoto } from "@/server/twilio";
-import { COPY_WINDOW, dailyCap, hasTextStop, isOwnerNumber, lineOwner, personForNumber, recordIncoming, recordReaction, saveOnce, setTextStop, textTouch } from "@/server/texting";
+import { COPY_WINDOW, dailyCap, hasTextStop, isOwnerNumber, lineFor, lineOwner, personForNumber, recordIncoming, recordReaction, saveOnce, setTextStop, textTouch } from "@/server/texting";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { centralDayStart, isStartWord, isStopWord, MAX_TEXT, otherRoute, toE164 } from "@/lib/texting";
 import { groupMembers, groupTitle, isGroupKey, MAX_GROUP, otherRecipients, readParticipants } from "@/lib/groupText";
@@ -154,11 +154,11 @@ export async function handleConversationMessage(f: Record<string, string>) {
   await recordGroupMessage(info, { from: author, body, sid: msg, media });
 }
 
-async function checkSend(user: { id: string }, body: string, photos = 0) {
+async function checkSend(user: { id: string }, body: string, photos = 0, line?: string | null) {
   if (!(await textingEnabled())) throw new UserError("Texting is off. An Admin can turn it on in Admin → Integrations.");
   if (!(await groupTextingOn())) throw new UserError("Group texting is off. An Admin can turn it on in Admin → Integrations.");
-  const me = await db.user.findUnique({ where: { id: user.id }, select: { textNumber: true } });
-  if (!me?.textNumber) throw new UserError("You don't have a texting number yet. An Admin can add it in Admin → Integrations.");
+  const me = { textNumber: (await lineFor(user, line)).number };
+  if (!me.textNumber) throw new UserError("You don't have a texting number yet. An Admin can add it in Admin → Integrations.");
   const text = body.trim();
   if (!text && !photos) throw new UserError("Write a message.");
   if (text.length > MAX_TEXT) throw new UserError(`Texts can be up to ${MAX_TEXT} characters.`);
@@ -171,15 +171,15 @@ async function checkSend(user: { id: string }, body: string, photos = 0) {
  * Reply in a group text from HQ: everyone in the group gets it from the user's number, through the group's Twilio
  * Conversation (made the first time HQ replies to a group that texted in).
  */
-export async function sendGroupText(user: { id: string; name: string }, o: { sid: string; body: string; media?: string[] }) {
+export async function sendGroupText(user: { id: string; name: string }, o: { sid: string; body: string; media?: string[]; line?: string | null }) {
   if (!isGroupKey(o.sid)) throw new UserError("That isn't a group text.");
   const photos = o.media ?? [];
   if (photos.length > MAX_TEXT_PHOTOS) throw new UserError(`Up to ${MAX_TEXT_PHOTOS} photos in one text.`);
   if (photos.some((u) => !isOurImage(u, publicBase()))) throw new UserError("Attach photos with the 📷 button.");
-  const { ourNumber, text } = await checkSend(user, o.body, photos.length);
+  const { ourNumber, text } = await checkSend(user, o.body, photos.length, o.line);
   const info = await db.textThread.findUnique({ where: { sid: o.sid } });
   if (!info?.group) throw new UserError("That group text wasn't found.");
-  if (info.ourNumber !== ourNumber) throw new UserError("This group text is on a teammate's number. Switch to your own number to text.");
+  if (info.ourNumber !== ourNumber) throw new UserError("This group text is on a different HQ number. Switch to that number to text.");
   const people = await membersOf(info.members);
   for (const m of people) if (m.person && (await hasTextStop(m.person.id))) throw new UserError(`${m.person.name} replied STOP to your texts, so HQ won't text this group.`);
   if (info.members.length > MAX_GROUP - 1) throw new UserError(`HQ can reply to groups of up to ${MAX_GROUP} people (Twilio's limit). Reply from your phone for this one.`);
@@ -222,8 +222,8 @@ export async function sendGroupText(user: { id: string; name: string }, o: { sid
 }
 
 /** + New message → group: up to 9 people (saved on contacts) and the user's number, then the first text. */
-export async function startGroupText(user: { id: string; name: string }, o: { numbers: string[]; body: string; media?: string[] }) {
-  const { ourNumber } = await checkSend(user, o.body, o.media?.length ?? 0);
+export async function startGroupText(user: { id: string; name: string }, o: { numbers: string[]; body: string; media?: string[]; line?: string | null }) {
+  const { ourNumber } = await checkSend(user, o.body, o.media?.length ?? 0, o.line);
   const digits = [...new Set(o.numbers.map(normalizePhone))];
   if (digits.length < 2) throw new UserError("Pick at least two people for a group text.");
   if (digits.length > MAX_GROUP - 1) throw new UserError(`A group text can have up to ${MAX_GROUP - 1} people plus you.`);
@@ -237,17 +237,17 @@ export async function startGroupText(user: { id: string; name: string }, o: { nu
   const sid = await createGroup({ ourNumber, numbers: digits.map((d) => toE164(d)!), name: groupTitle([...new Set(people.map(nameOf))]), webhookUrl: conversationHook() })
     .catch((e: Error) => { throw new UserError(e.message); });
   await db.textThread.create({ data: { sid, conversationSid: sid, ourNumber, group: true, members: digits, sender: `hq:${ourNumber}` } });
-  await sendGroupText(user, { sid, body: o.body, media: o.media });
+  await sendGroupText(user, { sid, body: o.body, media: o.media, line: o.line });
   return { sid };
 }
 
 /** Send text with more than one number (group texting on): one group text, the same thread as before if these people already have one. */
-export async function textNumbersAsGroup(user: { id: string; name: string }, o: { numbers: string[]; body: string; media?: string[] }) {
-  const me = await db.user.findUnique({ where: { id: user.id }, select: { textNumber: true } });
+export async function textNumbersAsGroup(user: { id: string; name: string }, o: { numbers: string[]; body: string; media?: string[]; line?: string | null }) {
+  const me = { textNumber: (await lineFor(user, o.line)).number };
   const want = [...new Set(o.numbers.map(normalizePhone))].sort();
   const same = me?.textNumber ? await groupWith(me.textNumber, want) : null;
-  if (same) { await sendGroupText(user, { sid: same.sid, body: o.body, media: o.media }); return { sid: same.sid }; }
-  return startGroupText(user, { numbers: want, body: o.body, media: o.media });
+  if (same) { await sendGroupText(user, { sid: same.sid, body: o.body, media: o.media, line: o.line }); return { sid: same.sid }; }
+  return startGroupText(user, { numbers: want, body: o.body, media: o.media, line: o.line });
 }
 
 export const groupReady = async () => isConnected("texting") && (await groupTextingOn());

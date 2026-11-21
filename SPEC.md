@@ -913,6 +913,11 @@ scrolls with it until its last card is on screen, then stays put while the middl
   Mobile or Home aren't shown) *(owner request 2026-10-28)*.
 - Two-way SMS from **each team member's own business number** *(owner decision 2026-10-20: Luke and
   Alyssa each have a number)*, plus missed calls. No email here (email stays in Gmail).
+- **Texting as a teammate** *(owner request 2026-11-21, owner only)*: in Messages, switching to a teammate's texts lets
+  the owner reply, react and start group texts from that teammate's HQ number; on a contact (and Draft text), a **From**
+  picker under the message box chooses whose number it goes from. Each text still records who sent it. Schedule is only
+  offered from your own number. Teammates still only text from their own number. Replies come back to that teammate's
+  number (their bell).
 - **Messages layout** *(owner-approved cleanup 2026-10-28; folders like FUB at the assistant's request)*: three
   columns filling the screen height. Left: + New message, whose texts, then folders **Inbox · Unread · Scheduled ·
   Archived** with counts. Middle: search, then the conversations (initials, 👥 for a group, a red "!" for a missed
