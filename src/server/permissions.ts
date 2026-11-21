@@ -7,6 +7,7 @@ export const PERMISSIONS = {
   editMessageTemplates: "Edit text and email templates",
   exportData: "Export data",
   sendTexts: "Send texts",
+  manageEvents: "Events",
 } as const;
 
 /** One line under each permission on Admin → Users & permissions (owner-approved redesign 2026-10-29). */
@@ -18,6 +19,7 @@ export const PERMISSION_HELP: Record<keyof typeof PERMISSIONS, string> = {
   editMessageTemplates: "Admin → Text templates and Email templates",
   exportData: "Download contacts as a spreadsheet (CSV)",
   sendTexts: "Text and call from their own HQ number",
+  manageEvents: "See, add and edit Events: templates, dates, attendees, signup pages and reminder texts",
 };
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -25,7 +27,7 @@ export const ALL_PERMISSIONS = Object.keys(PERMISSIONS) as Permission[];
 
 export const DEFAULT_ROLES: Record<string, Permission[]> = {
   Admin: ALL_PERMISSIONS,
-  Assistant: ["seeCommissions", "editTaskTemplates", "editMessageTemplates", "sendTexts"],
+  Assistant: ["seeCommissions", "editTaskTemplates", "editMessageTemplates", "sendTexts", "manageEvents"],
 };
 
 export function hasPermission(perms: readonly string[] | undefined, perm: Permission): boolean {

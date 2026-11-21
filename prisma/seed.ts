@@ -6,6 +6,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { DEFAULT_ROLES } from "../src/server/permissions";
 import { DEFAULT_FORMS, upgradeNotesAnswers, upgradeNotesForm, type Answers, type PaSection } from "../src/lib/pa";
 import { STARTER_TEMPLATES } from "./starterTemplates";
+import { seedEvents } from "./eventsSeed";
 import { defaultFileForm } from "../src/lib/files";
 import { todayCentral } from "../src/lib/normalize";
 import type { Phase } from "../src/lib/templates";
@@ -193,6 +194,8 @@ async function main() {
     await db.showing.updateMany({ where: { side: "listing", noTexts: true }, data: { noTexts: false } });
     await db.appSetting.create({ data: { key: "seed.ownListingNoTexts", value: true } });
   }
+  // Events (owner request 2026-11-21): the permission, starter templates and the 2026-27 Wolves season. Never stops the start.
+  await seedEvents(db).catch((e) => console.error("Events setup:", e instanceof Error ? e.message : "error"));
   // Trash: anything deleted more than 30 days ago is removed for good.
   const cutoff = new Date(Date.now() - 30 * 86400000);
   // People with stored files are purged by the app (it removes the files from the bucket first).

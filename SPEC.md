@@ -401,6 +401,50 @@ scrolls with it until its last card is on screen, then stays put while the middl
   agent's cell and office line as a group). One time, the showing checklists' automatic texts to the agent also got
   the owner added (group text), including ones already scheduled; change it in Admin → Checklists.
 
+### 6.7 Events *(owner request 2026-11-21; replaces the Google Sheets and Forms used for client events)*
+
+- **Who:** the **Events** permission (Admin → Users & permissions); Luke and Alyssa both have it (given to every role
+  once). The top bar's **Events** tab comes right after Pipeline (Admin → Top bar can move it).
+- **Event templates** (Events → Event templates): name, kind, location, what "done" is called ("Tickets sent", "Order
+  fulfilled"), **one date or many dates** (games), signup page intro, **signup questions** (short answer, long answer,
+  number, pick one; required or not; each is a merge field named after it, e.g. "Pie flavor" → `{pie_flavor}`), and
+  **default reminder texts** (days before + time, 8am–8pm, half hours). **New event** copies all of it, so only the date
+  is set (a one-date event asks for it; a many-dates event gets its dates added or imported). Editing a template later
+  doesn't change events already made. Starter templates: **Timberwolves Season** (many dates; "How many tickets?" 1–2,
+  notes; a reminder the day before at 10am) and **Pi Day** (one date; pie flavor, how many pies, delivery address,
+  notes; a reminder the day before at 10am). The **Timberwolves 2026-27** event is made once on the first deploy and its
+  home schedule loaded from the NBA (retried on each start until it works).
+- **Events and dates:** each event has one date or many (a game: date, time, title "Wolves vs Lakers", opponent,
+  location, seats / ticket info). **Import dates:** "Import Timberwolves home games" reads the NBA's public league
+  schedule (cdn.nba.com, regular-season home games, times in Central; a game with no set time shows "time TBD"), and a
+  **CSV upload** takes Date, Time, Opponent, Location, Seats columns. Importing again updates games already there (same
+  NBA game, or same date and title) and keeps seats typed in HQ, so nothing doubles.
+- **Attendees** are HQ contacts on a date, with a status: **Invited, Confirmed, Tickets sent / Order fulfilled
+  (the event's word), Declined**, and their signup answers (editable). Add people from a contact search, to one game or
+  to several at once. Removing a date removes its attendees (two-step).
+- **On each contact:** an **Events** card lists their events newest first ("Wolves vs Lakers 11/24/26 · Confirmed",
+  "Pi Day 2027 3/14/27 · 2 Cherry · Order fulfilled"), linking to the event. Combining contacts carries them over.
+- **Signup pages** (public, no sign-in): each event can turn on its own page at `/join/<long random link>` (24 random
+  bytes). Not listed anywhere, and search engines are told not to index it (`noindex` in the page and an `X-Robots-Tag`
+  header). On/off switch, optional open and close dates (Central), and **New link** (the old link stops working). The
+  form asks first and last name, cell phone (required), email, the dates (for a many-dates event: pick games) and the
+  event's questions. A signup is matched to a contact by phone or email, else a **new contact** is made; they're added
+  as **Confirmed** on a one-date event, or **Invited** on each game they picked (a request for Luke to confirm). A note
+  goes on their timeline and a bell alert ("Event signup: …", its own pop-up option in My settings, on by default) to
+  the team. A hidden robot trap box and a limit of 10 signups per 10 minutes per connection keep spam out.
+- **Reminder texts** (on the event page): text with merge fields from the contact (`{first_name}`… as in templates) and
+  the event (`{event_name}`, `{event_date}` "Thursday, January 14", `{event_short_date}` "1/14/27", `{event_time}`,
+  `{opponent}`, `{location}`, `{seat_info}`, `{slot_title}`) plus the signup answers (`{pie_flavor}`); timing **N days
+  before at a time** (8am–8pm); who it goes to (default **Confirmed** and **Tickets sent / fulfilled**); on/off.
+  **Preview** shows it filled in for the first attendee (or one picked). Each reminder is scheduled as an ordinary
+  scheduled text for every attendee it applies to, and **anyone added later (or signing up) gets theirs
+  automatically**; changes to the wording, dates, answers or status update or turn off the ones not sent yet. They show
+  in the contact's Scheduled box and Tasks → Scheduled (turn one off there; it isn't brought back), go out from the
+  event's **sender** (Luke's HQ number unless changed in Edit details) by the minute timer, and land in Messages and the
+  contact's timeline like any text. A reminder whose time has already passed when someone is added isn't sent. STOP,
+  no textable number (office / fax lines are skipped) and the daily cap still apply. Couples with two numbers get one
+  group text when group texting is on. The starter texts end with Luke's cell, **612-702-0295** (owner request).
+
 ## 7. Pipeline
 
 ### 7.1 Client files

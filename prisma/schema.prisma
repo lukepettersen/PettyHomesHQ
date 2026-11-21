@@ -174,6 +174,7 @@ model Person {
   documents     Document[]
   partnerOn     PaPartner[]
   texts         TextMessage[]
+  eventsAttended EventAttendee[]
 
   @@index([deletedAt])
   @@index([name])
@@ -666,6 +667,7 @@ model ScheduledText {
   media       Json      @default("[]")
   sendAt      DateTime
   taskId      String? // a checklist step checked off when it sends
+  eventKey    String? // an Events reminder: "<reminderId>:<attendeeId>" (kept in step by syncEventReminders)
   createdById String
   status      String    @default("pending") // pending | sending | sent | failed | canceled
   error       String?
@@ -674,6 +676,7 @@ model ScheduledText {
 
   @@index([status, sendAt])
   @@index([personId])
+  @@index([eventKey])
 }
 
 /// An email set to go out later from the scheduler's Gmail (owner request 2026-10-29), sent by the minute timer.
@@ -848,4 +851,104 @@ model McpGrant {
   createdAt     DateTime  @default(now())
 
   @@index([userId, kind])
+}
+
+// ---------- Events (owner request 2026-11-21; SPEC.md §6.7) ----------
+
+/// A reusable event setup ("Timberwolves Season", "Pi Day"): signup questions, one or many dates, default reminders.
+model EventTemplate {
+  id        String    @id @default(cuid())
+  name      String
+  type      String    @default("")
+  multiSlot Boolean   @default(false)
+  doneLabel String    @default("Tickets sent") // what "sent / fulfilled" is called for this kind of event
+  fields    Json      @default("[]") // [{ key, label, type: text|long|number|select, options, required }]
+  reminders Json      @default("[]") // [{ name, body, daysBefore, time }]
+  location  String    @default("")
+  intro     String    @default("") // shown on the signup page
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  events    Event[]
+}
+
+model Event {
+  id             String          @id @default(cuid())
+  templateId     String?
+  template       EventTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  name           String
+  type           String          @default("")
+  multiSlot      Boolean         @default(false)
+  doneLabel      String          @default("Tickets sent")
+  fields         Json            @default("[]")
+  location       String          @default("")
+  notes          String          @default("")
+  intro          String          @default("")
+  senderId       String? // whose HQ number its reminders go from
+  signupKey      String?         @unique // the private signup page's long random link
+  signupOn       Boolean         @default(false)
+  signupOpensAt  DateTime?
+  signupClosesAt DateTime?
+  createdById    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  deletedAt      DateTime?
+  slots          EventSlot[]
+  attendees      EventAttendee[]
+  reminders      EventReminder[]
+}
+
+/// One date of an event (a home game), or the only one (Pi Day).
+model EventSlot {
+  id         String          @id @default(cuid())
+  eventId    String
+  event      Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  date       DateTime        @db.Date
+  time       String? // "19:00"
+  title      String          @default("")
+  opponent   String          @default("")
+  location   String          @default("")
+  details    String          @default("") // seats / ticket info
+  externalId String? // the NBA game id, so a re-import updates instead of doubling
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  attendees  EventAttendee[]
+
+  @@unique([eventId, externalId])
+  @@index([eventId, date])
+}
+
+model EventAttendee {
+  id        String    @id @default(cuid())
+  eventId   String
+  event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  slotId    String
+  slot      EventSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  personId  String
+  person    Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  status    String    @default("invited") // invited | confirmed | sent | declined
+  answers   Json      @default("{}")
+  source    String    @default("manual") // manual | signup
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([slotId, personId])
+  @@index([personId])
+  @@index([eventId])
+}
+
+model EventReminder {
+  id         String   @id @default(cuid())
+  eventId    String
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name       String
+  body       String
+  daysBefore Int      @default(1)
+  time       String   @default("10:00")
+  statuses   String[] @default(["confirmed", "sent"])
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([eventId])
 }

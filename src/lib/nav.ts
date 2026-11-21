@@ -5,15 +5,23 @@ export const NAV_ITEMS = [
   { key: "messages", label: "Messages", href: "/messages" },
   { key: "people", label: "People", href: "/people" },
   { key: "pipeline", label: "Pipeline", href: "/pipeline" },
+  { key: "events", label: "Events", href: "/events" },
   { key: "tools", label: "Tools ▾", href: "" },
   { key: "admin", label: "Admin", href: "/admin" },
 ] as const;
 export type NavKey = (typeof NAV_ITEMS)[number]["key"];
 export const NAV_KEY = "nav.order";
 
-/** A saved order, cleaned: unknown tabs dropped, tabs added later put at the end. */
+/** A saved order, cleaned: unknown tabs dropped; a tab added later goes right after the tab before it in the default
+ *  order (Events after Pipeline, owner request 2026-11-21), or at the end. */
 export function navOrder(saved: unknown): NavKey[] {
   const all = NAV_ITEMS.map((i) => i.key) as NavKey[];
-  const picked = (Array.isArray(saved) ? saved : []).filter((k, i, a): k is NavKey => all.includes(k as NavKey) && a.indexOf(k) === i);
-  return [...picked, ...all.filter((k) => !picked.includes(k))];
+  const out = (Array.isArray(saved) ? saved : []).filter((k, i, a): k is NavKey => all.includes(k as NavKey) && a.indexOf(k) === i);
+  if (!out.length) return all;
+  all.forEach((k, i) => {
+    if (out.includes(k)) return;
+    const before = i > 0 ? out.indexOf(all[i - 1]) : -1;
+    if (before >= 0) out.splice(before + 1, 0, k); else out.push(k);
+  });
+  return out;
 }

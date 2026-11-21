@@ -2,7 +2,7 @@
 // (owner request 2026-11-19: "options for which things to allow notifications for"). Pure, tested in alerts.test.ts.
 // Owner report 2026-11-02: a website lead popped up as "New offer submitted"; every alert now gets its own title.
 
-export type AlertKind = "text" | "group" | "missed" | "offer" | "lead" | "paperwork" | "showing" | "problem" | "task" | "mention" | "newShowing" | "email" | "bulk" | "other";
+export type AlertKind = "text" | "group" | "missed" | "offer" | "lead" | "paperwork" | "showing" | "problem" | "task" | "mention" | "newShowing" | "email" | "bulk" | "eventSignup" | "other";
 export type AlertPrefs = Record<AlertKind, boolean>;
 type Item = { text: string; link: string | null };
 
@@ -16,6 +16,7 @@ export const ALERT_KINDS: { key: Exclude<AlertKind, "other">; label: string; hin
   { key: "paperwork", label: "Paperwork", hint: "A paperwork request for you, or yours is ready to sign", on: true },
   { key: "showing", label: "Showing emails", hint: "A ShowingTime email HQ couldn't read", on: true },
   { key: "problem", label: "Didn't send", hint: "A scheduled or automatic text or email that couldn't go out", on: true },
+  { key: "eventSignup", label: "Event signups", hint: "Someone signed up on an event's signup page", on: true },
   { key: "task", label: "Tasks given to you", hint: "A teammate gave you a task", on: false },
   { key: "mention", label: "@mentions", hint: "A teammate mentioned you in a note", on: false },
   { key: "newShowing", optIn: true, label: "New showings", hint: "A showing booked through ShowingTime, on our listing or one we're showing", on: false },
@@ -37,6 +38,7 @@ export function alertKind(n: Item): AlertKind {
   if (/^New showing|^Showing booked/.test(t)) return "newShowing";
   if (/^Email from /.test(t)) return "email";
   if (/^Mass (text|email) finished/.test(t)) return "bulk";
+  if (/^Event signup: /.test(t)) return "eventSignup";
   if (/ gave you a task/.test(t)) return "task";
   if (/ mentioned you on /.test(t)) return "mention";
   if (/wasn't sent|couldn't text you|couldn't send/i.test(t)) return "problem";
@@ -61,6 +63,7 @@ export function alertHeading(n: Item): string {
     case "newShowing": return "New showing";
     case "email": return "New email";
     case "bulk": return "Mass send finished";
+    case "eventSignup": return "New event signup";
     default: return "HQ alert";
   }
 }

@@ -13,7 +13,11 @@ const nextConfig: NextConfig = {
   // Uploads pass through the sign-in proxy, which otherwise cuts request bodies off at 10 MB (Files card allows 100 MB).
   experimental: { proxyClientMaxBodySize: "101mb" },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // Event signup pages are private: only reachable with their long random link, never listed by search engines.
+      { source: "/join/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }, { key: "Cache-Control", value: "no-store" }] },
+    ];
   },
 };
 

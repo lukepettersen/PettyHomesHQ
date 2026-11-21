@@ -12,7 +12,7 @@ import type { BellItem } from "@/server/notifications";
 
 export function TopBar({ name, tools, canEditTools, bell, texts, claude, owner = false, order }: { name: string; tools: Tool[]; canEditTools: boolean; bell: { unread: number; items: BellItem[] }; texts: number; claude: boolean; owner?: boolean; order: NavKey[] }) {
   return (
-    <header className="flex flex-wrap items-center gap-x-4 bg-moss px-4 text-misty xl:gap-x-6">
+    <header className="flex flex-wrap items-center gap-x-4 bg-moss px-4 text-misty 2xl:gap-x-6">
       <Link href="/people" className="flex items-center gap-2 py-3 text-white">
         <Logo />
         <span className="font-extrabold tracking-wide whitespace-nowrap"><span className="hidden sm:inline">PETTY HOMES </span><span className="rounded bg-misty px-1.5 text-xs text-charcoal">HQ</span></span>

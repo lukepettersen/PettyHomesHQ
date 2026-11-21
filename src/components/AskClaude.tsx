@@ -34,7 +34,7 @@ export function AskClaude({ connected }: { connected: boolean }) {
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className="flex items-center gap-1.5 rounded-md px-2 py-1.5 font-semibold text-white hover:bg-white/10" title="Ask Claude: say or type tasks and notes">
-        <Mic /><span className="hidden lg:inline">Ask Claude</span><span className="sr-only lg:hidden">Ask Claude</span>
+        <Mic /><span className="hidden 2xl:inline">Ask Claude</span><span className="sr-only 2xl:hidden">Ask Claude</span>
       </button>
       {/* Rendered at page level so it doesn't pick up the header's colors. */}
       {open && createPortal(<AskDialog connected={connected} onClose={() => setOpen(false)} />, document.body)}

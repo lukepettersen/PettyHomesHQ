@@ -38,6 +38,11 @@ export async function mergeContacts(userId: string, keepId: string, goneId: stri
     await tx.personTag.deleteMany({ where: { personId: goneId } });
     for (const c of gone.customValues) if (!keep.customValues.some((k) => k.fieldId === c.fieldId)) await tx.customValue.create({ data: { personId: keepId, fieldId: c.fieldId, value: c.value } });
     await tx.customValue.deleteMany({ where: { personId: goneId } });
+    // Their events (owner request 2026-11-21): moved over, except a date the kept contact is already on.
+    for (const a of await tx.eventAttendee.findMany({ where: { personId: goneId } })) {
+      if (await tx.eventAttendee.findUnique({ where: { slotId_personId: { slotId: a.slotId, personId: keepId } } })) await tx.eventAttendee.delete({ where: { id: a.id } });
+      else await tx.eventAttendee.update({ where: { id: a.id }, data: { personId: keepId } });
+    }
     // Everything else that belongs to a contact.
     // One at a time: queries inside a transaction share one connection.
     for (const run of [

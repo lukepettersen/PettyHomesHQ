@@ -27,6 +27,8 @@ import { PipelineCard } from "./PipelineCard";
 import { AppointmentsCard } from "./AppointmentsCard";
 import { FilesCard } from "./FilesCard";
 import { ShowingsCard } from "./ShowingsCard";
+import { EventsCard } from "./EventsCard";
+import { loadPersonEvents } from "@/server/events";
 import { loadShowings } from "@/server/showings";
 import { PartnerDeals } from "./PartnerDeals";
 import { storageConnected } from "@/server/storage";
@@ -167,6 +169,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
             templates={templates.map((t) => ({ id: t.id, name: t.name, manual: !t.trigger }))} files={files.filter((f) => !f.closedAt).map((f) => ({ id: f.id, label: `${f.kind === "buyer" ? "Buyer" : "Seller"} · ${f.kind === "buyer" ? f.status : (f.address ?? "").split(",")[0]}` }))} />
           <PipelineCard fileForms={fileForms} personId={p.id} personName={p.name} files={files} contracts={contracts} statuses={fileStatuses} canSeeCommission={canSeeCommission} />
           <ShowingsCard rows={await loadShowings(p.id)} />
+          <EventsCard rows={await loadPersonEvents(p.id)} today={tasks.today} />
           <AppointmentsCard types={await loadApptTypes()} calendarConnected={!!(await calendarConnection())} fileForms={fileForms} personId={p.id} personName={p.name} appts={appts} today={tasks.today} phone={p.phones[0]?.number ?? ""} address={p.address ?? ""} hasEmail={p.emails.length > 0} clientEmails={p.emails.map((e) => ({ address: e.address, label: e.label }))}
             team={tasks.team.map((m) => m.name)} callTemplates={templates.filter((t) => ["phonecall", "buyerconsult", "sellerconsult", "anyconsult"].includes(t.trigger ?? "")).map((t) => ({ name: t.name, trigger: t.trigger!, steps: t.phases.reduce((n, ph) => n + ph.steps.length, 0) }))}
             activeKinds={files.filter((f) => !f.closedAt).map((f) => f.kind)} statuses={fileStatuses} canSeeCommission={canSeeCommission} />

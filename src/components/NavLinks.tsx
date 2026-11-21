@@ -23,7 +23,7 @@ export function NavLinks({ tools, canEditTools, texts = 0, owner = false, order 
       <nav aria-label="Main" className="hidden gap-1 md:flex">
         {items.map(({ key, label, href }) => key === "tools" ? <ToolsMenu key="tools" tools={tools} canEdit={canEditTools} /> : (
           <Link key={href} href={href} aria-current={isOn(href) ? "page" : undefined}
-            className={`border-b-[3px] px-2.5 py-3.5 whitespace-nowrap ${isOn(href) ? "border-coral text-white" : "border-transparent hover:text-white"}`}>
+            className={`border-b-[3px] px-2 py-3.5 whitespace-nowrap 2xl:px-2.5 ${isOn(href) ? "border-coral text-white" : "border-transparent hover:text-white"}`}>
             {label}{badge(href)}
           </Link>
         ))}
