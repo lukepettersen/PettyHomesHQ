@@ -42,6 +42,11 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
   const end = useRef<HTMLDivElement>(null);
   const href = (n: string | null, lineId = line?.userId) => `/messages?${new URLSearchParams({ ...(lineId ? { line: lineId } : {}), ...(n ? { n } : {}) })}`;
   const current = threads.find((t) => t.number === open);
+  // A tapped conversation shows right away while it loads (owner report 2026-11-22: taps barely registered on a phone).
+  const [opening, setOpening] = useState<string | null>(null);
+  useEffect(() => { const t = setTimeout(() => setOpening(null), 0); return () => clearTimeout(t); }, [open]);
+  const loading = !!opening && opening !== open;
+  const openingThread = loading ? threads.find((t) => t.number === opening) : undefined;
 
   useEffect(() => { const t = setInterval(() => router.refresh(), 15000); return () => clearInterval(t); }, [router]);
   useEffect(() => { end.current?.scrollIntoView({ block: "end" }); }, [open, conversation.length]);
@@ -102,8 +107,8 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
           <ul className="min-h-0 flex-1 overflow-y-auto">
             {shown.map((t) => (
               <li key={t.number}>
-                <Link href={href(t.number)} aria-current={t.number === open ? "true" : undefined}
-                  className={`grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-x-2.5 border-t border-misty px-3 py-2.5 first:border-0 hover:bg-sunken max-md:relative max-md:grid-cols-[48px_minmax(0,1fr)_auto] max-md:gap-x-3 max-md:border-0 max-md:py-3 max-md:pl-6 max-md:pr-4 ${t.number === open ? "bg-accent-soft" : ""}`}>
+                <Link href={href(t.number)} aria-current={t.number === open ? "true" : undefined} onClick={() => setOpening(t.number)}
+                  className={`grid touch-manipulation grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-x-2.5 border-t border-misty px-3 py-2.5 first:border-0 hover:bg-sunken active:bg-misty max-md:relative max-md:grid-cols-[48px_minmax(0,1fr)_auto] max-md:gap-x-3 max-md:border-0 max-md:py-3 max-md:pl-6 max-md:pr-4 ${t.number === open || t.number === opening ? "bg-accent-soft" : ""}`}>
                   {t.unread > 0 && <span aria-hidden="true" className="absolute left-2 top-1/2 size-2.5 -translate-y-1/2 rounded-full bg-[#0b84fe] md:hidden" />}
                   <Avatar name={t.name} group={!!t.group} missed={t.lastKind === "missed_call"} />
                   <span className="min-w-0 max-md:border-b max-md:border-misty max-md:pb-3">
@@ -118,8 +123,13 @@ export function MessagesApp({ lines, line, threads, open, person, conversation, 
         ) : <p className="p-4 text-sm muted">{tab === "archived" && !q.trim() ? "Nothing archived. Click Archive on a conversation when you're done with it." : tab === "unread" && !q.trim() ? "All caught up. No unread texts or missed calls." : threads.length ? "No conversations match." : `No texts yet on ${formatPhone(line.number)}. Click + New message to text a contact.`}</p>}
       </section>
 
-      <section aria-label="Conversation" className={`card flex min-h-[60vh] flex-col overflow-hidden md:min-h-0 max-md:fixed max-md:inset-0 max-md:z-40 max-md:min-h-0 max-md:rounded-none max-md:border-0 ${open ? "" : "max-md:hidden"}`}>
-        {!open ? <p className="m-auto p-6 text-sm muted">Pick a conversation.</p> : (
+      <section aria-label="Conversation" className={`card flex min-h-[60vh] flex-col overflow-hidden md:min-h-0 max-md:fixed max-md:inset-0 max-md:z-40 max-md:min-h-0 max-md:rounded-none max-md:border-0 ${open || loading ? "" : "max-md:hidden"}`}>
+        {loading ? (
+          <div className="flex flex-1 flex-col">
+            <header className="flex items-center gap-2 border-b border-misty px-3 py-3"><b className="truncate">{openingThread?.name ?? "Conversation"}</b></header>
+            <p className="m-auto flex items-center gap-2 p-6 text-sm muted" role="status"><span aria-hidden="true" className="size-4 animate-spin rounded-full border-2 border-misty border-t-accent" />Opening…</p>
+          </div>
+        ) : !open ? <p className="m-auto p-6 text-sm muted">Pick a conversation.</p> : (
           <>
             <header className="flex items-center gap-2 border-b border-misty bg-white/95 px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur md:hidden">
               <Link href={href(null)} aria-label="Back to messages" className="flex items-center px-1 text-[17px] text-[#0b84fe]"><span aria-hidden="true" className="text-3xl leading-none">‹</span></Link>
