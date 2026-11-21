@@ -159,8 +159,8 @@ export async function previewGameOffer(eventId: string, slotIds: string[], perso
 export async function sendGameOffer(eventId: string, slotIds: string[], input: unknown) {
   return guarded("manageEvents", async (user) => {
     if (!user.permissions.includes("sendTexts")) throw new UserError("You don't have permission to send texts.");
-    const v = z.object({ personIds: z.array(id).min(1, "Pick who to text.").max(100), body: z.string().trim().min(1, "Write the text.").max(1500), markInvited: z.boolean(), fromId: id.nullable().optional() }).parse(input);
-    const r = await offerGame(user.id, id.parse(eventId), z.array(id).min(1, "Pick at least one game.").max(100).parse(slotIds), v.personIds, v.body, v.markInvited, v.fromId);
+    const v = z.object({ personIds: z.array(id).min(1, "Pick who to text.").max(100), body: z.string().trim().min(1, "Write the text.").max(1500), markInvited: z.boolean(), fromId: id.nullable().optional(), addOwner: z.boolean().optional() }).parse(input);
+    const r = await offerGame(user.id, id.parse(eventId), z.array(id).min(1, "Pick at least one game.").max(100).parse(slotIds), v.personIds, v.body, v.markInvited, v.fromId, v.addOwner ?? false);
     refresh(eventId);
     return r;
   });

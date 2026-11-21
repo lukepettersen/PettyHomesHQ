@@ -450,7 +450,9 @@ scrolls with it until its last card is on screen, then stays put while the middl
   about these games**: pick waiting people (those who asked for one of the games are ticked; anyone else can be added),
   edit the text, Preview, two-step Send. `{games}` lists the games one per line ("Wed, Jan 27 - Denver Nuggets - 8:30
   PM"); a warning offers to add it when the text has no list. Texts go from the sender's own HQ number (Alyssa's from
-  hers; the owner can pick another). Optionally marks them Invited for every game offered.
+  hers; the owner can pick another). Optionally marks them Invited for every game offered. With group texting on,
+  **"Add Luke's cell to the group"** (ticked to start, like Send text) makes each one a group text with the owner's
+  cell; the "Goes to" box lists every number before sending.
   The **Waitlist tab** does the same from the other side: tick people (or "+ All A/B/C", "Everyone with a cell"), pick
   the games being offered (only **open** games: ahead, with nobody Confirmed or Tickets sent), then write and send.
 - **Tiers** *(owner request 2026-11-22)*: each person on a waitlist has an **A / B / C** tier (or none), set from a

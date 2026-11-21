@@ -167,7 +167,7 @@ export function GameWaiting({ e, slot }: { e: EventView; slot: Slot }) {
 }
 
 /** Exactly which numbers each text goes to (owner 2026-11-22: "how do I know both numbers get texted?"). */
-function GoesTo({ e, ids, waiting, extra }: { e: EventView; ids: string[]; waiting: Want[]; extra: Hit[] }) {
+function GoesTo({ e, ids, waiting, extra, owner }: { e: EventView; ids: string[]; waiting: Want[]; extra: Hit[]; owner: boolean }) {
   const rows = ids.map((id) => { const w = waiting.find((x) => x.personId === id); return w ? { id, name: w.name, phones: w.phones } : { id, name: extra.find((x) => x.id === id)?.name ?? "", phones: [] as string[] }; });
   return (
     <div className="mt-2 rounded-lg border border-misty bg-white p-2 text-xs">
@@ -175,7 +175,8 @@ function GoesTo({ e, ids, waiting, extra }: { e: EventView; ids: string[]; waiti
       <ul className="mt-1 space-y-0.5">
         {rows.map((r) => (
           <li key={r.id}><b>{r.name}</b>: {r.phones.length ? r.phones.join(" and ") : "their textable numbers"}
-            {r.phones.length > 1 && <span className="muted"> {e.groupsOn ? "(one group text with both)" : "(each gets their own text)"}</span>}</li>
+            {owner && e.ownerCell && <> + {e.ownerCell.name}&apos;s cell ({e.ownerCell.number})</>}
+            {(r.phones.length > 1 || owner) && <span className="muted"> {e.groupsOn ? "(one group text)" : "(each gets their own text)"}</span>}</li>
         ))}
       </ul>
       <p className="mt-1 muted">Office, fax and landline numbers are never texted.</p>
@@ -201,6 +202,8 @@ export function OfferForm({ e, slots, waiting, onDone, people }: { e: EventView;
   const mine = e.senders.find((x) => x.id === e.me);
   const [fromId, setFromId] = useState(mine?.id ?? e.senderId ?? e.senders[0]?.id ?? "");
   const [invite, setInvite] = useState(true);
+  const [addOwner, setAddOwner] = useState(true);
+  const withOwner = addOwner && e.groupsOn && !!e.ownerCell;
   const [preview, setPreview] = useState<{ text: string; who: string; missing: string[] } | null>(null);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
@@ -211,7 +214,7 @@ export function OfferForm({ e, slots, waiting, onDone, people }: { e: EventView;
   const look = () => start(async () => { setError(""); const r = await previewGameOffer(e.id, ids, everyone[0] ?? null, body, fromId || null); if (!r.ok) { setError(r.error); return; } setPreview(r.data!); });
   const send = () => start(async () => {
     setError(""); setMsg("");
-    const r = await sendGameOffer(e.id, ids, { personIds: everyone, body, markInvited: invite, fromId: fromId || null });
+    const r = await sendGameOffer(e.id, ids, { personIds: everyone, body, markInvited: invite, fromId: fromId || null, addOwner: withOwner });
     if (!r.ok) { setError(r.error); setSure(false); return; }
     setMsg(`${r.data!.queued} ${r.data!.queued === 1 ? "text" : "texts"} going out ${r.data!.when ? `at ${r.data!.when} (after hours now)` : "within a minute"}.${r.data!.skipped.length ? ` Skipped: ${r.data!.skipped.join(", ")}.` : ""}`);
     setSure(false); setExtra([]); router.refresh();
@@ -245,10 +248,13 @@ export function OfferForm({ e, slots, waiting, onDone, people }: { e: EventView;
             {senders.map((x) => <option key={x.id} value={x.id}>{x.id === e.me ? "My number" : `${x.name.split(" ")[0]}'s number`} ({x.number})</option>)}
           </select></label>
         )}
+        {e.groupsOn && e.ownerCell && (
+          <label className="flex items-center gap-2 pb-2"><input type="checkbox" checked={addOwner} onChange={(x) => setAddOwner(x.target.checked)} />Add {e.me && e.meIsOwner ? "my" : `${e.ownerCell.name}'s`} cell to the group</label>
+        )}
         <label className="flex items-center gap-2 pb-2"><input type="checkbox" checked={invite} onChange={(x) => setInvite(x.target.checked)} />Mark them Invited for {slots.length === 1 ? "this game" : "these games"}</label>
       </div>
       {preview && <div className="mt-2 rounded-lg border border-misty bg-white p-2"><p className="text-xs muted">As {preview.who} would get it:</p><p className="whitespace-pre-wrap">{preview.text}</p></div>}
-      {everyone.length > 0 && <GoesTo e={e} ids={everyone} waiting={waiting} extra={extra} />}
+      {everyone.length > 0 && <GoesTo e={e} ids={everyone} waiting={waiting} extra={extra} owner={withOwner} />}
       {error && <p role="alert" className="mt-2 text-bad">{error}</p>}
       {msg && <p role="status" className="mt-2 text-accent">{msg}</p>}
       <div className="mt-2 flex flex-wrap justify-end gap-2">

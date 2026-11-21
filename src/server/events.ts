@@ -26,6 +26,13 @@ const answersOf = (v: unknown): Answers => Object.fromEntries(Object.entries(obj
 async function owner() {
   return db.user.findFirst({ where: { isOwner: true, status: { not: "DISABLED" } }, orderBy: { createdAt: "asc" }, select: { id: true, name: true } });
 }
+/** The owner's own cell, added to client group texts (owner 2026-10-22) and to waitlist offers (owner 2026-11-22). */
+async function ownerCell() {
+  const o = await db.user.findFirst({ where: { isOwner: true, status: { not: "DISABLED" }, forwardTo: { not: null } }, orderBy: { createdAt: "asc" }, select: { name: true, forwardTo: true } });
+  const n = o?.forwardTo ? normalizePhone(o.forwardTo) : "";
+  return o && n.length === 10 ? { name: o.name.split(" ")[0], number: formatPhone(n), digits: n } : null;
+}
+
 export const newSignupKey = () => randomBytes(24).toString("base64url");
 
 // ---------- Templates ----------
@@ -131,7 +138,7 @@ export async function loadEvent(id: string, me?: { id: string; isOwner: boolean 
       answers: answersOf(a.answers), phone: a.person.phones.find((p) => canText(p.label))?.number ?? null })),
     reminders: e.reminders.map((r) => ({ id: r.id, name: r.name, body: r.body, daysBefore: r.daysBefore, time: r.time, statuses: r.statuses, active: r.active, ...counts(r.id) })),
     senders: team.map((u) => ({ id: u.id, name: u.name, number: formatPhone(u.textNumber!) })),
-    me: me?.id ?? null, meIsOwner: !!me?.isOwner, groupsOn: await groupReady(),
+    me: me?.id ?? null, meIsOwner: !!me?.isOwner, groupsOn: await groupReady(), ownerCell: await ownerCell(),
   };
 }
 export type EventView = NonNullable<Awaited<ReturnType<typeof loadEvent>>>;
@@ -548,18 +555,21 @@ export async function previewOffer(user: { id: string }, eventId: string, slotId
  * contact and in Messages. Optionally marks them Invited for each game. People who replied STOP or have no textable
  * number are skipped and named.
  */
-export async function offerGame(userId: string, eventId: string, slotIds: string[], personIds: string[], body: string, markInvited: boolean, fromId?: string | null) {
+export async function offerGame(userId: string, eventId: string, slotIds: string[], personIds: string[], body: string, markInvited: boolean, fromId?: string | null, addOwner = false) {
   const { e, slots, senderId, sender } = await offerParts({ id: userId }, eventId, slotIds, fromId);
   if (!body.trim()) throw new UserError("Write the text.");
   const people = await db.person.findMany({ where: { id: { in: personIds }, deletedAt: null }, select: personSelect });
   if (!people.length) throw new UserError("Pick who to text.");
   const sendAt = nextSendTime();
   const skipped: string[] = [];
+  // The owner's cell in each group text, like Send text (only when group texting is on).
+  const cell = addOwner && (await groupReady()) ? (await ownerCell())?.digits ?? null : null;
   let queued = 0;
   for (const p of people) {
     const numbers = [...new Set(p.phones.filter((x) => canText(x.label) && x.normalized.length === 10).map((x) => x.normalized))];
     if (!numbers.length) { skipped.push(`${p.name} (no textable number)`); continue; }
     if (await hasTextStop(p.id)) { skipped.push(`${p.name} (replied STOP)`); continue; }
+    if (cell && !numbers.includes(cell)) numbers.push(cell);
     const text = offerText(body, p, e, slots, sender).text;
     // "evo:" keys aren't touched by syncEventReminders (they're one-off offers, not reminders).
     await db.scheduledText.create({ data: { personId: p.id, numbers, body: text, sendAt, createdById: senderId, eventKey: `evo:${e.id}:${slots[0].id}:${p.id}:${Date.now()}` } });
