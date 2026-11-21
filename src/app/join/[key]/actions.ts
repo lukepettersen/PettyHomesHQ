@@ -36,6 +36,7 @@ export async function submitSignup(input: unknown): Promise<{ ok: true } | { ok:
     const state = signupState(e);
     if (!state.open) return { ok: false, error: state.why };
     if (normalizePhone(v.phone).length !== 10) return { ok: false, error: "Please add a 10-digit phone number." };
+    if (e.page.emailRequired && !v.email) return { ok: false, error: "Please add your email." };
     if (v.email && !/^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/.test(v.email)) return { ok: false, error: "That email address doesn't look right." };
     const answers = cleanAnswers(e.fields, v.answers);
     const problem = answersProblem(e.fields, answers);

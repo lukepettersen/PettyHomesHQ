@@ -5,6 +5,7 @@ import type { EventView } from "@/server/events";
 import { EventSlots } from "./EventClient";
 import { GamesTab, ImportTab } from "./Games";
 import { WaitlistCard } from "./Waitlist";
+import { SignupEditor } from "./SignupEditor";
 import { Reminders, SignupSettings } from "./EventSide";
 
 type Tab = "games" | "waitlist" | "reminders" | "signup" | "import";
@@ -36,7 +37,7 @@ export function EventTabs({ e, today }: { e: EventView; today: string }) {
         {tab === "games" && (e.multiSlot ? <GamesTab e={e} today={today} /> : <EventSlots e={e} today={today} />)}
         {tab === "waitlist" && <WaitlistCard e={e} />}
         {tab === "reminders" && <div className="max-w-3xl"><Reminders e={e} /></div>}
-        {tab === "signup" && <div className="max-w-3xl"><SignupSettings key={`s${e.signupKey}${e.signupOn}`} e={e} /></div>}
+        {tab === "signup" && <div className="flex flex-col gap-3"><div className="max-w-3xl"><SignupSettings key={`s${e.signupKey}${e.signupOn}`} e={e} /></div><SignupEditor e={e} today={today} /></div>}
         {tab === "import" && <ImportTab e={e} />}
       </div>
     </div>

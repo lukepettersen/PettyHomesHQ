@@ -122,6 +122,7 @@ export async function loadEvent(id: string) {
       offered: e.attendees.filter((a) => a.personId === i.personId && a.status === "invited").map((a) => a.slotId),
       games: e.attendees.filter((a) => a.personId === i.personId && ASSIGNED.includes(a.status)).map((a) => a.slotId) })),
     senderId: e.senderId, signupKey: e.signupKey, signupOn: e.signupOn, signupOpensAt: e.signupOpensAt?.toISOString() ?? null, signupClosesAt: e.signupClosesAt?.toISOString() ?? null,
+    page: pageOf(e),
     slots: e.slots.map((s) => ({ id: s.id, date: isoFromDate(s.date), time: s.time, title: s.title, opponent: s.opponent, location: s.location, details: s.details, imported: !!s.externalId })),
     attendees: e.attendees.filter((a) => !a.person.deletedAt).map((a) => ({ id: a.id, slotId: a.slotId, personId: a.person.id, name: a.person.name, status: a.status, source: a.source,
       answers: answersOf(a.answers), phone: a.person.phones.find((p) => canText(p.label))?.number ?? null })),
@@ -366,6 +367,23 @@ export async function syncEventReminders(eventId: string, now = new Date()): Pro
 
 // ---------- Signup page ----------
 
+/** The signup page's wording, with the defaults filled in where it's blank. */
+export function pageOf(e: { name: string; intro: string; multiSlot: boolean; signupTitle: string; signupGamesOn: boolean; signupGamesLabel: string; signupThanks: string; signupEmailRequired: boolean }) {
+  return { title: e.signupTitle, intro: e.intro, gamesOn: e.multiSlot && e.signupGamesOn, gamesLabel: e.signupGamesLabel, thanks: e.signupThanks, emailRequired: e.signupEmailRequired,
+    defaults: { title: e.name, gamesLabel: "Any dates you'd especially like? (optional)", thanks: e.multiSlot ? "Thanks, {first}! You're on the list for {event}. We'll text you when we have tickets for you." : "Thanks, {first}! You're signed up for {event}." } };
+}
+export type SignupPage = ReturnType<typeof pageOf>;
+
+/** Saves the signup page's wording and questions (owner request 2026-11-22: each signup page editable). */
+export async function saveSignupPage(userId: string, eventId: string, v: { title: string; intro: string; gamesOn: boolean; gamesLabel: string; thanks: string; emailRequired: boolean; fields: unknown }) {
+  const e = await db.event.findFirst({ where: { id: eventId, deletedAt: null } });
+  if (!e) throw new UserError("That event was removed.");
+  await db.event.update({ where: { id: eventId }, data: { signupTitle: v.title.trim().slice(0, 120), intro: v.intro.trim().slice(0, 2000), signupGamesOn: v.gamesOn,
+    signupGamesLabel: v.gamesLabel.trim().slice(0, 200), signupThanks: v.thanks.trim().slice(0, 500), signupEmailRequired: v.emailRequired, fields: cleanFields(v.fields) } });
+  await logActivity(userId, "update", "event", eventId, `Edited the signup page for "${e.name}"`);
+  await syncEventReminders(eventId);
+}
+
 export async function setSignup(userId: string, eventId: string, v: { on: boolean; opensAt: Date | null; closesAt: Date | null; newLink?: boolean }) {
   const e = await db.event.findFirst({ where: { id: eventId, deletedAt: null } });
   if (!e) throw new UserError("That event was removed.");
@@ -381,7 +399,7 @@ export async function loadSignup(key: string) {
   const e = await db.event.findFirst({ where: { signupKey: key, deletedAt: null }, include: { slots: { orderBy: [{ date: "asc" }, { time: "asc" }] } } });
   if (!e) return null;
   const today = isoFromDate(new Date());
-  return { id: e.id, name: e.name, intro: e.intro, location: e.location, multiSlot: e.multiSlot, fields: fieldsOf(e.fields), signupOn: e.signupOn, signupOpensAt: e.signupOpensAt, signupClosesAt: e.signupClosesAt,
+  return { id: e.id, name: e.name, intro: e.intro, location: e.location, multiSlot: e.multiSlot, fields: fieldsOf(e.fields), signupOn: e.signupOn, signupOpensAt: e.signupOpensAt, signupClosesAt: e.signupClosesAt, page: pageOf(e),
     slots: e.slots.map((s) => ({ id: s.id, date: isoFromDate(s.date), time: s.time, title: s.title, opponent: s.opponent, location: s.location })).filter((s) => s.date >= today) };
 }
 
@@ -404,7 +422,7 @@ export async function receiveSignup(eventId: string, v: { first: string; last: s
     phones: digits.length === 10 ? { create: [{ label: "Mobile", number: formatPhone(digits), normalized: digits, position: 0 }] } : undefined,
     emails: email ? { create: [{ label: "", address: email, normalized: email, position: 0 }] } : undefined,
   }, select: { id: true, name: true } });
-  const slotIds = e.multiSlot ? v.slotIds.filter((id) => e.slots.some((s) => s.id === id)) : e.slots.map((s) => s.id).slice(0, 1);
+  const slotIds = e.multiSlot ? (e.signupGamesOn ? v.slotIds.filter((id) => e.slots.some((s) => s.id === id)) : []) : e.slots.map((s) => s.id).slice(0, 1);
   if (!e.multiSlot && !slotIds.length) throw new UserError("This event doesn't have a date yet.");
   const answers = cleanAnswers(fieldsOf(e.fields), v.answers);
   // Games (many dates): onto the waitlist, with the games they'd like; Luke assigns games from there (owner 2026-11-21).

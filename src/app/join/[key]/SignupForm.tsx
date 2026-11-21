@@ -8,20 +8,30 @@ import { submitSignup } from "./actions";
 
 type Slot = { id: string; date: string; time: string | null; title: string; opponent: string; location: string };
 
-export function SignupForm({ signupKey, multiSlot, fields, slots, eventName }: { signupKey: string; multiSlot: boolean; fields: EventField[]; slots: Slot[]; eventName: string }) {
+export type PageText = { gamesOn: boolean; gamesLabel: string; thanks: string; emailRequired: boolean };
+/** The thank-you message with {first} and {event} filled in. */
+export const thanksText = (t: string, first: string, event: string) => t.replace(/\{first(_name)?\}/g, first).replace(/\{event(_name)?\}/g, event);
+
+/** `preview`: shown in HQ's signup page editor; nothing is sent. */
+export function SignupForm({ signupKey, multiSlot, fields, slots, eventName, page, preview = false }: { signupKey: string; multiSlot: boolean; fields: EventField[]; slots: Slot[]; eventName: string; page: PageText; preview?: boolean }) {
   const [v, setV] = useState({ first: "", last: "", phone: "", email: "", website: "" });
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [picked, setPicked] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [pending, start] = useTransition();
-  const send = (x: React.FormEvent) => { x.preventDefault(); start(async () => {
+  const send = (x: React.FormEvent) => { x.preventDefault(); if (preview) { setDone(true); return; } start(async () => {
     setError("");
     const r = await submitSignup({ key: signupKey, ...v, slotIds: picked, answers });
     if (!r.ok) { setError(r.error); return; }
     setDone(true);
   }); };
-  if (done) return <p className="card mt-6 p-5 text-center text-lg">Thanks, {v.first}! {multiSlot ? `You're on the list for ${eventName}. We'll text you when we have tickets for you.` : `You're signed up for ${eventName}.`}</p>;
+  if (done) return (
+    <div className="card mt-6 p-5 text-center text-lg">
+      <p className="whitespace-pre-wrap">{thanksText(page.thanks, v.first || "Sam", eventName)}</p>
+      {preview && <button type="button" className="btn mt-3 text-sm" onClick={() => setDone(false)}>Back to the form</button>}
+    </div>
+  );
   const box = "input mt-1 w-full";
   return (
     <form onSubmit={send} className="card mt-6 flex flex-col gap-3 p-5">
@@ -30,12 +40,12 @@ export function SignupForm({ signupKey, multiSlot, fields, slots, eventName }: {
         <label className="label">Last name<input className={box} autoComplete="family-name" value={v.last} onChange={(x) => setV({ ...v, last: x.target.value })} /></label>
       </div>
       <label className="label">Cell phone<input className={box} required type="tel" autoComplete="tel" inputMode="tel" value={v.phone} onChange={(x) => setV({ ...v, phone: x.target.value })} /></label>
-      <label className="label">Email<input className={box} type="email" autoComplete="email" value={v.email} onChange={(x) => setV({ ...v, email: x.target.value })} /></label>
+      <label className="label">Email{!page.emailRequired && <span className="font-normal muted"> (optional)</span>}<input className={box} type="email" required={page.emailRequired} autoComplete="email" value={v.email} onChange={(x) => setV({ ...v, email: x.target.value })} /></label>
       {/* Robots fill in every box; people never see this one. */}
       <label className="absolute -left-[9999px]" aria-hidden="true">Website<input tabIndex={-1} autoComplete="off" value={v.website} onChange={(x) => setV({ ...v, website: x.target.value })} /></label>
-      {multiSlot && (
+      {multiSlot && page.gamesOn && (
         <fieldset>
-          <legend className="text-sm font-semibold">Any {slots.length === 1 ? "date" : "dates"} you&apos;d especially like? <span className="font-normal muted">(optional)</span></legend>
+          <legend className="text-sm font-semibold">{page.gamesLabel}</legend>
           {!slots.length && <p className="text-sm muted">No dates are open right now.</p>}
           <div className="mt-1 flex max-h-80 flex-col gap-1 overflow-auto">
             {slots.map((s) => (
@@ -56,7 +66,7 @@ export function SignupForm({ signupKey, multiSlot, fields, slots, eventName }: {
       ))}
       <p className="text-xs muted">By signing up you agree to get texts from Petty Homes about this event. Reply STOP anytime to opt out.</p>
       {error && <p role="alert" className="text-sm text-bad">{error}</p>}
-      <button type="submit" className="btn btn-primary" disabled={pending}>{pending ? "Sending…" : "Sign up"}</button>
+      <button type="submit" className="btn btn-primary" disabled={pending}>{pending ? "Sending…" : preview ? "Sign up (preview: nothing is sent)" : "Sign up"}</button>
     </form>
   );
 }

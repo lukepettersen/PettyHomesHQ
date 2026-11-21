@@ -16,11 +16,12 @@ export default async function Page({ params }: { params: Promise<{ key: string }
   return (
     <main className="mx-auto min-h-screen max-w-lg px-4 py-8">
       <p className="text-center text-sm font-bold tracking-wide text-accent">PETTY HOMES</p>
-      {e && <h1 className="mt-1 text-center text-2xl font-extrabold">{e.name}</h1>}
+      {e && <h1 className="mt-1 text-center text-2xl font-extrabold">{e.page.title || e.page.defaults.title}</h1>}
       {!e || !state.open ? <p className="card mt-6 p-5 text-center">{state.why || "This signup page isn't available."}</p> : (
         <>
           {e.intro && <p className="mt-3 whitespace-pre-wrap text-center">{e.intro}</p>}
-          <SignupForm signupKey={key} multiSlot={e.multiSlot} fields={e.fields} slots={e.slots} eventName={e.name} />
+          <SignupForm signupKey={key} multiSlot={e.multiSlot} fields={e.fields} slots={e.slots} eventName={e.name}
+            page={{ gamesOn: e.page.gamesOn, gamesLabel: e.page.gamesLabel || e.page.defaults.gamesLabel, thanks: e.page.thanks || e.page.defaults.thanks, emailRequired: e.page.emailRequired }} />
         </>
       )}
       <p className="mt-6 text-center text-xs muted">Questions? Text Luke at 612-702-0295.</p>

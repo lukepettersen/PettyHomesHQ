@@ -894,6 +894,12 @@ model Event {
   signupOn       Boolean         @default(false)
   signupOpensAt  DateTime?
   signupClosesAt DateTime?
+  // The signup page's wording (owner request 2026-11-22: "make each signup page editable"); blank = the default.
+  signupTitle    String          @default("")
+  signupGamesOn  Boolean         @default(true) // a many-dates event: show the list of games to pick from
+  signupGamesLabel String        @default("")
+  signupThanks   String          @default("")
+  signupEmailRequired Boolean    @default(false)
   createdById    String?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt

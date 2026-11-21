@@ -440,6 +440,10 @@ scrolls with it until its last card is on screen, then stays put while the middl
   as **Confirmed** on a one-date event, or **Invited** on each game they picked (a request for Luke to confirm). A note
   goes on their timeline and a bell alert ("Event signup: …", its own pop-up option in My settings, on by default) to
   the team. A hidden robot trap box and a limit of 10 signups per 10 minutes per connection keep spam out.
+- **Editing a signup page** *(owner request 2026-11-22)*: the Signup page tab has **Page wording & questions** with a
+  live phone-sized preview: headline (blank = the event's name), intro, for games whether to show the game list and
+  the question above it, whether email is required (name and cell always are), the questions (same editor as
+  templates), and the thank-you message (`{first}`, `{event}`). Save/Cancel; the preview's Sign up sends nothing.
 - **Reminder texts** (on the event page): text with merge fields from the contact (`{first_name}`… as in templates) and
   the event (`{event_name}`, `{event_date}` "Thursday, January 14", `{event_short_date}` "1/14/27", `{event_time}`,
   `{opponent}`, `{location}`, `{seat_info}`, `{slot_title}`) plus the signup answers (`{pie_flavor}`); timing **N days

@@ -16,7 +16,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const today = isoFromDate(new Date());
   return (
     <div className="mx-auto max-w-5xl px-4 py-4">
-      <EventHeader key={`h${e.name}${e.fields.length}`} e={e} today={today} />
+      <EventHeader key={`h${e.name}${JSON.stringify(e.fields)}${e.intro}`} e={e} today={today} />
       <EventTabs e={e} today={today} />
     </div>
   );

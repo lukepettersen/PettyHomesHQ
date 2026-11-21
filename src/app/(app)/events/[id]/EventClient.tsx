@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import type { EventView } from "@/server/events";
 import { answerSummary, longEventDate, shortEventDate, statusLabel, STATUS_KEYS } from "@/lib/events";
 import { formatTime } from "@/lib/tasks";
-import { FieldsEditor, fromDraft, toDraft, type FieldDraft } from "../FieldsEditor";
+import { fromDraft, toDraft, type FieldDraft } from "../FieldsEditor";
 import { TimeSelect } from "../TimeSelect";
 import { GameWaiting, ImportGoing } from "./Waitlist";
 import { addEventAttendees, editEvent, editEventAttendee, importSlotCsv, importWolvesSchedule, removeEvent, removeEventAttendee, removeEventSlot, saveEventSlot } from "../actions";
@@ -75,10 +75,8 @@ export function EventHeader({ e, today }: { e: EventView; today: string }) {
             <label className="label sm:col-span-2">Notes (just for you)<textarea className="input mt-1 w-full" rows={2} value={d.notes} onChange={(x) => setD({ ...d, notes: x.target.value })} /></label>
             {e.multiSlot && <label className="label">Waitlist name (also a tag on people waiting)<input className="input mt-1" value={d.waitlistLabel} onChange={(x) => setD({ ...d, waitlistLabel: x.target.value })} placeholder="Wants Wolves Tickets" /></label>}
             {e.multiSlot && <label className="label sm:col-span-2">Text offering a game to the waitlist<textarea className="input mt-1 w-full" rows={2} value={d.offerText} onChange={(x) => setD({ ...d, offerText: x.target.value })} /></label>}
-            <label className="label sm:col-span-2">Signup page intro<textarea className="input mt-1 w-full" rows={2} value={d.intro} onChange={(x) => setD({ ...d, intro: x.target.value })} /></label>
           </div>
-          <h3 className="mt-3 font-semibold">Signup questions</h3>
-          <div className="mt-1"><FieldsEditor fields={d.fields} onChange={(fields) => setD({ ...d, fields })} /></div>
+          <p className="mt-2 text-xs muted">The signup page&apos;s wording and questions are on the <b>Signup page</b> tab.</p>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-misty pt-3">
             <button type="button" className="btn text-sm text-bad" onBlur={() => setSure(false)} onClick={() => (sure ? remove() : setSure(true))}>{sure ? "Click again to remove the event" : "Remove event"}</button>
             <span className="flex gap-2">

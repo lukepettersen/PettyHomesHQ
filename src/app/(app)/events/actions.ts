@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { guarded, UserError } from "@/server/safe";
 import {
-  addAttendees, addInterest, applyAssignments, createEvent, offerGame, previewAssignments, previewOffer, removeInterest, deleteEvent, deleteReminder, deleteSlot, deleteTemplate, fetchWolvesSchedule, importSlots, previewReminder, removeAttendee,
+  addAttendees, addInterest, saveSignupPage, applyAssignments, createEvent, offerGame, previewAssignments, previewOffer, removeInterest, deleteEvent, deleteReminder, deleteSlot, deleteTemplate, fetchWolvesSchedule, importSlots, previewReminder, removeAttendee,
   saveReminder, saveSlot, saveTemplate, setSignup, updateAttendee, updateEvent,
 } from "@/server/events";
 import { readSlotCsv, STATUS_KEYS } from "@/lib/events";
@@ -176,5 +176,14 @@ export async function saveAssignments(eventId: string, input: unknown) {
     const r = await applyAssignments(user.id, id.parse(eventId), v.items, v.status);
     refresh(eventId);
     return r;
+  });
+}
+
+/** The signup page's wording and questions. */
+export async function saveEventSignupPage(eventId: string, input: unknown) {
+  return guarded("manageEvents", async (user) => {
+    const v = z.object({ title: z.string().max(120), intro: z.string().max(2000), gamesOn: z.boolean(), gamesLabel: z.string().max(200), thanks: z.string().max(500), emailRequired: z.boolean(), fields }).parse(input);
+    await saveSignupPage(user.id, id.parse(eventId), v);
+    refresh(eventId);
   });
 }
