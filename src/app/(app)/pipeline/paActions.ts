@@ -10,7 +10,7 @@ import { loadForm } from "@/server/pa";
 import { savePaPartners } from "@/server/partners";
 import { saveContractAnswers } from "@/server/paEdit";
 import { syncContract } from "@/server/google";
-import { syncSalesRow } from "@/server/salesSheet";
+import { syncSaleFromPa } from "@/server/sales";
 import { dateFromIso, isoFromDate, todayCentral } from "@/lib/normalize";
 import { apptIso, closeStepsForWaived, contractAnchors, factsOf, recheckConditions, redateContract, runTrigger } from "@/server/automation";
 import { applicableDates, cleanPaAnswers, formProblem, KEY_DATES, pendingKeys, type DateKey, type DateStatus, type PaSection } from "@/lib/pa";
@@ -65,7 +65,7 @@ export async function addPurchaseAgreement(input: z.input<typeof addSchema>) {
     await savePaPartners(pa.id, form, c.answers, v.partners ?? {}, v.saveAsContact ?? [], user.id);
     await logActivity(user.id, "create", "purchaseAgreement", pa.id, `Added ${v.side}-side purchase agreement for ${file.person.name}: ${c.address}${pa.n ? ` (${pa.n} tasks)` : ""}`);
     await syncContract(pa.id); // Google Calendar, when connected
-    await syncSalesRow(pa.id, "added"); // owner's sales Google Sheet, when set up
+    await syncSaleFromPa(pa.id); // the owner's Sales tab: a pending sale (replaces the sales Google Sheet, owner 2026-11-22)
     refresh(file.personId);
     return { id: pa.id, tasks: pa.n };
   });
@@ -107,7 +107,7 @@ export async function setKeyDate(input: z.input<typeof dateSchema>) {
     });
     await logActivity(user.id, "update", "purchaseAgreement", pa.id, `${label(v.key)} for ${pa.file.person.name}: ${v.status}${date ? ` (${date})` : ""}`);
     await syncContract(pa.id);
-    await syncSalesRow(pa.id, "changed"); // owner's sales Google Sheet, when set up
+    await syncSaleFromPa(pa.id);
     refresh(pa.file.personId);
   });
 }
@@ -159,6 +159,7 @@ export async function markClosed(paId: string) {
     });
     await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Marked closed: ${pa.address} for ${pa.file.person.name}`);
     await syncContract(pa.id);
+    await syncSaleFromPa(pa.id); // its sale is now closed
     refresh(pa.file.personId);
     revalidatePath("/people");
   });
@@ -176,7 +177,7 @@ export async function fellThrough(paId: string) {
     ]);
     await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Fell through: ${pa.address} for ${pa.file.person.name}`);
     await syncContract(pa.id);
-    await syncSalesRow(pa.id, "ended"); // owner's sales Google Sheet, when set up
+    await syncSaleFromPa(pa.id); // its sale: fell through (off the dashboard)
     refresh(pa.file.personId);
   });
 }

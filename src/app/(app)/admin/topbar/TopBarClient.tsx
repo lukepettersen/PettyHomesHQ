@@ -15,7 +15,7 @@ export function TopBarClient({ order }: { order: NavKey[] }) {
         {t.rows.map((k, i) => (
           <li key={k} className="flex items-center gap-2 border-b border-misty/60 px-4 py-2 last:border-0">
             <span className="w-5 text-sm muted">{i + 1}</span>
-            <span className="flex-1 font-semibold">{label(k)}{k === "whiteboard" && <span className="ml-2 text-xs font-normal muted">only you see it</span>}</span>
+            <span className="flex-1 font-semibold">{label(k)}{(k === "whiteboard" || k === "sales") && <span className="ml-2 text-xs font-normal muted">only you see it</span>}</span>
             <button type="button" className="btn px-2" aria-label={`Move ${label(k)} up`} disabled={i === 0} onClick={() => t.move(i, -1)}>↑</button>
             <button type="button" className="btn px-2" aria-label={`Move ${label(k)} down`} disabled={i === t.rows.length - 1} onClick={() => t.move(i, 1)}>↓</button>
           </li>

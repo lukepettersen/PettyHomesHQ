@@ -43,6 +43,11 @@ export async function mergeContacts(userId: string, keepId: string, goneId: stri
       if (await tx.eventAttendee.findUnique({ where: { slotId_personId: { slotId: a.slotId, personId: keepId } } })) await tx.eventAttendee.delete({ where: { id: a.id } });
       else await tx.eventAttendee.update({ where: { id: a.id }, data: { personId: keepId } });
     }
+    // Their past sales (owner request 2026-11-22).
+    for (const sp of await tx.salePerson.findMany({ where: { personId: goneId } })) {
+      await tx.salePerson.delete({ where: { saleId_personId: { saleId: sp.saleId, personId: goneId } } });
+      await tx.salePerson.upsert({ where: { saleId_personId: { saleId: sp.saleId, personId: keepId } }, update: {}, create: { saleId: sp.saleId, personId: keepId } });
+    }
     // Everything else that belongs to a contact.
     // One at a time: queries inside a transaction share one connection.
     for (const run of [

@@ -176,6 +176,7 @@ model Person {
   texts         TextMessage[]
   eventsAttended EventAttendee[]
   eventInterests EventInterest[]
+  sales          SalePerson[]
 
   @@index([deletedAt])
   @@index([name])
@@ -983,4 +984,59 @@ model EventInterest {
 
   @@unique([eventId, personId])
   @@index([personId])
+}
+
+// ---------- Sales (owner request 2026-11-22; SPEC.md §7.9; replaces the owner's sales Google Sheet) ----------
+
+/// One sale (a buyer or seller side), from the master file's DATA tab or made from a purchase agreement in HQ. The
+/// money lives in SaleMoney so a contact's Past Sales card (everyone) can never pull it; only the owner sees money.
+model Sale {
+  id            String       @id @default(cuid())
+  paId          String?      @unique // the HQ purchase agreement it came from
+  importKey     String?      @unique // "<close date>|<street>" for rows from the master file (a re-import updates)
+  status        String       @default("pending") // pending | closed | fell_through
+  side          String // buyer | seller
+  clientName    String       @default("") // as in the master file: "Sharpe/Nguyen"
+  address       String       @default("")
+  city          String       @default("")
+  zip           String       @default("")
+  closeDate     DateTime?    @db.Date
+  source        String       @default("") // SPHERE, PAST CLIENT REFERRAL…
+  initialSource String       @default("")
+  lender        String       @default("")
+  referredFrom  String       @default("")
+  onTime        String       @default("") // YES | NO | ""
+  review        Json? // contacts it might be (to pick in Sales → Review): [{ id, name, why }]; null = settled
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deletedAt     DateTime?
+  people        SalePerson[]
+  money         SaleMoney?
+
+  @@index([status, closeDate])
+}
+
+model SalePerson {
+  saleId   String
+  sale     Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  personId String
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([saleId, personId])
+  @@index([personId])
+}
+
+/// Owner-only: never selected for anyone else (src/server/sales.ts checks the owner before every read or write).
+model SaleMoney {
+  saleId         String  @id
+  sale           Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  price          Int     @default(0) // sale price, whole dollars
+  listPrice      Int     @default(0)
+  contributions  Int     @default(0) // seller contributions
+  commissionPct  Float   @default(0) // 2.7 = 2.7%
+  gross          Float   @default(0) // gross commission (GCI)
+  fees           Float   @default(0) // brokerage fee, LC, TC, E&O, media, referral, admin…
+  net            Float   @default(0) // commission to the owner after the split
+  splitPct       Float   @default(0) // 94 = 94%
+  commissionPaid Boolean @default(false)
 }

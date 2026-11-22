@@ -15,7 +15,7 @@ export function NavLinks({ tools, canEditTools, texts = 0, owner = false, order 
   const from = useSearchParams().get("from");
   const active = path.startsWith("/people/") && from ? `/${from}` : null;
   const isOn = (href: string) => (active ? active === href : path === href || path.startsWith(href + "/"));
-  const items = order.filter((k) => owner || k !== "whiteboard").map((k) => NAV_ITEMS.find((i) => i.key === k)!);
+  const items = order.filter((k) => owner || (k !== "whiteboard" && k !== "sales")).map((k) => NAV_ITEMS.find((i) => i.key === k)!);
   const badge = (href: string) => href === "/messages" && texts > 0 && <span className="ml-1 rounded-full bg-coral px-1.5 text-xs font-bold text-white" aria-label={`${texts} unread`}>{texts}</span>;
   const shown = items.filter((i) => i.key !== "tools").slice(0, 4), more = items.filter((i) => !shown.some((s) => s.key === i.key));
   return (

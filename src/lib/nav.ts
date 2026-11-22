@@ -6,6 +6,7 @@ export const NAV_ITEMS = [
   { key: "people", label: "People", href: "/people" },
   { key: "pipeline", label: "Pipeline", href: "/pipeline" },
   { key: "events", label: "Events", href: "/events" },
+  { key: "sales", label: "Sales", href: "/sales" }, // only the owner sees it (owner request 2026-11-22)
   { key: "tools", label: "Tools ▾", href: "" },
   { key: "admin", label: "Admin", href: "/admin" },
 ] as const;

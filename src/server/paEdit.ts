@@ -5,7 +5,7 @@ import { logActivity } from "@/server/activity";
 import { hasPermission } from "@/server/permissions";
 import { loadForm } from "@/server/pa";
 import { syncContract } from "@/server/google";
-import { syncSalesRow } from "@/server/salesSheet";
+import { syncSaleFromPa } from "@/server/sales";
 import { dateFromIso, isoFromDate } from "@/lib/normalize";
 import { factsOf, recheckConditions, redateContract } from "@/server/automation";
 import { cleanPaAnswers, KEY_DATES, toPaView, type Answers, type DateKey, type PaSection, type PaView } from "@/lib/pa";
@@ -31,7 +31,7 @@ export function cleanOrThrow(form: PaSection[], answers: Answers, canComm: boole
 }
 
 /** Saves new answers on a contract: a pending key date that moves is marked Extended, checklists re-date and re-check
- *  their "Only when", then the calendar and the sales sheet update. Returns the person and what moved. */
+ *  their "Only when", then the calendar and the owner's Sales tab update. Returns the person and what moved. */
 export async function saveContractAnswers(user: { id: string; permissions: string[] }, paId: string, raw: Answers, how = "") {
   const pa = await db.purchaseAgreement.findFirst({ where: { id: paId, deletedAt: null }, include: { file: { include: { person: { select: { name: true } } } } } });
   if (!pa) throw new UserError("That contract was deleted.");
@@ -58,7 +58,7 @@ export async function saveContractAnswers(user: { id: string; permissions: strin
   });
   await logActivity(user.id, "update", "purchaseAgreement", pa.id, `Updated purchase agreement for ${pa.file.person.name}${how}${moved.length ? ` (moved ${moved.join(", ")})` : ""}${steps.added || steps.removed ? ` (checklist: ${steps.added} added, ${steps.removed} removed)` : ""}`);
   await syncContract(pa.id);
-  await syncSalesRow(pa.id, "changed");
+  await syncSaleFromPa(pa.id);
   return { personId: pa.file.personId, form, answers: c.answers, moved };
 }
 

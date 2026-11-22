@@ -680,6 +680,36 @@ scrolls with it until its last card is on screen, then stays put while the middl
   looks up the forms and what the deal already knows, asks for anything missing, then texts back the request and
   waits for **YES** before sending. "undo" takes the task back.
 
+### 7.6 Sales *(owner request 2026-11-22; owner only; replaces the Google Sheet sync and the master file)*
+
+Top bar **Sales** (after Events), seen only by the owner. **Only the owner can see this tab and any commission data**:
+the page is "not found" for everyone else, every Sales action refuses non-owners on the server, and sales never appear
+in search, exports, the API, the text assistant or the Claude connector. Money lives in its own table (`SaleMoney`).
+- **Sale**: client name (last names, "Sharpe/Nguyen"), property address, city, ZIP, close date, side (buyer/seller),
+  status (Pending / Closed / Fell through), source, initial source, lender, referred from, on time, linked contacts.
+  Money: sale price, list price, seller contributions, commission %, gross commission, fees, net (commission after
+  split and fees), split %, commission paid. Columns follow the master file's DATA tab.
+- **Dashboard**: pick This month / This quarter / This year (and a year): Pending (count, volume, gross), Closed in the
+  period (count, volume, gross, net), Outstanding commission (closed, not marked paid), the same period compared with
+  each prior year, and closed sales by lead source and by referral.
+- **Summary**: per year, Total / Buyer / Seller (deals, volume, average price, gross, gross %, net, split) plus Career,
+  like the master file's SUMMARY tab. Closed sales only.
+- **All sales**: filters (year, status, side, search) and an editable list; Edit opens every field and the linked
+  contacts (gross and net recalculate from price, commission % and split; you can type over them). Remove is a
+  two-step confirm (soft delete).
+- **Import**: the DATA tab as CSV. Re-importing updates the same sales (matched by close date, side and street), so
+  nothing doubles; a sale HQ already made from a contract (same street, within 45 days) is merged into it. Each sale is
+  matched to contacts by property address and last names: sure matches are linked; unsure ones go to **Review** (pick
+  a suggested contact, search for one, "New contact", or "No contact"); sales with no possible contact create one
+  ("Wagner & Schmidt", stage Past Client, the address for buyers).
+- **From contracts**: adding a purchase agreement creates a Pending sale (price, commission % from the contract, the
+  usual split = the newest closed sale's split, contributions, lender, source from the contact). Closing it marks the
+  sale Closed with its close date; Fell through marks it Fell through; deleting the contract removes it; price or
+  commission % changes update gross and net. The first time the owner opens Sales, every open or closed contract
+  already in HQ gets its sale.
+- **Contact page → Past Sales card** (everyone): "N deals with Luke", each with address, side, close date and status.
+  No money fields here: no commission, GCI or split. Fell-through sales are left off.
+
 ## 8. Task templates and automations
 
 - A **template** = phases of steps. Each step: name, timing (days before/on/after an anchor
@@ -723,7 +753,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
   purchase agreement's terms** (owner request 2026-11-02: "move Ortiz closing to 11/25 and price 495k"): HQ texts back
   each change as "Close date: Tue Nov 17 → Wed Nov 25" and saves only on **YES**, through the same save as Edit (any term
   on the form; checked the same way; a moved pending date is marked Extended; checklists re-date and re-check "Only
-  when"; calendar invites and the sales sheet update); "undo" puts the contract back, date marks included. It also
+  when"; calendar invites and the owner's Sales tab update); "undo" puts the contract back, date marks included. It also
   **reads photos** the owner texts to the HQ number (owner request 2026-11-03): a booking confirmation or other
   appointment screenshot goes on the calendar by itself (date, time and address from the photo; "Haircut - Jesse's
   Barber Shop"), a business card becomes a contact, and a photo with no words is acted on when it's plain what it
@@ -1239,15 +1269,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
   messages for matching) and compose/send.
 - Admin → Integrations shows Connected / Not connected with connect/disconnect.
 
-- **Sales sheet** *(owner request 2026-10-28; owner only)*: Admin → Integrations → Sales sheet takes the link to a tab in
-  the owner's Google Sheet (Google must allow Sheets: Reconnect Google). When a purchase agreement is added, HQ inserts
-  a row under the header row, copying the row below's formulas, colors and dropdowns, and fills: Client name
-  (last names, "Sharpe/Nguyen"), Property address, City, ZIP, Close date, Deal type, Month, Month #, Quarter, Year,
-  Lender (matching the sheet's choices; CASH for cash, N/A on seller side, else OTHER), Referred from ("None" if
-  blank), Sale price, Seller contributions (in dollars), List price (seller side), Commission %, Initial source
-  (when it matches a choice). Source and everything else are left for the owner. Columns are found by their header
-  names; formula columns are never typed over. Changing the close date or price updates that row; Fell through
-  removes it. Every contract gets a row (they're all the owner's). "Last:" shows the latest result or problem.
+- **Sales sheet**: removed 2026-11-22 (owner request); sales now live in HQ's own Sales tab (§7.6).
 - **Address lookup** *(owner request 2026-10-21)*: address boxes (contact Address, purchase agreement
   and buyer/listing Property address) suggest full US addresses as you type (Google Places; Twin Cities
   first); picking one fills street, city, state and ZIP. You can still type anything. Off until
@@ -1436,8 +1458,7 @@ None right now. New ones get added here.
 **Parked ideas** *(owner, 2026-10-28: tabled for later; nothing built yet)*:
 - Follow-up sequences that send texts/emails on a schedule and stop on reply (like FUB Action Plans; needs the worker).
 - Merge duplicate contacts (possible-duplicates list + Merge).
-- Business dashboard (closed/pending, volume, commission for those allowed, pipeline value, lead source results, yearly
-  goal), possibly fed by the owner's Google Sheet of sales and commissions (private to the owner).
+- Business dashboard: built as the owner-only Sales tab (§7.6, 2026-11-22).
 - Calendar page (everyone's appointments and contract dates for the week).
 - Caller ID: sync HQ contacts to Google Contacts so phones show names (Connect Google Contacts; per person).
 - Call transcripts + summaries (Twilio transcription + Claude; ~$2/month at current volume).
