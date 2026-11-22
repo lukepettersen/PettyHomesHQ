@@ -248,3 +248,14 @@ export function byMonth(rows: StatSale[], year: number) {
   const list = closed(rows).filter((r) => yearOf(r.closeDate) === year);
   return MONTHS.map((_, i) => { const m = list.filter((r) => monthOf(r.closeDate!) === i + 1); return { month: i + 1, deals: m.length, volume: sum(m.map((r) => r.price)) }; });
 }
+
+/** The SUMMARY tab by year, quarter or month (owner request 2026-11-22). Quarters and months can be limited to one year;
+ *  `key` sorts in time order ("2026", "2026-Q4", "2026-11"). Closed sales only. */
+export type SummaryBy = "year" | "quarter" | "month";
+export function summaryBy(rows: StatSale[], by: SummaryBy, side?: "buyer" | "seller", onlyYear?: number) {
+  const list = closed(rows).filter((r) => (!side || r.side === side) && (!onlyYear || yearOf(r.closeDate) === onlyYear));
+  const keyOf = (iso: string) => by === "year" ? iso.slice(0, 4) : by === "quarter" ? `${iso.slice(0, 4)}-Q${Math.ceil(monthOf(iso) / 3)}` : iso.slice(0, 7);
+  const labelOf = (k: string) => by === "year" ? k : by === "quarter" ? `${k.slice(5)} ${k.slice(0, 4)}` : `${MONTHS[Number(k.slice(5, 7)) - 1].slice(0, 3)} ${k.slice(0, 4)}`;
+  const keys = [...new Set(list.map((r) => keyOf(r.closeDate!)))].sort();
+  return { rows: keys.map((k) => ({ key: k, label: labelOf(k), ...totals(list.filter((r) => keyOf(r.closeDate!) === k)) })), total: totals(list) };
+}

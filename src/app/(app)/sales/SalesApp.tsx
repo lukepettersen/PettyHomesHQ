@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { SaleView } from "@/server/sales";
-import { breakdown, compareYears, dashboard, DEFAULT_SALE_COLUMNS, MONTHS, periodOf, SALE_COLUMNS, SOURCES, STATUS_LABEL, yearSummary, type DashCard, type SaleColumn, type StatSale, type Totals } from "@/lib/sales";
+import { breakdown, compareYears, dashboard, DEFAULT_SALE_COLUMNS, MONTHS, periodOf, SALE_COLUMNS, SOURCES, STATUS_LABEL, summaryBy, yearSummary, type DashCard, type SaleColumn, type SummaryBy, type StatSale, type Totals } from "@/lib/sales";
 import { Dashboard } from "./Dashboard";
 import { applyImportAction, deleteSaleAction, findPeopleAction, previewImportAction, resolveReviewAction, saveColumnsAction, saveSaleAction } from "./actions";
 
@@ -36,7 +36,7 @@ export function SalesApp({ rows, today, columns, cards }: { rows: SaleView[]; to
       </div>
       <div className="mt-3">
         {tab === "dashboard" && <Dashboard rows={rows} today={today} cards={cards} />}
-        {tab === "summary" && <Summary rows={rows} />}
+        {tab === "summary" && <Summary rows={rows} today={today} />}
         {tab === "list" && <SalesList rows={rows} today={today} columns={columns} />}
         {tab === "review" && <Review rows={review} />}
         {tab === "import" && <Import />}
@@ -45,20 +45,26 @@ export function SalesApp({ rows, today, columns, cards }: { rows: SaleView[]; to
   );
 }
 
-type SumKey = "year" | "deals" | "volume" | "avgPrice" | "listVolume" | "netPct" | "gross" | "grossPct" | "net" | "splitPct";
-const SUM_COLS: [SumKey, string, boolean][] = [["year", "Year", false], ["deals", "Deals", false], ["volume", "Volume", false], ["avgPrice", "Avg sale price", false], ["listVolume", "List price", true],
+type SumKey = "key" | "deals" | "volume" | "avgPrice" | "listVolume" | "netPct" | "gross" | "grossPct" | "net" | "splitPct";
+const SUM_COLS: [SumKey, string, boolean][] = [["key", "", false], ["deals", "Deals", false], ["volume", "Volume", false], ["avgPrice", "Avg sale price", false], ["listVolume", "List price", true],
   ["netPct", "Sale/list", true], ["gross", "Gross commission", false], ["grossPct", "Gross %", false], ["net", "Commission", false], ["splitPct", "Split %", false]];
+const BY_LABEL: Record<SummaryBy, string> = { year: "Year", quarter: "Quarter", month: "Month" };
 
-/** The master file's SUMMARY tab; click a heading to sort the years (CAREER stays at the bottom). */
-function Summary({ rows }: { rows: SaleView[] }) {
+/** The master file's SUMMARY tab, by year, quarter or month; click a heading to sort (the total row stays last). */
+function Summary({ rows, today }: { rows: SaleView[]; today: string }) {
   const all = useMemo(() => stat(rows), [rows]);
-  const [sort, setSort] = useState<{ key: SumKey; desc: boolean }>({ key: "year", desc: false });
-  const sortBy = (key: SumKey) => setSort((s) => s.key === key ? { key, desc: !s.desc } : { key, desc: key !== "year" });
-  const show = (k: SumKey, y: Totals) => k === "deals" ? y.deals : k === "netPct" || k === "grossPct" ? pct(y[k]) : k === "splitPct" ? `${Math.round(y.splitPct)}%` : k === "year" ? "" : $(y[k]);
+  const years = useMemo(() => [...new Set(all.filter((r) => r.status === "closed" && r.closeDate).map((r) => Number(r.closeDate!.slice(0, 4))))].sort((a, b) => b - a), [all]);
+  const [by, setBy] = useState<SummaryBy>("year");
+  const [onlyYear, setOnlyYear] = useState(0); // 0 = every year
+  const [sort, setSort] = useState<{ key: SumKey; desc: boolean }>({ key: "key", desc: false });
+  const sortBy = (key: SumKey) => setSort((s) => s.key === key ? { key, desc: !s.desc } : { key, desc: key !== "key" });
+  const pickBy = (b: SummaryBy) => { setBy(b); if (b !== "year" && !onlyYear) setOnlyYear(Number(today.slice(0, 4))); if (b === "year") setOnlyYear(0); };
+  const show = (k: SumKey, y: Totals) => k === "deals" ? y.deals : k === "netPct" || k === "grossPct" ? pct(y[k]) : k === "splitPct" ? `${Math.round(y.splitPct)}%` : k === "key" ? "" : $(y[k]);
   const table = (title: string, side?: "buyer" | "seller") => {
-    const s = yearSummary(all, side);
+    const s = summaryBy(all, by, side, onlyYear || undefined);
     const cols = SUM_COLS.filter(([, , sideOnly]) => !sideOnly || side);
-    const years = [...s.years].sort((a, b) => { const c = sort.key === "year" ? a.year - b.year : a[sort.key] - b[sort.key]; return sort.desc ? -c : c; });
+    const list = [...s.rows].sort((a, b) => { const c = sort.key === "key" ? a.key.localeCompare(b.key) : a[sort.key] - b[sort.key]; return sort.desc ? -c : c; });
+    const totalLabel = onlyYear ? `${onlyYear} TOTAL` : "CAREER";
     return (
       <section className="card overflow-x-auto">
         <h2 className="border-b border-misty px-3 py-2 font-bold">{title}</h2>
@@ -66,14 +72,15 @@ function Summary({ rows }: { rows: SaleView[] }) {
           <thead><tr className="text-left text-xs muted">
             {cols.map(([k, l], i) => (
               <th key={k} className={`py-1 ${i === 0 ? "px-3" : ""} ${i === cols.length - 1 ? "pr-3" : ""}`} aria-sort={sort.key === k ? (sort.desc ? "descending" : "ascending") : "none"}>
-                <button type="button" className="font-semibold hover:underline" onClick={() => sortBy(k)} title={`Sort by ${l}`}>{l}{sort.key === k && <span aria-hidden> {sort.desc ? "▼" : "▲"}</span>}</button>
+                <button type="button" className="font-semibold hover:underline" onClick={() => sortBy(k)}>{k === "key" ? BY_LABEL[by] : l}{sort.key === k && <span aria-hidden> {sort.desc ? "▼" : "▲"}</span>}</button>
               </th>
             ))}
           </tr></thead>
           <tbody>
-            {[...years.map((y) => ({ k: String(y.year), ...y })), { k: "CAREER", ...s.career }].map((y) => (
-              <tr key={y.k} className={`border-t border-misty/60 ${y.k === "CAREER" ? "bg-sunken font-bold" : ""}`}>
-                {cols.map(([k], i) => <td key={k} className={`py-1 ${i === 0 ? "px-3" : ""} ${i === cols.length - 1 ? "pr-3" : ""}`}>{k === "year" ? y.k : show(k, y)}</td>)}
+            {!list.length && <tr><td colSpan={cols.length} className="px-3 py-2 muted">No closed sales.</td></tr>}
+            {[...list.map((y) => ({ k: y.label, total: false, ...y })), { k: totalLabel, total: true, ...s.total }].map((y) => (
+              <tr key={y.k} className={`border-t border-misty/60 ${y.total ? "bg-sunken font-bold" : ""}`}>
+                {cols.map(([k], i) => <td key={k} className={`py-1 ${i === 0 ? "px-3" : ""} ${i === cols.length - 1 ? "pr-3" : ""}`}>{k === "key" ? y.k : show(k, y)}</td>)}
               </tr>
             ))}
           </tbody>
@@ -81,7 +88,22 @@ function Summary({ rows }: { rows: SaleView[] }) {
       </section>
     );
   };
-  return <div className="flex flex-col gap-4">{table("Total")}{table("Buyer transactions", "buyer")}{table("Seller transactions", "seller")}</div>;
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-semibold">Show by</span>
+        {(["year", "quarter", "month"] as SummaryBy[]).map((b) => (
+          <button key={b} type="button" aria-pressed={by === b} onClick={() => pickBy(b)} className={`rounded-full border px-3 py-1 text-sm font-semibold ${by === b ? "border-accent bg-accent text-white" : "border-misty bg-white hover:bg-sunken"}`}>{BY_LABEL[b]}</button>
+        ))}
+        <label className="ml-auto flex items-center gap-2 text-sm font-semibold">Years
+          <select className="input w-auto py-1" value={onlyYear} onChange={(e) => setOnlyYear(Number(e.target.value))}>
+            <option value={0}>Every year</option>{years.map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </label>
+      </div>
+      {table("Total")}{table("Buyer transactions", "buyer")}{table("Seller transactions", "seller")}
+    </div>
+  );
 }
 
 /** The master file's DATA tab: every sale, filterable and editable. */

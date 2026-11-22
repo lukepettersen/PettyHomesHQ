@@ -698,7 +698,9 @@ in search, exports, the API, the text assistant or the Claude connector. Money l
   cards". Saved in AppSetting `sales.dashboard`. The usual cards: the six number tiles, Every year, By lead source,
   By referral. Charts show the numbers on hover.
 - **Summary**: per year, Total / Buyer / Seller (deals, volume, average price, gross, gross %, net, split) plus Career,
-  like the master file's SUMMARY tab. Closed sales only. Click a heading to sort the years (Career stays last).
+  like the master file's SUMMARY tab. Closed sales only. **Show by** Year / Quarter / Month, and **Years**: every
+  year or one year (Quarter and Month start on this year; the total row reads "2026 TOTAL", or CAREER for every year).
+  Click a heading to sort (the total row stays last).
 - **All sales**: filters (year, status, side, search) and an editable list; click a heading to sort by it (again to
   flip); **Columns** picks which of the master file's columns show (saved; "Back to the usual columns"); Edit opens every field and the linked
   contacts (gross and net recalculate from price, commission % and split; you can type over them). Remove is a

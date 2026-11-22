@@ -112,3 +112,14 @@ describe("dashboard cards", () => {
     expect(m[2]).toEqual({ month: 3, deals: 2, volume: 500000 });
   });
 });
+
+describe("summary by quarter and month", () => {
+  it("groups closed sales and limits to one year", async () => {
+    const { summaryBy } = await import("./sales");
+    const rows = [s("2026-11-02"), s("2026-10-20", { side: "seller" }), s("2026-03-01"), s("2025-11-01"), s(null, { status: "pending" })];
+    expect(summaryBy(rows, "quarter").rows.map((r) => [r.label, r.deals])).toEqual([["Q4 2025", 1], ["Q1 2026", 1], ["Q4 2026", 2]]);
+    expect(summaryBy(rows, "month", undefined, 2026).rows.map((r) => r.label)).toEqual(["Mar 2026", "Oct 2026", "Nov 2026"]);
+    expect(summaryBy(rows, "month", "seller", 2026).total.deals).toBe(1);
+    expect(summaryBy(rows, "year").total.deals).toBe(4);
+  });
+});
