@@ -705,7 +705,7 @@ in search, exports, the API, the text assistant or the Claude connector. Money l
 - **From contracts**: adding a purchase agreement creates a Pending sale (price, commission % from the contract, the
   usual split = the newest closed sale's split, contributions, lender, source from the contact). Closing it marks the
   sale Closed with its close date; Fell through marks it Fell through; deleting the contract removes it; price or
-  commission % changes update gross and net. The first time the owner opens Sales, every open or closed contract
+  commission % changes update gross and net. A sale removed on the Sales tab stays removed. The first time the owner opens Sales, every open or closed contract
   already in HQ gets its sale.
 - **Contact page → Past Sales card** (everyone): "N deals with Luke", each with address, side, close date and status.
   No money fields here: no commission, GCI or split. Fell-through sales are left off.

@@ -207,6 +207,7 @@ export async function syncSaleFromPa(paId: string): Promise<void> {
     if (!pa) return;
     const had = await db.sale.findUnique({ where: { paId: pa.id }, include: { money: true } });
     if (pa.deletedAt || pa.file.deletedAt) { if (had) await db.sale.update({ where: { id: had.id }, data: { deletedAt: new Date() } }); return; }
+    if (had?.deletedAt) return; // removed on the Sales tab: editing the contract doesn't bring it back
     const a = obj(pa.answers);
     const parts = pa.address.split(",").map((x) => x.trim());
     const zip = /\b(\d{5})\b/.exec(parts.slice(1).join(" "))?.[1] ?? "";
@@ -225,7 +226,7 @@ export async function syncSaleFromPa(paId: string): Promise<void> {
       await db.salePerson.create({ data: { saleId: s.id, personId: pa.file.personId } });
       return;
     }
-    await db.sale.update({ where: { id: had.id }, data: { ...data, deletedAt: null } });
+    await db.sale.update({ where: { id: had.id }, data });
     // Price or commission % changed on the contract: gross and net follow (at the sale's split).
     const m = had.money;
     if (!m) { await db.saleMoney.create({ data: { saleId: had.id, price: pa.price, listPrice, contributions, commissionPct: pct, ...moneyFor(pa.price, pct, await usualSplit()), splitPct: await usualSplit() } }); return; }
