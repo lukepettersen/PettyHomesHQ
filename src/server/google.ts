@@ -74,6 +74,11 @@ async function accessToken(id = "calendar"): Promise<string | null> {
   return tok.access_token;
 }
 
+/** Does Google still let HQ in with the shared connection? (Admin → Integrations shows "Reconnect Google" when not.) */
+export async function googleWorks(): Promise<boolean> {
+  return !!(await accessToken().catch(() => null));
+}
+
 async function call(method: string, path: string, body?: unknown): Promise<Response | null> {
   const token = await accessToken();
   if (!token) return null;

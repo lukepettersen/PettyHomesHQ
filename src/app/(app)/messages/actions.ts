@@ -263,3 +263,31 @@ async function turnOffAutoStep(user: SessionUser, taskId: string) {
   if (t.personId) revalidatePath(`/people/${t.personId}`);
   revalidatePath("/messages");
 }
+
+/** "Send again" on a text, email or automatic checklist send that didn't go out (owner request 2026-11-22: emails
+ *  failed while Google was disconnected). It goes back in line and the minute timer sends it within a minute. */
+export async function retryScheduled(scheduledId: string) {
+  return guarded("sendTexts", async (user) => {
+    let personId: string | null = null;
+    if (scheduledId.startsWith("task:")) {
+      const t = await db.task.findFirst({ where: { id: id.parse(scheduledId.slice(5)), deletedAt: null } });
+      const r = t ? await db.task.updateMany({ where: { id: t.id, autoState: "failed", completedAt: null }, data: { autoState: "pending", autoError: null } }) : { count: 0 };
+      if (!t || !r.count) throw new UserError("That one already went out or was turned off.");
+      personId = t.personId;
+      await logActivity(user.id, "update", "task", t.personId, `Send again: the automatic send for "${t.title}"`);
+    } else if (scheduledId.startsWith("email:")) {
+      const s = await db.scheduledEmail.findUnique({ where: { id: id.parse(scheduledId.slice(6)) } });
+      const r = s ? await db.scheduledEmail.updateMany({ where: { id: s.id, status: "failed" }, data: { status: "pending", error: null, sendAt: new Date() } }) : { count: 0 };
+      if (!s || !r.count) throw new UserError("That email already went out or was canceled.");
+      personId = s.personId;
+      await logActivity(user.id, "update", "scheduledEmail", s.personId, "Send again: a scheduled email that didn't go out");
+    } else {
+      const s = await db.scheduledText.findUnique({ where: { id: id.parse(scheduledId) } });
+      const r = s ? await db.scheduledText.updateMany({ where: { id: s.id, status: "failed" }, data: { status: "pending", error: null, sendAt: new Date() } }) : { count: 0 };
+      if (!s || !r.count) throw new UserError("That text already went out or was canceled.");
+      personId = s.personId;
+      await logActivity(user.id, "update", "scheduledText", s.personId, "Send again: a scheduled text that didn't go out");
+    }
+    if (personId) revalidatePath(`/people/${personId}`);
+  });
+}

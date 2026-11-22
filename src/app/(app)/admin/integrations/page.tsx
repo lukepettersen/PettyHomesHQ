@@ -8,7 +8,7 @@ import { listNumbers } from "@/server/twilio";
 import { groupTextingOn } from "@/server/groupText";
 import { recentInbound } from "@/server/textDebug";
 import { CalendarControls } from "./CalendarControls";
-import { calendarConnection, GMAIL_READ_SCOPE, GMAIL_SEND_SCOPE, hasScope } from "@/server/google";
+import { calendarConnection, googleWorks, GMAIL_READ_SCOPE, GMAIL_SEND_SCOPE, hasScope } from "@/server/google";
 import { requireUser } from "@/server/auth";
 import { WebsiteLeads } from "./WebsiteLeads";
 import { leadLink } from "@/server/leads";
@@ -30,6 +30,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ g
   const denied = await adminGate();
   if (denied) return denied;
   const [list, texting, cal, sp] = [integrationStatus(), await textingEnabled(), await calendarConnection(), await searchParams];
+  const googleBroken = !!cal && !(await googleWorks());
   const result = sp.google ? GOOGLE_RESULT[sp.google] : undefined;
   const team = await db.user.findMany({ where: { status: { not: "DISABLED" } }, orderBy: [{ isOwner: "desc" }, { name: "asc" }], select: { id: true, name: true, textNumber: true, forwardTo: true } });
   const lines = team.map((u) => ({ userId: u.id, name: u.name, number: u.textNumber, forwardTo: u.forwardTo }));
@@ -58,7 +59,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ g
             <p className="text-sm">{i.what}</p>
             {i.id === "texting" && <TextingSwitch connected={i.connected} on={texting} />}
             {i.id === "texting" && <TextLines lines={lines} cap={cap} numbers={numbers} record={record} groups={groups} inbound={inbound} />}
-            {i.id === "google" && <CalendarControls keysSet={i.connected} email={cal?.email ?? null} connected={!!cal} gmail={{ send: hasScope(cal, GMAIL_SEND_SCOPE), read: hasScope(cal, GMAIL_READ_SCOPE) }} />}
+            {i.id === "google" && <CalendarControls keysSet={i.connected} email={cal?.email ?? null} connected={!!cal} gmail={{ send: hasScope(cal, GMAIL_SEND_SCOPE), read: hasScope(cal, GMAIL_READ_SCOPE) }} broken={googleBroken} />}
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider muted">{i.connected ? "Railway variables (all set)" : "Add in Railway → Variables"}</h3>
               <ul className="mt-1 flex flex-col gap-1 text-sm">

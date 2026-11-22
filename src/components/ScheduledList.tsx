@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { cancelScheduledText } from "@/app/(app)/messages/actions";
+import { cancelScheduledText, retryScheduled } from "@/app/(app)/messages/actions";
 import { cancelScheduledEmail } from "@/app/(app)/people/emailActions";
 
 export type ScheduledRow = { id: string; when: string; to: string; body: string; by: string; mine: boolean; status: string; error: string | null; personId?: string | null; personName?: string | null; auto?: boolean; email?: boolean };
@@ -30,6 +30,8 @@ export function ScheduledList({ rows, withPerson = false, empty }: { rows: Sched
             </span>
             {x.status === "pending" && x.mine && <button type="button" className="text-xs font-semibold text-bad hover:underline" disabled={busy}
               onClick={() => start(async () => { setError(""); const r = x.id.startsWith("email:") ? await cancelScheduledEmail(x.id.slice(6)) : await cancelScheduledText(x.id); if (!r.ok) setError(r.error); else router.refresh(); })}>{x.auto ? "Turn off" : "Cancel"}</button>}
+            {x.status === "failed" && <button type="button" className="text-xs font-semibold text-accent hover:underline" disabled={busy}
+              onClick={() => start(async () => { setError(""); const r = await retryScheduled(x.id); if (!r.ok) setError(r.error); else router.refresh(); })}>Send again</button>}
           </li>
         ))}
       </ul>

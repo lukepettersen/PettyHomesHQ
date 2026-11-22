@@ -302,7 +302,8 @@ export async function loadThreads(ourNumber: string): Promise<Thread[]> {
 
 export async function loadConversation(ourNumber: string, theirNumber: string, userId?: string): Promise<Bubble[]> {
   // Reactions HQ sent are kept (for delivery status and the daily cap) but show as an icon on the message, not a bubble.
-  const rows = await db.textMessage.findMany({ where: { ourNumber, theirNumber, kind: { not: "reaction" } }, orderBy: { createdAt: "asc" }, take: 500, include: { sentBy: { select: { name: true } }, person: { select: { name: true } } } });
+  // The newest 500, shown oldest first (a long thread used to show only its first 500 and miss the latest, owner 2026-11-22).
+  const rows = (await db.textMessage.findMany({ where: { ourNumber, theirNumber, kind: { not: "reaction" } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 500, include: { sentBy: { select: { name: true } }, person: { select: { name: true } } } })).reverse();
   return rows.map((m) => ({ id: m.id, direction: m.direction, kind: m.kind, body: m.body, status: m.status, error: m.error, by: m.sentBy?.name.split(" ")[0] ?? null, at: m.createdAt.toISOString(),
     from: m.fromNumber ? m.person?.name ?? formatPhone(m.fromNumber) : null, reactions: ((Array.isArray(m.reactions) ? m.reactions : []) as ReactionMark[]).map((x) => x.emoji),
     mine: ((Array.isArray(m.reactions) ? m.reactions : []) as ReactionMark[]).filter((x) => userId && x.by === `hq:${userId}`).map((x) => x.emoji),

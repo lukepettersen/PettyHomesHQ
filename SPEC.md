@@ -1277,7 +1277,11 @@ in search, exports, the API, the text assistant or the Claude connector. Money l
     the person's Files.
 - Smallest scopes needed: sign-in profile; Calendar events; Gmail read (metadata and
   messages for matching) and compose/send.
-- Admin → Integrations shows Connected / Not connected with connect/disconnect.
+- Admin → Integrations shows Connected / Not connected with connect/disconnect, and **Reconnect Google** always; when
+  Google stops letting HQ in (sign-in revoked or expired) it says so in red above the button (owner 2026-11-22).
+- **Send again** *(owner request 2026-11-22)*: a scheduled text or email, or an automatic checklist send, that shows
+  "Not sent" in the contact's Scheduled box has a Send again link; it goes back in line and sends within a minute.
+- **Messages threads** show the newest 500 texts (oldest first); before 2026-11-22 a long thread showed its first 500.
 
 - **Sales sheet**: removed 2026-11-22 (owner request); sales now live in HQ's own Sales tab (§7.6).
 - **Address lookup** *(owner request 2026-10-21)*: address boxes (contact Address, purchase agreement

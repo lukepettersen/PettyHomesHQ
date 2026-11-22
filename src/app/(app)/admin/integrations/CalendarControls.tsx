@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { disconnectCalendar, refreshCalendar } from "./actions";
 
 /** Connect / Disconnect Google: Calendar and sending Gmail (one connection for the team). */
-export function CalendarControls({ keysSet, connected, email, gmail }: { keysSet: boolean; connected: boolean; email: string | null; gmail: { send: boolean; read: boolean } }) {
+export function CalendarControls({ keysSet, connected, email, gmail, broken = false }: { keysSet: boolean; connected: boolean; email: string | null; gmail: { send: boolean; read: boolean }; broken?: boolean }) {
   const router = useRouter();
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState("");
@@ -24,6 +24,12 @@ export function CalendarControls({ keysSet, connected, email, gmail }: { keysSet
       ) : (
         <a href="/api/google/connect" aria-disabled={!keysSet} className={`btn btn-primary ml-auto ${keysSet ? "" : "pointer-events-none opacity-50"}`}>Connect Google</a>
       )}
+      {connected && broken && (
+        <div className="flex w-full flex-wrap items-center gap-3 rounded-md border border-bad/40 bg-white px-3 py-2">
+          <span className="text-sm font-semibold text-bad">Google stopped letting HQ in, so emails, calendar invites and Gmail syncing aren&apos;t working. Click Reconnect Google and sign in with {email || "the same account"}.</span>
+          <a href="/api/google/connect" className="btn btn-primary ml-auto">Reconnect Google</a>
+        </div>
+      )}
       {error && <span role="alert" className="text-sm text-bad">{error}</span>}
       {connected && (
         <div className="flex w-full flex-wrap items-center gap-3 border-t border-misty pt-2">
@@ -37,7 +43,7 @@ export function CalendarControls({ keysSet, connected, email, gmail }: { keysSet
             <b>Gmail:</b> {gmail.send ? `Sending on, from ${email || "this account"}.` : "Sending not allowed yet."}{" "}
             {gmail.read ? "Emails to and from contacts show on their timelines, and your Gmail signature is added." : "Reconnect to show emails and replies on timelines and add your Gmail signature."}
           </span>
-          {!(gmail.send && gmail.read) && <a href="/api/google/connect" className="btn btn-primary ml-auto">Reconnect Google</a>}
+          {!broken && <a href="/api/google/connect" className={`btn ml-auto ${gmail.send && gmail.read ? "" : "btn-primary"}`}>Reconnect Google</a>}
         </div>
       )}
     </div>
