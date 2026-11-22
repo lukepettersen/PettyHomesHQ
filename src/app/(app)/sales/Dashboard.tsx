@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import type { SaleView } from "@/server/sales";
-import { breakdown, byMonth, compareYears, dashboard, DASH_CARDS, DASH_SIZES, DEFAULT_DASHBOARD, MONTHS, periodOf, STATUS_LABEL, totals,
-  type DashCard, type DashCardKind, type DashSize, type Period, type StatSale, type Totals } from "@/lib/sales";
+import { breakdown, byMonth, compareYears, dashboard, DASH_CARDS, DASH_SIZES, DEFAULT_DASHBOARD, MONTHS, periodOf, STATUS_LABEL, SUBS_FOR, TILE_SUBS, totals,
+  type DashCard, type DashCardKind, type DashSize, type TileSub, type Period, type StatSale, type Totals } from "@/lib/sales";
 import { saveDashboardAction } from "./actions";
 
 // The owner's Sales dashboard (SPEC.md §7.6): cards the owner picks, orders and sizes with Customize (owner request 2026-11-22).
@@ -38,6 +38,7 @@ export function Dashboard({ rows, today, cards }: { rows: SaleView[]; today: str
   const list = editing ?? cards;
 
   const move = (i: number, by: number) => { if (!editing) return; const n = [...editing]; const j = i + by; if (j < 0 || j >= n.length) return; [n[i], n[j]] = [n[j], n[i]]; setEditing(n); };
+  const setSub = (i: number, sub: TileSub) => editing && setEditing(editing.map((c, k) => (k === i ? { ...c, sub: sub === "usual" ? undefined : sub } : c)));
   const resize = (i: number, size: DashSize) => editing && setEditing(editing.map((c, k) => (k === i ? { ...c, size } : c)));
   const remove = (i: number) => editing && setEditing(editing.filter((_, k) => k !== i));
   const add = () => { if (!editing || !adding) return; setEditing([...editing, { id: `${adding}-${Date.now().toString(36)}`, kind: adding, size: DASH_CARDS[adding].size }]); setAdding(""); };
@@ -84,6 +85,11 @@ export function Dashboard({ rows, today, cards }: { rows: SaleView[]; today: str
                 <select className="rounded border border-misty bg-white px-1 py-0 text-xs" aria-label={`Size of ${DASH_CARDS[c.kind].label}`} value={c.size} onChange={(e) => resize(i, e.target.value as DashSize)}>
                   {(Object.keys(DASH_SIZES) as DashSize[]).map((s) => <option key={s} value={s}>{DASH_SIZES[s]}</option>)}
                 </select>
+                {SUBS_FOR[c.kind] && (
+                  <select className="rounded border border-misty bg-white px-1 py-0 text-xs" aria-label={`Line under ${DASH_CARDS[c.kind].label}`} title="What shows under the number" value={c.sub ?? "usual"} onChange={(e) => setSub(i, e.target.value as TileSub)}>
+                    {SUBS_FOR[c.kind]!.map((t) => <option key={t} value={t}>Below: {TILE_SUBS[t]}</option>)}
+                  </select>
+                )}
                 <button type="button" className="btn px-1.5 py-0 text-xs text-bad" aria-label={`Remove ${DASH_CARDS[c.kind].label}`} onClick={() => remove(i)}>✕</button>
               </div>
             )}
@@ -117,16 +123,25 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 function CardBody({ card, ctx }: { card: DashCard; ctx: Ctx }) {
   const { d, prev, year, label, cmp, p, all, rows, kind } = ctx;
   const vs = (a: number, b: number | undefined) => (b ? `${a >= b ? "▲" : "▼"} ${Math.abs(((a - b) / (b || 1)) * 100).toFixed(0)}% vs ${year - 1}` : `${year - 1}: none`);
+  // The line under a tile: the owner's pick for this card (Customize → "Below: …"), else the usual one.
+  const pick = (lines: Partial<Record<TileSub, string>>) => (card.sub === "none" ? "" : (card.sub && lines[card.sub]) ?? lines.usual ?? "");
+  const per = (n: number) => (d.closed.deals ? n / d.closed.deals : 0);
+  const vsLine = (a: number, b: number | undefined, _f: (n: number) => string) => (b ? vs(a, b) : `${year - 1}: none`);
+  const cmpLines = (a: number, b: number | undefined, f: (n: number) => string): Partial<Record<TileSub, string>> => ({
+    vsLast: b ? vs(a, b) : `${year - 1}: none`,
+    diffLast: b !== undefined ? `${a >= b ? "+" : "−"}${f(Math.abs(a - b))} vs ${year - 1}` : `${year - 1}: none`,
+    lastYear: `${year - 1}: ${b !== undefined ? f(b) : "none"}`,
+  });
   const periodTitle = kind === "year" ? "every year" : `${p.label} in every year`;
   switch (card.kind) {
-    case "pending": return <Tile label="Pending sales" value={String(d.pending.deals)} sub={`${$(d.pending.volume)} · GCI ${$(d.pending.gross)}`} tone="text-[#24507a]" />;
-    case "closed": return <Tile label={`Closed · ${label}`} value={String(d.closed.deals)} sub={prev ? vs(d.closed.deals, prev.deals) : ""} />;
-    case "volume": return <Tile label={`Volume · ${label}`} value={$(d.closed.volume)} sub={prev ? vs(d.closed.volume, prev.volume) : ""} />;
-    case "gross": return <Tile label={`Gross commission · ${label}`} value={$(d.closed.gross)} sub={`${pct(d.closed.grossPct)} of volume`} />;
-    case "net": return <Tile label={`Net income · ${label}`} value={$(d.closed.net)} sub={`${pct(d.closed.splitPct)} split${prev ? ` · ${vs(d.closed.net, prev.net)}` : ""}`} tone="text-accent" />;
-    case "owed": return <Tile label="Commission owed to you" value={$(d.outstanding.net)} sub={`${d.outstanding.deals} closed, not marked paid`} tone={d.outstanding.deals ? "text-[#9a6400]" : ""} />;
-    case "avgPrice": return <Tile label={`Average sale price · ${label}`} value={$(d.closed.avgPrice)} sub={prev ? vs(d.closed.avgPrice, prev.avgPrice) : ""} />;
-    case "saleToList": return <Tile label={`Sale-to-list · ${label}`} value={d.closed.listVolume ? pct(d.closed.netPct) : "—"} sub="sale price ÷ list price" />;
+    case "pending": return <Tile label="Pending sales" value={String(d.pending.deals)} sub={pick({ usual: `${$(d.pending.volume)} · GCI ${$(d.pending.gross)}`, gci: `GCI ${$(d.pending.gross)}`, deals: `${$(d.pending.volume)} volume` })} tone="text-[#24507a]" />;
+    case "closed": return <Tile label={`Closed · ${label}`} value={String(d.closed.deals)} sub={pick({ usual: vsLine(d.closed.deals, prev?.deals, String), ...cmpLines(d.closed.deals, prev?.deals, (n) => `${n} sales`) })} />;
+    case "volume": return <Tile label={`Volume · ${label}`} value={$(d.closed.volume)} sub={pick({ usual: vsLine(d.closed.volume, prev?.volume, $), ...cmpLines(d.closed.volume, prev?.volume, $), perSale: `${$(d.closed.avgPrice)} per sale`, deals: `${d.closed.deals} sales`, gci: `GCI ${$(d.closed.gross)}` })} />;
+    case "gross": return <Tile label={`Gross commission · ${label}`} value={$(d.closed.gross)} sub={pick({ usual: `${pct(d.closed.grossPct)} of volume`, pctVolume: `${pct(d.closed.grossPct)} of volume`, ...cmpLines(d.closed.gross, prev?.gross, $), perSale: `${$(per(d.closed.gross))} per sale`, deals: `${d.closed.deals} sales` })} />;
+    case "net": return <Tile label={`Net income · ${label}`} value={$(d.closed.net)} sub={pick({ usual: `${pct(d.closed.splitPct)} split${prev ? ` · ${vsLine(d.closed.net, prev.net, $)}` : ""}`, split: `${pct(d.closed.splitPct)} split`, pctVolume: `${pct(d.closed.volume ? (d.closed.net / d.closed.volume) * 100 : 0)} of volume`, ...cmpLines(d.closed.net, prev?.net, $), perSale: `${$(per(d.closed.net))} per sale`, deals: `${d.closed.deals} sales` })} tone="text-accent" />;
+    case "owed": return <Tile label="Commission owed to you" value={$(d.outstanding.net)} sub={pick({ usual: `${d.outstanding.deals} closed, not marked paid` })} tone={d.outstanding.deals ? "text-[#9a6400]" : ""} />;
+    case "avgPrice": return <Tile label={`Average sale price · ${label}`} value={$(d.closed.avgPrice)} sub={pick({ usual: vsLine(d.closed.avgPrice, prev?.avgPrice, $), ...cmpLines(d.closed.avgPrice, prev?.avgPrice, $), deals: `${d.closed.deals} sales` })} />;
+    case "saleToList": return <Tile label={`Sale-to-list · ${label}`} value={d.closed.listVolume ? pct(d.closed.netPct) : "—"} sub={pick({ usual: "sale price ÷ list price", vsLast: vsLine(d.closed.netPct, prev?.listVolume ? prev.netPct : undefined, pct), lastYear: prev?.listVolume ? `${year - 1}: ${pct(prev.netPct)}` : `${year - 1}: none` })} />;
     case "sides": {
       const inP = all.filter((r) => r.status === "closed" && r.closeDate?.startsWith(String(year)) && periodHas(r.closeDate, p));
       const b = totals(inP.filter((r) => r.side === "buyer")), s = totals(inP.filter((r) => r.side === "seller"));

@@ -42,6 +42,6 @@ export async function saveColumnsAction(cols: unknown) {
   return guarded(null, async (user) => { ownerOnly(user); await saveSaleColumns(user, z.array(z.string().max(30)).max(40).parse(cols)); revalidatePath("/sales"); });
 }
 export async function saveDashboardAction(cards: unknown) {
-  const card = z.object({ id: z.string().max(40), kind: z.string().max(30), size: z.string().max(10) });
+  const card = z.object({ id: z.string().max(40), kind: z.string().max(30), size: z.string().max(10), sub: z.string().max(20).optional() });
   return guarded(null, async (user) => { ownerOnly(user); await saveDashboard(user, z.array(card).max(40).parse(cards)); revalidatePath("/sales"); });
 }

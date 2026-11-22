@@ -225,7 +225,25 @@ export const DASH_CARDS = {
 export type DashCardKind = keyof typeof DASH_CARDS;
 export const DASH_SIZES = { small: "Small", medium: "Medium", half: "Half width", full: "Full width" } as const;
 export type DashSize = keyof typeof DASH_SIZES;
-export type DashCard = { id: string; kind: DashCardKind; size: DashSize };
+export type DashCard = { id: string; kind: DashCardKind; size: DashSize; sub?: TileSub };
+/** What a number tile shows under its number (owner request 2026-11-22: "change what's below these cards"). */
+export const TILE_SUBS = {
+  usual: "The usual line", vsLast: "% change vs last year", diffLast: "Difference vs last year", lastYear: "Last year's number",
+  perSale: "Average per sale", pctVolume: "% of volume", split: "Split % (net ÷ gross)", deals: "Number of sales", gci: "Gross commission", none: "Nothing",
+} as const;
+export type TileSub = keyof typeof TILE_SUBS;
+/** Which lines make sense under each tile. */
+export const SUBS_FOR: Partial<Record<DashCardKind, TileSub[]>> = {
+  pending: ["usual", "gci", "deals", "none"],
+  closed: ["usual", "vsLast", "diffLast", "lastYear", "none"],
+  volume: ["usual", "vsLast", "diffLast", "lastYear", "perSale", "deals", "gci", "none"],
+  gross: ["usual", "pctVolume", "vsLast", "diffLast", "lastYear", "perSale", "deals", "none"],
+  net: ["usual", "split", "pctVolume", "vsLast", "diffLast", "lastYear", "perSale", "deals", "none"],
+  owed: ["usual", "none"],
+  avgPrice: ["usual", "vsLast", "diffLast", "lastYear", "deals", "none"],
+  sides: ["usual", "none"],
+  saleToList: ["usual", "vsLast", "lastYear", "none"],
+};
 export const DEFAULT_DASHBOARD: DashCard[] = (["pending", "closed", "volume", "gross", "net", "owed", "everyYear", "bySource", "byReferral"] as DashCardKind[])
   .map((kind) => ({ id: kind, kind, size: DASH_CARDS[kind].size }));
 /** A saved dashboard → known cards and sizes (max 40); nothing usable saved → the default layout. */
@@ -239,7 +257,11 @@ export function cleanDashboard(v: unknown): DashCard[] {
     if (typeof kind !== "string" || !(kind in DASH_CARDS)) continue;
     const cid = typeof id === "string" && /^[\w-]{1,40}$/.test(id) && !seen.has(id) ? id : `${kind}-${out.length}`;
     seen.add(cid);
-    out.push({ id: cid, kind: kind as DashCardKind, size: typeof size === "string" && size in DASH_SIZES ? (size as DashSize) : DASH_CARDS[kind as DashCardKind].size });
+    const k = kind as DashCardKind;
+    const sub = (x as Record<string, unknown>).sub;
+    const card: DashCard = { id: cid, kind: k, size: typeof size === "string" && size in DASH_SIZES ? (size as DashSize) : DASH_CARDS[k].size };
+    if (typeof sub === "string" && sub !== "usual" && (SUBS_FOR[k] ?? []).includes(sub as TileSub)) card.sub = sub as TileSub;
+    out.push(card);
   }
   return out;
 }

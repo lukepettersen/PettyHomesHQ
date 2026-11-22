@@ -123,3 +123,11 @@ describe("summary by quarter and month", () => {
     expect(summaryBy(rows, "year").total.deals).toBe(4);
   });
 });
+
+describe("tile lines", () => {
+  it("keeps a line only where it fits the tile", async () => {
+    const { cleanDashboard } = await import("./sales");
+    expect(cleanDashboard([{ id: "g", kind: "gross", size: "small", sub: "perSale" }, { id: "o", kind: "owed", size: "small", sub: "perSale" }, { id: "n", kind: "net", size: "small", sub: "usual" }]))
+      .toEqual([{ id: "g", kind: "gross", size: "small", sub: "perSale" }, { id: "o", kind: "owed", size: "small" }, { id: "n", kind: "net", size: "small" }]);
+  });
+});
