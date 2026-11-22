@@ -689,9 +689,14 @@ in search, exports, the API, the text assistant or the Claude connector. Money l
   status (Pending / Closed / Fell through), source, initial source, lender, referred from, on time, linked contacts.
   Money: sale price, list price, seller contributions, commission %, gross commission, fees, net (commission after
   split and fees), split %, commission paid. Columns follow the master file's DATA tab.
-- **Dashboard**: pick This month / This quarter / This year (and a year): Pending (count, volume, gross), Closed in the
-  period (count, volume, gross, net), Outstanding commission (closed, not marked paid), the same period compared with
-  each prior year, and closed sales by lead source and by referral.
+- **Dashboard**: pick This month / This quarter / This year (and a year); every card follows that choice. Cards
+  *(owner request 2026-11-22: "make what shows editable with different cards")*: **Customize** adds cards from a list
+  (number tiles: Pending, Closed, Volume, Gross commission, Net income, Commission owed, Average sale price, Buyers vs
+  sellers, Sale-to-list; tables: Every year, By lead source, By referral; charts: Volume / Sales / Net income by year,
+  Month by month this year vs last, Volume by lead source; lists: Pending deals, Owed commissions), moves them (← →),
+  sizes them (Small, Medium, Half width, Full width) and removes them (✕); Save / Cancel / "Start over with the usual
+  cards". Saved in AppSetting `sales.dashboard`. The usual cards: the six number tiles, Every year, By lead source,
+  By referral. Charts show the numbers on hover.
 - **Summary**: per year, Total / Buyer / Seller (deals, volume, average price, gross, gross %, net, split) plus Career,
   like the master file's SUMMARY tab. Closed sales only. Click a heading to sort the years (Career stays last).
 - **All sales**: filters (year, status, side, search) and an editable list; click a heading to sort by it (again to

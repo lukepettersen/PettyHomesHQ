@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { SaleView } from "@/server/sales";
-import { breakdown, compareYears, dashboard, DEFAULT_SALE_COLUMNS, MONTHS, periodOf, SALE_COLUMNS, SOURCES, STATUS_LABEL, yearSummary, type Period, type SaleColumn, type StatSale, type Totals } from "@/lib/sales";
+import { breakdown, compareYears, dashboard, DEFAULT_SALE_COLUMNS, MONTHS, periodOf, SALE_COLUMNS, SOURCES, STATUS_LABEL, yearSummary, type DashCard, type SaleColumn, type StatSale, type Totals } from "@/lib/sales";
+import { Dashboard } from "./Dashboard";
 import { applyImportAction, deleteSaleAction, findPeopleAction, previewImportAction, resolveReviewAction, saveColumnsAction, saveSaleAction } from "./actions";
 
 // The owner's Sales tab (SPEC.md §7.6), modeled on the master file: Dashboard (SALES COMPARE), Summary (SUMMARY),
@@ -15,7 +16,7 @@ const day = (iso: string | null) => { if (!iso) return "—"; const [y, m, d] = 
 const stat = (rows: SaleView[]): StatSale[] => rows.map((r) => ({ status: r.status, side: r.side, closeDate: r.closeDate, source: r.source, referredFrom: r.referredFrom, price: r.price, listPrice: r.listPrice, gross: r.gross, net: r.net, commissionPaid: r.commissionPaid }));
 type Tab = "dashboard" | "summary" | "list" | "review" | "import";
 
-export function SalesApp({ rows, today, columns }: { rows: SaleView[]; today: string; columns: SaleColumn[] }) {
+export function SalesApp({ rows, today, columns, cards }: { rows: SaleView[]; today: string; columns: SaleColumn[]; cards: DashCard[] }) {
   const [tab, setTab] = useState<Tab>("dashboard");
   const review = rows.filter((r) => r.review?.length);
   const tabs: [Tab, string, number | null][] = [["dashboard", "Dashboard", null], ["summary", "Summary", null], ["list", "All sales", rows.length], ["review", "Review", review.length], ["import", "Import", null]];
@@ -34,7 +35,7 @@ export function SalesApp({ rows, today, columns }: { rows: SaleView[]; today: st
         ))}
       </div>
       <div className="mt-3">
-        {tab === "dashboard" && <Dashboard rows={rows} today={today} />}
+        {tab === "dashboard" && <Dashboard rows={rows} today={today} cards={cards} />}
         {tab === "summary" && <Summary rows={rows} />}
         {tab === "list" && <SalesList rows={rows} today={today} columns={columns} />}
         {tab === "review" && <Review rows={review} />}
@@ -44,81 +45,6 @@ export function SalesApp({ rows, today, columns }: { rows: SaleView[]; today: st
   );
 }
 
-function Tile({ label, value, sub, tone = "" }: { label: string; value: string; sub?: string; tone?: string }) {
-  return (
-    <div className="card p-3">
-      <div className="text-[11px] font-semibold uppercase tracking-wide muted">{label}</div>
-      <div className={`text-xl font-extrabold ${tone}`}>{value}</div>
-      {sub && <div className="text-xs muted">{sub}</div>}
-    </div>
-  );
-}
-
-/** The master file's SALES COMPARE: this month / quarter / year next to the same period in past years, by source and referral. */
-function Dashboard({ rows, today }: { rows: SaleView[]; today: string }) {
-  const [kind, setKind] = useState<Period>("year");
-  const all = useMemo(() => stat(rows), [rows]);
-  const years = useMemo(() => [...new Set(all.filter((r) => r.closeDate).map((r) => Number(r.closeDate!.slice(0, 4))))].sort((a, b) => b - a), [all]);
-  const [year, setYear] = useState(Number(today.slice(0, 4)));
-  const p = { ...periodOf(kind, today), year };
-  const d = dashboard(all, p);
-  const cmp = compareYears(all, p);
-  const prev = cmp.find((c) => c.year === year - 1);
-  const src = breakdown(all, "source", p, year), refs = breakdown(all, "referredFrom", p, year);
-  const label = kind === "year" ? `${year}` : `${p.label} ${year}`;
-  const vs = (a: number, b: number | undefined) => (b ? `${a >= b ? "▲" : "▼"} ${Math.abs(((a - b) / (b || 1)) * 100).toFixed(0)}% vs ${year - 1}` : `${year - 1}: none`);
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {([["month", `This month (${MONTHS[p.month - 1]})`], ["quarter", `This quarter (Q${p.quarter})`], ["year", "Whole year"]] as const).map(([k, l]) => (
-          <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)} className={`rounded-full border px-3 py-1 text-sm font-semibold ${kind === k ? "border-accent bg-accent text-white" : "border-misty bg-white hover:bg-sunken"}`}>{l}</button>
-        ))}
-        <label className="ml-auto flex items-center gap-2 text-sm font-semibold">Year
-          <select className="input w-auto py-1" value={year} onChange={(e) => setYear(Number(e.target.value))}>{[...new Set([Number(today.slice(0, 4)), ...years])].sort((a, b) => b - a).map((y) => <option key={y}>{y}</option>)}</select>
-        </label>
-      </div>
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
-        <Tile label="Pending sales" value={String(d.pending.deals)} sub={`${$(d.pending.volume)} · GCI ${$(d.pending.gross)}`} tone="text-[#24507a]" />
-        <Tile label={`Closed · ${label}`} value={String(d.closed.deals)} sub={prev ? vs(d.closed.deals, prev.deals) : ""} />
-        <Tile label="Volume" value={$(d.closed.volume)} sub={prev ? vs(d.closed.volume, prev.volume) : ""} />
-        <Tile label="Gross commission" value={$(d.closed.gross)} sub={`${pct(d.closed.grossPct)} of volume`} />
-        <Tile label="Net income" value={$(d.closed.net)} sub={`${pct(d.closed.splitPct)} split`} tone="text-accent" />
-        <Tile label="Commission owed to you" value={$(d.outstanding.net)} sub={`${d.outstanding.deals} closed, not marked paid`} tone={d.outstanding.deals ? "text-[#9a6400]" : ""} />
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="card overflow-hidden">
-          <h2 className="border-b border-misty px-3 py-2 font-bold">{kind === "year" ? "Every year" : `${p.label} in every year`}</h2>
-          <table className="w-full text-sm">
-            <thead><tr className="text-left text-xs muted"><th className="px-3 py-1">Year</th><th>Sales</th><th>Volume</th><th>Gross comm.</th><th className="pr-3">Net income</th></tr></thead>
-            <tbody>{cmp.map((c) => (
-              <tr key={c.year} className={`border-t border-misty/60 ${c.year === year ? "bg-accent-soft font-semibold" : ""}`}><td className="px-3 py-1">{c.year}</td><td>{c.deals}</td><td>{$(c.volume)}</td><td>{$(c.gross)}</td><td className="pr-3">{$(c.net)}</td></tr>
-            ))}</tbody>
-          </table>
-        </section>
-        <section className="card overflow-hidden">
-          <h2 className="border-b border-misty px-3 py-2 font-bold">By lead source · {label}</h2>
-          <Breakdown rows={src} empty="No closed sales in this period." />
-        </section>
-      </div>
-      <section className="card overflow-hidden">
-        <h2 className="border-b border-misty px-3 py-2 font-bold">By referral · {label}</h2>
-        <Breakdown rows={refs} empty="No closed sales in this period." />
-      </section>
-    </div>
-  );
-}
-
-function Breakdown({ rows, empty }: { rows: ({ key: string } & Totals)[]; empty: string }) {
-  if (!rows.length) return <p className="px-3 py-2 text-sm muted">{empty}</p>;
-  return (
-    <table className="w-full text-sm">
-      <thead><tr className="text-left text-xs muted"><th className="px-3 py-1"></th><th>Sales</th><th>Volume</th><th className="pr-3">Net income</th></tr></thead>
-      <tbody>{rows.map((b) => <tr key={b.key} className="border-t border-misty/60"><td className="px-3 py-1">{b.key}</td><td>{b.deals}</td><td>{$(b.volume)}</td><td className="pr-3">{$(b.net)}</td></tr>)}</tbody>
-    </table>
-  );
-}
-
-/** The master file's SUMMARY: total, buyer and seller by year and career. */
 type SumKey = "year" | "deals" | "volume" | "avgPrice" | "listVolume" | "netPct" | "gross" | "grossPct" | "net" | "splitPct";
 const SUM_COLS: [SumKey, string, boolean][] = [["year", "Year", false], ["deals", "Deals", false], ["volume", "Volume", false], ["avgPrice", "Avg sale price", false], ["listVolume", "List price", true],
   ["netPct", "Sale/list", true], ["gross", "Gross commission", false], ["grossPct", "Gross %", false], ["net", "Commission", false], ["splitPct", "Split %", false]];

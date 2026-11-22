@@ -199,3 +199,52 @@ export function cleanSaleColumns(v: unknown): SaleColumn[] {
   want.add("client");
   return SALE_COLUMNS.map(([k]) => k).filter((k) => want.has(k));
 }
+
+// ---------- Dashboard cards: which show, in what order and size (owner request 2026-11-22) ----------
+export const DASH_CARDS = {
+  pending: { label: "Pending sales", about: "Under contract now: count, volume and GCI", size: "small" },
+  closed: { label: "Closed sales", about: "Closed in the period, vs last year", size: "small" },
+  volume: { label: "Volume", about: "Sale volume closed in the period, vs last year", size: "small" },
+  gross: { label: "Gross commission", about: "GCI closed in the period and % of volume", size: "small" },
+  net: { label: "Net income", about: "Your commission after split and fees", size: "small" },
+  owed: { label: "Commission owed to you", about: "Closed sales not marked paid", size: "small" },
+  avgPrice: { label: "Average sale price", about: "Average price of sales closed in the period", size: "small" },
+  sides: { label: "Buyers vs sellers", about: "How many buyer and seller sales closed", size: "small" },
+  saleToList: { label: "Sale-to-list", about: "Sale price as % of list price", size: "small" },
+  everyYear: { label: "Every year (table)", about: "The period in every year: sales, volume, GCI, net", size: "half" },
+  volumeChart: { label: "Volume by year (chart)", about: "Bar chart of volume for the period in every year", size: "half" },
+  dealsChart: { label: "Sales by year (chart)", about: "Bar chart of closed sales for the period in every year", size: "half" },
+  netChart: { label: "Net income by year (chart)", about: "Bar chart of your net income in every year", size: "half" },
+  monthly: { label: "Month by month (chart)", about: "Volume each month this year next to last year", size: "full" },
+  bySource: { label: "By lead source (table)", about: "Closed sales by lead source", size: "half" },
+  sourceChart: { label: "By lead source (chart)", about: "Bar chart of volume by lead source", size: "half" },
+  byReferral: { label: "By referral (table)", about: "Closed sales by who referred them", size: "full" },
+  pendingList: { label: "Pending deals (list)", about: "Every sale under contract, with close date and price", size: "half" },
+  owedList: { label: "Owed commissions (list)", about: "Closed sales not marked paid", size: "half" },
+} as const;
+export type DashCardKind = keyof typeof DASH_CARDS;
+export const DASH_SIZES = { small: "Small", medium: "Medium", half: "Half width", full: "Full width" } as const;
+export type DashSize = keyof typeof DASH_SIZES;
+export type DashCard = { id: string; kind: DashCardKind; size: DashSize };
+export const DEFAULT_DASHBOARD: DashCard[] = (["pending", "closed", "volume", "gross", "net", "owed", "everyYear", "bySource", "byReferral"] as DashCardKind[])
+  .map((kind) => ({ id: kind, kind, size: DASH_CARDS[kind].size }));
+/** A saved dashboard → known cards and sizes (max 40); nothing usable saved → the default layout. */
+export function cleanDashboard(v: unknown): DashCard[] {
+  if (!Array.isArray(v)) return DEFAULT_DASHBOARD;
+  const seen = new Set<string>();
+  const out: DashCard[] = [];
+  for (const x of v.slice(0, 40)) {
+    if (!x || typeof x !== "object") continue;
+    const { id, kind, size } = x as Record<string, unknown>;
+    if (typeof kind !== "string" || !(kind in DASH_CARDS)) continue;
+    const cid = typeof id === "string" && /^[\w-]{1,40}$/.test(id) && !seen.has(id) ? id : `${kind}-${out.length}`;
+    seen.add(cid);
+    out.push({ id: cid, kind: kind as DashCardKind, size: typeof size === "string" && size in DASH_SIZES ? (size as DashSize) : DASH_CARDS[kind as DashCardKind].size });
+  }
+  return out;
+}
+/** Closed volume and count per month (1–12) of a year. */
+export function byMonth(rows: StatSale[], year: number) {
+  const list = closed(rows).filter((r) => yearOf(r.closeDate) === year);
+  return MONTHS.map((_, i) => { const m = list.filter((r) => monthOf(r.closeDate!) === i + 1); return { month: i + 1, deals: m.length, volume: sum(m.map((r) => r.price)) }; });
+}

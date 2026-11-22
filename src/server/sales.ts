@@ -7,7 +7,7 @@ import { UserError } from "@/server/safe";
 import { dateFromIso, formatPhone, isoFromDate, todayCentral } from "@/lib/normalize";
 import {
   clientNameOf, commissionPctOf, contactNameFor, importKeyOf, streetOf, lenderLabel, matchSale, moneyFor, readSalesCsv, sourceLabel,
-  cleanSaleColumns, type ImportRow, type MatchPerson, type StatSale,
+  cleanDashboard, cleanSaleColumns, type ImportRow, type MatchPerson, type StatSale,
 } from "@/lib/sales";
 
 // Sales (owner request 2026-11-22; SPEC.md §7.6). OWNER ONLY: every function here that reads or writes a sale's money,
@@ -273,4 +273,16 @@ export async function saveSaleColumns(user: SalesUser, cols: string[]) {
   ownerOnly(user);
   const value = cleanSaleColumns(cols);
   await db.appSetting.upsert({ where: { key: "sales.columns" }, update: { value }, create: { key: "sales.columns", value } });
+}
+
+/** The owner's Sales dashboard cards (AppSetting `sales.dashboard`). */
+export async function loadDashboard(user: SalesUser) {
+  ownerOnly(user);
+  const row = await db.appSetting.findUnique({ where: { key: "sales.dashboard" } });
+  return cleanDashboard(row?.value ?? null);
+}
+export async function saveDashboard(user: SalesUser, cards: unknown) {
+  ownerOnly(user);
+  const value = cleanDashboard(cards);
+  await db.appSetting.upsert({ where: { key: "sales.dashboard" }, update: { value }, create: { key: "sales.dashboard", value } });
 }

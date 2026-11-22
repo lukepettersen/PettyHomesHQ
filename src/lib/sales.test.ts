@@ -100,3 +100,15 @@ describe("All sales columns", () => {
     expect(cleanSaleColumns(["net", "bogus", "address"])).toEqual(["client", "address", "net"]);
   });
 });
+
+describe("dashboard cards", () => {
+  it("keeps known cards and sizes, and fills in the default", async () => {
+    const { cleanDashboard, DEFAULT_DASHBOARD, byMonth } = await import("./sales");
+    expect(cleanDashboard(null)).toEqual(DEFAULT_DASHBOARD);
+    expect(cleanDashboard([{ id: "a", kind: "monthly", size: "half" }, { id: "a", kind: "net", size: "huge" }, { kind: "nope" }])).toEqual([
+      { id: "a", kind: "monthly", size: "half" }, { id: "net-1", kind: "net", size: "small" }]);
+    expect(cleanDashboard([])).toEqual([]);
+    const m = byMonth([s("2026-03-02"), s("2026-03-20", { price: 100000 }), s("2025-03-01")], 2026);
+    expect(m[2]).toEqual({ month: 3, deals: 2, volume: 500000 });
+  });
+});

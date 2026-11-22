@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { guarded } from "@/server/safe";
-import { applySalesImport, deleteSale, ownerOnly, previewSalesImport, resolveReview, salePeopleOptions, saveSale, saveSaleColumns } from "@/server/sales";
+import { applySalesImport, deleteSale, ownerOnly, previewSalesImport, resolveReview, salePeopleOptions, saveDashboard, saveSale, saveSaleColumns } from "@/server/sales";
 
 // Sales tab (SPEC.md §7.6): OWNER ONLY. Every action checks it on the server (ownerOnly), whatever the page shows.
 const id = z.string().trim().min(1).max(40);
@@ -40,4 +40,8 @@ export async function findPeopleAction(q: string) {
 }
 export async function saveColumnsAction(cols: unknown) {
   return guarded(null, async (user) => { ownerOnly(user); await saveSaleColumns(user, z.array(z.string().max(30)).max(40).parse(cols)); revalidatePath("/sales"); });
+}
+export async function saveDashboardAction(cards: unknown) {
+  const card = z.object({ id: z.string().max(40), kind: z.string().max(30), size: z.string().max(10) });
+  return guarded(null, async (user) => { ownerOnly(user); await saveDashboard(user, z.array(card).max(40).parse(cards)); revalidatePath("/sales"); });
 }
