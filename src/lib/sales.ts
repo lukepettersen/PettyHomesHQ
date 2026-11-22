@@ -182,3 +182,20 @@ export function clientNameOf(personName: string): string {
 }
 /** Gross and net for a new sale: gross = price × commission %; net = gross × the split % (the owner's usual one). */
 export const moneyFor = (price: number, pct: number, splitPct: number) => { const gross = Math.round(price * pct) / 100; return { gross, net: Math.round(gross * splitPct) / 100 }; };
+
+// ---------- All sales columns: which show, in the master file's order (owner request 2026-11-22) ----------
+export const SALE_COLUMNS = [
+  ["client", "Client"], ["address", "Address"], ["city", "City"], ["zip", "ZIP"], ["closeDate", "Close date"], ["side", "Type"], ["status", "Status"],
+  ["source", "Source"], ["initialSource", "Initial source"], ["lender", "Lender"], ["referredFrom", "Referred from"], ["price", "Sale price"],
+  ["listPrice", "List price"], ["contributions", "Seller contributions"], ["commissionPct", "Comm %"], ["gross", "Gross"], ["fees", "Fees"],
+  ["net", "Net"], ["splitPct", "Split"], ["commissionPaid", "Paid"], ["onTime", "On time"],
+] as const;
+export type SaleColumn = (typeof SALE_COLUMNS)[number][0];
+export const DEFAULT_SALE_COLUMNS: SaleColumn[] = ["client", "address", "closeDate", "side", "status", "source", "referredFrom", "price", "commissionPct", "gross", "net", "splitPct", "commissionPaid"];
+/** Saved column choice → known keys in the standard order; client always shows; nothing saved → the defaults. */
+export function cleanSaleColumns(v: unknown): SaleColumn[] {
+  if (!Array.isArray(v)) return DEFAULT_SALE_COLUMNS;
+  const want = new Set(v.filter((x): x is string => typeof x === "string"));
+  want.add("client");
+  return SALE_COLUMNS.map(([k]) => k).filter((k) => want.has(k));
+}

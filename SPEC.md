@@ -693,8 +693,9 @@ in search, exports, the API, the text assistant or the Claude connector. Money l
   period (count, volume, gross, net), Outstanding commission (closed, not marked paid), the same period compared with
   each prior year, and closed sales by lead source and by referral.
 - **Summary**: per year, Total / Buyer / Seller (deals, volume, average price, gross, gross %, net, split) plus Career,
-  like the master file's SUMMARY tab. Closed sales only.
-- **All sales**: filters (year, status, side, search) and an editable list; Edit opens every field and the linked
+  like the master file's SUMMARY tab. Closed sales only. Click a heading to sort the years (Career stays last).
+- **All sales**: filters (year, status, side, search) and an editable list; click a heading to sort by it (again to
+  flip); **Columns** picks which of the master file's columns show (saved; "Back to the usual columns"); Edit opens every field and the linked
   contacts (gross and net recalculate from price, commission % and split; you can type over them). Remove is a
   two-step confirm (soft delete).
 - **Import**: the DATA tab as CSV. Re-importing updates the same sales (matched by close date, side and street), so

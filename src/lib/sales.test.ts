@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { breakdown, clientNameOf, commissionPctOf, compareYears, contactNameFor, dashboard, familyOf, importKeyOf, lenderLabel, matchSale, moneyFor, periodOf,
-  readSaleDate, readSalesCsv, sourceLabel, totals, yearSummary, type StatSale } from "./sales";
+  readSaleDate, readSalesCsv, sourceLabel, totals, yearSummary, cleanSaleColumns, DEFAULT_SALE_COLUMNS, type StatSale } from "./sales";
 
 const s = (closeDate: string | null, o: Partial<StatSale> = {}): StatSale => ({ status: "closed", side: "buyer", closeDate, source: "SPHERE", referredFrom: "", price: 400000, listPrice: 400000, gross: 10800, net: 10152, commissionPaid: true, ...o });
 
@@ -91,5 +91,12 @@ describe("a sale from a purchase agreement", () => {
     expect(clientNameOf("Will & Katie Sharpe")).toBe("Sharpe");
     expect(clientNameOf("Tony Wagner & Laura Schmidt")).toBe("Wagner/Schmidt");
     expect(moneyFor(665000, 2.7, 94)).toEqual({ gross: 17955, net: 16877.7 });
+  });
+});
+
+describe("All sales columns", () => {
+  it("keeps known columns in the usual order, always with Client", () => {
+    expect(cleanSaleColumns(null)).toEqual(DEFAULT_SALE_COLUMNS);
+    expect(cleanSaleColumns(["net", "bogus", "address"])).toEqual(["client", "address", "net"]);
   });
 });

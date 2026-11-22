@@ -7,10 +7,10 @@ import { UserError } from "@/server/safe";
 import { dateFromIso, formatPhone, isoFromDate, todayCentral } from "@/lib/normalize";
 import {
   clientNameOf, commissionPctOf, contactNameFor, importKeyOf, streetOf, lenderLabel, matchSale, moneyFor, readSalesCsv, sourceLabel,
-  type ImportRow, type MatchPerson, type StatSale,
+  cleanSaleColumns, type ImportRow, type MatchPerson, type StatSale,
 } from "@/lib/sales";
 
-// Sales (owner request 2026-11-22; SPEC.md §7.9). OWNER ONLY: every function here that reads or writes a sale's money,
+// Sales (owner request 2026-11-22; SPEC.md §7.6). OWNER ONLY: every function here that reads or writes a sale's money,
 // or lists sales, starts with ownerOnly(user). The one exception is loadPersonSales, which never selects SaleMoney:
 // it's the Past Sales card on a contact (address, date, side, status), shown to everyone.
 
@@ -262,3 +262,15 @@ export async function salePeopleOptions(user: SalesUser, q: string) {
 }
 
 export const todayIso = () => isoFromDate(todayCentral());
+
+/** The owner's All sales column choice (AppSetting `sales.columns`). */
+export async function loadSaleColumns(user: SalesUser) {
+  ownerOnly(user);
+  const row = await db.appSetting.findUnique({ where: { key: "sales.columns" } });
+  return cleanSaleColumns(row?.value ?? null);
+}
+export async function saveSaleColumns(user: SalesUser, cols: string[]) {
+  ownerOnly(user);
+  const value = cleanSaleColumns(cols);
+  await db.appSetting.upsert({ where: { key: "sales.columns" }, update: { value }, create: { key: "sales.columns", value } });
+}

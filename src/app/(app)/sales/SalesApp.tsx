@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { SaleView } from "@/server/sales";
-import { breakdown, compareYears, dashboard, MONTHS, periodOf, SOURCES, STATUS_LABEL, yearSummary, type Period, type StatSale, type Totals } from "@/lib/sales";
-import { applyImportAction, deleteSaleAction, findPeopleAction, previewImportAction, resolveReviewAction, saveSaleAction } from "./actions";
+import { breakdown, compareYears, dashboard, DEFAULT_SALE_COLUMNS, MONTHS, periodOf, SALE_COLUMNS, SOURCES, STATUS_LABEL, yearSummary, type Period, type SaleColumn, type StatSale, type Totals } from "@/lib/sales";
+import { applyImportAction, deleteSaleAction, findPeopleAction, previewImportAction, resolveReviewAction, saveColumnsAction, saveSaleAction } from "./actions";
 
-// The owner's Sales tab (SPEC.md §7.9), modeled on the master file: Dashboard (SALES COMPARE), Summary (SUMMARY),
+// The owner's Sales tab (SPEC.md §7.6), modeled on the master file: Dashboard (SALES COMPARE), Summary (SUMMARY),
 // All sales (DATA), Review (sales to match to contacts) and Import.
 const $ = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 const pct = (n: number) => `${n.toFixed(2)}%`;
@@ -15,7 +15,7 @@ const day = (iso: string | null) => { if (!iso) return "—"; const [y, m, d] = 
 const stat = (rows: SaleView[]): StatSale[] => rows.map((r) => ({ status: r.status, side: r.side, closeDate: r.closeDate, source: r.source, referredFrom: r.referredFrom, price: r.price, listPrice: r.listPrice, gross: r.gross, net: r.net, commissionPaid: r.commissionPaid }));
 type Tab = "dashboard" | "summary" | "list" | "review" | "import";
 
-export function SalesApp({ rows, today }: { rows: SaleView[]; today: string }) {
+export function SalesApp({ rows, today, columns }: { rows: SaleView[]; today: string; columns: SaleColumn[] }) {
   const [tab, setTab] = useState<Tab>("dashboard");
   const review = rows.filter((r) => r.review?.length);
   const tabs: [Tab, string, number | null][] = [["dashboard", "Dashboard", null], ["summary", "Summary", null], ["list", "All sales", rows.length], ["review", "Review", review.length], ["import", "Import", null]];
@@ -36,7 +36,7 @@ export function SalesApp({ rows, today }: { rows: SaleView[]; today: string }) {
       <div className="mt-3">
         {tab === "dashboard" && <Dashboard rows={rows} today={today} />}
         {tab === "summary" && <Summary rows={rows} />}
-        {tab === "list" && <SalesList rows={rows} today={today} />}
+        {tab === "list" && <SalesList rows={rows} today={today} columns={columns} />}
         {tab === "review" && <Review rows={review} />}
         {tab === "import" && <Import />}
       </div>
@@ -119,20 +119,35 @@ function Breakdown({ rows, empty }: { rows: ({ key: string } & Totals)[]; empty:
 }
 
 /** The master file's SUMMARY: total, buyer and seller by year and career. */
+type SumKey = "year" | "deals" | "volume" | "avgPrice" | "listVolume" | "netPct" | "gross" | "grossPct" | "net" | "splitPct";
+const SUM_COLS: [SumKey, string, boolean][] = [["year", "Year", false], ["deals", "Deals", false], ["volume", "Volume", false], ["avgPrice", "Avg sale price", false], ["listVolume", "List price", true],
+  ["netPct", "Sale/list", true], ["gross", "Gross commission", false], ["grossPct", "Gross %", false], ["net", "Commission", false], ["splitPct", "Split %", false]];
+
+/** The master file's SUMMARY tab; click a heading to sort the years (CAREER stays at the bottom). */
 function Summary({ rows }: { rows: SaleView[] }) {
   const all = useMemo(() => stat(rows), [rows]);
+  const [sort, setSort] = useState<{ key: SumKey; desc: boolean }>({ key: "year", desc: false });
+  const sortBy = (key: SumKey) => setSort((s) => s.key === key ? { key, desc: !s.desc } : { key, desc: key !== "year" });
+  const show = (k: SumKey, y: Totals) => k === "deals" ? y.deals : k === "netPct" || k === "grossPct" ? pct(y[k]) : k === "splitPct" ? `${Math.round(y.splitPct)}%` : k === "year" ? "" : $(y[k]);
   const table = (title: string, side?: "buyer" | "seller") => {
     const s = yearSummary(all, side);
+    const cols = SUM_COLS.filter(([, , sideOnly]) => !sideOnly || side);
+    const years = [...s.years].sort((a, b) => { const c = sort.key === "year" ? a.year - b.year : a[sort.key] - b[sort.key]; return sort.desc ? -c : c; });
     return (
       <section className="card overflow-x-auto">
         <h2 className="border-b border-misty px-3 py-2 font-bold">{title}</h2>
         <table className="w-full min-w-[720px] text-sm">
-          <thead><tr className="text-left text-xs muted"><th className="px-3 py-1">Year</th><th>Deals</th><th>Volume</th><th>Avg sale price</th>{side && <th>List price</th>}{side && <th>Sale/list</th>}<th>Gross commission</th><th>Gross %</th><th>Commission</th><th className="pr-3">Split %</th></tr></thead>
+          <thead><tr className="text-left text-xs muted">
+            {cols.map(([k, l], i) => (
+              <th key={k} className={`py-1 ${i === 0 ? "px-3" : ""} ${i === cols.length - 1 ? "pr-3" : ""}`} aria-sort={sort.key === k ? (sort.desc ? "descending" : "ascending") : "none"}>
+                <button type="button" className="font-semibold hover:underline" onClick={() => sortBy(k)} title={`Sort by ${l}`}>{l}{sort.key === k && <span aria-hidden> {sort.desc ? "▼" : "▲"}</span>}</button>
+              </th>
+            ))}
+          </tr></thead>
           <tbody>
-            {[...s.years.map((y) => ({ k: String(y.year), ...y })), { k: "CAREER", ...s.career }].map((y) => (
+            {[...years.map((y) => ({ k: String(y.year), ...y })), { k: "CAREER", ...s.career }].map((y) => (
               <tr key={y.k} className={`border-t border-misty/60 ${y.k === "CAREER" ? "bg-sunken font-bold" : ""}`}>
-                <td className="px-3 py-1">{y.k}</td><td>{y.deals}</td><td>{$(y.volume)}</td><td>{$(y.avgPrice)}</td>{side && <td>{$(y.listVolume)}</td>}{side && <td>{pct(y.netPct)}</td>}
-                <td>{$(y.gross)}</td><td>{pct(y.grossPct)}</td><td>{$(y.net)}</td><td className="pr-3">{Math.round(y.splitPct)}%</td>
+                {cols.map(([k], i) => <td key={k} className={`py-1 ${i === 0 ? "px-3" : ""} ${i === cols.length - 1 ? "pr-3" : ""}`}>{k === "year" ? y.k : show(k, y)}</td>)}
               </tr>
             ))}
           </tbody>
@@ -144,15 +159,53 @@ function Summary({ rows }: { rows: SaleView[] }) {
 }
 
 /** The master file's DATA tab: every sale, filterable and editable. */
-function SalesList({ rows, today }: { rows: SaleView[]; today: string }) {
+// All sales columns: how each one shows, sorts and aligns (owner request 2026-11-22: sort by any column, pick which show).
+const NUM: SaleColumn[] = ["price", "listPrice", "contributions", "commissionPct", "gross", "fees", "net", "splitPct"];
+const STATUS_ORDER: Record<string, number> = { pending: 0, closed: 1, fell_through: 2 };
+function sortValue(r: SaleView, k: SaleColumn): string | number {
+  switch (k) {
+    case "client": return (r.clientName || r.people[0]?.name || "").toLowerCase();
+    case "closeDate": return r.closeDate ?? "9999";
+    case "status": return STATUS_ORDER[r.status] ?? 9;
+    case "commissionPaid": return r.status === "closed" ? (r.commissionPaid ? 1 : 0) : 2;
+    default: { const v = r[k]; return typeof v === "number" ? v : String(v ?? "").toLowerCase(); }
+  }
+}
+function cell(r: SaleView, k: SaleColumn) {
+  switch (k) {
+    case "client": return <><b>{r.clientName || "—"}</b>{r.people.length > 0 && <span className="block text-xs">{r.people.map((p, i) => <span key={p.id}>{i > 0 && ", "}<Link href={`/people/${p.id}`} className="text-accent hover:underline">{p.name}</Link></span>)}</span>}
+      {r.review && <span className="block text-xs text-[#9a6400]">needs a contact (Review)</span>}</>;
+    case "address": return <>{r.address}<span className="block text-xs muted">{[r.city, r.zip].filter(Boolean).join(" ")}</span></>;
+    case "closeDate": return day(r.closeDate);
+    case "side": return r.side === "buyer" ? "Buyer" : "Seller";
+    case "status": return <><span className={`rounded-full px-2 text-xs font-semibold ${r.status === "closed" ? "bg-accent-soft text-accent" : r.status === "pending" ? "bg-[#e3ecf7] text-[#24507a]" : "bg-sunken"}`}>{STATUS_LABEL[r.status]}</span>{r.paId && <span className="block text-[10px] muted">from HQ contract</span>}</>;
+    case "commissionPct": return r.commissionPct ? pct(r.commissionPct) : "—";
+    case "splitPct": return r.splitPct ? `${Math.round(r.splitPct)}%` : "—";
+    case "commissionPaid": return r.status === "closed" ? (r.commissionPaid ? "Yes" : "No") : "—";
+    case "price": case "listPrice": case "contributions": case "gross": case "fees": case "net": return $(r[k]);
+    default: return <span className="text-xs">{r[k]}</span>;
+  }
+}
+const LABEL = Object.fromEntries(SALE_COLUMNS) as Record<SaleColumn, string>;
+
+function SalesList({ rows, today, columns }: { rows: SaleView[]; today: string; columns: SaleColumn[] }) {
+  const router = useRouter();
   const [q, setQ] = useState("");
   const [year, setYear] = useState("all");
   const [status, setStatus] = useState("all");
   const [side, setSide] = useState("all");
   const [editing, setEditing] = useState<SaleView | "new" | null>(null);
+  const [sort, setSort] = useState<{ key: SaleColumn; desc: boolean }>({ key: "closeDate", desc: true });
+  const [picking, setPicking] = useState(false);
   const years = [...new Set(rows.map((r) => r.closeDate?.slice(0, 4)).filter((y): y is string => !!y))].sort().reverse();
-  const shown = rows.filter((r) => (year === "all" || r.closeDate?.startsWith(year)) && (status === "all" || r.status === status) && (side === "all" || r.side === side)
+  const filtered = rows.filter((r) => (year === "all" || r.closeDate?.startsWith(year)) && (status === "all" || r.status === status) && (side === "all" || r.side === side)
     && (!q.trim() || `${r.clientName} ${r.address} ${r.city} ${r.referredFrom} ${r.people.map((p) => p.name).join(" ")}`.toLowerCase().includes(q.trim().toLowerCase())));
+  const shown = [...filtered].sort((a, b) => {
+    const x = sortValue(a, sort.key), y = sortValue(b, sort.key);
+    const c = typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y));
+    return sort.desc ? -c : c;
+  });
+  const sortBy = (key: SaleColumn) => setSort((s) => s.key === key ? { key, desc: !s.desc } : { key, desc: NUM.includes(key) || key === "closeDate" });
   const sel = "input w-auto py-1 text-sm";
   return (
     <div>
@@ -162,31 +215,64 @@ function SalesList({ rows, today }: { rows: SaleView[]; today: string }) {
         <select className={sel} aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}><option value="all">Any status</option>{Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
         <select className={sel} aria-label="Side" value={side} onChange={(e) => setSide(e.target.value)}><option value="all">Buyer & seller</option><option value="buyer">Buyer</option><option value="seller">Seller</option></select>
         <span className="text-sm muted">{shown.length} sales · {$(shown.reduce((a, r) => a + r.price, 0))}</span>
-        <button type="button" className="btn btn-primary ml-auto text-sm" onClick={() => setEditing("new")}>+ Add a sale</button>
+        <span className="ml-auto flex gap-2">
+          <button type="button" className="btn text-sm" aria-expanded={picking} onClick={() => setPicking(!picking)}>Columns</button>
+          <button type="button" className="btn btn-primary text-sm" onClick={() => setEditing("new")}>+ Add a sale</button>
+        </span>
       </div>
+      {picking && <ColumnPicker columns={columns} onDone={() => { setPicking(false); router.refresh(); }} />}
       {editing && <SaleEditor sale={editing === "new" ? null : editing} today={today} onDone={() => setEditing(null)} />}
       <div className="card mt-3 overflow-x-auto">
-        <table className="w-full min-w-[1100px] text-sm">
+        <table className="w-full text-sm" style={{ minWidth: `${Math.max(600, columns.length * 85)}px` }}>
           <thead className="bg-sunken text-left text-xs"><tr>
-            <th className="px-2 py-1.5">Client</th><th>Address</th><th>Close date</th><th>Type</th><th>Status</th><th>Source</th><th>Referred from</th><th className="text-right">Sale price</th><th className="text-right">Comm %</th><th className="text-right">Gross</th><th className="text-right">Net</th><th className="text-right">Split</th><th className="px-2">Paid</th><th></th>
+            {columns.map((k, i) => (
+              <th key={k} className={`${NUM.includes(k) ? "text-right" : ""} ${i === 0 ? "px-2" : "px-1"} py-1.5`} aria-sort={sort.key === k ? (sort.desc ? "descending" : "ascending") : "none"}>
+                <button type="button" className="font-semibold hover:underline" onClick={() => sortBy(k)} title={`Sort by ${LABEL[k]}`}>
+                  {LABEL[k]}{sort.key === k && <span aria-hidden> {sort.desc ? "▼" : "▲"}</span>}
+                </button>
+              </th>
+            ))}
+            <th></th>
           </tr></thead>
           <tbody>
             {shown.map((r) => (
               <tr key={r.id} className="border-t border-misty/60 align-top hover:bg-paper">
-                <td className="px-2 py-1"><b>{r.clientName || "—"}</b>{r.people.length > 0 && <span className="block text-xs">{r.people.map((p, i) => <span key={p.id}>{i > 0 && ", "}<Link href={`/people/${p.id}`} className="text-accent hover:underline">{p.name}</Link></span>)}</span>}
-                  {r.review && <span className="block text-xs text-[#9a6400]">needs a contact (Review)</span>}</td>
-                <td>{r.address}<span className="block text-xs muted">{[r.city, r.zip].filter(Boolean).join(" ")}</span></td>
-                <td>{day(r.closeDate)}</td><td>{r.side === "buyer" ? "Buyer" : "Seller"}</td>
-                <td><span className={`rounded-full px-2 text-xs font-semibold ${r.status === "closed" ? "bg-accent-soft text-accent" : r.status === "pending" ? "bg-[#e3ecf7] text-[#24507a]" : "bg-sunken"}`}>{STATUS_LABEL[r.status]}</span>{r.paId && <span className="block text-[10px] muted">from HQ contract</span>}</td>
-                <td className="text-xs">{r.source}</td><td className="text-xs">{r.referredFrom}</td>
-                <td className="text-right">{$(r.price)}</td><td className="text-right">{r.commissionPct ? pct(r.commissionPct) : "—"}</td><td className="text-right">{$(r.gross)}</td><td className="text-right">{$(r.net)}</td>
-                <td className="text-right">{r.splitPct ? `${Math.round(r.splitPct)}%` : "—"}</td><td className={`px-2 ${r.status === "closed" && !r.commissionPaid ? "font-bold text-[#9a6400]" : ""}`}>{r.status === "closed" ? (r.commissionPaid ? "Yes" : "No") : "—"}</td>
-                <td className="pr-2"><button type="button" className="btn px-2 py-0.5 text-xs" onClick={() => setEditing(r)}>Edit</button></td>
+                {columns.map((k, i) => (
+                  <td key={k} className={`${NUM.includes(k) ? "text-right" : ""} ${i === 0 ? "px-2" : "px-1"} py-1 ${k === "commissionPaid" && r.status === "closed" && !r.commissionPaid ? "font-bold text-[#9a6400]" : ""}`}>{cell(r, k)}</td>
+                ))}
+                <td className="pr-2 py-1"><button type="button" className="btn px-2 py-0.5 text-xs" onClick={() => setEditing(r)}>Edit</button></td>
               </tr>
             ))}
           </tbody>
         </table>
         {!shown.length && <p className="p-4 text-sm muted">No sales match.</p>}
+      </div>
+    </div>
+  );
+}
+
+/** Pick which All sales columns show (saved for the owner; Client always shows). */
+function ColumnPicker({ columns, onDone }: { columns: SaleColumn[]; onDone: () => void }) {
+  const [on, setOn] = useState<Set<SaleColumn>>(new Set(columns));
+  const [error, setError] = useState("");
+  const [pending, start] = useTransition();
+  const flip = (k: SaleColumn) => { const n = new Set(on); if (n.has(k)) n.delete(k); else n.add(k); setOn(n); };
+  const save = (cols: SaleColumn[]) => start(async () => { setError(""); const r = await saveColumnsAction(cols); if (!r.ok) { setError(r.error); return; } onDone(); });
+  return (
+    <div className="card mt-3 p-3">
+      <p className="text-sm font-semibold">Columns to show</p>
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
+        {SALE_COLUMNS.map(([k, l]) => (
+          <label key={k} className="flex items-center gap-1.5 text-sm">
+            <input type="checkbox" checked={k === "client" || on.has(k)} disabled={k === "client"} onChange={() => flip(k)} />{l}
+          </label>
+        ))}
+      </div>
+      {error && <p role="alert" className="mt-2 text-sm text-bad">{error}</p>}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button type="button" className="btn btn-primary text-sm" disabled={pending} onClick={() => save([...on])}>Save</button>
+        <button type="button" className="btn text-sm" disabled={pending} onClick={onDone}>Cancel</button>
+        <button type="button" className="btn text-sm muted" disabled={pending} onClick={() => save(DEFAULT_SALE_COLUMNS)}>Back to the usual columns</button>
       </div>
     </div>
   );

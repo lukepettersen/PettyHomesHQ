@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { guarded } from "@/server/safe";
-import { applySalesImport, deleteSale, ownerOnly, previewSalesImport, resolveReview, salePeopleOptions, saveSale } from "@/server/sales";
+import { applySalesImport, deleteSale, ownerOnly, previewSalesImport, resolveReview, salePeopleOptions, saveSale, saveSaleColumns } from "@/server/sales";
 
-// Sales tab (SPEC.md §7.9): OWNER ONLY. Every action checks it on the server (ownerOnly), whatever the page shows.
+// Sales tab (SPEC.md §7.6): OWNER ONLY. Every action checks it on the server (ownerOnly), whatever the page shows.
 const id = z.string().trim().min(1).max(40);
 const money = z.number().finite().min(-10_000_000).max(100_000_000);
 const sale = z.object({
@@ -37,4 +37,7 @@ export async function applyImportAction(csv: string) {
 }
 export async function findPeopleAction(q: string) {
   return guarded(null, async (user) => { ownerOnly(user); return salePeopleOptions(user, z.string().max(80).parse(q)); });
+}
+export async function saveColumnsAction(cols: unknown) {
+  return guarded(null, async (user) => { ownerOnly(user); await saveSaleColumns(user, z.array(z.string().max(30)).max(40).parse(cols)); revalidatePath("/sales"); });
 }

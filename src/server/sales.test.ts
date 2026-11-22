@@ -20,7 +20,7 @@ describe("sales: only the owner (server-side)", async () => {
   const attempts: [string, () => Promise<unknown>][] = [
     ["loadSales", () => s.loadSales(alyssa)], ["saveSale", () => s.saveSale(alyssa, null, sale)], ["deleteSale", () => s.deleteSale(alyssa, "x")],
     ["resolveReview", () => s.resolveReview(alyssa, "x", { none: true })], ["previewSalesImport", () => s.previewSalesImport(alyssa, "a")], ["applySalesImport", () => s.applySalesImport(alyssa, "a")],
-    ["salePeopleOptions", () => s.salePeopleOptions(alyssa, "sam")], ["backfillSales", () => s.backfillSales(alyssa)],
+    ["salePeopleOptions", () => s.salePeopleOptions(alyssa, "sam")], ["backfillSales", () => s.backfillSales(alyssa)], ["loadSaleColumns", () => s.loadSaleColumns(alyssa)], ["saveSaleColumns", () => s.saveSaleColumns(alyssa, ["gross"])],
   ];
   for (const [name, run] of attempts) it(`${name} refuses a non-owner without reading anything`, async () => {
     touched.length = 0;
