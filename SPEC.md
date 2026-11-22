@@ -700,7 +700,7 @@ in search, exports, the API, the text assistant or the Claude connector. Money l
 - **Import**: the DATA tab as CSV. Re-importing updates the same sales (matched by close date, side and street), so
   nothing doubles; a sale HQ already made from a contract (same street, within 45 days) is merged into it. Each sale is
   matched to contacts by property address and last names: sure matches are linked; unsure ones go to **Review** (pick
-  a suggested contact, search for one, "New contact", or "No contact"); sales with no possible contact create one
+  a suggested contact, **Search…** any contact by name, "New contact", or "No contact"); sales with no possible contact create one
   ("Wagner & Schmidt", stage Past Client, the address for buyers).
 - **From contracts**: adding a purchase agreement creates a Pending sale (price, commission % from the contract, the
   usual split = the newest closed sale's split, contributions, lender, source from the contact). Closing it marks the

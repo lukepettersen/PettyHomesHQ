@@ -277,6 +277,7 @@ function Review({ rows }: { rows: SaleView[] }) {
             <span><b>{r.clientName}</b> · {r.address}{r.city ? `, ${r.city}` : ""} · {r.side === "buyer" ? "Buyer" : "Seller"} {day(r.closeDate)}{r.referredFrom && <span className="muted"> · referred by {r.referredFrom}</span>}</span>
             <span className="flex flex-wrap gap-1.5">
               {r.review!.map((c) => <button key={c.id} type="button" disabled={pending} className="btn px-2 py-0.5 text-xs" title={c.why} onClick={() => act(r.id, { personId: c.id })}>It&apos;s {c.name} <span className="muted">({c.why})</span></button>)}
+              <FindContact disabled={pending} onPick={(personId) => act(r.id, { personId })} />
               <button type="button" disabled={pending} className="btn px-2 py-0.5 text-xs" onClick={() => act(r.id, { create: true })}>New contact</button>
               <button type="button" disabled={pending} className="btn px-2 py-0.5 text-xs muted" onClick={() => act(r.id, { none: true })}>No contact</button>
             </span>
@@ -284,6 +285,32 @@ function Review({ rows }: { rows: SaleView[] }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+/** Review: search all contacts by name and link the one this sale belongs to (owner request 2026-11-22). */
+function FindContact({ disabled, onPick }: { disabled: boolean; onPick: (personId: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const [hits, setHits] = useState<{ id: string; name: string; detail: string }[]>([]);
+  useEffect(() => { if (q.trim().length < 2) return; const t = setTimeout(() => { void findPeopleAction(q).then((r) => r.ok && setHits(r.data!)); }, 200); return () => clearTimeout(t); }, [q]);
+  if (!open) return <button type="button" disabled={disabled} className="btn px-2 py-0.5 text-xs" onClick={() => setOpen(true)}>Search…</button>;
+  const shown = q.trim().length < 2 ? [] : hits;
+  return (
+    <span className="relative inline-block">
+      <input autoFocus className="input w-56 py-0.5 text-xs" placeholder="Search contacts by name" aria-label="Search contacts by name" value={q}
+        onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") { setOpen(false); setQ(""); } }} />
+      <button type="button" className="ml-1 text-xs muted underline" onClick={() => { setOpen(false); setQ(""); }}>Cancel</button>
+      {shown.length > 0 && (
+        <ul className="absolute right-0 z-20 mt-1 w-72 overflow-hidden rounded-lg border border-misty bg-white shadow-lg">
+          {shown.map((h) => (
+            <li key={h.id}><button type="button" disabled={disabled} className="block w-full px-3 py-1.5 text-left text-sm hover:bg-accent-soft" onClick={() => onPick(h.id)}>
+              <b>{h.name}</b>{h.detail && <span className="muted"> · {h.detail}</span>}</button></li>
+          ))}
+        </ul>
+      )}
+      {q.trim().length >= 2 && !shown.length && <span className="absolute right-0 z-20 mt-1 block w-56 rounded-lg border border-misty bg-white px-3 py-1.5 text-xs muted shadow">No contacts found</span>}
+    </span>
   );
 }
 
