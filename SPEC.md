@@ -743,7 +743,10 @@ scrolls with it until its last card is on screen, then stays put while the middl
   moves it to Trash), then go on with the rest of the request ("yes, his number is 952-567-9827" adds Mason and prepares
   the text). **Every text it sends for the owner is a group text that includes the owner's own cell** (owner request
   2026-10-30), so the owner sees the conversation; the YES prompt says "Group text to Mason Albee + your cell". If group
-  texting is off in Admin, it goes to the contact alone and the receipt says so.
+  texting is off in Admin, it goes to the contact alone and the receipt says so. **Several contacts in one group
+  text** *(owner request 2026-11-22: "group text Ryan and Aaron")*: every number of every contact named, plus the
+  owner's cell, in one group (up to 8 numbers plus the owner); the YES prompt names them all. With group texting off it
+  says so and offers to text each separately. The Claude app connector's send_text takes the same extra contacts.
   "task …", "contact …" and check-in replies keep working as before. Needs ANTHROPIC_API_KEY (same as Ask Claude); it
   can't email, move deals or change contracts yet.
 - **Ask by text** *(owner request 2026-10-30)*: a Task or Call step with a due date can tick **Ask by text when it's

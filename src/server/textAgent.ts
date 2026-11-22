@@ -11,6 +11,7 @@ import { callChanged, consultChanged, redateConsult } from "@/server/automation"
 import { addCalendarEvent, calendarConnection, removeCalendarEvent, syncAppointment } from "@/server/google";
 import { sendTextAs } from "@/server/texting";
 import { groupReady, textNumbersAsGroup } from "@/server/groupText";
+import { MAX_GROUP } from "@/lib/groupText";
 import { hasPermission } from "@/server/permissions";
 import { calendarHint } from "@/lib/assistant";
 import { addMinutes, defaultTitle } from "@/lib/appointments";
@@ -53,7 +54,7 @@ Calendar:
 
 Other:
 - add_task for reminders and to-dos (due today if no day is said). add_note to log what happened with a client, in the speaker's words, cleaned up, keeping every fact.
-- text_client when they want someone texted. Write the message as the speaker would (first person, casual, short), greeting them by first name. It goes as a group text that includes the speaker's own cell, and is NOT sent until they reply YES, so call it once, then stop.
+- text_client when they want someone texted. Write the message as the speaker would (first person, casual, short), greeting them by first name. It goes as a group text that includes the speaker's own cell, and is NOT sent until they reply YES, so call it once, then stop. To text several contacts TOGETHER in one group text ("group text Ryan and Aaron"), put the first in person_id and the others in also_ids (find_people for each first); greet them all.
 - my_schedule answers "what's on my calendar / today / tomorrow".
 - add_to_whiteboard puts a sticky note on the speaker's private HQ whiteboard, for things to remember that aren't a task with a due date ("put on my board…", "remember…", "whiteboard: …"). Keep their words; a short list can be lines starting with "• ".
 - Contracts (purchase agreements): contract_details shows a contact's active contract with every term (key, label, type, value). To change terms ("move Ortiz closing to 11/25", "price is now 395k", "inspection waived? no: inspection date Nov 8"), call edit_contract once with every change: the key from contract_details and the value in its format (date YYYY-MM-DD; datetime YYYY-MM-DDTHH:MM; money/number digits only; pct like 2.7; yesno "Yes"/"No"; choice exactly one of its choices; "" to clear). It is NOT saved until they reply YES, so stop after it. If a term isn't on the form, say so.
@@ -119,8 +120,9 @@ const tools: Anthropic.Beta.BetaTool[] = [
       checks: { type: "array", items: str("Change form box key (price, expiration, temp, active, cancelled, other)") },
       notes: str('Anything else for the teammate, or ""'), send_to: str('Teammate user id from paperwork_forms, or "" for the usual one'),
     }, required: ["person_id", "form", "values", "checks", "notes", "send_to"], additionalProperties: false } },
-  { name: "text_client", description: "Prepare a text to a contact from the speaker's HQ number. Not sent until the speaker replies YES.", strict: true,
-    input_schema: { type: "object", properties: { person_id: str("Contact id"), body: str("The message"), send_date: str('YYYY-MM-DD to send later, or "" for now'), send_time: str('HH:MM to send later, or ""') }, required: ["person_id", "body", "send_date", "send_time"], additionalProperties: false } },
+  // Not strict: the strict grammar has a size limit the tool list already nears (owner report 2026-11-05).
+  { name: "text_client", description: "Prepare a text to one contact, or several in one group text (also_ids), from the speaker's HQ number. Not sent until the speaker replies YES.",
+    input_schema: { type: "object", properties: { person_id: str("Contact id"), also_ids: { type: "array", items: { type: "string" }, description: "More contact ids for one group text with all of them, or []" }, body: str("The message"), send_date: str('YYYY-MM-DD to send later, or "" for now'), send_time: str('HH:MM to send later, or ""') }, required: ["person_id", "also_ids", "body", "send_date", "send_time"], additionalProperties: false } },
 ];
 
 const record = (userId: string, kind: string, summary: string, payload: object, status = "done") =>
@@ -387,8 +389,15 @@ async function runTool(me: Me, name: string, a: Record<string, unknown>, seen: S
     const p = await person(s("person_id"));
     const body = s("body").slice(0, 1200);
     if (!p || !body) return "Not prepared: needs a contact id and the message.";
-    if (p.tags.some((t) => /text unsubscribed/i.test(t.tag.name))) return `${p.name} replied STOP, so HQ can't text them; tell the speaker.`;
-    if (!p.phones.length) return `${p.name} has no phone number in HQ; tell the speaker.`;
+    // Several contacts in one group text (owner request 2026-11-22: "group text Ryan and Aaron").
+    const moreIds = [...new Set((Array.isArray(a.also_ids) ? a.also_ids : []).map((x) => String(x)).filter((x) => x && x !== p.id))].slice(0, 8);
+    const others = [];
+    for (const id of moreIds) { const o = await person(id); if (!o) return `Not prepared: ${id} isn't a contact id; use find_people.`; others.push(o); }
+    for (const x of [p, ...others]) {
+      if (x.tags.some((t) => /text unsubscribed/i.test(t.tag.name))) return `${x.name} replied STOP, so HQ can't text them; tell the speaker.`;
+      if (!x.phones.length) return `${x.name} has no phone number in HQ; tell the speaker.`;
+    }
+    if (others.length && !(await groupReady())) return "Group texting is off in Admin → Integrations, so they can't be in one text; offer to text each separately.";
     const later = s("send_date") ? cleanWhen(a.send_date, a.send_time) : null;
     if (later) {
       const problem = later.time ? scheduleProblem(later.date, later.time) : "Pick a time for a scheduled text.";
@@ -396,7 +405,8 @@ async function runTool(me: Me, name: string, a: Record<string, unknown>, seen: S
     }
     const at = later?.time ? ` at ${scheduleLabel(centralToUtc(later.date, later.time))}` : "";
     const group = me.cell && !p.phones.some((x) => x.normalized === me.cell) ? " + your cell" : "";
-    await record(me.id, "text", `${group ? "Group text" : "Text"} to ${p.name}${group}${at}: "${body}"\nReply YES to send, or NO.`, { personId: p.id, body, date: later?.date ?? null, time: later?.time ?? null }, "confirm");
+    const names = [p, ...others].map((x) => x.name).join(", ");
+    await record(me.id, "text", `${group || others.length ? "Group text" : "Text"} to ${names}${group}${at}: "${body}"\nReply YES to send, or NO.`, { personId: p.id, alsoIds: others.map((x) => x.id), body, date: later?.date ?? null, time: later?.time ?? null }, "confirm");
     return "Prepared. Waiting for them to reply YES. Stop here.";
   }
   return "Unknown tool.";
@@ -554,12 +564,17 @@ export async function answerConfirm(user: { id: string; name: string }, actionId
     }
   }
   if (!yes) return "Okay, not sent.";
-  const p = act.payload as { personId: string; body: string; date: string | null; time: string | null };
+  const p = act.payload as { personId: string; alsoIds?: string[]; body: string; date: string | null; time: string | null };
   const person = await db.person.findFirst({ where: { id: p.personId, deletedAt: null }, include: { phones: { orderBy: { position: "asc" } } } });
   if (!person?.phones.length) return "Not sent: they have no phone number in HQ now.";
-  // Texts the assistant sends go as a group text with the owner's own cell in it (owner request 2026-10-30).
-  const theirs = [...new Set(person.phones.filter((x) => canText(x.label)).map((x) => x.normalized))];
+  const extra = p.alsoIds?.length ? await db.person.findMany({ where: { id: { in: p.alsoIds }, deletedAt: null }, include: { phones: true } }) : [];
+  // Texts the assistant sends go as a group text with the owner's own cell in it (owner request 2026-10-30); several
+  // contacts go in the same group (owner request 2026-11-22).
+  const theirs = [...new Set([person, ...extra].flatMap((x) => x.phones.filter((y) => canText(y.label)).map((y) => y.normalized)))];
   if (!theirs.length) return "Not sent: their only number is an office line, which can't get texts.";
+  if (extra.length && !(await groupReady())) return "Not sent: group texting is off in Admin → Integrations, so they can't be in one text.";
+  if (theirs.length > MAX_GROUP - 2) return `Not sent: that's more numbers than one group text can hold (${MAX_GROUP - 2} plus you).`;
+  const who = [person, ...extra].map((x) => x.name).join(", ");
   const me = await db.user.findUnique({ where: { id: user.id }, select: { forwardTo: true } });
   const cell = me?.forwardTo ? normalizePhone(me.forwardTo) : "";
   const withCell = cell && !theirs.includes(cell) && (await groupReady()) ? [...theirs, cell] : theirs;
@@ -569,11 +584,11 @@ export async function answerConfirm(user: { id: string; name: string }, actionId
       const s = await db.scheduledText.create({ data: { personId: person.id, numbers: withCell, body: p.body, sendAt, createdById: user.id } });
       await db.textAgentAction.update({ where: { id: act.id }, data: { payload: { ...p, scheduledId: s.id } } });
       await logActivity(user.id, "create", "scheduledText", person.id, `Scheduled a text to ${person.name} for ${scheduleLabel(sendAt)} by text`);
-      return `✓ Scheduled for ${scheduleLabel(sendAt)} to ${person.name}${withCell !== theirs ? " + your cell" : ""}.`;
+      return `✓ Scheduled for ${scheduleLabel(sendAt)} to ${who}${withCell !== theirs ? " + your cell" : ""}.`;
     }
     if (withCell.length > 1 && (await groupReady())) await textNumbersAsGroup(user, { numbers: withCell, body: p.body });
     else for (const n of theirs) await sendTextAs(user, { personId: person.id, to: n, body: p.body, typed: true });
-    return withCell !== theirs ? `✓ Sent as a group text to ${person.name} + your cell.` : cell && !theirs.includes(cell) ? `✓ Sent to ${person.name} (just them: group texts are off in Admin → Integrations).` : `✓ Sent to ${person.name}.`;
+    return withCell !== theirs ? `✓ Sent as a group text to ${who} + your cell.` : extra.length ? `✓ Sent as a group text to ${who}.` : cell && !theirs.includes(cell) ? `✓ Sent to ${person.name} (just them: group texts are off in Admin → Integrations).` : `✓ Sent to ${person.name}.`;
   } catch (e) {
     await db.textAgentAction.update({ where: { id: act.id }, data: { status: "canceled" } });
     return `Not sent: ${e instanceof UserError ? e.message : "something went wrong. Send it from their page in HQ."}`;
