@@ -11,7 +11,14 @@ describe("mass email", () => {
       { id: "5", name: "E", emails: ["a@x.com", "e@x.com"], tags: [] }, // shares A's address: gets their other one
     ]);
     expect(r.send).toEqual([{ personId: "1", name: "A", email: "a@x.com" }, { personId: "5", name: "E", email: "e@x.com" }]);
-    expect(r.skipped).toEqual({ noEmail: 1, optedOut: 2 });
+    expect(r.skipped).toEqual({ noEmail: 1, optedOut: 2, shared: 0 });
+    expect(r.notSent.map((x) => [x.name, x.why])).toEqual([["B", "No email"], ["C", "Unsubscribed (tag Email Unsubscribed)"], ["D", "Bounced (tag Bounced)"]]);
+  });
+  it("names who shares an address (owner report 2026-11-23)", () => {
+    const r = pickRecipients([{ id: "1", name: "Dana Possley", emails: ["d@x.com"], tags: [] }, { id: "2", name: "Ryan Possley", emails: ["D@x.com "], tags: [] }]);
+    expect(r.send).toHaveLength(1);
+    expect(r.skipped.shared).toBe(1);
+    expect(r.notSent[0].why).toBe("Same email as Dana Possley (d@x.com), who gets it");
   });
   it("signs unsubscribe links", () => {
     const t = unsubToken("p1", "s3cret");

@@ -244,6 +244,12 @@ Principles:
   the email they came from starts ticked) or **All emails from Petty Homes**, then press Unsubscribe (so link scanners
   can't trigger it). All tags them **Email Unsubscribed**; a kind tags them "Unsubscribed: <kind>" (texting isn't
   affected either way), noted on their timeline. People who unsubscribed before 2026-11-02 stay unsubscribed from all.
+- **Who didn't get it** *(owner report 2026-11-23: 417 selected, 345 sent)*: two contacts with the same address get one
+  email (the second is skipped as "Same email as …"). The send box shows each skip reason with a count and **See who's
+  skipped** (names and why) before sending; **People → Mass emails** lists the last week's sends ("Sent to N of M who
+  could get it", how many were selected) with **Who didn't get it** (no email, unsubscribed/bounced tag, same email as,
+  already got it in 24 hours, didn't send and why). A send that **stopped** (e.g. Google disconnected) has **Resume**,
+  which carries on with whoever hasn't got it. The 24-hour rule only skips people who got it from an earlier send.
 - **Attachments** *(owner request 2026-10-21)*: **📎 Attach file** on mass emails and the timeline Email
   tab (PDFs, Word/Excel, images; up to 5 files, 24 MB total, owner request 2026-11-10; Gmail allows 25 MB). Files upload once to the private file
   storage and go with each email; the timeline notes the file names. Needs File storage connected.

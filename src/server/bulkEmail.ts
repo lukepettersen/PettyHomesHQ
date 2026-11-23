@@ -29,7 +29,8 @@ type Job = { userId: string; kind: string; subject: string; body: string; addres
 async function sendGroup(user: SessionUser, v: Job, personIds: string[]) {
   const secret = process.env.NEXTAUTH_SECRET ?? "";
   const { send: all } = await bulkPeople(personIds, v.kind);
-  const had = new Set((await db.emailTrack.findMany({ where: { personId: { in: all.map((r) => r.personId) }, subject: v.subject, sentAt: { gte: new Date(Date.now() - 86400000) } }, select: { personId: true } })).map((t) => t.personId));
+  // Already sent this subject by another send in the last 24 hours (not this send's own earlier groups).
+  const had = new Set((await db.emailTrack.findMany({ where: { personId: { in: all.map((r) => r.personId) }, subject: v.subject, batch: { not: v.batch }, sentAt: { gte: new Date(Date.now() - 86400000) } }, select: { personId: true } })).map((t) => t.personId));
   const send = all.filter((r) => !had.has(r.personId));
   const files = await loadAttachments(v.attachments);
   const done: string[] = personIds.filter((id) => !send.some((r) => r.personId === id)); // skipped ones count as handled
@@ -56,7 +57,9 @@ async function sendGroup(user: SessionUser, v: Job, personIds: string[]) {
     ]);
     await db.emailTrack.update({ where: { id: track.id }, data: { entryId: entry.id } });
   }
-  return { done, sent, skipped: had.size, failed, slowDown, stop };
+  const late = [...personIds.filter((id) => !all.some((r) => r.personId === id)).map((id) => ({ personId: id, name: "", why: "Unsubscribed or lost their email after the send started" })),
+    ...all.filter((r) => had.has(r.personId)).map((r) => ({ personId: r.personId, name: r.name, why: "Already got this email in the last 24 hours" }))];
+  return { done, sent, skipped: had.size, failed, slowDown, stop, late };
 }
 
 const list = (v: unknown) => (Array.isArray(v) ? (v as string[]) : []);
@@ -85,6 +88,7 @@ export async function sendBulkJobs(now = new Date()): Promise<number> {
       const state = r.stop ? "stopped" : left <= 0 ? "done" : "sending";
       await db.bulkEmailJob.update({ where: { id: j.id }, data: {
         doneIds, sent: j.sent + r.sent, skipped: j.skipped + r.skipped, failed: [...(j.failed as object[]), ...r.failed].slice(0, 500),
+        notSent: r.late.length ? [...(j.notSent as object[]), ...r.late].slice(0, 2500) : undefined,
         state, error: r.stop, waitUntil: r.slowDown ? new Date(Date.now() + 65000) : null, lockedUntil: null } });
       if (state === "done") {
         const n = j.sent + r.sent;

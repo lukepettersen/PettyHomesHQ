@@ -9,7 +9,7 @@ import { AttachFiles, type Attached } from "@/components/AttachFiles";
 import { toHtml } from "@/lib/email";
 import { bulkEmailStatus, prepareBulkEmail, previewBulkEmail, startBulkEmail, stopBulkEmail } from "./bulkEmailActions";
 
-type Prep = { recipients: { personId: string; name: string }[]; skipped: { noEmail: number; optedOut: number }; sendsFrom: string | null; kinds: string[]; address: string; templates: { id: string; name: string; subject: string; body: string }[] };
+type Prep = { recipients: { personId: string; name: string }[]; skipped: { noEmail: number; optedOut: number; shared: number }; notSent: { name: string; why: string }[]; sendsFrom: string | null; kinds: string[]; address: string; templates: { id: string; name: string; subject: string; body: string }[] };
 
 /**
  * People → select → Email (SPEC.md §6.2): a template or your own words with merge fields, a preview as one
@@ -84,8 +84,14 @@ export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: ()
         <div className="flex flex-col gap-3">
           <p className="text-sm">
             <b>{n.toLocaleString()} {n === 1 ? "person" : "people"}</b> will get their own email from {prep.sendsFrom}.
-            {(prep.skipped.noEmail > 0 || prep.skipped.optedOut > 0) && <span className="muted"> Skipped: {[prep.skipped.noEmail && `${prep.skipped.noEmail} with no email`, prep.skipped.optedOut && `${prep.skipped.optedOut} unsubscribed or bounced`].filter(Boolean).join(", ")}.</span>}
+            {prep.notSent.length > 0 && <span className="muted"> Skipped: {[prep.skipped.noEmail && `${prep.skipped.noEmail} with no email`, prep.skipped.optedOut && `${prep.skipped.optedOut} unsubscribed or bounced`, prep.skipped.shared && `${prep.skipped.shared} sharing an email with someone else here (they get one email)`].filter(Boolean).join(", ")}.</span>}
           </p>
+          {prep.notSent.length > 0 && (
+            <details className="rounded-md bg-sunken px-3 py-2 text-sm">
+              <summary className="cursor-pointer font-semibold">See who&apos;s skipped ({prep.notSent.length})</summary>
+              <ul className="mt-1 max-h-48 overflow-y-auto">{prep.notSent.map((x, i) => <li key={i} className="py-0.5"><b>{x.name}</b> <span className="muted">· {x.why}</span></li>)}</ul>
+            </details>
+          )}
           <label className="label">What kind of email is this?
             <select className="input" value={kind} onChange={(e) => { setKind(e.target.value); setConfirm(false); }}>
               <option value="">Pick one…</option>{prep.kinds.map((k) => <option key={k} value={k}>{k}</option>)}

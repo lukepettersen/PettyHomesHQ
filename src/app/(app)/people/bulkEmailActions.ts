@@ -35,13 +35,13 @@ export async function prepareBulkEmail(input: { ids: string[]; kind?: string }) 
     const v = z.object({ ids, kind: z.string().max(40).optional() }).parse(input);
     const kinds = await loadEmailKinds();
     const kind = kinds.find((x) => x.toLowerCase() === (v.kind ?? "").toLowerCase());
-    const [{ send, skipped }, templates, address, gmail] = await Promise.all([
+    const [{ send, skipped, notSent }, templates, address, gmail] = await Promise.all([
       loadPeople(v.ids, kind),
       db.messageTemplate.findMany({ where: { kind: "email" }, orderBy: [{ folder: "asc" }, { name: "asc" }], select: { id: true, name: true, folder: true, subject: true, body: true } }),
       db.appSetting.findUnique({ where: { key: ADDRESS_KEY } }), emailConnection(user.id),
     ]);
     return {
-      recipients: send.map((r) => ({ personId: r.personId, name: r.name })), skipped, sendsFrom: gmail?.email ?? null, kinds,
+      recipients: send.map((r) => ({ personId: r.personId, name: r.name })), skipped, notSent: notSent.map((x) => ({ name: x.name, why: x.why })), sendsFrom: gmail?.email ?? null, kinds,
       address: typeof address?.value === "string" ? address.value : "",
       templates: templates.map((t) => ({ id: t.id, name: t.folder ? `${t.folder} · ${t.name}` : t.name, subject: t.subject, body: t.body })),
     };
@@ -77,10 +77,11 @@ export async function startBulkEmail(input: z.input<typeof sendSchema>) {
     const kind = await checkKind(v.kind);
     await loadAttachments(v.attachments); // checks them now rather than on the first group
     await db.appSetting.upsert({ where: { key: ADDRESS_KEY }, update: { value: v.address }, create: { key: ADDRESS_KEY, value: v.address } });
-    const { send } = await loadPeople(v.personIds, kind);
+    const { send, notSent } = await loadPeople(v.personIds, kind);
     if (!send.length) throw new UserError("Nobody here can get it (no email, or unsubscribed).");
     const job = await db.bulkEmailJob.create({ data: { userId: user.id, kind, subject: v.subject, body: v.body, address: v.address, signature: v.signature ?? true,
-      batch: crypto.randomUUID(), attachments: (v.attachments ?? []) as object[], personIds: send.map((r) => r.personId) } });
+      batch: crypto.randomUUID(), attachments: (v.attachments ?? []) as object[], personIds: send.map((r) => r.personId),
+      selected: v.personIds.length, notSent: notSent.slice(0, 2000) } });
     await logActivity(user.id, "create", "email", job.id, `Started mass email (${kind}) "${v.subject}" to ${send.length} ${send.length === 1 ? "person" : "people"}`);
     void sendBulkJobs().catch(() => { /* the minute timer picks it up */ });
     return { id: job.id, total: send.length };
@@ -103,5 +104,19 @@ export async function stopBulkEmail(id: string) {
   return guarded(null, async (user) => {
     const r = await db.bulkEmailJob.updateMany({ where: { id: z.string().min(1).max(40).parse(id), userId: user.id, state: "sending" }, data: { state: "stopped", error: "Stopped." } });
     if (r.count) await logActivity(user.id, "update", "email", id, "Stopped a mass email");
+  });
+}
+
+/** Pick up a mass email that stopped (e.g. Google was disconnected) where it left off (owner request 2026-11-23). */
+export async function resumeBulkEmail(id: string) {
+  return guarded(null, async (user) => {
+    const j = await db.bulkEmailJob.findUnique({ where: { id: z.string().min(1).max(40).parse(id) } });
+    if (!j || j.userId !== user.id) throw new UserError("That mass email isn't yours.");
+    if (j.state !== "stopped") throw new UserError("That mass email isn't stopped.");
+    if (!(await emailConnection(user.id))) throw new UserError("Gmail isn't connected. An Admin can reconnect Google in Admin → Integrations.");
+    await db.bulkEmailJob.update({ where: { id: j.id }, data: { state: "sending", error: null, waitUntil: null, lockedUntil: null } });
+    await logActivity(user.id, "update", "email", j.id, `Resumed mass email "${j.subject}"`);
+    void sendBulkJobs().catch(() => { /* the minute timer picks it up */ });
+    revalidatePath("/people/emails");
   });
 }

@@ -20,20 +20,29 @@ export function cleanKinds(raw: unknown): string[] {
 }
 
 type P = { id: string; name: string; emails: string[]; tags: string[] };
-/** Who gets the email (their first address) and why the rest are skipped. With a kind, people unsubscribed from just
- *  that kind are skipped too; people unsubscribed from other kinds still get it. */
+export type NotSent = { personId: string; name: string; why: string };
+/** Who gets the email (their first address) and, by name, who's skipped and why (owner request 2026-11-23: "only went to
+ *  345"). With a kind, people unsubscribed from just that kind are skipped too; other kinds still get it. Two contacts
+ *  with the same address get one email: the second is skipped as "Same email as …". */
 export function pickRecipients(people: P[], kind?: string) {
   const send: { personId: string; name: string; email: string }[] = [];
-  const skipped = { noEmail: 0, optedOut: 0 };
-  const seen = new Set<string>();
+  const skipped = { noEmail: 0, optedOut: 0, shared: 0 };
+  const notSent: NotSent[] = [];
+  const seen = new Map<string, string>(); // address → who gets it
   for (const p of people) {
-    if (p.tags.some((t) => NO_EMAIL_TAGS.includes(t) || (!!kind && t === kindTag(kind)))) { skipped.optedOut++; continue; }
-    const email = p.emails.map((e) => e.trim().toLowerCase()).find((e) => e && !seen.has(e));
-    if (!email) { skipped.noEmail++; continue; }
-    seen.add(email);
+    const tag = p.tags.find((t) => NO_EMAIL_TAGS.includes(t) || (!!kind && t === kindTag(kind)));
+    if (tag) { skipped.optedOut++; notSent.push({ personId: p.id, name: p.name, why: tag === "Bounced" ? "Bounced (tag Bounced)" : `Unsubscribed (tag ${tag})` }); continue; }
+    const all = p.emails.map((e) => e.trim().toLowerCase()).filter(Boolean);
+    const email = all.find((e) => !seen.has(e));
+    if (!email) {
+      if (all.length) { skipped.shared++; notSent.push({ personId: p.id, name: p.name, why: `Same email as ${seen.get(all[0])} (${all[0]}), who gets it` }); }
+      else { skipped.noEmail++; notSent.push({ personId: p.id, name: p.name, why: "No email" }); }
+      continue;
+    }
+    seen.set(email, p.name);
     send.push({ personId: p.id, name: p.name, email });
   }
-  return { send, skipped };
+  return { send, skipped, notSent };
 }
 
 /** A token that proves an unsubscribe link came from HQ for this person (no sign-in needed to use it). */

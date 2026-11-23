@@ -815,6 +815,8 @@ model BulkEmailJob {
   sent        Int       @default(0)
   skipped     Int       @default(0) // already got it in the last 24 hours
   failed      Json      @default("[]") // [{ name, error }]
+  notSent     Json      @default("[]") // [{ personId, name, why }]: selected but skipped (owner request 2026-11-23)
+  selected    Int       @default(0) // how many were selected
   state       String    @default("sending") // sending | done | stopped
   error       String?
   waitUntil   DateTime? // Gmail asked to slow down
