@@ -10,32 +10,37 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     { label: "Activity", href: "/admin/activity", desc: "What everyone changed, by day", need: "owner" },
     { label: "Trash", href: "/admin/trash", desc: "Restore deleted people, deals and tasks", need: "trash" },
   ] },
-  { name: "Texts & emails", icon: "💬", blurb: "Messages you send.", items: [
-    { label: "Text templates", href: "/admin/text-templates", desc: "Texts to pick from, by folder", need: "messages" },
-    { label: "Email templates", href: "/admin/email-templates", desc: "Emails to pick from, by folder", need: "messages" },
+  // Features (owner request 2026-11-23): everything HQ does by itself, in one place.
+  { name: "Features", icon: "⚙️", blurb: "Things HQ does on its own: reports, showing emails, checklists and reminders.", items: [
     { label: "Weekly emails", href: "/admin/weekly-emails", desc: "Contingency deadlines, closings and listings reports, emailed every week", also: ["/admin/deadline-email"] },
+    { label: "Showing emails", href: "/admin/showings", desc: "ShowingTime emails: is HQ reading Gmail, and what it did with each one" },
+    { label: "Checklists", href: "/admin/templates", desc: "Task templates that fill in each deal, with automatic texts and emails", need: "templates" },
+    { label: "Paperwork steps", href: "/admin/paperwork", desc: "Step-by-step instructions for each Request paperwork form, and your own forms", need: "templates" },
+    { label: "Date reminders", href: "/admin/reminders", desc: "Birthday and homeiversary tasks" },
+    { label: "Calendar invites", href: "/admin/calendar", desc: "Which contract dates go on the calendar, and who's invited" },
+  ] },
+  { name: "Texts & emails", icon: "💬", blurb: "Templates for messages you send.", items: [
+    { label: "Text templates", href: "/admin/text-templates", desc: "Texts to pick from, by folder", need: "messages" },
+    { label: "Email templates", href: "/admin/email-templates", desc: "Emails to pick from, by folder, and mass email kinds", need: "messages" },
   ] },
   { name: "Deals", icon: "🏡", blurb: "How buyer and seller deals move.", items: [
     { label: "Pipeline stages", href: "/admin/statuses", desc: "Buyer, seller and Under Contract columns" },
     { label: "Deal questions", href: "/admin/file-forms", desc: "Buyer and seller forms, and the purchase agreement", also: ["/admin/forms"] },
-    { label: "Checklists", href: "/admin/templates", desc: "Task templates that fill in each deal, with automatic texts and emails", need: "templates" },
-    { label: "Paperwork steps", href: "/admin/paperwork", desc: "Step-by-step instructions for each Request paperwork form, and your own forms", need: "templates" },
-    { label: "Calendar invites", href: "/admin/calendar", desc: "Which contract dates go on the calendar, and who's invited" },
   ] },
   { name: "Contacts", icon: "📇", blurb: "How people are organized.", items: [
     { label: "Stages, sources & follow-up", href: "/admin/lists", desc: "Lead, Sphere, Past Client… where people came from" },
     { label: "Tags", href: "/admin/tags", desc: "Rename, merge or delete tags" },
     { label: "Custom fields", href: "/admin/fields", desc: "Extra fields on every contact" },
-    { label: "Date reminders", href: "/admin/reminders", desc: "Birthday and homeiversary tasks" },
     { label: "Appointment types", href: "/admin/appointments", desc: "Phone call, consults, showing and your own" },
   ] },
-  { name: "Connections & tools", icon: "🔌", blurb: "Outside services, shortcuts and bringing data in.", items: [
-    { label: "Integrations", href: "/admin/integrations", desc: "Google (calendar, email), texting & calls, file storage" },
-    { label: "Showing emails", href: "/admin/showings", desc: "Is HQ reading Gmail, and what it did with each ShowingTime email" },
+  { name: "Connections", icon: "🔌", blurb: "Outside services HQ is connected to.", items: [
+    { label: "Integrations", href: "/admin/integrations", desc: "Google (calendar, email), texting & calls, website leads, file storage, Claude app" },
+  ] },
+  { name: "Import & layout", icon: "🧭", blurb: "Bringing data in, and how HQ's menus look.", items: [
+    { label: "Import from Follow Up Boss", href: "/admin/import", desc: "Contacts, notes, texts and templates" },
+    { label: "Import address list", href: "/admin/address-list", desc: "A spreadsheet of names and addresses (holiday cards), matched to people already in HQ" },
     { label: "Tools menu", href: "/admin/tools", desc: "Links in the Tools menu (MLS, Slack, Gmail…)" },
     { label: "Top bar", href: "/admin/topbar", desc: "The order of the tabs at the top (Whiteboard, Tasks, People…)" },
-    { label: "Import address list", href: "/admin/address-list", desc: "A spreadsheet of names and addresses (holiday cards), matched to people already in HQ" },
-    { label: "Import from Follow Up Boss", href: "/admin/import", desc: "Contacts, notes, texts and templates" },
   ] },
 ];
 

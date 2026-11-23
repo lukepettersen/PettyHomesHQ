@@ -35,7 +35,16 @@ export async function onShowingEmail(gmailId: string, subject: string, text: str
   const base = { received: received.toISOString(), subject, inbox };
   const skip = (why: string) => logShowingEmail({ ...base, result: "skipped", why });
   const e = parseShowingEmail(subject, text, received);
-  if (!e) return skip("Not a showing confirmation, cancellation or reschedule HQ knows (e.g. a request, reminder or feedback email).");
+  if (!e) {
+    // A confirmation / cancellation HQ should have read but couldn't (owner report 2026-11-23): say so, loudly.
+    if (/(?:^|\| |^YOUR |\d(?:ST|ND|RD|TH) )SHOWING (?:CONFIRMED|CANCELL?ED|RESCHEDULED) \||^(?:CONFIRMED|CANCELL?ED|RESCHEDULED) \|/i.test(subject.trim())) {
+      await logShowingEmail({ ...base, result: "failed", why: "A showing email HQ couldn't read (the agent's name or the time wasn't where HQ looks). Tell Claude so it can be fixed." });
+      const owner = await db.user.findFirst({ where: { isOwner: true }, select: { id: true } });
+      if (owner) await db.notification.create({ data: { toId: owner.id, alert: true, link: "/admin/showings", text: `HQ couldn't read a ShowingTime email ("${subject.slice(0, 90)}"). See Admin → Showing emails.` } }).catch(() => null);
+      return;
+    }
+    return skip("Not a showing confirmation, cancellation or reschedule (e.g. a request, reminder or feedback email).");
+  }
   const team = await db.user.findMany({ where: { status: { not: "DISABLED" } }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, email: true, isOwner: true } });
   const ours = (n: string) => team.some((u) => u.name.toLowerCase() === n.trim().toLowerCase());
   // Our listing: "Presented by" one of us. A showing we booked for a buyer (owner request 2026-11-03): the listing

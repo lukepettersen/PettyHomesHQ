@@ -82,7 +82,7 @@ export function parseShowingEmail(subject: string, body: string, received: Date)
   const noTexts = side === "buyer" && /\bno text(?:s| messages?)\b|\bdo not text\b|\bemails? only\b/i.test(t);
 
   // Our listing: the buyer's agent who's coming. A showing we booked: the listing agent ("Listing Presented By").
-  const block = side === "buyer" ? (t.match(/Listing Presented By (.+?)(?: For questions| Free Downloadable|$)/)?.[1] ?? "") : (t.match(/Buyer'?s Agent Details (.+?) Listing Contacts/)?.[1] ?? "");
+  const block = side === "buyer" ? (t.match(/Listing Presented By (.+?)(?: For questions| Free Downloadable|$)/)?.[1] ?? "") : (t.match(/Buyer'?s Agent Details (.+?)(?: Listing Contacts| For questions| Free Downloadable| Showing Instructions| Feedback|$)/)?.[1] ?? ""); // some emails have no Listing Contacts (owner report 2026-11-23)
   const email = (block.match(EMAIL)?.[0] ?? "").toLowerCase();
   const phones = [...block.matchAll(PHONE)].map((m) => ({ n: m[0], office: /^\s*\(Office/i.test(block.slice((m.index ?? 0) + m[0].length)) }));
   const firstPhoneAt = block.search(PHONE);

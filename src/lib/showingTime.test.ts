@@ -109,3 +109,16 @@ describe("ShowingTime emails (owner request 2026-11-01)", () => {
     expect(s.noTexts).toBe(false);
   });
 });
+
+describe("a listing email with no Listing Contacts section (owner report 2026-11-23)", () => {
+  it("still reads the buyer's agent", async () => {
+    const { parseShowingEmail } = await import("./showingTime");
+    const body = `8841 Nicollet Avenue S, Bloomington, MN 55420 $324,900 | ACTIVE | ID# 7164074 Subdivision: Nicollet Gardens Presented by: Luke Pettersen Additional Listing Details
+Showings by this Agent: 1 Total # of Showings: 4 Appointment Details Showing Monday, November 23, 2026 3:45 PM - 4:45 PM Pahola Clysdale RE/MAX Advantage Plus More Details Listing Activity
+Buyer's Agent Details Pahola Clysdale RE/MAX Advantage Plus (651) 398-6250 651-272-4688 (Office Main Line) paholaclysdale@msn.com`;
+    const e = parseShowingEmail("SHOWING CONFIRMED | 8841 Nicollet Avenue S, Bloomington, MN 55420 Mon, 11/23 3:45 PM", body, new Date("2026-11-23T19:43:00Z"));
+    expect(e).toMatchObject({ kind: "confirmed", side: "listing", date: "2026-11-23", start: "15:45", end: "16:45", presentedBy: "Luke Pettersen",
+      agent: { name: "Pahola Clysdale", company: "RE/MAX Advantage Plus", email: "paholaclysdale@msn.com" } });
+    expect(e!.agent.mobile).toMatch(/398-6250/);
+  });
+});

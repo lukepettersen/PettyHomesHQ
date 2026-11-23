@@ -1028,6 +1028,9 @@ in search, exports, the API, the text assistant or the Claude connector. Money l
 
 ### Showings from ShowingTime *(owner request 2026-11-01)*
 
+- *(Owner report 2026-11-23)* A listing's "SHOWING CONFIRMED" email with no **Listing Contacts** section was skipped
+  (HQ looked for the agent only up to that heading); the agent is now read up to whatever follows. A confirmation /
+  cancellation HQ still can't read is logged as **Didn't work** and alerts the owner (bell), never skipped quietly.
 - **Admin → Showing emails** *(owner request 2026-11-23: "somewhere I can track this feature")*: each inbox HQ reads
   (the shared Google connection and anyone's own Gmail) with "Read OK, last <time>" or why it couldn't read; and every
   ShowingTime email HQ read (newest first, last 80) with what it did: **Added** (the showing, which contact, how many
@@ -1502,3 +1505,8 @@ None right now. New ones get added here.
 - Calendar page (everyone's appointments and contract dates for the week).
 - Caller ID: sync HQ contacts to Google Contacts so phones show names (Connect Google Contacts; per person).
 - Call transcripts + summaries (Twilio transcription + Claude; ~$2/month at current volume).
+
+- **Admin groups** *(owner request 2026-11-23)*: Team · **Features** (things HQ does on its own: Weekly emails, Showing
+  emails, Checklists, Paperwork steps, Date reminders, Calendar invites) · Texts & emails (templates) · Deals · Contacts
+  (incl. Appointment types) · Connections (Integrations) · Import & layout (imports, Tools menu, Top bar). Page
+  addresses are unchanged.
