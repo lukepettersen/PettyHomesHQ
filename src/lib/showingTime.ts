@@ -56,7 +56,7 @@ export function parseShowingEmail(subject: string, body: string, received: Date)
   // Some offices' ShowingTime sends "CANCELLED | Showing | <address> | Thu, 11/12 3:30 PM" (owner report 2026-11-13).
   const m1 = m0 ? null : sub.match(/^(CONFIRMED|CANCELL?ED|RESCHEDULED) \| (?:\d+(?:ST|ND|RD|TH) )?Showing \| (.+?) \| (?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*, (\d{1,2})\/(\d{1,2}) (\d{1,2}:\d{2} [AP]M)$/i);
   if (!m0 && !m1) return null; // walk-throughs, previews, appraisals, feedback
-  const side = m0 ? (m0[1] ? "buyer" : "listing") : /Listing Presented By/i.test(body) ? "buyer" : /Buyer'?s Agent Details/i.test(body) ? "listing" : "buyer";
+  const side = m0 ? (m0[1] ? "buyer" : "listing") : /Listing Presented By/i.test(body) ? "buyer" : /Buyer(?:['’`]?s)? Agent Details/i.test(body) ? "listing" : "buyer";
   const head = m0 ? [m0[0], m0[2], m0[3], m0[4], m0[5], m0[6]] : [m1![0], m1![1], m1![2], m1![3], m1![4], m1![5]];
   const kind: ShowingKind = /^CONF/i.test(head[1]) ? "confirmed" : /^CANC/i.test(head[1]) ? "cancelled" : "rescheduled";
   const t = flat(body);
@@ -82,7 +82,9 @@ export function parseShowingEmail(subject: string, body: string, received: Date)
   const noTexts = side === "buyer" && /\bno text(?:s| messages?)\b|\bdo not text\b|\bemails? only\b/i.test(t);
 
   // Our listing: the buyer's agent who's coming. A showing we booked: the listing agent ("Listing Presented By").
-  const block = side === "buyer" ? (t.match(/Listing Presented By (.+?)(?: For questions| Free Downloadable|$)/)?.[1] ?? "") : (t.match(/Buyer'?s Agent Details (.+?)(?: Listing Contacts| For questions| Free Downloadable| Showing Instructions| Feedback|$)/)?.[1] ?? ""); // some emails have no Listing Contacts (owner report 2026-11-23)
+  const block = side === "buyer" ? (t.match(/Listing Presented By (.+?)(?: For questions| Free Downloadable|$)/)?.[1] ?? "") : (t.match(/Buyer(?:['’`]?s)? Agent(?: Details| Info(?:rmation)?)?:? (.+?)(?: Listing Contacts| For questions| Free Downloadable| Showing Instructions| Feedback|$)/i)?.[1]
+      // No buyer's agent section (owner report 2026-11-23): the agent named under Appointment Details, after the time.
+      ?? t.match(/\d{1,2}:\d{2}\s*[AP]M\s*-\s*\d{1,2}:\d{2}\s*[AP]M (.+?)(?: More Details| Listing Activity| Buyer| Listing Contacts|$)/i)?.[1] ?? "");
   const email = (block.match(EMAIL)?.[0] ?? "").toLowerCase();
   const phones = [...block.matchAll(PHONE)].map((m) => ({ n: m[0], office: /^\s*\(Office/i.test(block.slice((m.index ?? 0) + m[0].length)) }));
   const firstPhoneAt = block.search(PHONE);
@@ -114,4 +116,17 @@ export function pickListingTemplate<T extends { name: string }>(templates: T[], 
   const [num, street] = k.toLowerCase().split(" ");
   const forListing = templates.filter((t) => { const n = ` ${t.name.toLowerCase().replace(/[^a-z0-9]+/g, " ")} `; return n.includes(` ${num} `) && n.includes(` ${street} `); });
   return forListing.find((t) => /showing/i.test(t.name) && !/feedback/i.test(t.name)) ?? null;
+}
+
+/** Why a showing email couldn't be read, without any of its personal details (owner report 2026-11-23): which parts
+ *  HQ found, and which headings the email has. Shown on Admin → Showing emails so the reader can be fixed. */
+export function showingReadProblem(subject: string, body: string): string {
+  const t = flat(body);
+  const has = (re: RegExp) => re.test(t);
+  const headings = [["Appointment Details", /Appointment Details/i], ["Buyer's Agent Details", /Buyer(?:['’`]?s)? Agent Details/i], ["Listing Contacts", /Listing Contacts/i],
+    ["Listing Presented By", /Listing Presented By/i], ["Presented by", /Presented by:/i], ["a time range", /\d{1,2}:\d{2}\s*[AP]M\s*-\s*\d{1,2}:\d{2}\s*[AP]M/i], ["an email address", new RegExp(EMAIL.source)], ["a phone number", new RegExp(PHONE.source)]] as const;
+  const found = headings.filter(([, re]) => has(re)).map(([n]) => n);
+  const missing = headings.filter(([, re]) => !has(re)).map(([n]) => n);
+  const apostrophe = /Buyer’s/.test(t) ? " (curly apostrophe in Buyer’s)" : "";
+  return `Found: ${found.join(", ") || "none"}. Missing: ${missing.join(", ") || "none"}${apostrophe}. Text length ${t.length}${t.length < 200 ? " (the email body looks empty: maybe HTML only)" : ""}.`;
 }

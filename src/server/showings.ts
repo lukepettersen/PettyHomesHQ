@@ -6,7 +6,7 @@ import { alertIfWanted } from "@/server/sounds";
 import { dateFromIso, formatPhone, isoFromDate, normalizePhone, todayCentral } from "@/lib/normalize";
 import { centralToUtc } from "@/lib/scheduledText";
 import { formatTime, longIso } from "@/lib/tasks";
-import { parseShowingEmail, streetKey, type ShowingEmail } from "@/lib/showingTime";
+import { parseShowingEmail, showingReadProblem, streetKey, type ShowingEmail } from "@/lib/showingTime";
 
 // Showings on our listings from ShowingTime's emails (owner request 2026-11-01; SPEC.md §10 Showings). Called by the
 // Gmail sync for every email from showingtime.com; anything that isn't about one of our listings is ignored.
@@ -19,7 +19,7 @@ export async function logShowingEmail(row: Omit<ShowingLogRow, "at">) {
   try {
     const cur = await db.appSetting.findUnique({ where: { key: LOG_KEY } });
     const list = (Array.isArray(cur?.value) ? cur.value : []) as ShowingLogRow[];
-    if (list.some((x) => x.subject === row.subject.slice(0, 160) && x.received === row.received && x.result === row.result)) return; // read again: no new row
+    if (list.some((x) => x.subject === row.subject.slice(0, 160) && x.received === row.received && x.result === row.result && x.why === row.why.slice(0, 240))) return; // read again, same outcome: no new row
     const value = [{ at: new Date().toISOString(), ...row, subject: row.subject.slice(0, 160), why: row.why.slice(0, 240) }, ...list].slice(0, 80);
     await db.appSetting.upsert({ where: { key: LOG_KEY }, update: { value }, create: { key: LOG_KEY, value } });
   } catch { /* the log never stops a showing */ }
@@ -38,7 +38,7 @@ export async function onShowingEmail(gmailId: string, subject: string, text: str
   if (!e) {
     // A confirmation / cancellation HQ should have read but couldn't (owner report 2026-11-23): say so, loudly.
     if (/(?:^|\| |^YOUR |\d(?:ST|ND|RD|TH) )SHOWING (?:CONFIRMED|CANCELL?ED|RESCHEDULED) \||^(?:CONFIRMED|CANCELL?ED|RESCHEDULED) \|/i.test(subject.trim())) {
-      await logShowingEmail({ ...base, result: "failed", why: "A showing email HQ couldn't read (the agent's name or the time wasn't where HQ looks). Tell Claude so it can be fixed." });
+      await logShowingEmail({ ...base, result: "failed", why: `A showing email HQ couldn't read (the agent's name or the time wasn't where HQ looks). Tell Claude so it can be fixed. ${showingReadProblem(subject, text)}` });
       const owner = await db.user.findFirst({ where: { isOwner: true }, select: { id: true } });
       if (owner) await db.notification.create({ data: { toId: owner.id, alert: true, link: "/admin/showings", text: `HQ couldn't read a ShowingTime email ("${subject.slice(0, 90)}"). See Admin → Showing emails.` } }).catch(() => null);
       return;

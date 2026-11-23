@@ -122,3 +122,17 @@ Buyer's Agent Details Pahola Clysdale RE/MAX Advantage Plus (651) 398-6250 651-2
     expect(e!.agent.mobile).toMatch(/398-6250/);
   });
 });
+
+describe("more listing email layouts (owner report 2026-11-23)", () => {
+  it("reads a curly apostrophe, or the agent under Appointment Details", async () => {
+    const { parseShowingEmail, showingReadProblem } = await import("./showingTime");
+    const sub = "SHOWING CONFIRMED | 8841 Nicollet Avenue S, Bloomington, MN 55420 Mon, 11/23 3:45 PM";
+    const at = new Date("2026-11-23T19:43:00Z");
+    const curly = "Presented by: Luke Pettersen Appointment Details Showing Monday, November 23, 2026 3:45 PM - 4:45 PM Pahola Clysdale RE/MAX Advantage Plus More Details Buyer’s Agent Details Pahola Clysdale RE/MAX Advantage Plus (651) 398-6250 paholaclysdale@msn.com";
+    expect(parseShowingEmail(sub, curly, at)?.agent).toMatchObject({ name: "Pahola Clysdale", email: "paholaclysdale@msn.com" });
+    const noSection = "Presented by: Luke Pettersen Appointment Details Showing Monday, November 23, 2026 3:45 PM - 4:45 PM Pahola Clysdale RE/MAX Advantage Plus More Details Listing Activity";
+    expect(parseShowingEmail(sub, noSection, at)?.agent).toMatchObject({ name: "Pahola Clysdale", company: "RE/MAX Advantage Plus" });
+    expect(showingReadProblem(sub, "")).toMatch(/looks empty/);
+    expect(showingReadProblem(sub, curly)).not.toMatch(/Pahola|398|msn/); // no personal details
+  });
+});
