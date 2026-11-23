@@ -1517,3 +1517,11 @@ None right now. New ones get added here.
   invites) · Texts & emails (templates) · Deals · Contacts (incl. Appointment types) · **Connections & tools**
   (Integrations, both imports, Tools menu, Top bar). Page addresses are unchanged. Admin home shows just the names; each
   group and page has an ⓘ to hover (or tab to) for what it does.
+
+- **Email message box shows formatting** *(owner request 2026-11-23)*: in every email editor (contact Email tab, Draft
+  email, mass email, email templates) bold looks bold, links look like links, bullet lists and images show as you type;
+  B / Link / • List / Image and Ctrl/Cmd+B format the selection; pasting keeps the words only. Messages are still
+  stored as HQ's light formatting (**bold**, [words](link), "- " bullets, ![image](address)), so templates, merge
+  fields and sending are unchanged. The "/" template shortcut is now only in text boxes; emails use the Template
+  picker. **Preview** is a button next to Send (contact Email tab and Draft email): a pop-up with From, To, Subject
+  and the email as it will arrive.

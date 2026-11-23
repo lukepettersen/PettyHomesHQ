@@ -1,10 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
-import { FormatBar } from "@/components/FormatBar";
+import { useEffect, useState, useTransition } from "react";
+import { RichBox } from "@/components/RichBox";
 import { EmailPreview } from "@/components/EmailPreview";
-import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
+import { TemplateSearch } from "@/components/TemplateSearch";
 import { fillEmailTemplate, sendEmail } from "../emailActions";
 import { ScheduleEmail } from "@/components/ScheduleText";
 import { AddRecipient, ExtraChips, PartyChecks, type Extra } from "@/components/AddRecipient";
@@ -27,17 +27,6 @@ export function EmailComposer({ personId, emails, templates, sendsFrom, onSent, 
   const [signature, setSignature] = useState(true);
   const [files, setFiles] = useState<Attached[]>([]);
   const [confirmClear, setConfirmClear] = useState(false);
-  const box = useRef<HTMLTextAreaElement>(null);
-  // "/name" in the message puts that template in where the slash was (subject too, if it's empty).
-  const slash = useSlashTemplates({ box, value: body, templates, onChoose: (id, from, to) => start(async () => {
-    const r = await fillEmailTemplate({ personId, templateId: id });
-    if (!r.ok) { setError(r.error); return; }
-    const next = body.slice(0, from) + r.data!.body + body.slice(to);
-    setBody(next); setTemplateId(id); setMissing(r.data!.missing); setConfirm(false);
-    if (!subject.trim()) setSubject(r.data!.subject);
-    const at = from + r.data!.body.length;
-    requestAnimationFrame(() => { box.current?.focus(); box.current?.setSelectionRange(at, at); });
-  }) });
 
   const clear = () => {
     if (!confirmClear) { setConfirmClear(true); return; }
@@ -82,11 +71,7 @@ export function EmailComposer({ personId, emails, templates, sendsFrom, onSent, 
       <label className="label">Subject<input className="input" value={subject} onChange={(e) => { setConfirm(false); setSubject(e.target.value); }} /></label>
       <div className="label">Message
         <div>
-          <FormatBar box={box} value={body} onChange={(v) => { setConfirm(false); setBody(v); }} />
-          <textarea ref={box} aria-label="Message" placeholder="Write here, or type / and a template name" className="input min-h-40 rounded-t-none font-normal" value={body}
-            onChange={(e) => { setConfirm(false); setBody(e.target.value); slash.track(); }} onKeyDown={slash.onKeyDown} onKeyUp={slash.track} onClick={slash.track} />
-          {slash.menu}
-          <EmailPreview body={body} />
+          <RichBox value={body} onChange={(v) => { setConfirm(false); setBody(v); }} placeholder="Write here, or pick a template above" />
         </div>
       </div>
       <AttachFiles files={files} onChange={setFiles} />
@@ -96,6 +81,7 @@ export function EmailComposer({ personId, emails, templates, sendsFrom, onSent, 
         <span className="text-xs muted">Sends from {sendsFrom}{ownGmail ? " (your Gmail)" : ""}. A copy is in its Gmail Sent folder and here on the timeline.{!ownGmail && canConnect && <> <ConnectMyGmail /></>}</span>
         <span className="flex flex-wrap justify-end gap-2">
         {(subject || body || templateId) && <button type="button" className="btn" disabled={pending} onClick={clear} onBlur={() => setConfirmClear(false)}>{confirmClear ? "Click again to clear" : "Clear"}</button>}
+        <EmailPreview body={body} subject={subject} to={all} signature={signature} from={sendsFrom} />
         <ScheduleEmail email={{ personId, to: all, subject, body, signature, attachments: files }} disabled={pending || !all.length || !subject.trim() || !body.trim()}
           onScheduled={(when) => { setNotice(`Scheduled for ${when}.`); setSubject(""); setBody(""); setTemplateId(""); setMissing([]); setExtras([]); setFiles([]); router.refresh(); }} />
         <button type="button" className="btn btn-primary" disabled={pending || !all.length || !subject.trim() || !body.trim()} onClick={send} onBlur={() => setConfirm(false)}>

@@ -5,7 +5,7 @@ import { useRef, useState, useTransition } from "react";
 import { SaveBar } from "@/components/SaveBar";
 import { fill, sampleValues, type MergeField } from "@/lib/merge";
 import { toHtml } from "@/lib/email";
-import { FormatBar } from "@/components/FormatBar";
+import { RichBox, type RichHandle } from "@/components/RichBox";
 import { deleteMessageTemplate, moveMessageTemplate, saveMessageTemplate } from "./actions";
 import { FolderList } from "@/components/FolderList";
 
@@ -56,10 +56,12 @@ function Editor({ t: initial, fields, folders, onDirty, onSaved, onDeleted }: { 
   const [confirm, setConfirm] = useState(false);
   const [pending, start] = useTransition();
   const body = useRef<HTMLTextAreaElement>(null);
+  const rich = useRef<RichHandle>(null); // the email message box (shows formatting as you type)
   const isNew = !initial.id;
   const dirty = isNew || JSON.stringify(t) !== JSON.stringify(initial);
   const set = (p: Partial<Msg>) => { const n = { ...t, ...p }; setT(n); onDirty(isNew || JSON.stringify(n) !== JSON.stringify(initial)); };
   const insert = (key: string) => {
+    if (t.kind === "email" && rich.current) { rich.current.insert(`{${key}}`); return; }
     const el = body.current, tag = `{${key}}`;
     const at = el?.selectionStart ?? t.body.length;
     set({ body: t.body.slice(0, at) + tag + t.body.slice(el?.selectionEnd ?? at) });
@@ -79,8 +81,7 @@ function Editor({ t: initial, fields, folders, onDirty, onSaved, onDeleted }: { 
         {t.kind === "email" ? (
           <div className="label">Message
             <div>
-              <FormatBar box={body} value={t.body} onChange={(v) => set({ body: v })} />
-              <textarea ref={body} aria-label="Message" className="input min-h-48 rounded-t-none font-normal" value={t.body} onChange={(e) => set({ body: e.target.value })} />
+              <RichBox key={initial.id ?? "new"} handle={rich} value={t.body} onChange={(v) => set({ body: v })} minHeight="12rem" />
             </div>
           </div>
         ) : (

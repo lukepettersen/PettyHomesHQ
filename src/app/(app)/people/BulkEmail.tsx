@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/Modal";
-import { FormatBar } from "@/components/FormatBar";
+import { RichBox } from "@/components/RichBox";
 import { TemplateSearch } from "@/components/TemplateSearch";
 import { AttachFiles, type Attached } from "@/components/AttachFiles";
 import { toHtml } from "@/lib/email";
@@ -32,7 +32,6 @@ export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: ()
   const [progress, setProgress] = useState<{ total: number; done: number; sent: number; skipped: number; waiting: boolean; failed: { name: string; error: string }[]; finished: boolean; stopped: boolean } | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const box = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     prepareBulkEmail({ ids, kind }).then((r) => { if (!r.ok) setError(r.error); else { setPrep(r.data!); setAddress((a) => a || r.data!.address); } });
@@ -102,9 +101,7 @@ export function BulkEmail({ ids: picked, onClose }: { ids: string[]; onClose: ()
           <label className="label">Subject<input className="input" value={subject} onChange={(e) => { setSubject(e.target.value); setPreview(null); setConfirm(false); }} /></label>
           <div className="label">Message
             <div>
-              <FormatBar box={box} value={body} onChange={(v) => { setBody(v); setPreview(null); setConfirm(false); }} />
-              <textarea ref={box} aria-label="Message" className="input min-h-48 rounded-t-none font-normal" value={body} placeholder="Write here. {first_name} and other merge fields fill in for each person."
-                onChange={(e) => { setBody(e.target.value); setPreview(null); setConfirm(false); }} />
+              <RichBox value={body} onChange={(v) => { setBody(v); setPreview(null); setConfirm(false); }} placeholder="Write here. {first_name} and other merge fields fill in for each person." minHeight="12rem" />
             </div>
           </div>
           <AttachFiles files={files} onChange={setFiles} />

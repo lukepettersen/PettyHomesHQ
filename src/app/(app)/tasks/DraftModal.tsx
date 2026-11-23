@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { FormatBar } from "@/components/FormatBar";
+import { RichBox } from "@/components/RichBox";
 import { EmailPreview } from "@/components/EmailPreview";
 import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
 import { Modal } from "@/components/Modal";
@@ -119,10 +119,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
           {canSend ? (
             <div className="label">Message
               <div>
-                <FormatBar box={box} value={body} onChange={setBody} />
-                <textarea ref={box} aria-label="Message" className={`input ${big ? "min-h-[60vh]" : "min-h-56"} rounded-t-none font-normal`} value={body} onChange={(e) => { setBody(e.target.value); slash.track(); }} {...slashProps} />
-                {slash.menu}
-                <EmailPreview body={body} />
+                <RichBox value={body} onChange={setBody} minHeight={big ? "60vh" : "14rem"} placeholder="Write here, or pick a template above" />
               </div>
             </div>
           ) : <div className="label">Message<textarea ref={box} aria-label="Message" className={`input ${big ? "min-h-[60vh]" : "min-h-56"} font-normal`} value={body} onChange={(e) => { setBody(e.target.value); slash.track(); }} {...slashProps} />{slash.menu}</div>}
@@ -132,6 +129,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
           <div className="flex flex-wrap justify-end gap-2">
             <button type="button" className="btn" onClick={onClose}>Close</button>
             <button type="button" className="btn" disabled={!body} onClick={copy}>{copied ? "Copied" : "Copy"}</button>
+            {d.kind === "email" && <EmailPreview body={body} subject={subject} to={toAll} signature={canSend && signature} from={d.sendsFrom ?? ""} />}
             {d.kind === "email" && <a className={`btn ${canSend ? "" : "btn-primary"} ${body ? "" : "pointer-events-none opacity-50"}`} href={mailto}>Open in email</a>}
             {canSend && <button type="button" className="btn btn-primary" disabled={pending || !toAll.length || !subject.trim() || !body.trim()} onClick={send} onBlur={() => setConfirm(false)}>
               {pending ? "Sending…" : "Send email"}</button>}
