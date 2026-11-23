@@ -64,7 +64,12 @@ export async function onShowingEmail(gmailId: string, subject: string, text: str
 
 /** A new showing: the agent (found, or added), the showing, a note, and the "When a showing is confirmed" checklists. */
 async function confirmed(e: ShowingEmail, ownerId: string, gmailId: string) {
-  const had = await db.showing.findUnique({ where: { key: e.key }, select: { agentId: true } });
+  // Already in HQ: the same key, or the same place and time on the same side (owner report 2026-11-23: a re-read gave the
+  // same showing a second key, so it was saved twice and its texts went out twice).
+  const sameTime = await db.showing.findMany({ where: { date: dateFromIso(e.date), start: e.start, side: e.side }, select: { agentId: true, address: true } });
+  const k = streetKey(e.address)?.toLowerCase();
+  const had = (await db.showing.findUnique({ where: { key: e.key }, select: { agentId: true } }))
+    ?? sameTime.find((x) => x.address.toLowerCase() === e.address.toLowerCase() || (!!k && streetKey(x.address)?.toLowerCase() === k)) ?? null;
   if (had) return { added: false, why: "Already in HQ (the same email in two inboxes, or read twice).", personId: had.agentId }; // already read
   const mobile = normalizePhone(e.agent.mobile), office = normalizePhone(e.agent.office);
   const phones = [mobile, office].filter((n) => n.length === 10);
@@ -140,4 +145,30 @@ export async function loadShowings(agentId: string) {
     return { id: s.id, side: s.side, address: s.address, date, when: when({ date, start: s.start, end: s.end }), status: s.status === "confirmed" && date < today ? "shown" : s.status,
       seller: s.seller && !s.seller.deletedAt ? { id: s.seller.id, name: s.seller.name } : null, total: s.total };
   });
+}
+
+/** Once (owner report 2026-11-23): a showing saved twice keeps the first; the copy's unsent texts and open steps are
+ *  removed and the copy is deleted. Run from the minute timer; AppSetting flag `showings.dedupe.2026-11-23`. */
+export async function dedupeShowingsOnce(): Promise<number> {
+  const flag = "showings.dedupe.2026-11-23";
+  if (await db.appSetting.findUnique({ where: { key: flag } })) return 0;
+  if (!(await db.appSetting.create({ data: { key: flag, value: new Date().toISOString() } }).then(() => true, () => false))) return 0;
+  const rows = await db.showing.findMany({ where: { status: "confirmed", date: { gte: new Date(Date.now() - 14 * 86400000) } }, orderBy: { createdAt: "asc" } });
+  const seen = new Map<string, string>();
+  let n = 0;
+  for (const r of rows) {
+    const k = `${r.side}|${isoFromDate(r.date)}|${r.start}|${streetKey(r.address)?.toLowerCase() ?? r.address.toLowerCase()}`;
+    if (!seen.has(k)) { seen.set(k, r.id); continue; }
+    await db.$transaction(async (tx) => {
+      await tx.task.updateMany({ where: { showingId: r.id, completedAt: null, deletedAt: null, autoState: { in: ["pending", "failed"] } }, data: { autoState: "off" } });
+      await tx.task.updateMany({ where: { showingId: r.id, completedAt: null, deletedAt: null }, data: { deletedAt: new Date() } });
+      await tx.showing.delete({ where: { id: r.id } });
+    });
+    n++;
+  }
+  if (n) {
+    const owner = await db.user.findFirst({ where: { isOwner: true }, select: { id: true } });
+    if (owner) await logActivity(owner.id, "update", "showing", null, `Removed ${n} showing${n === 1 ? "" : "s"} saved twice (and their unsent texts)`);
+  }
+  return n;
 }
