@@ -42,25 +42,36 @@ export default async function AdminHome() {
       <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {visibleGroups(can).map((g) => (
           <section key={g.name} className="card p-4">
-            <h2 className="flex items-center gap-2 text-[17px] font-bold"><span aria-hidden="true" className="grid h-8 w-8 place-items-center rounded-lg bg-accent-soft text-base">{g.icon}</span>{g.name}</h2>
-            <p className="mb-2 mt-0.5 text-[13px] muted">{g.blurb}</p>
+            <h2 className="mb-2 flex items-center gap-2 text-[17px] font-bold"><span aria-hidden="true" className="grid h-8 w-8 place-items-center rounded-lg bg-accent-soft text-base">{g.icon}</span>{g.name}<Info text={g.blurb} left /></h2>
             {g.items.map((i) => (
-              <Link key={i.href} href={i.href} className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 hover:bg-sunken">
-                <span className="min-w-0">
-                  <b className="block text-sm">{i.label}</b>
-                  <span className="block text-[12.5px] muted">{i.href === "/admin/users" && team ? team : i.desc}</span>
-                  {i.href === "/admin/integrations" && (
-                    <span className="mt-1 flex flex-wrap gap-1">
-                      {connections.map((c) => <span key={c.name} className={`rounded-full px-2 py-px text-[11px] font-bold ${tone[c.tone]}`}>{c.name}: {c.text}</span>)}
-                    </span>
-                  )}
-                </span>
-                {badge[i.href] ? <span className={`flex-none rounded-full px-2 py-px text-xs font-bold ${tone[badge[i.href].tone]}`}>{badge[i.href].text}</span> : <span aria-hidden="true" className="flex-none font-bold muted">›</span>}
-              </Link>
+              <div key={i.href} className="flex items-center gap-1 rounded-lg hover:bg-sunken">
+                <Link href={i.href} className="flex min-w-0 flex-1 items-center justify-between gap-2 px-2.5 py-2">
+                  <span className="min-w-0">
+                    <b className="block text-sm">{i.label}</b>
+                    {i.href === "/admin/integrations" && (
+                      <span className="mt-1 flex flex-wrap gap-1">
+                        {connections.map((c) => <span key={c.name} className={`rounded-full px-2 py-px text-[11px] font-bold ${tone[c.tone]}`}>{c.name}: {c.text}</span>)}
+                      </span>
+                    )}
+                  </span>
+                  {badge[i.href] ? <span className={`flex-none rounded-full px-2 py-px text-xs font-bold ${tone[badge[i.href].tone]}`}>{badge[i.href].text}</span> : <span aria-hidden="true" className="flex-none font-bold muted">›</span>}
+                </Link>
+                <span className="pr-2"><Info text={i.href === "/admin/users" && team ? `${i.desc}. Now: ${team}` : i.desc} /></span>
+              </div>
             ))}
           </section>
         ))}
       </div>
     </>
+  );
+}
+
+/** ⓘ: hover or tab to it to read what a group or page is for (owner request 2026-11-23: descriptions made the page busy). */
+function Info({ text, left = false }: { text: string; left?: boolean }) {
+  return (
+    <span tabIndex={0} aria-label={text} className="group relative inline-grid h-5 w-5 flex-none cursor-help place-items-center rounded-full border border-misty text-[11px] font-bold leading-none muted outline-none hover:text-charcoal focus-visible:ring-2 focus-visible:ring-accent">
+      i
+      <span role="tooltip" className={`pointer-events-none absolute ${left ? "left-0" : "right-0"} top-6 z-20 hidden w-60 rounded-md bg-charcoal px-2.5 py-1.5 text-left text-xs font-normal normal-case leading-snug text-white shadow-lg group-hover:block group-focus:block`}>{text}</span>
+    </span>
   );
 }

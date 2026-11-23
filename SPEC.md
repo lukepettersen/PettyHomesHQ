@@ -1509,4 +1509,5 @@ None right now. New ones get added here.
 - **Admin groups** *(owner requests 2026-11-23)*: Team · **Features** (things HQ does on its own: Weekly emails, Mass
   emails and Mass texts reports (also on People), Showing emails, Checklists, Paperwork steps, Date reminders, Calendar
   invites) · Texts & emails (templates) · Deals · Contacts (incl. Appointment types) · **Connections & tools**
-  (Integrations, both imports, Tools menu, Top bar). Page addresses are unchanged.
+  (Integrations, both imports, Tools menu, Top bar). Page addresses are unchanged. Admin home shows just the names; each
+  group and page has an ⓘ to hover (or tab to) for what it does.
