@@ -1506,7 +1506,7 @@ None right now. New ones get added here.
 - Caller ID: sync HQ contacts to Google Contacts so phones show names (Connect Google Contacts; per person).
 - Call transcripts + summaries (Twilio transcription + Claude; ~$2/month at current volume).
 
-- **Admin groups** *(owner request 2026-11-23)*: Team · **Features** (things HQ does on its own: Weekly emails, Showing
-  emails, Checklists, Paperwork steps, Date reminders, Calendar invites) · Texts & emails (templates) · Deals · Contacts
-  (incl. Appointment types) · Connections (Integrations) · Import & layout (imports, Tools menu, Top bar). Page
-  addresses are unchanged.
+- **Admin groups** *(owner requests 2026-11-23)*: Team · **Features** (things HQ does on its own: Weekly emails, Mass
+  emails and Mass texts reports (also on People), Showing emails, Checklists, Paperwork steps, Date reminders, Calendar
+  invites) · Texts & emails (templates) · Deals · Contacts (incl. Appointment types) · **Connections & tools**
+  (Integrations, both imports, Tools menu, Top bar). Page addresses are unchanged.

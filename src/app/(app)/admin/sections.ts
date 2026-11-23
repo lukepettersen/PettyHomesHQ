@@ -11,8 +11,10 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     { label: "Trash", href: "/admin/trash", desc: "Restore deleted people, deals and tasks", need: "trash" },
   ] },
   // Features (owner request 2026-11-23): everything HQ does by itself, in one place.
-  { name: "Features", icon: "⚙️", blurb: "Things HQ does on its own: reports, showing emails, checklists and reminders.", items: [
+  { name: "Features", icon: "⚙️", blurb: "Things HQ does on its own: reports, mass sends, showing emails, checklists and reminders.", items: [
     { label: "Weekly emails", href: "/admin/weekly-emails", desc: "Contingency deadlines, closings and listings reports, emailed every week", also: ["/admin/deadline-email"] },
+    { label: "Mass emails", href: "/people/emails", desc: "Each mass email: who got it, who didn't and why, and how many opened" },
+    { label: "Mass texts", href: "/people/texts", desc: "Each mass text and how it went" },
     { label: "Showing emails", href: "/admin/showings", desc: "ShowingTime emails: is HQ reading Gmail, and what it did with each one" },
     { label: "Checklists", href: "/admin/templates", desc: "Task templates that fill in each deal, with automatic texts and emails", need: "templates" },
     { label: "Paperwork steps", href: "/admin/paperwork", desc: "Step-by-step instructions for each Request paperwork form, and your own forms", need: "templates" },
@@ -33,10 +35,8 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     { label: "Custom fields", href: "/admin/fields", desc: "Extra fields on every contact" },
     { label: "Appointment types", href: "/admin/appointments", desc: "Phone call, consults, showing and your own" },
   ] },
-  { name: "Connections", icon: "🔌", blurb: "Outside services HQ is connected to.", items: [
+  { name: "Connections & tools", icon: "🔌", blurb: "Outside services, bringing data in, and how HQ's menus look.", items: [
     { label: "Integrations", href: "/admin/integrations", desc: "Google (calendar, email), texting & calls, website leads, file storage, Claude app" },
-  ] },
-  { name: "Import & layout", icon: "🧭", blurb: "Bringing data in, and how HQ's menus look.", items: [
     { label: "Import from Follow Up Boss", href: "/admin/import", desc: "Contacts, notes, texts and templates" },
     { label: "Import address list", href: "/admin/address-list", desc: "A spreadsheet of names and addresses (holiday cards), matched to people already in HQ" },
     { label: "Tools menu", href: "/admin/tools", desc: "Links in the Tools menu (MLS, Slack, Gmail…)" },
