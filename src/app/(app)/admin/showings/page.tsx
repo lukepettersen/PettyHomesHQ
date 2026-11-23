@@ -33,8 +33,8 @@ export default async function Page() {
             return (
               <li key={i.email + i.shared} className="flex flex-wrap items-baseline justify-between gap-2 py-1.5">
                 <span><b>{i.email}</b> <span className="text-xs muted">{i.shared ? "(the shared Google connection)" : "(their own Gmail)"}</span></span>
-                <span className={bad ? "text-bad" : "text-accent"}>
-                  {!i.reads ? "Not allowed to read email: Reconnect Google in Admin → Integrations" : bad ? `Couldn't read Gmail ${when(i.errorAt)}: ${i.error}. Reconnect Google in Admin → Integrations.` : `Read OK, last ${when(i.okAt)}`}
+                <span className={bad ? "text-bad" : i.okAt ? "text-accent" : "muted"}>
+                  {!i.reads ? "Not allowed to read email: Reconnect Google in Admin → Integrations" : bad ? `Couldn't read Gmail ${when(i.errorAt)}: ${i.error}. Reconnect Google in Admin → Integrations.` : i.okAt ? `Read OK, last ${when(i.okAt)}` : "No read recorded yet. Click Look again to check it now."}
                 </span>
               </li>
             );
