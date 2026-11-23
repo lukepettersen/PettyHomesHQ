@@ -105,3 +105,10 @@ describe("clickable images (owner request 2026-10-27)", () => {
     expect(buildMimeRaw({ from: "a@b.co", to: ["c@d.co"], replyTo: "x\r\nBcc: e@f.co", subject: "Hi", body: "x" })).not.toContain("Reply-To");
   });
 });
+
+describe("htmlToText decodes numbered characters (owner report 2026-11-23)", () => {
+  it("turns &#x27; and &#39; into apostrophes", async () => {
+    const { htmlToText } = await import("./email");
+    expect(htmlToText("<td>Buyer&#x27;s Agent Details</td><td>Tom&#39;s &amp; Co &rsquo;</td><p>&amp;#x27;</p>")).toBe("Buyer's Agent DetailsTom's & Co '&#x27;");
+  });
+});

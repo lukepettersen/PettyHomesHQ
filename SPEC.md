@@ -1028,7 +1028,9 @@ in search, exports, the API, the text assistant or the Claude connector. Money l
 
 ### Showings from ShowingTime *(owner request 2026-11-01)*
 
-- *(Owner report 2026-11-23)* A listing's "SHOWING CONFIRMED" email with no **Listing Contacts** section was skipped
+- *(Owner report 2026-11-23)* The real cause: some ShowingTime emails are HTML only, and HQ's HTML-to-text left
+  "Buyer&#x27;s" undecoded, so "Buyer's Agent Details" wasn't found. HTML-to-text now decodes numbered characters.
+  Also: a listing's "SHOWING CONFIRMED" email with no **Listing Contacts** section was skipped
   (HQ looked for the agent only up to that heading); the agent is now read up to whatever follows. A confirmation /
   cancellation HQ still can't read is logged as **Didn't work** and alerts the owner (bell), never skipped quietly.
 - **Admin → Showing emails** *(owner request 2026-11-23: "somewhere I can track this feature")*: each inbox HQ reads
