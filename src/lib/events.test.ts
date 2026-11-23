@@ -139,3 +139,25 @@ describe("events: offering several games in one text (owner request 2026-11-22)"
       .toBe("Wed, Jan 27 - Denver Nuggets - 8:30 PM\nFri, Jan 29 - Charlotte Hornets - 8:30 PM\nSun, Jan 31 - Phoenix Suns - 5:00 PM");
   });
 });
+
+describe("open-game emails (owner request 2026-11-23)", () => {
+  it("finds games coming up with nobody confirmed or sent, and knows when to send", async () => {
+    const { openGames, openAlertDue, openAlertEmail, cleanOpenAlert } = await import("./events");
+    const slot = (id: string, date: string, opponent: string) => ({ id, date, time: "19:00", title: `Wolves vs ${opponent}`, opponent, details: "" });
+    const slots = [slot("a", "2026-11-25", "Lakers"), slot("b", "2026-11-27", "Suns"), slot("c", "2026-12-20", "Jazz"), slot("d", "2026-11-20", "Kings")];
+    const att = [{ slotId: "a", status: "sent", name: "Pat" }, { slotId: "b", status: "invited", name: "Sam" }];
+    const g = openGames(slots, att, "2026-11-23", 14);
+    expect(g.map((x) => [x.id, x.offered])).toEqual([["b", ["Sam"]]]);
+    const e = openAlertEmail("Timberwolves 2026-27", g, 14, "https://hq/events/1");
+    expect(e.subject).toBe("Timberwolves 2026-27: no one going yet for Fri, Nov 27 - Suns - 7:00 PM");
+    expect(e.body).toContain("offered to Sam, not confirmed");
+    const a = cleanOpenAlert({ on: true, days: 999, freq: "weekly", day: 1, time: "08:00", to: ["u1", "u1"] });
+    expect(a).toMatchObject({ days: 60, to: ["u1"] });
+    expect(openAlertDue(a, { dow: 1, hhmm: "08:05", today: "2026-11-23" }, null)).toBe(true);
+    expect(openAlertDue(a, { dow: 1, hhmm: "07:59", today: "2026-11-23" }, null)).toBe(false);
+    expect(openAlertDue(a, { dow: 2, hhmm: "09:00", today: "2026-11-24" }, null)).toBe(false);
+    expect(openAlertDue(a, { dow: 1, hhmm: "09:00", today: "2026-11-23" }, "2026-11-23")).toBe(false);
+    expect(openAlertDue({ ...a, freq: "daily" }, { dow: 2, hhmm: "09:00", today: "2026-11-24" }, "2026-11-23")).toBe(true);
+    expect(cleanOpenAlert(null)).toMatchObject({ on: false, days: 14, time: "08:00" });
+  });
+});

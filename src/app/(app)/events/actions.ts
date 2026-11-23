@@ -8,6 +8,7 @@ import {
   saveReminder, saveSlot, saveTemplate, setSignup, updateAttendee, updateEvent,
 } from "@/server/events";
 import { readSlotCsv, STATUS_KEYS } from "@/lib/events";
+import { saveOpenAlert, sendOpenAlert } from "@/server/eventAlerts";
 import { centralToUtc } from "@/lib/scheduledText";
 
 // Events (SPEC.md §6.7): everything needs the "Events" permission (Luke and Alyssa).
@@ -193,5 +194,26 @@ export async function setWaitlistTier(eventId: string, interestId: string, tier:
   return guarded("manageEvents", async (user) => {
     await setInterestTier(user.id, id.parse(interestId), z.enum(["", "A", "B", "C"]).parse(tier));
     refresh(eventId);
+  });
+}
+
+// Open-game emails (owner request 2026-11-23): email chosen teammates when a game coming up has nobody going.
+const openAlert = z.object({ on: z.boolean(), days: z.number().int().min(1).max(60), freq: z.enum(["daily", "weekly"]), day: z.number().int().min(0).max(6),
+  time: z.string().regex(/^([01]\d|2[0-3]):(00|15|30|45)$/, "Pick a time"), to: z.array(id).max(10) });
+export async function saveOpenAlertAction(eventId: string, input: unknown) {
+  return guarded("manageEvents", async (user) => {
+    const v = openAlert.parse(input);
+    if (v.on && !v.to.length) throw new UserError("Pick who gets the email.");
+    await saveOpenAlert(user.id, id.parse(eventId), v);
+    refresh(eventId);
+  });
+}
+export async function testOpenAlertAction(eventId: string, input: unknown) {
+  return guarded("manageEvents", async () => {
+    const v = openAlert.parse(input);
+    if (!v.to.length) throw new UserError("Pick who gets the email.");
+    const r = await sendOpenAlert(id.parse(eventId), { ...v, on: true }, true);
+    if (!r.ok) throw new UserError(r.error);
+    return { games: r.games };
   });
 }

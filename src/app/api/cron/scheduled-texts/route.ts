@@ -7,6 +7,7 @@ import { pullCalendarDeletes, syncGmail } from "@/server/google";
 import { sendBulkJobs } from "@/server/bulkEmail";
 import { sendBulkTexts } from "@/server/bulkText";
 import { sendDueDigest } from "@/server/deadlineDigest";
+import { sendDueOpenAlerts } from "@/server/eventAlerts";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,8 @@ export async function POST(req: Request) {
   const emails = await run("scheduled emails", sendDueEmails), asks = await run("check-in texts", sendDueAsks);
   const bulk = await run("mass emails", () => sendBulkJobs()), bulkTexts = await run("mass texts", () => sendBulkTexts());
   const digest = await run("weekly deadlines email", () => sendDueDigest());
+  const openGames = await run("open-game emails", () => sendDueOpenAlerts());
   const gmail = await run("Gmail", syncGmail);
   const calendar = await run("Google Calendar deletes", () => pullCalendarDeletes());
-  return Response.json({ sent, auto, emails, asks, bulk, bulkTexts, digest, gmail, calendar });
+  return Response.json({ sent, auto, emails, asks, bulk, bulkTexts, digest, openGames, gmail, calendar });
 }

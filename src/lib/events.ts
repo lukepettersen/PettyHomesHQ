@@ -305,3 +305,43 @@ export function gameFor<T extends { id: string; date: string; opponent: string; 
   const o = norm(row.opponent);
   return same.find((s) => o && (norm(s.opponent).includes(o) || norm(s.title).includes(o) || o.includes(norm(s.opponent).split(" ").slice(-1)[0]))) ?? null;
 }
+
+// ---------- Open-game emails (owner request 2026-11-23: replaces a weekly check of the old tickets sheet) ----------
+/** Email chosen teammates when a game in the next `days` days has nobody confirmed or sent. Daily, or weekly on `day`
+ *  (0 = Sunday), at `time` Central. `to` = HQ user ids. Kept per event in AppSetting `events.openAlert.<eventId>`. */
+export type OpenAlert = { on: boolean; days: number; freq: "daily" | "weekly"; day: number; time: string; to: string[] };
+export const DEFAULT_OPEN_ALERT: OpenAlert = { on: false, days: 14, freq: "weekly", day: 1, time: "08:00", to: [] };
+export function cleanOpenAlert(v: unknown): OpenAlert {
+  const o = v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+  const days = Math.round(Number(o.days));
+  const day = Math.round(Number(o.day));
+  return {
+    on: o.on === true,
+    days: Number.isFinite(days) ? Math.min(60, Math.max(1, days)) : DEFAULT_OPEN_ALERT.days,
+    freq: o.freq === "daily" ? "daily" : "weekly",
+    day: Number.isFinite(day) && day >= 0 && day <= 6 ? day : DEFAULT_OPEN_ALERT.day,
+    time: typeof o.time === "string" && /^([01]\d|2[0-3]):(00|15|30|45)$/.test(o.time) ? o.time : DEFAULT_OPEN_ALERT.time,
+    to: Array.isArray(o.to) ? [...new Set(o.to.filter((x): x is string => typeof x === "string" && x.length > 0 && x.length <= 40))].slice(0, 10) : [],
+  };
+}
+/** Games from today through `days` days out with nobody confirmed or sent, soonest first; `offered` = invited, not yet confirmed. */
+export function openGames<S extends Pick<SlotInfo, "date" | "time" | "title" | "opponent" | "details"> & { id: string }>(
+  slots: S[], attendees: { slotId: string; status: string; name: string }[], today: string, days: number,
+): (S & { offered: string[] })[] {
+  const last = addDays(today, days);
+  return slots
+    .filter((s) => s.date >= today && s.date <= last && !attendees.some((a) => a.slotId === s.id && ASSIGNED.includes(a.status)))
+    .sort((a, b) => (a.date + (a.time ?? "")).localeCompare(b.date + (b.time ?? "")))
+    .map((s) => ({ ...s, offered: attendees.filter((a) => a.slotId === s.id && a.status === "invited").map((a) => a.name) }));
+}
+/** Is the open-game email due at this Central day/time, and not already sent today? */
+export function openAlertDue(a: OpenAlert, now: { dow: number; hhmm: string; today: string }, lastSent: string | null): boolean {
+  return a.on && a.to.length > 0 && (a.freq === "daily" || now.dow === a.day) && now.hhmm >= a.time && lastSent !== now.today;
+}
+/** The email: subject and plain body listing each open game, with a link to the event in HQ. */
+export function openAlertEmail(eventName: string, games: ReturnType<typeof openGames>, days: number, link: string): { subject: string; body: string } {
+  const one = games.length === 1;
+  const subject = one ? `${eventName}: no one going yet for ${gameLine(games[0], eventName)}` : `${eventName}: ${games.length} games in the next ${days} days have no one going`;
+  const lines = games.map((g) => `• ${gameLine(g, eventName)}${g.details ? ` (${g.details})` : ""}${g.offered.length ? ` · offered to ${g.offered.join(", ")}, not confirmed` : ""}`);
+  return { subject, body: `${one ? "This game has" : "These games have"} nobody confirmed or sent yet:\n\n${lines.join("\n")}\n\nOpen the event in HQ: ${link}\n\n— HQ open-game reminder` };
+}

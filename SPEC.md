@@ -461,6 +461,12 @@ scrolls with it until its last card is on screen, then stays put while the middl
   cell; the "Goes to" box lists every number before sending.
   The **Waitlist tab** does the same from the other side: tick people (or "+ All A/B/C", "Everyone with a cell"), pick
   the games being offered (only **open** games: ahead, with nobody Confirmed or Tickets sent), then write and send.
+- **Open-game email** *(owner request 2026-11-23; replaces a weekly check of the old tickets sheet)*: at the top of a
+  many-dates event's Games tab, **Set up / Edit**: on/off, "games in the next N days" (1–60, default 14), check every
+  day or every chosen weekday at a time (15-minute steps, default Monday 8:00am), and who gets it (team members, ticked).
+  At that time HQ emails them (from the owner's Gmail) a list of the games in that window with nobody confirmed or sent
+  (date, opponent, tip-off, seat details, and who it was offered to if anyone) and a link to the event. Nothing is sent
+  when every game has someone. **Send a test now** sends it right away. AppSetting `events.openAlert.<eventId>`.
 - **Tiers** *(owner request 2026-11-22)*: each person on a waitlist has an **A / B / C** tier (or none), set from a
   dropdown on their row; it belongs to that event only (how the owner doles out tickets). The Waitlist tab is stacked A,
   B, C, then no tier. The season sheet's "B Clients Interested" / "C Clients Interested" columns set the tier (a one-time
