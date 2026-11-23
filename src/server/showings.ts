@@ -83,6 +83,11 @@ async function confirmed(e: ShowingEmail, ownerId: string, gmailId: string) {
   const future = centralToUtc(e.date, e.start).getTime() > Date.now();
 
   const r = await db.$transaction(async (tx) => {
+    // Two reads at the same moment (the minute timer and Look again): one waits for the other, then sees it's saved.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`showing|${e.side}|${e.date}|${e.start}`}))`;
+    const again = await tx.showing.findMany({ where: { date: dateFromIso(e.date), start: e.start, side: e.side }, select: { agentId: true, address: true, key: true } });
+    const dup = again.find((x) => x.key === e.key || x.address.toLowerCase() === e.address.toLowerCase() || (!!k && streetKey(x.address)?.toLowerCase() === k));
+    if (dup) return { dupOf: dup.agentId } as const;
     let agentId = existing?.id;
     if (!agentId) {
       const stage = await tx.stage.findFirst({ where: { name: { contains: "partner", mode: "insensitive" } }, select: { id: true } });
@@ -104,6 +109,7 @@ async function confirmed(e: ShowingEmail, ownerId: string, gmailId: string) {
     if (e.noTexts && tasks) await tx.task.updateMany({ where: { showingId: s.id, kind: "text", autoState: "pending" }, data: { autoState: "off", autoError: "Their listing says no text messages, so it wasn't texted. Email or call them instead." } });
     return { agentId, showingId: s.id, created: !existing, tasks };
   });
+  if ("dupOf" in r) return { added: false, why: "Already in HQ (read twice at the same moment).", personId: r.dupOf };
   // Only showings still ahead (an old email read again doesn't alert).
   if (future) {
     const team = await db.user.findMany({ where: { status: { not: "DISABLED" } }, select: { id: true } });

@@ -1034,7 +1034,8 @@ in search, exports, the API, the text assistant or the Claude connector. Money l
   (HQ looked for the agent only up to that heading); the agent is now read up to whatever follows. A confirmation /
   cancellation HQ still can't read is logged as **Didn't work** and alerts the owner (bell), never skipped quietly.
 - *(Owner report 2026-11-23: a buyer's agent got the same text twice)* A showing is "already in HQ" when it has the same
-  ShowingTime number **or** the same side, date, start and street; showings saved twice were cleaned up once (the copy
+  ShowingTime number **or** the same side, date, start and street (two reads at the same moment wait for each other);
+  showings saved twice were cleaned up once (the copy
   and its unsent texts removed).
 - **Admin → Showing emails** *(owner request 2026-11-23: "somewhere I can track this feature")*: each inbox HQ reads
   (the shared Google connection and anyone's own Gmail) with "Read OK, last <time>" or why it couldn't read; and every
