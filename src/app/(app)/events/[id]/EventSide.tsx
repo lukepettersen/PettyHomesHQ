@@ -59,12 +59,12 @@ export function SignupSettings({ e }: { e: EventView }) {
 }
 
 type Reminder = EventView["reminders"][number];
-type Draft = { name: string; body: string; daysBefore: number; time: string; statuses: string[]; active: boolean };
-const blank: Draft = { name: "Reminder", body: "Hi {first_name}! Reminder: {event_name} is {event_date} at {event_time}. Questions? Text Luke at 612-702-0295.", daysBefore: 1, time: "10:00", statuses: ["confirmed", "sent"], active: true };
+type Draft = { name: string; body: string; daysBefore: number; time: string; statuses: string[]; active: boolean; addOwner: boolean };
+const blank: Draft = { name: "Reminder", body: "Hi {first_name}! Reminder: {event_name} is {event_date} at {event_time}. Questions? Text Luke at 612-702-0295.", daysBefore: 1, time: "10:00", statuses: ["confirmed", "sent"], active: true, addOwner: true };
 
 function ReminderForm({ e, r, onDone }: { e: EventView; r: Reminder | null; onDone: () => void }) {
   const router = useRouter();
-  const [d, setD] = useState<Draft>(r ? { name: r.name, body: r.body, daysBefore: r.daysBefore, time: r.time, statuses: r.statuses, active: r.active } : blank);
+  const [d, setD] = useState<Draft>(r ? { name: r.name, body: r.body, daysBefore: r.daysBefore, time: r.time, statuses: r.statuses, active: r.active, addOwner: r.addOwner } : blank);
   const [who, setWho] = useState("");
   const [preview, setPreview] = useState<{ text: string; missing: string[]; who: string } | null>(null);
   const [error, setError] = useState("");
@@ -89,6 +89,7 @@ function ReminderForm({ e, r, onDone }: { e: EventView; r: Reminder | null; onDo
       <fieldset className="mt-2 text-sm"><legend className="font-semibold">Goes to people who are</legend>
         {STATUS_KEYS.map((k) => <label key={k} className="mr-3 inline-flex items-center gap-1"><input type="checkbox" checked={d.statuses.includes(k)} onChange={(x) => setD({ ...d, statuses: x.target.checked ? [...d.statuses, k] : d.statuses.filter((s) => s !== k) })} />{statusLabel(k, e.doneLabel)}</label>)}
       </fieldset>
+      <label className="mt-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={d.addOwner} onChange={(x) => setD({ ...d, addOwner: x.target.checked })} />Include {e.ownerCell ? `${e.ownerCell.name}'s cell (${e.ownerCell.number})` : "the owner's cell"} as a group text, so their reply reaches {e.ownerCell?.name ?? "the owner"}&apos;s phone{!e.groupsOn && <span className="muted"> (group texts aren&apos;t set up, so it goes to the client only)</span>}</label>
       <label className="mt-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={d.active} onChange={(x) => setD({ ...d, active: x.target.checked })} />On (scheduled for everyone it applies to, including people added later)</label>
       <div className="mt-2 flex flex-wrap items-end gap-2">
         <label className="label">Preview for<select className="input mt-1" value={who} onChange={(x) => { setWho(x.target.value); setPreview(null); }}>
@@ -142,7 +143,7 @@ export function Reminders({ e }: { e: EventView }) {
             </div>
             <p className="mt-1 whitespace-pre-wrap text-xs muted">{r.body}</p>
             <p className="mt-1 text-xs">{[r.pending ? `${r.pending} scheduled${r.next ? ` (next ${r.next})` : ""}` : "None scheduled", r.sent ? `${r.sent} sent` : "", r.failed ? `${r.failed} didn't send` : "", r.off ? `${r.off} turned off` : ""].filter(Boolean).join(" · ")}
-              <span className="muted"> · to {r.statuses.map((s) => statusLabel(s, e.doneLabel).toLowerCase()).join(", ")}</span></p>
+              <span className="muted"> · to {r.statuses.map((s) => statusLabel(s, e.doneLabel).toLowerCase()).join(", ")}{r.addOwner && e.groupsOn && e.ownerCell ? `, with ${e.ownerCell.name}'s cell in the group` : ""}</span></p>
             <div className="mt-1 flex justify-end gap-2">
               <button type="button" className="btn px-2 py-0.5 text-xs" onClick={() => setEditing(r.id)}>Edit</button>
               <button type="button" className="btn px-2 py-0.5 text-xs text-bad" disabled={pending} onBlur={() => setSure("")} onClick={() => (sure === r.id ? remove(r.id) : setSure(r.id))}>{sure === r.id ? "Click again" : "Remove"}</button>

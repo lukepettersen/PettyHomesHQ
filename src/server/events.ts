@@ -136,7 +136,7 @@ export async function loadEvent(id: string, me?: { id: string; isOwner: boolean 
     slots: e.slots.map((s) => ({ id: s.id, date: isoFromDate(s.date), time: s.time, title: s.title, opponent: s.opponent, location: s.location, details: s.details, imported: !!s.externalId })),
     attendees: e.attendees.filter((a) => !a.person.deletedAt).map((a) => ({ id: a.id, slotId: a.slotId, personId: a.person.id, name: a.person.name, status: a.status, source: a.source,
       answers: answersOf(a.answers), phone: a.person.phones.find((p) => canText(p.label))?.number ?? null })),
-    reminders: e.reminders.map((r) => ({ id: r.id, name: r.name, body: r.body, daysBefore: r.daysBefore, time: r.time, statuses: r.statuses, active: r.active, ...counts(r.id) })),
+    reminders: e.reminders.map((r) => ({ id: r.id, name: r.name, body: r.body, daysBefore: r.daysBefore, time: r.time, statuses: r.statuses, active: r.active, addOwner: r.addOwner, ...counts(r.id) })),
     senders: team.map((u) => ({ id: u.id, name: u.name, number: formatPhone(u.textNumber!) })),
     me: me?.id ?? null, meIsOwner: !!me?.isOwner, groupsOn: await groupReady(), ownerCell: await ownerCell(),
   };
@@ -299,11 +299,11 @@ export async function loadPersonEvents(personId: string) {
 
 // ---------- Reminders ----------
 
-export type ReminderInput = { name: string; body: string; daysBefore: number; time: string; statuses: string[]; active: boolean };
+export type ReminderInput = { name: string; body: string; daysBefore: number; time: string; statuses: string[]; active: boolean; addOwner?: boolean };
 export async function saveReminder(userId: string, eventId: string, id: string | null, r: ReminderInput) {
   const e = await db.event.findFirst({ where: { id: eventId, deletedAt: null } });
   if (!e) throw new UserError("That event was removed.");
-  const data = { name: r.name.trim().slice(0, 80) || "Reminder", body: r.body.trim().slice(0, 1000), daysBefore: r.daysBefore, time: r.time, statuses: r.statuses, active: r.active };
+  const data = { name: r.name.trim().slice(0, 80) || "Reminder", body: r.body.trim().slice(0, 1000), daysBefore: r.daysBefore, time: r.time, statuses: r.statuses, active: r.active, addOwner: r.addOwner ?? true };
   if (!data.body) throw new UserError("Write the reminder text.");
   const saved = id ? await db.eventReminder.update({ where: { id, eventId }, data }) : await db.eventReminder.create({ data: { eventId, ...data } });
   await logActivity(userId, id ? "update" : "create", "event", eventId, `${id ? "Changed" : "Added"} reminder "${saved.name}" on "${e.name}"${saved.active ? "" : " (off)"}`);
@@ -356,6 +356,8 @@ export async function syncEventReminders(eventId: string, now = new Date()): Pro
   const sender = (await db.user.findUnique({ where: { id: senderId }, select: { name: true } }))?.name ?? "";
   const slots = new Map(e.slots.map((s) => [s.id, s]));
   const wanted = new Map<string, { personId: string; numbers: string[]; body: string; sendAt: Date }>();
+  // "Include my cell": the owner's cell joins each reminder as a group text, so the client's reply reaches the owner's phone.
+  const cell = e.reminders.some((r) => r.active && r.addOwner) && (await groupReady()) ? (await ownerCell())?.digits ?? null : null;
   if (!e.deletedAt) for (const r of e.reminders.filter((x) => x.active)) for (const a of e.attendees) {
     const s = slots.get(a.slotId);
     if (!s || a.person.deletedAt || !r.statuses.includes(a.status)) continue;
@@ -363,6 +365,7 @@ export async function syncEventReminders(eventId: string, now = new Date()): Pro
     if (sendAt <= now) continue;
     const numbers = [...new Set(a.person.phones.filter((p) => canText(p.label) && p.normalized.length === 10).map((p) => p.normalized))];
     if (!numbers.length || (await hasTextStop(a.person.id))) continue;
+    if (r.addOwner && cell && !numbers.includes(cell)) numbers.push(cell);
     wanted.set(`evt:${e.id}:${r.id}:${a.id}`, { personId: a.person.id, numbers, body: reminderText(r.body, a.person, e, s, answersOf(a.answers), sender).text, sendAt });
   }
   for (const x of existing) {
@@ -654,4 +657,17 @@ export async function applyAssignments(userId: string, eventId: string, items: {
   await syncEventReminders(eventId);
   await syncWaitlistTag(eventId);
   return { added, updated, created, waiting };
+}
+
+/** Once after the "include my cell" change (owner 2026-11-23): re-schedule every event's pending reminders so the
+ *  owner's cell joins them. Run from the minute timer; AppSetting flag `events.resync.addOwner`. */
+export async function resyncRemindersOnce(): Promise<number> {
+  const flag = "events.resync.addOwner";
+  if (await db.appSetting.findUnique({ where: { key: flag } })) return 0;
+  const claimed = await db.appSetting.create({ data: { key: flag, value: new Date().toISOString() } }).then(() => true, () => false);
+  if (!claimed) return 0;
+  const events = await db.event.findMany({ where: { deletedAt: null }, select: { id: true } });
+  let n = 0;
+  for (const e of events) n += (await syncEventReminders(e.id)) || 0;
+  return n;
 }

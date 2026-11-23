@@ -963,6 +963,7 @@ model EventReminder {
   time       String   @default("10:00")
   statuses   String[] @default(["confirmed", "sent"])
   active     Boolean  @default(true)
+  addOwner   Boolean  @default(true) // the owner's cell joins as a group text, so replies reach the owner's phone (owner 2026-11-23)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

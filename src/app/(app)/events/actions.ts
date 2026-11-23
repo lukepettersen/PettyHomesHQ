@@ -109,7 +109,7 @@ export async function removeEventAttendee(eventId: string, attendeeId: string) {
   return guarded("manageEvents", async (user) => { await removeAttendee(user.id, id.parse(attendeeId)); refresh(eventId); });
 }
 
-const reminder = z.object({ name: z.string().max(80), body: z.string().max(1000), daysBefore: z.number().int().min(0).max(60), time: clock, statuses: z.array(status).min(1, "Pick who it goes to.").max(4), active: z.boolean() });
+const reminder = z.object({ name: z.string().max(80), body: z.string().max(1000), daysBefore: z.number().int().min(0).max(60), time: clock, statuses: z.array(status).min(1, "Pick who it goes to.").max(4), active: z.boolean(), addOwner: z.boolean().optional() });
 export async function saveEventReminder(eventId: string, reminderId: string | null, input: unknown) {
   return guarded("manageEvents", async (user) => {
     const v = reminder.parse(input);

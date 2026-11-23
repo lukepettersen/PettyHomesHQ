@@ -8,6 +8,7 @@ import { sendBulkJobs } from "@/server/bulkEmail";
 import { sendBulkTexts } from "@/server/bulkText";
 import { sendDueDigest } from "@/server/deadlineDigest";
 import { sendDueOpenAlerts } from "@/server/eventAlerts";
+import { resyncRemindersOnce } from "@/server/events";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
   const run = async (name: string, job: () => Promise<number>) => {
     try { return await job(); } catch (e) { console.error(`Minute timer: ${name} failed:`, e instanceof Error ? e.message : "unknown error"); return 0; }
   };
+  await run("event reminders re-sync", resyncRemindersOnce);
   const sent = await run("scheduled texts", sendDueTexts), auto = await run("automatic steps", () => sendDueAutoTasks());
   const emails = await run("scheduled emails", sendDueEmails), asks = await run("check-in texts", sendDueAsks);
   const bulk = await run("mass emails", () => sendBulkJobs()), bulkTexts = await run("mass texts", () => sendBulkTexts());
