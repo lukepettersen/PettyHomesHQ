@@ -671,3 +671,14 @@ export async function resyncRemindersOnce(): Promise<number> {
   for (const e of events) n += (await syncEventReminders(e.id)) || 0;
   return n;
 }
+
+/** Reminder texts tab → "Send from": whose HQ number the event's reminders go from (owner request 2026-11-23). */
+export async function setEventSender(userId: string, eventId: string, senderId: string) {
+  const e = await db.event.findFirst({ where: { id: eventId, deletedAt: null }, select: { id: true, name: true } });
+  if (!e) throw new UserError("That event was removed.");
+  const u = await db.user.findFirst({ where: { id: senderId, textNumber: { not: null }, status: { not: "DISABLED" } }, select: { name: true } });
+  if (!u) throw new UserError("Pick someone with an HQ number to send the reminders.");
+  await db.event.update({ where: { id: e.id }, data: { senderId } });
+  await logActivity(userId, "update", "event", e.id, `Reminder texts for "${e.name}" now go from ${u.name}'s HQ number`);
+  await syncEventReminders(e.id);
+}

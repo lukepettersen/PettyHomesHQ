@@ -5,7 +5,7 @@ import { useEffect, useState, useTransition } from "react";
 import type { EventView } from "@/server/events";
 import { EVENT_MERGE_FIELDS, reminderWhen, statusLabel, STATUS_KEYS } from "@/lib/events";
 import { TimeSelect } from "../TimeSelect";
-import { previewEventReminder, removeEventReminder, saveEventReminder, saveEventSignup } from "../actions";
+import { previewEventReminder, removeEventReminder, saveEventReminder, saveEventSignup, setEventSenderAction } from "../actions";
 
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-CA", { timeZone: "America/Chicago" }) : "");
 
@@ -129,7 +129,17 @@ export function Reminders({ e }: { e: EventView }) {
         <h2 id="rem-h" className="text-lg font-bold">Reminder texts</h2>
         {editing === null && <button type="button" className="text-sm font-semibold text-accent hover:underline" onClick={() => setEditing("new")}>+ Add</button>}
       </div>
-      <p className="text-sm muted">Sent automatically before each date, from {sender ? `${sender.name}'s HQ number` : "the owner's HQ number"}. Everyone added later gets them too.</p>
+      <p className="text-sm muted">Sent automatically before each date. Everyone added later gets them too.</p>
+      {e.senders.length > 0 && (
+        <label className="mt-2 flex flex-wrap items-center gap-2 text-sm font-semibold">Send from
+          <select className="input w-auto py-1 font-normal" aria-label="Reminder texts send from" value={e.senderId ?? sender?.id ?? ""} disabled={pending}
+            onChange={(x) => { const v = x.target.value; start(async () => { setError(""); const r = await setEventSenderAction(e.id, v); if (!r.ok) setError(r.error); router.refresh(); }); }}>
+            {!e.senderId && <option value="">The owner&apos;s HQ number</option>}
+            {e.senders.map((s) => <option key={s.id} value={s.id}>{s.name}&apos;s HQ number ({s.number})</option>)}
+          </select>
+          <span className="text-xs font-normal muted">Changing it moves every scheduled reminder to that number.</span>
+        </label>
+      )}
       <details className="mt-1 text-xs muted"><summary className="cursor-pointer">How they work</summary>
         <p className="mt-1">From {sender ? `${sender.number}` : "the owner's HQ number"}, 8am–8pm only. Each one shows in the contact&apos;s Scheduled box (turn one off there) and in Messages once sent. People who replied STOP, or with no textable number, are skipped.</p>
       </details>

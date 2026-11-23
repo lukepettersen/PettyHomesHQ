@@ -5,7 +5,7 @@ import { z } from "zod";
 import { guarded, UserError } from "@/server/safe";
 import {
   addAttendees, addInterest, saveSignupPage, setInterestTier, applyAssignments, createEvent, offerGame, previewAssignments, previewOffer, removeInterest, deleteEvent, deleteReminder, deleteSlot, deleteTemplate, fetchWolvesSchedule, importSlots, previewReminder, removeAttendee,
-  saveReminder, saveSlot, saveTemplate, setSignup, updateAttendee, updateEvent,
+  saveReminder, saveSlot, saveTemplate, setEventSender, setSignup, updateAttendee, updateEvent,
 } from "@/server/events";
 import { readSlotCsv, STATUS_KEYS } from "@/lib/events";
 import { saveOpenAlert, sendOpenAlert } from "@/server/eventAlerts";
@@ -216,4 +216,7 @@ export async function testOpenAlertAction(eventId: string, input: unknown) {
     if (!r.ok) throw new UserError(r.error);
     return { games: r.games };
   });
+}
+export async function setEventSenderAction(eventId: string, senderId: string) {
+  return guarded("manageEvents", async (user) => { await setEventSender(user.id, id.parse(eventId), id.parse(senderId)); refresh(eventId); });
 }

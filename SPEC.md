@@ -466,6 +466,8 @@ scrolls with it until its last card is on screen, then stays put while the middl
   reminders): the reminder goes as a group text with the client's numbers and the owner's cell, so replies reach the
   owner's phone. Off, or when group texts aren't set up, it goes to the client only. Reminders already scheduled were
   re-scheduled once to include it.
+- **Send from** on the Reminder texts tab *(owner request 2026-11-23)*: whose HQ number the reminders go from (same as
+  Edit details → "Reminder texts go from"); changing it moves every scheduled reminder to that number.
 - **Open-game email** *(owner request 2026-11-23; replaces a weekly check of the old tickets sheet)*: at the top of a
   many-dates event's Games tab, **Set up / Edit**: on/off, "games in the next N days" (1–60, default 14), check every
   day or every chosen weekday at a time (15-minute steps, default Monday 8:00am), and who gets it (team members, ticked).
