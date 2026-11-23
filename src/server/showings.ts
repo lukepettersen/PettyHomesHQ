@@ -11,26 +11,52 @@ import { parseShowingEmail, streetKey, type ShowingEmail } from "@/lib/showingTi
 // Showings on our listings from ShowingTime's emails (owner request 2026-11-01; SPEC.md §10 Showings). Called by the
 // Gmail sync for every email from showingtime.com; anything that isn't about one of our listings is ignored.
 
+// Showing emails log (owner request 2026-11-23: "somewhere I can track this feature"): every ShowingTime email HQ
+// reads and what it did with it, newest first, the last 80. Subject and outcome only, never the email itself.
+export type ShowingLogRow = { at: string; received: string; subject: string; result: "added" | "updated" | "skipped" | "failed"; why: string; personId?: string | null; inbox?: string };
+const LOG_KEY = "showings.log";
+export async function logShowingEmail(row: Omit<ShowingLogRow, "at">) {
+  try {
+    const cur = await db.appSetting.findUnique({ where: { key: LOG_KEY } });
+    const list = (Array.isArray(cur?.value) ? cur.value : []) as ShowingLogRow[];
+    if (list.some((x) => x.subject === row.subject.slice(0, 160) && x.received === row.received && x.result === row.result)) return; // read again: no new row
+    const value = [{ at: new Date().toISOString(), ...row, subject: row.subject.slice(0, 160), why: row.why.slice(0, 240) }, ...list].slice(0, 80);
+    await db.appSetting.upsert({ where: { key: LOG_KEY }, update: { value }, create: { key: LOG_KEY, value } });
+  } catch { /* the log never stops a showing */ }
+}
+export async function loadShowingLog(): Promise<ShowingLogRow[]> {
+  const cur = await db.appSetting.findUnique({ where: { key: LOG_KEY } });
+  return (Array.isArray(cur?.value) ? cur.value : []) as ShowingLogRow[];
+}
+
 const when = (s: { date: string; start: string; end: string | null }) => `${longIso(s.date)} ${formatTime(s.start)}${s.end ? `–${formatTime(s.end)}` : ""}`;
 
-export async function onShowingEmail(gmailId: string, subject: string, text: string, received: Date): Promise<void> {
+export async function onShowingEmail(gmailId: string, subject: string, text: string, received: Date, inbox = ""): Promise<void> {
+  const base = { received: received.toISOString(), subject, inbox };
+  const skip = (why: string) => logShowingEmail({ ...base, result: "skipped", why });
   const e = parseShowingEmail(subject, text, received);
-  if (!e) return;
+  if (!e) return skip("Not a showing confirmation, cancellation or reschedule HQ knows (e.g. a request, reminder or feedback email).");
   const team = await db.user.findMany({ where: { status: { not: "DISABLED" } }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, email: true, isOwner: true } });
   const ours = (n: string) => team.some((u) => u.name.toLowerCase() === n.trim().toLowerCase());
   // Our listing: "Presented by" one of us. A showing we booked for a buyer (owner request 2026-11-03): the listing
   // agent isn't one of us (one of our own listings is handled by its listing-side email).
-  if (e.side === "listing" && e.presentedBy && !ours(e.presentedBy)) return;
-  if (ours(e.agent.name) || team.some((u) => u.email.toLowerCase() === e.agent.email)) return;
+  if (e.side === "listing" && e.presentedBy && !ours(e.presentedBy)) return skip(`Not our listing ("Presented by ${e.presentedBy}").`);
+  if (ours(e.agent.name) || team.some((u) => u.email.toLowerCase() === e.agent.email)) return skip(`The showing agent is on our team (${e.agent.name}).`);
   const owner = team.find((u) => u.isOwner) ?? team[0];
-  if (!owner) return;
-  if (e.kind === "confirmed") await confirmed(e, owner.id, gmailId);
-  else await stopped(e, owner.id);
+  if (!owner) return skip("No owner in HQ.");
+  if (e.kind === "confirmed") {
+    const r = await confirmed(e, owner.id, gmailId);
+    await logShowingEmail({ ...base, result: r.added ? "added" : "skipped", why: r.why, personId: r.personId });
+  } else {
+    const r = await stopped(e, owner.id);
+    await logShowingEmail({ ...base, result: r.personId ? "updated" : "skipped", why: r.why, personId: r.personId });
+  }
 }
 
 /** A new showing: the agent (found, or added), the showing, a note, and the "When a showing is confirmed" checklists. */
 async function confirmed(e: ShowingEmail, ownerId: string, gmailId: string) {
-  if (await db.showing.findUnique({ where: { key: e.key }, select: { id: true } })) return; // already read (the same email in two inboxes, or synced twice)
+  const had = await db.showing.findUnique({ where: { key: e.key }, select: { agentId: true } });
+  if (had) return { added: false, why: "Already in HQ (the same email in two inboxes, or read twice).", personId: had.agentId }; // already read
   const mobile = normalizePhone(e.agent.mobile), office = normalizePhone(e.agent.office);
   const phones = [mobile, office].filter((n) => n.length === 10);
   const existing = e.agent.email || phones.length ? await db.person.findFirst({ where: { deletedAt: null, OR: [
@@ -72,18 +98,19 @@ async function confirmed(e: ShowingEmail, ownerId: string, gmailId: string) {
       : `New showing: ${e.agent.name} at ${e.address}, ${when(e)}` });
   }
   await logActivity(ownerId, "create", "showing", r.agentId, `Showing from ShowingTime: ${e.agent.name} at ${e.address}, ${when(e)}${r.created ? " (agent added)" : ""}${r.tasks ? `, ${r.tasks} steps` : ""} [${gmailId.slice(0, 6)}]`);
+  return { added: true, personId: r.agentId, why: `${e.side === "buyer" ? "Showing we booked" : "Showing on our listing"}: ${e.agent.name} at ${e.address}, ${when(e)}${r.created ? " (agent added as a contact)" : ""}. ${future ? (r.tasks ? `${r.tasks} checklist steps started.` : "No checklist applies (Checklists → \"When a showing is confirmed\").") : "Already past when HQ read it, so no checklist texts."}` };
 }
 
 /** Cancelled, or asked to move (the new time comes as its own confirmation): its texts are turned off. */
 async function stopped(e: ShowingEmail, ownerId: string) {
   const at = e.kind === "rescheduled" ? e.was : { date: e.date, start: e.start };
-  if (!at) return;
+  if (!at) return { personId: null, why: "No earlier time in the email to match." };
   // The same place and time, on either side: matched by house number and street, since offices write the address
   // differently ("Unit# #212", "Road" / "Rd") (owner report 2026-11-13).
   const key = streetKey(e.address)?.toLowerCase();
   const same = await db.showing.findMany({ where: { status: "confirmed", date: dateFromIso(at.date), start: at.start } });
   const s = same.find((x) => x.address.toLowerCase() === e.address.toLowerCase()) ?? (key ? same.find((x) => streetKey(x.address)?.toLowerCase() === key) : undefined);
-  if (!s) return;
+  if (!s) return { personId: null, why: `No matching showing in HQ to ${e.kind === "cancelled" ? "cancel" : "move"} (${e.address}).` };
   const status = e.kind === "cancelled" ? "cancelled" : "rescheduled";
   await db.$transaction(async (tx) => {
     await tx.showing.update({ where: { id: s.id }, data: { status } });
@@ -92,6 +119,7 @@ async function stopped(e: ShowingEmail, ownerId: string) {
     await tx.timelineEntry.create({ data: { personId: s.agentId, kind: "note", body: `Showing ${status} (ShowingTime): ${s.address}, ${when({ date: isoFromDate(s.date), start: s.start, end: s.end })}${status === "rescheduled" ? ". The new time starts again when it's confirmed." : ""}` } });
   });
   await logActivity(ownerId, "update", "showing", s.agentId, `Showing ${status}: ${s.address}, ${when({ date: isoFromDate(s.date), start: s.start, end: s.end })}`);
+  return { personId: s.agentId, why: `Showing ${status}: ${s.address}; its texts were turned off.` };
 }
 
 /** A contact's showings (as the buyer's agent on our listing, or the listing agent on one we showed), newest first, for the Showings card. */

@@ -1028,6 +1028,13 @@ in search, exports, the API, the text assistant or the Claude connector. Money l
 
 ### Showings from ShowingTime *(owner request 2026-11-01)*
 
+- **Admin → Showing emails** *(owner request 2026-11-23: "somewhere I can track this feature")*: each inbox HQ reads
+  (the shared Google connection and anyone's own Gmail) with "Read OK, last <time>" or why it couldn't read; and every
+  ShowingTime email HQ read (newest first, last 80) with what it did: **Added** (the showing, which contact, how many
+  checklist steps started, or "already past"), **Updated** (cancelled / rescheduled), **Skipped** and why (not a
+  confirmation HQ knows, not our listing, our own agent, already in HQ), or **Didn't work** and the error. **Look again
+  (last 3 days)** reads Gmail now; anything already in HQ is skipped. Subjects and outcomes only, never the email.
+
 - HQ reads ShowingTime's emails in the Gmail it already syncs (now also on the app's own minute timer, at most every 3
   minutes, so it works when nobody has HQ open). Only **"SHOWING CONFIRMED | …"** (also "2ND / 3RD … SHOWING CONFIRMED", a repeat visit, owner report 2026-11-09) (and the "CONFIRMED / CANCELLED / RESCHEDULED | Showing | <address> | <day>, <m/d> <time>" style some offices send, owner report 2026-11-13: a cancellation in that style was missed and the offer text still went; a cancellation is matched to its showing by house number, street, day and time, on either side) (someone showing one of our
   listings, "Presented by" a team member) and **"YOUR SHOWING CONFIRMED | …"** (a showing we booked for a buyer, owner

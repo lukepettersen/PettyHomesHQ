@@ -345,18 +345,50 @@ async function syncOne(c: { id: string; email: string; userId: string; scopes: s
     // Claim this run so two tabs don't sync at the same time.
     const claimed = await db.googleConnection.updateMany({ where: { id: c.id, gmailSyncedAt: last }, data: { gmailSyncedAt: new Date(now) } });
     if (!claimed.count) return 0;
-    try { return await syncSince(last ? last.getTime() - 10 * 60000 : now - FIRST_LOOKBACK, c.email, c.userId, c.id); }
-    catch (e) { await db.googleConnection.update({ where: { id: c.id }, data: { gmailSyncedAt: last } }); throw e; }
+    try { const n = await syncSince(last ? last.getTime() - 10 * 60000 : now - FIRST_LOOKBACK, c.email, c.userId, c.id); await gmailStatus(c.id, null); return n; }
+    catch (e) { await db.googleConnection.update({ where: { id: c.id }, data: { gmailSyncedAt: last } }); await gmailStatus(c.id, e instanceof Error ? e.message : "unknown error"); throw e; }
   } catch (e) {
     console.error("Gmail: sync failed", e instanceof Error ? e.message : "unknown");
     return 0;
   }
 }
 
+/** How each inbox's last Gmail read went (Admin → Showing emails, owner request 2026-11-23): AppSetting `gmail.status.<id>`. */
+async function gmailStatus(connId: string, error: string | null) {
+  const key = `gmail.status.${connId}`;
+  const prev = await db.appSetting.findUnique({ where: { key } }).catch(() => null);
+  const p = (prev?.value ?? {}) as { okAt?: string };
+  const value = error ? { okAt: p.okAt ?? null, errorAt: new Date().toISOString(), error: error.slice(0, 200) } : { okAt: new Date().toISOString(), errorAt: null, error: null };
+  await db.appSetting.upsert({ where: { key }, update: { value }, create: { key, value } }).catch(() => null);
+}
+export async function loadGmailStatus() {
+  const shared = await calendarConnection().catch(() => null);
+  const own = googleKeysSet() ? await db.googleConnection.findMany({ where: { id: { startsWith: "gmail:" } } }) : [];
+  const conns = [...(shared ? [shared] : []), ...own];
+  const rows = await db.appSetting.findMany({ where: { key: { in: conns.map((c) => `gmail.status.${c.id}`) } } });
+  return conns.map((c) => {
+    const v = (rows.find((r) => r.key === `gmail.status.${c.id}`)?.value ?? {}) as { okAt?: string | null; errorAt?: string | null; error?: string | null };
+    return { email: c.email, reads: hasScope(c, GMAIL_READ_SCOPE), shared: c.id === shared?.id, okAt: v.okAt ?? null, errorAt: v.errorAt ?? null, error: v.error ?? null };
+  });
+}
+/** "Look again": read the last `days` days of every connected inbox now (showings and emails already in HQ are skipped). */
+export async function rereadGmail(days = 3): Promise<number> {
+  const shared = await calendarConnection().catch(() => null);
+  const own = googleKeysSet() ? await db.googleConnection.findMany({ where: { id: { startsWith: "gmail:" } } }) : [];
+  let n = 0;
+  for (const c of [...(shared ? [shared] : []), ...own]) {
+    if (!hasScope(c, GMAIL_READ_SCOPE)) continue;
+    try { n += await syncSince(Date.now() - days * 86400000, c.email, c.userId, c.id); await gmailStatus(c.id, null); }
+    catch (e) { await gmailStatus(c.id, e instanceof Error ? e.message : "unknown error"); }
+  }
+  return n;
+}
+
 /** A ShowingTime email HQ couldn't handle: the owner hears about it in the bell (owner report 2026-11-15), so a showing
  *  is never missed silently. Only the subject and the error are kept, never the email itself. */
-async function showingEmailFailed(subject: string, e: unknown) {
+async function showingEmailFailed(subject: string, e: unknown, inbox = "") {
   const why = e instanceof Error ? e.message.split("\n").filter(Boolean).slice(-1)[0]?.slice(0, 160) ?? e.name : "unknown error";
+  await (await import("@/server/showings")).logShowingEmail({ received: new Date().toISOString(), subject, inbox, result: "failed", why });
   console.error("ShowingTime email:", e instanceof Error ? e.name : "error");
   const owner = await db.user.findFirst({ where: { isOwner: true }, select: { id: true } }).catch(() => null);
   if (owner) await db.notification.create({ data: { toId: owner.id, alert: true, text: `HQ couldn't read a ShowingTime email ("${subject.slice(0, 90)}"): ${why}. Tell Claude so it can be fixed.` } }).catch(() => null);
@@ -387,7 +419,7 @@ async function syncSince(fromMs: number, accountEmail: string, accountUserId: st
     const from = addressesIn(h("from")), to = addressesIn(`${h("to")}, ${h("cc")}`);
     const outbound = from.some((a) => team.has(a));
     // ShowingTime emails about showings on our listings (owner request 2026-11-01). Never stops the sync.
-    if (from.some((a) => a.endsWith("@showingtime.com"))) await (await import("@/server/showings")).onShowingEmail(id, h("subject"), messageFullText(m.payload ?? {}), new Date(Number(m.internalDate) || Date.now())).catch((e) => showingEmailFailed(h("subject"), e));
+    if (from.some((a) => a.endsWith("@showingtime.com"))) await (await import("@/server/showings")).onShowingEmail(id, h("subject"), messageFullText(m.payload ?? {}), new Date(Number(m.internalDate) || Date.now()), accountEmail).catch((e) => showingEmailFailed(h("subject"), e, accountEmail));
     const theirs = [...from, ...to].filter((a) => !team.has(a));
     if (!theirs.length) continue;
     const matches = await db.email.findMany({ where: { normalized: { in: theirs }, person: { deletedAt: null } }, select: { personId: true, normalized: true } });

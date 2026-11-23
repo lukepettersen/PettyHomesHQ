@@ -30,7 +30,8 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     { label: "Appointment types", href: "/admin/appointments", desc: "Phone call, consults, showing and your own" },
   ] },
   { name: "Connections & tools", icon: "🔌", blurb: "Outside services, shortcuts and bringing data in.", items: [
-    { label: "Integrations", href: "/admin/integrations", desc: "Google (calendar, email, sheet), texting & calls, file storage" },
+    { label: "Integrations", href: "/admin/integrations", desc: "Google (calendar, email), texting & calls, file storage" },
+    { label: "Showing emails", href: "/admin/showings", desc: "Is HQ reading Gmail, and what it did with each ShowingTime email" },
     { label: "Tools menu", href: "/admin/tools", desc: "Links in the Tools menu (MLS, Slack, Gmail…)" },
     { label: "Top bar", href: "/admin/topbar", desc: "The order of the tabs at the top (Whiteboard, Tasks, People…)" },
     { label: "Import address list", href: "/admin/address-list", desc: "A spreadsheet of names and addresses (holiday cards), matched to people already in HQ" },
