@@ -193,6 +193,9 @@ Principles:
   - Smart lists: filter builder with fields Stage, Tag, Source, Deal status, Follow-up,
     Last contact (more/less than N days), Due for a touch, Assigned to, **Has an upcoming
     task (yes/no)** *(new)*.
+  - *(2026-11-24)* **Upcoming task assigned to** "has none for / has one for" a teammate (or Nobody): e.g. "No upcoming
+    task for Luke" lists people with nothing coming up for Luke, even if Alyssa has tasks for them. Upcoming = open,
+    due today or later (the same as "Has an upcoming task").
   - *(2026-10-29)* **Pipeline status** "is any of / is none of": any buyer stage, seller stage or Under Contract
     column (a deal under contract counts in its column, not its old stage), or "No open deal".
   - *(2026-10-14)* More specific filters: Stage / Type / Source / Assigned to (incl. Nobody)

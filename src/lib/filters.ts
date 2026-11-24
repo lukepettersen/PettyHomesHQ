@@ -6,7 +6,7 @@ export type Filter = { field: FilterField; op: string; value: string };
 export type FilterField =
   | "stage" | "type" | "tag" | "source" | "assigned" | "followUp"
   | "lastContact" | "lastCall" | "lastText" | "lastEmail" | "created"
-  | "birthday" | "homeiversary" | "hasEmail" | "hasPhone" | "dueForTouch" | "upcomingTask" | "pipeline";
+  | "birthday" | "homeiversary" | "hasEmail" | "hasPhone" | "dueForTouch" | "upcomingTask" | "upcomingTaskFor" | "pipeline";
 
 export type PersonFacts = {
   stage: string | null;
@@ -22,6 +22,8 @@ export type PersonFacts = {
   createdAt?: Date | null;
   assignedTo: string | null; // user name
   hasUpcomingTask: boolean;
+  /** Who their upcoming tasks are assigned to (names; "Nobody" for unassigned), owner request 2026-11-24. */
+  upcomingTaskFor?: string[];
   hasEmail?: boolean;
   hasPhone?: boolean;
   birthdays?: string[]; // "MM-DD"
@@ -42,7 +44,7 @@ export const FIELD_LABELS: Record<FilterField, string> = {
   stage: "Stage", pipeline: "Pipeline status", type: "Type", tag: "Tags", source: "Source", assigned: "Assigned to", followUp: "Follow-up",
   lastContact: "Last contact (any)", lastCall: "Last call", lastText: "Last text", lastEmail: "Last email", created: "Added to HQ",
   birthday: "Birthday", homeiversary: "Homeiversary", hasEmail: "Has an email", hasPhone: "Has a phone",
-  dueForTouch: "Due for a touch", upcomingTask: "Has an upcoming task",
+  dueForTouch: "Due for a touch", upcomingTask: "Has an upcoming task", upcomingTaskFor: "Upcoming task assigned to",
 };
 
 const DAYS_OPS: [string, string][] = [["moreThan", "more than"], ["lessThan", "less than"], ["never", "never"]];
@@ -58,6 +60,8 @@ export const FIELD_OPS: Record<FilterField, [string, string][]> = {
   birthday: [["within", "in the next"]], homeiversary: [["within", "in the next"]],
   hasEmail: [["is", "is"]], hasPhone: [["is", "is"]], dueForTouch: [["is", "is"]], upcomingTask: [["is", "is"]],
   pipeline: [["isAny", "is any of"], ["isNot", "is none of"]],
+  // "Has no upcoming task for Luke" (owner request 2026-11-24: Alyssa's tasks shouldn't count).
+  upcomingTaskFor: [["hasNone", "has none for"], ["hasAny", "has one for"]],
 };
 /** Fields whose value is a number of days. */
 export const DAY_FIELDS: FilterField[] = ["lastContact", "lastCall", "lastText", "lastEmail", "created", "birthday", "homeiversary"];
@@ -126,6 +130,11 @@ export function matches(p: PersonFacts, f: Filter, now = new Date()): boolean {
     case "hasPhone": return !!p.hasPhone === yes;
     case "dueForTouch": return isDueForTouch(p, now) === yes;
     case "upcomingTask": return p.hasUpcomingTask === yes;
+    case "upcomingTaskFor": {
+      const mine = (p.upcomingTaskFor ?? []).map(lc);
+      const hit = vals.some((v) => mine.includes(v));
+      return f.op === "hasNone" ? !hit : hit;
+    }
     case "pipeline": {
       const mine = (p.pipeline ?? []).map((x) => x.toLowerCase());
       const hit = vals.some((v) => (v === "none" ? !mine.length : mine.includes(v)));
@@ -148,6 +157,7 @@ export function describeFilter(f: Filter): string {
   }
   if (f.field === "birthday" || f.field === "homeiversary") return `${FIELD_LABELS[f.field]} in the next ${f.value} days`;
   if (f.field === "followUp") return valuesOf(f).map((v) => (v === "none" ? "No follow-up set" : `Follow-up every ${v} days`)).join(" or ");
+  if (f.field === "upcomingTaskFor") return f.op === "hasNone" ? `No upcoming task for ${list}` : `Has an upcoming task for ${list}`;
   if (f.field === "pipeline") return `${FIELD_LABELS.pipeline} ${op} ${valuesOf(f).map(pipelineLabel).join(", ")}`;
   if (["dueForTouch", "upcomingTask", "hasEmail", "hasPhone"].includes(f.field)) return `${FIELD_LABELS[f.field]}: ${f.value === "yes" ? "yes" : "no"}`;
   return `${FIELD_LABELS[f.field]} ${op} ${list}`;

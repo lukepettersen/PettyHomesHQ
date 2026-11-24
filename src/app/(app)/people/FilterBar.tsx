@@ -17,6 +17,7 @@ function valuesFor(field: FilterField, o: FilterOptions): [string, string][] | n
     case "tag": return o.tags.map((s) => [s, s]);
     case "source": return o.sources.map((s) => [s, s]);
     case "assigned": return [["Nobody", "Nobody"], ...o.team.map((s) => [s, s] as [string, string])];
+    case "upcomingTaskFor": return [...o.team.map((s) => [s, s] as [string, string]), ["Nobody", "Nobody (unassigned)"]];
     case "followUp": return [["none", "Not set"], ...o.followUp.map((d) => [String(d), `Every ${d} days`] as [string, string])];
     case "dueForTouch": case "upcomingTask": case "hasEmail": case "hasPhone": return [["yes", "Yes"], ["no", "No"]];
     default: return null; // day fields: a number of days

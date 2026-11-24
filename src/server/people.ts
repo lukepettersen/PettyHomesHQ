@@ -54,6 +54,13 @@ export async function loadPeopleRows(): Promise<PersonRow[]> {
   for (const t of await db.task.findMany({ where: { personId: { not: null }, completedAt: null, deletedAt: null, ...LIVE_STEPS }, select: { personId: true, title: true, dueDate: true },
     orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }, { dueTime: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }] }))
     if (!nextTask.has(t.personId!)) nextTask.set(t.personId!, { title: t.title, due: t.dueDate ? isoFromDate(t.dueDate) : null });
+  // Who each person's upcoming tasks are for (the "Upcoming task assigned to" filter).
+  const taskFor = new Map<string, Set<string>>();
+  for (const t of await db.task.findMany({ where: { personId: { not: null }, completedAt: null, deletedAt: null, dueDate: { gte: today } }, select: { personId: true, assignee: { select: { name: true } } } })) {
+    const set = taskFor.get(t.personId!) ?? new Set<string>();
+    set.add(t.assignee?.name ?? "Nobody");
+    taskFor.set(t.personId!, set);
+  }
   const mmdd = (d: Date) => d.toISOString().slice(5, 10);
   // Where each open deal sits: its stage, or its Under Contract column once there's an active purchase agreement.
   const ucCols = await db.pipelineStatus.findMany({ where: { kind: "uc" }, orderBy: { position: "asc" }, select: { name: true, untilDate: true } });
@@ -73,6 +80,7 @@ export async function loadPeopleRows(): Promise<PersonRow[]> {
       lastContactAt: p.lastContactAt,
       assignedTo: p.assignedTo?.name ?? null,
       hasUpcomingTask: p._count.tasks > 0,
+      upcomingTaskFor: [...(taskFor.get(p.id) ?? [])],
       lastCallAt: lastBy.get(`${p.id}:call`) ?? null, lastTextAt: p.lastTextAt ?? lastBy.get(`${p.id}:text`) ?? null, touchAfter: p.touchAfter, lastEmailAt: lastBy.get(`${p.id}:email`) ?? null,
       createdAt: p.createdAt, hasEmail: p.emails.length > 0, hasPhone: p.phones.length > 0,
       birthdays: p.dates.filter((d) => d.kind === "birthday").map((d) => mmdd(d.date)),

@@ -83,3 +83,16 @@ describe("pipeline status filter", () => {
   });
 });
 
+
+describe("upcoming task assigned to (owner request 2026-11-24)", () => {
+  it("finds people with no upcoming task for Luke, whatever Alyssa has", async () => {
+    const { matches, describeFilter } = await import("./filters");
+    const base = { stage: null, type: null, source: null, tags: [], followUpDays: null, lastContactAt: null, assignedTo: null, hasUpcomingTask: true };
+    const f = { field: "upcomingTaskFor" as const, op: "hasNone", value: "Luke Pettersen" };
+    expect(matches({ ...base, upcomingTaskFor: ["Alyssa Chakiton"] }, f)).toBe(true);
+    expect(matches({ ...base, upcomingTaskFor: ["Luke Pettersen", "Alyssa Chakiton"] }, f)).toBe(false);
+    expect(matches({ ...base, hasUpcomingTask: false, upcomingTaskFor: [] }, f)).toBe(true);
+    expect(matches({ ...base, upcomingTaskFor: ["luke pettersen"] }, { ...f, op: "hasAny" })).toBe(true);
+    expect(describeFilter(f)).toBe("No upcoming task for Luke Pettersen");
+  });
+});
