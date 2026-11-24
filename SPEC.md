@@ -1537,3 +1537,9 @@ None right now. New ones get added here.
   fields and sending are unchanged. The "/" template shortcut is now only in text boxes; emails use the Template
   picker. **Preview** is a button next to Send (contact Email tab and Draft email): a pop-up with From, To, Subject
   and the email as it will arrive.
+
+- **Print labels for card tasks** *(owner request 2026-11-24)*: Tasks → Today → Important dates has **🖨 Labels**: the
+  open card tasks' names and addresses (the same name as on each task: one person, or the household for a child's
+  birthday) laid out for Avery 5160 / 8160 sheets (1" × 2⅝", 30 a sheet), no logo, long names shrink to fit; "Start at
+  label #" for a partly used sheet; people with no mailing address are skipped and counted. Prints from the browser
+  (Letter, 100%).

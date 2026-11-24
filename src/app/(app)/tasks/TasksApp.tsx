@@ -7,6 +7,7 @@ import type { DoneRow, ListRow, TaskRow, TeamMember, TouchRow } from "@/server/t
 import { diffDays, formatTime, longIso, parseQuickAdd, PRIORITIES, repeatLabel, VIEW_COOKIE, WHO_COOKIE } from "@/lib/tasks";
 import { completeDateTask, completeTask, createList, deleteList, logTouch, quickAddTask, spreadTouches, unspreadTouches, renameList, reopenTask, setListOnToday } from "./actions";
 import { ArrangeLists } from "./ArrangeLists";
+import { PrintLabels } from "./PrintLabels";
 import { TaskDetail } from "./TaskDetail";
 import { PersonLink, TaskLine, Toast } from "./parts";
 import { saveTrail } from "@/components/TaskTrail";
@@ -220,7 +221,8 @@ export function TasksApp(p: Props) {
             const late = items.some((t) => !t.done && t.due! < p.today);
             return (
               <section key={k} className="flex flex-col">
-                <h3 className={`mb-1.5 flex gap-2 text-xs font-semibold tracking-wider ${late ? "text-bad" : "muted"}`}>{head}<span className="font-medium">{items.filter((t) => !t.done).length || ""}</span></h3>
+                <h3 className={`mb-1.5 flex gap-2 text-xs font-semibold tracking-wider ${late ? "text-bad" : "muted"}`}>{head}<span className="font-medium">{items.filter((t) => !t.done).length || ""}</span>
+                  {k === "dates" && <span className="ml-auto"><PrintLabels rows={items.filter((t) => !t.done && t.mailTo).map((t) => t.mailTo!)} /></span>}</h3>
                 {box(items.length ? items.map((t) => line(t, true, true)) : <div className="px-3 py-2.5 text-sm muted">Nothing due</div>)}
               </section>
             );
