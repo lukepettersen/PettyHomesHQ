@@ -75,3 +75,15 @@ export async function loadFileForm(kind: FileKind): Promise<FileSection[]> {
   if (Array.isArray(row?.sections)) return row.sections as unknown as FileSection[];
   return defaultFileForm(kind, await db.pipelineStatus.findMany({ where: { kind }, orderBy: { position: "asc" } }));
 }
+
+/** The Pipeline ticker (owner request 2026-11-24): which stages a person wants counted across the top, as
+ *  "buyer:<statusId>" / "listing:<statusId>" / "uc:<statusId>". AppSetting `pipeline.ticker.<userId>`. */
+export async function loadTicker(userId: string): Promise<string[]> {
+  const row = await db.appSetting.findUnique({ where: { key: `pipeline.ticker.${userId}` } });
+  return Array.isArray(row?.value) ? (row!.value as unknown[]).filter((x): x is string => typeof x === "string" && /^(buyer|listing|uc):[\w-]{1,40}$/.test(x)).slice(0, 30) : [];
+}
+export async function saveTicker(userId: string, keys: string[]) {
+  const valid = new Set((await db.pipelineStatus.findMany({ select: { id: true, kind: true } })).map((s) => `${s.kind}:${s.id}`));
+  const value = [...new Set(keys)].filter((k) => valid.has(k)).slice(0, 30);
+  await db.appSetting.upsert({ where: { key: `pipeline.ticker.${userId}` }, update: { value }, create: { key: `pipeline.ticker.${userId}`, value } });
+}

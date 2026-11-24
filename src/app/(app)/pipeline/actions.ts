@@ -7,7 +7,7 @@ import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { hasPermission } from "@/server/permissions";
 import { cleanFileAnswers, type FileKind } from "@/lib/files";
-import { loadFileForm } from "@/server/files";
+import { loadFileForm, saveTicker } from "@/server/files";
 import { syncContract } from "@/server/google";
 import { isoFromDate, todayCentral } from "@/lib/normalize";
 import { factsOf, moveFile, redateConsult, runTrigger } from "@/server/automation";
@@ -243,5 +243,14 @@ export async function saveFileForm(input: { kind: string; sections: unknown }) {
     await db.fileFormDef.upsert({ where: { kind }, update: { sections }, create: { kind, sections } });
     await logActivity(user.id, "update", "fileForm", kind, `Saved the ${kind} form (${sections.length} sections)`);
     revalidatePath("/admin/file-forms");
+  });
+}
+
+// ---------- Ticker (owner request 2026-11-24): the stages counted across the top of Pipeline, per person ----------
+export async function saveTickerAction(keys: unknown) {
+  return guarded(null, async (user) => {
+    const v = z.array(z.string().regex(/^(buyer|listing|uc):[\w-]{1,40}$/)).max(30).parse(keys);
+    await saveTicker(user.id, v);
+    revalidatePath("/pipeline");
   });
 }

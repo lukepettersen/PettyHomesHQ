@@ -570,6 +570,10 @@ scrolls with it until its last card is on screen, then stays put while the middl
 
 ### 7.3 Pipeline page (board; drag to move)
 - Tabs: **Buyers · Sellers · Under Contract/Pending**, each with counts.
+- **Ticker** *(owner request 2026-11-24)*: a row of counts at the top of Pipeline for the stages each person picks
+  ("Edit ticker": tick any buyer, seller or Under Contract stage; saved per person, AppSetting
+  `pipeline.ticker.<userId>`). Each shows the number of clients in that stage (Under Contract also the dollar total);
+  clicking one opens its tab. Empty stages on the board are about half as wide, so stages with clients get the room.
 - **Drag to move** *(owner request 2026-11-24)*: on Buyers and Sellers, drag a card to another stage; it moves at once
   and saves the same way as changing the status on the client's page (that stage's checklist starts, activity logged);
   a line says "<name> moved to <stage> (N checklist tasks added)". Under Contract is grouped by contract dates, so it

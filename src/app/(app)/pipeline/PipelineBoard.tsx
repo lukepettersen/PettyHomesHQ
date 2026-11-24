@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { setFileStatus } from "./actions";
+import { saveTickerAction, setFileStatus } from "./actions";
 import { initials } from "@/lib/normalize";
 import { fileLine, health, HEALTH_LABEL, kMoney, shortDay } from "@/lib/files";
 import { diffDays } from "@/lib/tasks";
@@ -15,7 +15,7 @@ const BAR = ["bg-misty", "bg-mint", "bg-moss"];
 
 /** Where each client is (SPEC.md §7.3). Drag a buyer or seller card to another stage to move it (owner request 2026-11-24);
  *  that runs the same move as the status on their page (checklists included). */
-export function PipelineBoard({ cards, contracts, closed, statuses, today, initialTab, canEditStages }: { cards: PipelineCard[]; contracts: ContractCard[]; closed: ContractCard[]; statuses: Record<"buyer" | "listing" | "uc", StatusRow[]>; today: string; initialTab: Tab; canEditStages: boolean }) {
+export function PipelineBoard({ cards, contracts, closed, statuses, today, initialTab, canEditStages, ticker }: { ticker: string[]; cards: PipelineCard[]; contracts: ContractCard[]; closed: ContractCard[]; statuses: Record<"buyer" | "listing" | "uc", StatusRow[]>; today: string; initialTab: Tab; canEditStages: boolean }) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState<string[]>([]); // columns showing all their cards ("+N more")
@@ -57,6 +57,9 @@ export function PipelineBoard({ cards, contracts, closed, statuses, today, initi
         <div className="flex items-baseline gap-3"><h1 className="text-2xl font-extrabold sm:text-[28px]">Pipeline</h1><span className="text-sm muted">{volume ? kMoney(volume) : "$0"} under contract</span></div>
         {canEditStages && !editing && <button type="button" className="btn" onClick={() => setEditing(true)}>Edit stages</button>}
       </div>
+      <Ticker keys={ticker} statuses={statuses} count={(kind, id) => kind === "uc" ? contracts.filter((c) => c.columnId === id).length : (kind === "buyer" ? buyers : sellers).filter((c) => c.statusId === id).length}
+        volume={(kind, id) => kind === "uc" ? contracts.filter((c) => c.columnId === id).reduce((t, c) => t + c.price, 0) : 0}
+        onOpen={(kind) => setTab(kind === "buyer" ? "buyers" : kind === "listing" ? "sellers" : "uc")} />
       <div role="tablist" aria-label="Pipeline" className="mt-3 flex gap-1 overflow-x-auto border-b border-misty">
         {tabs.map(([k, l, n]) => (
           <button key={k} role="tab" type="button" aria-selected={tab === k} disabled={editing} onClick={() => setTab(k)}
@@ -73,9 +76,9 @@ export function PipelineBoard({ cards, contracts, closed, statuses, today, initi
       {editing ? (
         <StageEditor kind={statusKind} rows={statuses[statusKind]} counts={Object.fromEntries(columns.map((c) => [c.key, c.items.length]))} onDone={() => setEditing(false)} />
       ) : (
-        // Every stage is a column sharing the width evenly, all in one row with no scrolling (owner request 2026-11-24;
-        // cards trimmed to one line each to fit); 8 cards a column then "+N more". Phones: one column.
-        <div className="mt-3 grid items-start gap-1 pb-3 max-md:!grid-cols-1" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}>
+        // Every stage is a column, all in one row with no scrolling (owner request 2026-11-24; cards trimmed to one line
+        // each); empty stages are about half as wide so the ones with clients get the room; 8 cards a column then "+N more".
+        <div className="mt-3 grid items-start gap-1 pb-3 max-md:!grid-cols-1" style={{ gridTemplateColumns: columns.map((c) => (c.items.length ? "minmax(0, 1fr)" : "minmax(0, 0.55fr)")).join(" ") }}>
           {columns.map((c, i) => {
             const total = c.items.reduce((t, x) => t + (x.price ?? 0), 0);
             const all = expanded.includes(c.key), shown = all ? c.items : c.items.slice(0, 8);
@@ -88,7 +91,7 @@ export function PipelineBoard({ cards, contracts, closed, statuses, today, initi
                 <div className="flex items-baseline justify-between gap-1 border-b border-misty bg-white px-1.5 py-1 text-[12px]" title={c.name}><b className="leading-tight">{c.name}</b><span className="flex-none text-[11px] muted">{c.items.length}{total ? ` · ${kMoney(total)}` : ""}</span></div>
                 <div className="flex flex-col gap-0.5 p-0.5">
                   {shown.map((x) => "fileId" in x ? <ContractTile key={x.id} card={x} today={today} closed={!!c.closed} /> : <Card key={x.id} card={x} today={today} onDrag={(on) => setDragging(on ? x.id : null)} />)}
-                  {!c.items.length && <span className="py-2 text-center text-xs muted">Empty</span>}
+                  {!c.items.length && <span className="py-2 text-center text-xs muted">—</span>}
                   {c.items.length > 8 && <button type="button" className="py-0.5 text-xs font-semibold text-accent hover:underline" onClick={() => setExpanded(all ? expanded.filter((k) => k !== c.key) : [...expanded, c.key])}>{all ? "Show fewer" : `+${c.items.length - 8} more`}</button>}
                 </div>
               </section>
@@ -144,5 +147,53 @@ function ContractTile({ card, today, closed }: { card: ContractCard; today: stri
       <span className="truncate text-[11px] muted">{card.personName} · {kMoney(card.price)}{closed ? ` · Closed ${card.endedOn ? shortDay(card.endedOn) : ""}` : card.dates.closing ? ` · Closing ${shortDay(card.dates.closing)}` : ""}</span>
       {!closed && <Next n={card.nextTask} today={today} />}
     </Link>
+  );
+}
+
+const KIND_LABEL = { buyer: "Buyer", listing: "Seller", uc: "Under contract" } as const;
+type Kind = keyof typeof KIND_LABEL;
+
+/** The ticker (owner request 2026-11-24): a count for each stage you pick, across the top; "Edit ticker" to choose. */
+function Ticker({ keys, statuses, count, volume, onOpen }: { keys: string[]; statuses: Record<Kind, StatusRow[]>; count: (k: Kind, id: string) => number; volume: (k: Kind, id: string) => number; onOpen: (k: Kind) => void }) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [picked, setPicked] = useState<string[]>(keys);
+  const [error, setError] = useState("");
+  const [pending, start] = useTransition();
+  const items = keys.map((k) => { const [kind, id] = k.split(":") as [Kind, string]; const s = statuses[kind]?.find((x) => x.id === id); return s ? { k, kind, id, name: s.name } : null; }).filter((x): x is NonNullable<typeof x> => !!x);
+  const dup = (name: string) => items.filter((x) => x.name === name).length > 1;
+  const save = () => start(async () => { setError(""); const r = await saveTickerAction(picked); if (!r.ok) { setError(r.error); return; } setEditing(false); router.refresh(); });
+  return (
+    <div className="mt-3">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {items.map((x) => {
+          const n = count(x.kind, x.id), v = volume(x.kind, x.id);
+          return (
+            <button key={x.k} type="button" onClick={() => onOpen(x.kind)} title={`${KIND_LABEL[x.kind]} · ${x.name}: open that tab`}
+              className="flex items-baseline gap-1.5 rounded-lg border border-misty bg-white px-3 py-1.5 hover:border-accent">
+              <b className="text-lg leading-none">{n}</b>
+              <span className="text-xs">{x.name}{dup(x.name) ? ` (${KIND_LABEL[x.kind].toLowerCase()})` : ""}{v ? ` · ${kMoney(v)}` : ""}</span>
+            </button>
+          );
+        })}
+        <button type="button" className="text-xs font-semibold text-accent hover:underline" onClick={() => { setPicked(keys); setEditing(!editing); }}>{items.length ? "Edit ticker" : "+ Add a ticker of stage counts"}</button>
+      </div>
+      {editing && (
+        <div className="card mt-2 p-3 text-sm">
+          <p className="font-semibold">Count these stages at the top</p>
+          <div className="mt-2 grid gap-3 sm:grid-cols-3">
+            {(["buyer", "listing", "uc"] as Kind[]).map((kind) => (
+              <fieldset key={kind}><legend className="mb-1 text-xs font-semibold uppercase muted">{kind === "buyer" ? "Buyers" : kind === "listing" ? "Sellers" : "Under contract"}</legend>
+                {statuses[kind].map((s) => { const k = `${kind}:${s.id}`; return (
+                  <label key={k} className="flex items-center gap-2 py-0.5"><input type="checkbox" checked={picked.includes(k)} onChange={(e) => setPicked(e.target.checked ? [...picked, k] : picked.filter((x) => x !== k))} />{s.name}</label>
+                ); })}
+              </fieldset>
+            ))}
+          </div>
+          {error && <p role="alert" className="mt-2 text-bad">{error}</p>}
+          <div className="mt-3 flex gap-2"><button type="button" className="btn btn-primary" disabled={pending} onClick={save}>Save</button><button type="button" className="btn" disabled={pending} onClick={() => setEditing(false)}>Cancel</button></div>
+        </div>
+      )}
+    </div>
   );
 }
