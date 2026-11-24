@@ -62,7 +62,7 @@ Principles:
 - Google sign-in only, `@pettyhomes.com` only; no passwords stored. Owner and assistant turn
   on Google 2-step verification.
 - **Staying signed in** *(2026-10-14)*: the sign-in page has **"Keep me signed in on this
-  device"** (unticked by default). Ticked: that browser stays signed in up to 400 days (the
+  device"** (ticked by default since 2026-11-24, owner: "we keep getting logged out every morning"). Ticked: that browser stays signed in up to 400 days (the
   browser limit). Unticked: signed out 12 hours after signing in. Removing or disabling a
   user in Admin still locks them out immediately on every device.
 - Secrets (Google client, Twilio, storage, Anthropic, database) live only in Railway environment

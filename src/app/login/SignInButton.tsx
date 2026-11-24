@@ -6,7 +6,7 @@ import { REMEMBER_COOKIE } from "@/lib/session";
 
 export function SignInButton({ next = "/" }: { next?: string }) {
   const [busy, setBusy] = useState(false);
-  const [remember, setRemember] = useState(false);
+  const [remember, setRemember] = useState(true); // ticked by default (owner 2026-11-24: signed out every morning)
   const go = () => {
     // Read by the server when Google sends you back; only says whether to keep this device signed in.
     document.cookie = remember ? `${REMEMBER_COOKIE}=1; path=/; max-age=900; samesite=lax${location.protocol === "https:" ? "; secure" : ""}` : `${REMEMBER_COOKIE}=; path=/; max-age=0`;
@@ -23,7 +23,7 @@ export function SignInButton({ next = "/" }: { next?: string }) {
     >
       {busy ? "Opening Google…" : "Sign in with Google"}
     </button>
-    <p className="mt-2 text-xs muted">Leave it unticked on shared computers: you&apos;ll be signed out after 12 hours.</p>
+    <p className="mt-2 text-xs muted">On a shared computer, untick it: you&apos;ll be signed out after 12 hours.</p>
     </>
   );
 }
