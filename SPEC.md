@@ -568,11 +568,16 @@ scrolls with it until its last card is on screen, then stays put while the middl
   automatic **Closed in {year}** column (owner's choice, 2026-10-14). A contract sits in the
   first column whose date is still open; with nothing open it sits in the last column.
 
-### 7.3 Pipeline page (read-only board)
+### 7.3 Pipeline page (board; drag to move)
 - Tabs: **Buyers · Sellers · Under Contract/Pending**, each with counts.
+- **Drag to move** *(owner request 2026-11-24)*: on Buyers and Sellers, drag a card to another stage; it moves at once
+  and saves the same way as changing the status on the client's page (that stage's checklist starts, activity logged);
+  a line says "<name> moved to <stage> (N checklist tasks added)". Under Contract is grouped by contract dates, so it
+  doesn't drag.
 - **Fits on one screen** *(owner chose Option A, 2026-10-28)*: every stage is a column, empty or not, all sharing the
-  page width evenly; with more than 6 stages they wrap into two rows (e.g. 10 seller stages = two rows of 5) so the
-  columns stay wide enough to read (owner request 2026-10-28); on a phone they stack; each column shows 8 cards, then "+N more" (Show fewer folds it back). Column
+  page width evenly, **all in one row with no scrolling** (owner request 2026-11-24; this replaced the two rows for
+  more than 6 stages): cards are trimmed to one line each (name, then the next task and date; hover for the whole
+  text); on a phone they stack; each column shows 8 cards, then "+N more" (Show fewer folds it back). Column
   headers show the count, and the dollar total only when there is one.
 - Compact cards: client (sellers: the address, then the client and days on market) with a health dot (on track /
   something overdue / behind), then the next task (red when late) with assignee initials. Deal notes show on hover.
