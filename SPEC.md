@@ -1546,4 +1546,4 @@ None right now. New ones get added here.
   (5¾" × 4¼"), landscape, one a page,
   the recipient in the middle and the return address small at the top left (editable in the pop-up, remembered in
   AppSetting `cards.returnAddress`; starts as "Petty Homes" and the mass-email mailing address). The last choice
-  (labels or envelopes, and the envelope size) is remembered on that computer.
+  (labels or envelopes, and the envelope size; A2 to start) is remembered on that computer.

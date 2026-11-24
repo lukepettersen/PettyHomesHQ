@@ -14,7 +14,7 @@ export function PrintLabels({ rows, returnAddress }: { rows: { name: string; add
   // Labels, or straight onto A7 envelopes with the return address (owner request 2026-11-24); remembered on this computer.
   const [on, setOn] = useState<"labels" | "envelopes">(() => { try { return localStorage.getItem("hq.cardPrint") === "envelopes" ? "envelopes" : "labels"; } catch { return "labels"; } });
   const [ret, setRet] = useState(returnAddress);
-  const [size, setSize] = useState<EnvelopeSize>(() => { try { const v = localStorage.getItem("hq.envelopeSize"); return v && v in ENVELOPES ? (v as EnvelopeSize) : "a7"; } catch { return "a7"; } });
+  const [size, setSize] = useState<EnvelopeSize>(() => { try { const v = localStorage.getItem("hq.envelopeSize"); return v && v in ENVELOPES ? (v as EnvelopeSize) : "small"; } catch { return "small"; } });
   const ok = rows.filter((r) => r.address?.trim());
   const missing = rows.length - ok.length;
   if (!rows.length) return null;
