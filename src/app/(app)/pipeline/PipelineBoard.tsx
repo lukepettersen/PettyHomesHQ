@@ -18,7 +18,6 @@ const BAR = ["bg-misty", "bg-mint", "bg-moss"];
 export function PipelineBoard({ cards, contracts, closed, statuses, today, initialTab, canEditStages, ticker }: { ticker: string[]; cards: PipelineCard[]; contracts: ContractCard[]; closed: ContractCard[]; statuses: Record<"buyer" | "listing" | "uc", StatusRow[]>; today: string; initialTab: Tab; canEditStages: boolean }) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [editing, setEditing] = useState(false);
-  const [expanded, setExpanded] = useState<string[]>([]); // columns showing all their cards ("+N more")
   const router = useRouter();
   const [moved, setMoved] = useState<Record<string, string>>({}); // fileId → stage, shown at once while the move saves
   const [dragging, setDragging] = useState<string | null>(null);
@@ -77,11 +76,11 @@ export function PipelineBoard({ cards, contracts, closed, statuses, today, initi
         <StageEditor kind={statusKind} rows={statuses[statusKind]} counts={Object.fromEntries(columns.map((c) => [c.key, c.items.length]))} onDone={() => setEditing(false)} />
       ) : (
         // Every stage is a column, all in one row with no scrolling (owner request 2026-11-24; cards trimmed to one line
-        // each); empty stages are about half as wide so the ones with clients get the room; 8 cards a column then "+N more".
-        <div className="mt-3 grid items-start gap-1 pb-3 max-md:!grid-cols-1" style={{ gridTemplateColumns: columns.map((c) => (c.items.length ? "minmax(0, 1fr)" : "minmax(0, 0.55fr)")).join(" ") }}>
+        // each); empty stages are about half as wide so the ones with clients get the room; every card shows.
+        <div className="mt-3 grid w-full items-start gap-1 pb-3 max-md:!grid-cols-1" style={{ gridTemplateColumns: columns.map((c) => (c.items.length ? "minmax(0, 1fr)" : "minmax(0, 0.55fr)")).join(" ") }}>
           {columns.map((c, i) => {
             const total = c.items.reduce((t, x) => t + (x.price ?? 0), 0);
-            const all = expanded.includes(c.key), shown = all ? c.items : c.items.slice(0, 8);
+            const shown = c.items; // every card shows (owner request 2026-11-24: "should always show all")
             return (
               <section key={c.key} aria-label={c.name} className={`flex min-w-0 flex-col overflow-hidden rounded-lg border bg-sunken ${over === c.key && dragging ? "border-accent ring-2 ring-accent/40" : "border-misty"}`}
                 onDragOver={(e) => { if (!dragging || tab === "uc" || c.key === "none") return; e.preventDefault(); setOver(c.key); }}
@@ -92,7 +91,6 @@ export function PipelineBoard({ cards, contracts, closed, statuses, today, initi
                 <div className="flex flex-col gap-0.5 p-0.5">
                   {shown.map((x) => "fileId" in x ? <ContractTile key={x.id} card={x} today={today} closed={!!c.closed} /> : <Card key={x.id} card={x} today={today} onDrag={(on) => setDragging(on ? x.id : null)} />)}
                   {!c.items.length && <span className="py-2 text-center text-xs muted">—</span>}
-                  {c.items.length > 8 && <button type="button" className="py-0.5 text-xs font-semibold text-accent hover:underline" onClick={() => setExpanded(all ? expanded.filter((k) => k !== c.key) : [...expanded, c.key])}>{all ? "Show fewer" : `+${c.items.length - 8} more`}</button>}
                 </div>
               </section>
             );

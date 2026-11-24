@@ -581,7 +581,7 @@ scrolls with it until its last card is on screen, then stays put while the middl
 - **Fits on one screen** *(owner chose Option A, 2026-10-28)*: every stage is a column, empty or not, all sharing the
   page width evenly, **all in one row with no scrolling** (owner request 2026-11-24; this replaced the two rows for
   more than 6 stages): cards are trimmed to one line each (name, then the next task and date; hover for the whole
-  text); on a phone they stack; each column shows 8 cards, then "+N more" (Show fewer folds it back). Column
+  text); on a phone they stack; every card shows (owner request 2026-11-24; no "+N more"). Column
   headers show the count, and the dollar total only when there is one.
 - Compact cards: client (sellers: the address, then the client and days on market) with a health dot (on track /
   something overdue / behind), then the next task (red when late) with assignee initials. Deal notes show on hover.
