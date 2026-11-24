@@ -16,3 +16,14 @@ describe("mailing labels (owner request 2026-11-24)", () => {
     expect((html.match(/class="label"/g) ?? []).length).toBe(33);
   });
 });
+
+describe("envelopes (owner request 2026-11-24)", () => {
+  it("one A7 envelope a person, with the return address", async () => {
+    const { envelopesHtml } = await import("./labels");
+    const html = envelopesHtml([{ name: "Alexa Klos", address: "5533 Emerson Ave S, Minneapolis, MN 55419" }, { name: "Nope", address: "" }], "Petty Homes\n123 Main St\nEdina, MN 55410");
+    expect((html.match(/class="env"/g) ?? []).length).toBe(1);
+    expect(html).toContain("size: 7.25in 5.25in");
+    expect(html).toContain("<div>Petty Homes</div><div>123 Main St</div>");
+    expect(html).toContain("<div>Minneapolis, MN 55419</div>");
+  });
+});

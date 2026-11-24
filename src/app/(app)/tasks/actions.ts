@@ -329,3 +329,12 @@ export async function applyTemplateToPerson(input: z.input<typeof applySchema>) 
     return { count: n, name: t.name };
   });
 }
+
+/** The return address printed on card envelopes (owner request 2026-11-24): AppSetting `cards.returnAddress`. */
+export async function saveReturnAddress(text: string) {
+  return guarded(null, async (user) => {
+    const value = z.string().max(300).parse(text).split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 4).join("\n");
+    await db.appSetting.upsert({ where: { key: "cards.returnAddress" }, update: { value }, create: { key: "cards.returnAddress", value } });
+    await logActivity(user.id, "update", "setting", null, "Changed the return address for card envelopes");
+  });
+}

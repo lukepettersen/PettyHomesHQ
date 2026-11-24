@@ -39,3 +39,26 @@ body { font-family: Helvetica, Arial, sans-serif; color: #000; }
 @media screen { body { background: #ddd; } .sheet { background: #fff; margin: 0.25in auto; box-shadow: 0 1px 4px rgba(0,0,0,.25); } .label { outline: 1px dashed #ccc; } }
 </style></head><body>${pages.join("")}<script>window.onload = () => setTimeout(() => window.print(), 300);</script></body></html>`;
 }
+
+/** Envelopes printed directly (owner request 2026-11-24): A7 (7¼" × 5¼", landscape), one a page, the return address
+ *  small at the top left and the recipient in the middle, as the post office likes it. No logo. */
+export function envelopesHtml(rows: LabelRow[], returnAddress: string): string {
+  const list = rows.filter((r) => r.address?.trim());
+  const ret = returnAddress.split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 4);
+  const pages = list.map((r) => {
+    const lines = [r.name, ...addressLines(r.address!)];
+    return `<section class="env">${ret.length ? `<div class="ret">${ret.map((l) => `<div>${esc(l)}</div>`).join("")}</div>` : ""}<div class="to${Math.max(...lines.map((l) => l.length)) > 36 ? " s" : ""}">${lines.map((l) => `<div>${esc(l)}</div>`).join("")}</div></section>`;
+  });
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Envelopes</title><style>
+@page { size: 7.25in 5.25in; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Helvetica, Arial, sans-serif; color: #000; }
+.env { position: relative; width: 7.25in; height: 5.25in; page-break-after: always; overflow: hidden; }
+.env:last-child { page-break-after: auto; }
+.ret { position: absolute; left: 0.4in; top: 0.35in; font-size: 9pt; line-height: 1.25; }
+.to { position: absolute; left: 2.6in; top: 2.15in; width: 4.3in; font-size: 13pt; line-height: 1.3; }
+.to.s { font-size: 11pt; }
+.to div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media screen { body { background: #ddd; } .env { background: #fff; margin: 0.25in auto; box-shadow: 0 1px 4px rgba(0,0,0,.25); } }
+</style></head><body>${pages.join("")}<script>window.onload = () => setTimeout(() => window.print(), 300);</script></body></html>`;
+}

@@ -12,7 +12,7 @@ import { TaskDetail } from "./TaskDetail";
 import { PersonLink, TaskLine, Toast } from "./parts";
 import { saveTrail } from "@/components/TaskTrail";
 
-type Props = { today: string; team: TeamMember[]; lists: ListRow[]; tasks: TaskRow[]; doneToday: DoneRow[]; touches: TouchRow[]; waiting: number; spreadable: number; weekend: boolean; meId: string; initialView: string; initialWho: string; initialTask: string | null };
+type Props = { returnAddress: string; today: string; team: TeamMember[]; lists: ListRow[]; tasks: TaskRow[]; doneToday: DoneRow[]; touches: TouchRow[]; waiting: number; spreadable: number; weekend: boolean; meId: string; initialView: string; initialWho: string; initialTask: string | null };
 type Done = { row: TaskRow; realId: string; nextId: string | null };
 
 const keyOf = (l: ListRow) => l.builtin ?? `list:${l.id}`;
@@ -222,7 +222,7 @@ export function TasksApp(p: Props) {
             return (
               <section key={k} className="flex flex-col">
                 <h3 className={`mb-1.5 flex gap-2 text-xs font-semibold tracking-wider ${late ? "text-bad" : "muted"}`}>{head}<span className="font-medium">{items.filter((t) => !t.done).length || ""}</span>
-                  {k === "dates" && <span className="ml-auto"><PrintLabels rows={items.filter((t) => !t.done && t.mailTo).map((t) => t.mailTo!)} /></span>}</h3>
+                  {k === "dates" && <span className="ml-auto"><PrintLabels rows={items.filter((t) => !t.done && t.mailTo).map((t) => t.mailTo!)} returnAddress={p.returnAddress} /></span>}</h3>
                 {box(items.length ? items.map((t) => line(t, true, true)) : <div className="px-3 py-2.5 text-sm muted">Nothing due</div>)}
               </section>
             );
