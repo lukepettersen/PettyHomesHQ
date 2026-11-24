@@ -40,9 +40,18 @@ body { font-family: Helvetica, Arial, sans-serif; color: #000; }
 </style></head><body>${pages.join("")}<script>window.onload = () => setTimeout(() => window.print(), 300);</script></body></html>`;
 }
 
-/** Envelopes printed directly (owner request 2026-11-24): A7 (7¼" × 5¼", landscape), one a page, the return address
+/** Envelopes printed directly (owner request 2026-11-24): A7, long (9½" × 4") or small (5¾" × 4¼"), landscape, one a page, the return address
  *  small at the top left and the recipient in the middle, as the post office likes it. No logo. */
-export function envelopesHtml(rows: LabelRow[], returnAddress: string): string {
+export const ENVELOPES = {
+  a7: { label: 'A7 (7¼" × 5¼")', w: 7.25, h: 5.25 },
+  long: { label: '#10 (9½" × 4")', w: 9.5, h: 4 },
+  small: { label: 'A2 (5¾" × 4¼")', w: 5.75, h: 4.25 },
+} as const;
+export type EnvelopeSize = keyof typeof ENVELOPES;
+export function envelopesHtml(rows: LabelRow[], returnAddress: string, size: EnvelopeSize = "a7"): string {
+  const { w, h } = ENVELOPES[size] ?? ENVELOPES.a7;
+  // The recipient a little left of center and just below the middle; the return address in the top-left corner.
+  const toLeft = (w * 0.36).toFixed(2), toTop = (h * 0.42).toFixed(2), toWidth = (w - w * 0.36 - 0.3).toFixed(2), big = w >= 7 ? 13 : 11.5;
   const list = rows.filter((r) => r.address?.trim());
   const ret = returnAddress.split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 4);
   const pages = list.map((r) => {
@@ -50,14 +59,14 @@ export function envelopesHtml(rows: LabelRow[], returnAddress: string): string {
     return `<section class="env">${ret.length ? `<div class="ret">${ret.map((l) => `<div>${esc(l)}</div>`).join("")}</div>` : ""}<div class="to${Math.max(...lines.map((l) => l.length)) > 36 ? " s" : ""}">${lines.map((l) => `<div>${esc(l)}</div>`).join("")}</div></section>`;
   });
   return `<!doctype html><html><head><meta charset="utf-8"><title>Envelopes</title><style>
-@page { size: 7.25in 5.25in; margin: 0; }
+@page { size: ${w}in ${h}in; margin: 0; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: Helvetica, Arial, sans-serif; color: #000; }
-.env { position: relative; width: 7.25in; height: 5.25in; page-break-after: always; overflow: hidden; }
+.env { position: relative; width: ${w}in; height: ${h}in; page-break-after: always; overflow: hidden; }
 .env:last-child { page-break-after: auto; }
-.ret { position: absolute; left: 0.4in; top: 0.35in; font-size: 9pt; line-height: 1.25; }
-.to { position: absolute; left: 2.6in; top: 2.15in; width: 4.3in; font-size: 13pt; line-height: 1.3; }
-.to.s { font-size: 11pt; }
+.ret { position: absolute; left: 0.35in; top: 0.3in; font-size: ${w >= 7 ? 9 : 8}pt; line-height: 1.25; }
+.to { position: absolute; left: ${toLeft}in; top: ${toTop}in; width: ${toWidth}in; font-size: ${big}pt; line-height: 1.3; }
+.to.s { font-size: ${big - 2}pt; }
 .to div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media screen { body { background: #ddd; } .env { background: #fff; margin: 0.25in auto; box-shadow: 0 1px 4px rgba(0,0,0,.25); } }
 </style></head><body>${pages.join("")}<script>window.onload = () => setTimeout(() => window.print(), 300);</script></body></html>`;

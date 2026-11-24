@@ -1542,7 +1542,8 @@ None right now. New ones get added here.
   open card tasks' names and addresses (the same name as on each task: one person, or the household for a child's
   birthday) laid out for Avery 5160 / 8160 sheets (1" × 2⅝", 30 a sheet), no logo, long names shrink to fit; "Start at
   label #" for a partly used sheet; people with no mailing address are skipped and counted. Prints from the browser
-  (Letter, 100%). **Or straight onto envelopes** (owner request 2026-11-24): A7 (5¼" × 7¼", landscape), one a page,
+  (Letter, 100%). **Or straight onto envelopes** (owner request 2026-11-24): pick the size, A7 (7¼" × 5¼"), #10 (9½" × 4") or A2
+  (5¾" × 4¼"), landscape, one a page,
   the recipient in the middle and the return address small at the top left (editable in the pop-up, remembered in
   AppSetting `cards.returnAddress`; starts as "Petty Homes" and the mass-email mailing address). The last choice
-  (labels or envelopes) is remembered on that computer.
+  (labels or envelopes, and the envelope size) is remembered on that computer.
