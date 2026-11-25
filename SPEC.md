@@ -730,6 +730,10 @@ in search, exports, the API, the text assistant or the Claude connector. Money l
   By referral. Charts show the numbers on hover. Each number tile also has **Below:** — what shows under the number:
   the usual line, % change vs last year, difference vs last year, last year's number, average per sale, % of volume,
   split %, number of sales, gross commission or nothing (only the choices that fit that tile).
+- **Pending sales count** *(owner request 2026-11-25: "volume should just add all the sale prices together")*: every
+  number (deals, volume, gross, net, averages, by source / referral, month by month) counts each sale dated in the
+  period, closed or pending; fell-through sales never count. The **Pending** column says how many of those haven't
+  closed yet; the Dashboard's first tile is **Sales** ("N still pending"). Commission owed stays closed-and-unpaid only.
 - **New years appear automatically** *(owner request 2026-11-25)*: every year that has a sale dated in it, closed or
   pending, shows everywhere (Summary rows, the Years and Year pickers, Every year, All sales' year filter). Summary
   and Every year have a **Pending** column (count · volume), so a year with only pending sales still shows.
@@ -1550,3 +1554,7 @@ None right now. New ones get added here.
   the recipient in the middle and the return address small at the top left (editable in the pop-up, remembered in
   AppSetting `cards.returnAddress`; starts as "Petty Homes" and the mass-email mailing address). The last choice
   (labels or envelopes, and the envelope size; A2 to start) is remembered on that computer.
+
+- **Attach from their files** *(owner request 2026-11-25)*: the contact's Email tab and the Draft email pop-up have
+  📎 Attach file (upload) and **📁 From their files** (pick from the contact's Files card; a copy is attached, the file
+  stays on the card). Draft email can now attach files too.

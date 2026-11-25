@@ -8,7 +8,9 @@ import { logActivity } from "@/server/activity";
 import { mergeFor } from "@/server/merge";
 import { fill } from "@/lib/merge";
 import { completeTask } from "../tasks/actions";
-import { attachmentList } from "@/server/attachments";
+import { attachmentList, ATTACH_PREFIX, MAX_ATTACH_MB, MAX_ATTACH_TOTAL } from "@/server/attachments";
+import { getFile, putFile, storageConnected } from "@/server/storage";
+import { randomBytes } from "node:crypto";
 import { deliverEmail } from "@/server/emailSend";
 import { hasPermission } from "@/server/permissions";
 import { centralToUtc, scheduleLabel, scheduleProblem } from "@/lib/scheduledText";
@@ -84,5 +86,28 @@ export async function cancelScheduledEmail(scheduledId: string) {
     if (!r.count) throw new UserError("That email is going out right now.");
     await logActivity(user.id, "delete", "scheduledEmail", s.personId, `Canceled the email scheduled for ${scheduleLabel(s.sendAt)}`);
     revalidatePath(`/people/${s.personId}`);
+  });
+}
+
+// ---------- Attach from their Files card (owner request 2026-11-25) ----------
+/** The files saved on a contact (their Files card), to attach to an email. */
+export async function personFilesForEmail(personId: string) {
+  return guarded(null, async () => {
+    const docs = await db.document.findMany({ where: { personId: id.parse(personId), deletedAt: null }, orderBy: { createdAt: "desc" }, take: 50, select: { id: true, name: true, size: true } });
+    return docs;
+  });
+}
+/** A copy of one of their files as an email attachment (the email sends it like any uploaded attachment). */
+export async function attachPersonFile(docId: string) {
+  return guarded(null, async (user) => {
+    if (!storageConnected()) throw new UserError("File storage isn't connected yet (Admin → Integrations), so emails can't have attachments.");
+    const d = await db.document.findFirst({ where: { id: id.parse(docId), deletedAt: null } });
+    if (!d) throw new UserError("That file was deleted.");
+    if (d.size > MAX_ATTACH_TOTAL) throw new UserError(`"${d.name}" is larger than ${MAX_ATTACH_MB} MB, too big to email.`);
+    const key = `${ATTACH_PREFIX}${new Date().toISOString().slice(0, 7)}/${randomBytes(9).toString("base64url")}-${d.name.replace(/[^\w.\- ]+/g, "").replace(/ /g, "_").slice(0, 120) || "file"}`;
+    try { await putFile(key, await getFile(d.key), d.contentType); }
+    catch { throw new UserError("That file couldn't be copied for the email. Try again."); }
+    await logActivity(user.id, "update", "document", d.personId, `Attached "${d.name}" to an email`);
+    return { key, name: d.name, size: d.size, type: d.contentType };
   });
 }

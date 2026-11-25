@@ -138,8 +138,9 @@ describe("a new year shows as soon as a sale is dated in it (owner request 2026-
     const rows = [s("2026-03-01"), s("2027-02-10", { status: "pending", price: 500000 }), s("2028-01-01", { status: "fell_through" })];
     expect(saleYears(rows, "2026-11-25")).toEqual([2027, 2026]);
     const y = summaryBy(rows, "year");
-    expect(y.rows.map((r) => [r.key, r.deals, r.pending])).toEqual([["2026", 1, 0], ["2027", 0, 1]]);
-    expect(y.total).toMatchObject({ deals: 1, pending: 1, pendingVolume: 500000 });
-    expect(compareYears(rows, periodOf("year", "2026-11-25")).map((r) => [r.year, r.deals, r.pending])).toEqual([[2027, 0, 1], [2026, 1, 0]]);
+    // Pending sales count in deals, volume and income too; Pending says how many of them haven't closed yet.
+    expect(y.rows.map((r) => [r.key, r.deals, r.volume, r.pending])).toEqual([["2026", 1, 400000, 0], ["2027", 1, 500000, 1]]);
+    expect(y.total).toMatchObject({ deals: 2, volume: 900000, pending: 1, pendingVolume: 500000 });
+    expect(compareYears(rows, periodOf("year", "2026-11-25")).map((r) => [r.year, r.deals, r.pending])).toEqual([[2027, 1, 1], [2026, 1, 0]]);
   });
 });

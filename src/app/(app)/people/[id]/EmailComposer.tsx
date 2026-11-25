@@ -74,7 +74,7 @@ export function EmailComposer({ personId, emails, templates, sendsFrom, onSent, 
           <RichBox value={body} onChange={(v) => { setConfirm(false); setBody(v); }} placeholder="Write here, or pick a template above" />
         </div>
       </div>
-      <AttachFiles files={files} onChange={setFiles} />
+      <AttachFiles files={files} onChange={setFiles} personId={personId} />
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={signature} onChange={(e) => setSignature(e.target.checked)} /> Add my Gmail signature</label>
       {missing.length > 0 && <p className="text-sm text-[#9a6400]">Not filled in (nothing on file): {missing.join(", ")}. Check the message before sending.</p>}
       <div className="flex flex-wrap items-center justify-between gap-2">

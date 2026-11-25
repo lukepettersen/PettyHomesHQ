@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { RichBox } from "@/components/RichBox";
+import { AttachFiles, type Attached } from "@/components/AttachFiles";
 import { EmailPreview } from "@/components/EmailPreview";
 import { TemplateSearch, useSlashTemplates } from "@/components/TemplateSearch";
 import { Modal } from "@/components/Modal";
@@ -48,6 +49,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
   const slashProps = { onKeyDown: slash.onKeyDown, onKeyUp: slash.track, onClick: slash.track };
   const router = useRouter();
   const canSend = !!(d && d.kind === "email" && d.sendsFrom && d.personId);
+  const [files, setFiles] = useState<Attached[]>([]); // attachments (owner request 2026-11-25)
   const canText = !!(d && d.kind === "text" && !d.textBlocked && d.personId && d.to.length);
   const text = () => start(async () => {
     setError("");
@@ -66,7 +68,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
     // One click sends (owner request 2026-10-27); only mass emails ask twice.
     setConfirm(false); setError("");
     start(async () => {
-      const r = await sendEmail({ personId: d!.personId!, taskId, to: toAll, subject, body, signature });
+      const r = await sendEmail({ personId: d!.personId!, taskId, to: toAll, subject, body, signature, attachments: files });
       if (!r.ok) { setError(r.error); return; }
       router.refresh(); onClose();
     });
@@ -123,6 +125,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
               </div>
             </div>
           ) : <div className="label">Message<textarea ref={box} aria-label="Message" className={`input ${big ? "min-h-[60vh]" : "min-h-56"} font-normal`} value={body} onChange={(e) => { setBody(e.target.value); slash.track(); }} {...slashProps} />{slash.menu}</div>}
+          {canSend && <AttachFiles files={files} onChange={setFiles} personId={d.personId} />}
           {canSend && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={signature} onChange={(e) => setSignature(e.target.checked)} /> Add my Gmail signature</label>}
           {d.missing.length > 0 && <p className="text-sm text-[#9a6400]">Not filled in (nothing on file): {d.missing.join(", ")}. Check the message before sending.</p>}
           <p className="text-xs muted">{d.kind === "email" ? (canSend ? `Send email sends it from ${d.sendsFrom}, puts it on the timeline and checks off this task.` : "Gmail isn't connected, so HQ can't send it. Open it in your email app, or copy it. An Admin can connect Gmail in Admin → Integrations.") : canText ? "Send text sends it from your business number, puts it on the timeline and checks off this task." : `${d.textBlocked ? `${d.textBlocked} ` : ""}Copy it and send it from your phone, then check off the task.`}</p>
@@ -135,7 +138,7 @@ export function DraftModal({ taskId, onClose }: { taskId: string; onClose: () =>
               {pending ? "Sending…" : "Send email"}</button>}
             {canText && <button type="button" className="btn btn-primary" disabled={pending || !body.trim() || !phones.length} onClick={text}>{pending ? "Sending…" : "Send text"}</button>}
             {/* Schedule it for later instead; the step is checked off when it goes out (owner request 2026-10-28). */}
-            {canSend && d.personId && <ScheduleEmail email={{ personId: d.personId, taskId, to: toAll, subject, body, signature }} disabled={pending || !toAll.length || !subject.trim() || !body.trim()} onScheduled={() => { router.refresh(); onClose(); }} />}
+            {canSend && d.personId && <ScheduleEmail email={{ personId: d.personId, taskId, to: toAll, subject, body, signature, attachments: files }} disabled={pending || !toAll.length || !subject.trim() || !body.trim()} onScheduled={() => { router.refresh(); onClose(); }} />}
             {canText && <ScheduleText numbers={d.groups ? textTo : phones} body={body} personId={d.personId} taskId={taskId} disabled={pending || !body.trim() || !phones.length} onScheduled={() => { router.refresh(); onClose(); }} />}
           </div>
         </div>
