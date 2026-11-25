@@ -289,6 +289,17 @@ export async function loadDashboard(user: SalesUser) {
       await db.appSetting.update({ where: { key: "sales.dashboard" }, data: { value: cards } });
     }
   }
+  if (row && !(await db.appSetting.findUnique({ where: { key: "sales.dashboard.closedAdded" } }))) {
+    await db.appSetting.create({ data: { key: "sales.dashboard.closedAdded", value: true } }).catch(() => null);
+    const at = cards.findIndex((c) => c.kind === "closed");
+    if (at >= 0 && !cards.some((c) => c.kind === "closedOnly")) {
+      cards.splice(at + 1, 0, { id: "closedOnly", kind: "closedOnly", size: cards[at].size });
+      // Sales, Closed sales, Pending sales side by side (owner request 2026-11-25).
+      const p = cards.findIndex((c) => c.kind === "pending");
+      if (p >= 0 && p !== at + 2) { const [pc] = cards.splice(p, 1); cards.splice(cards.findIndex((c) => c.kind === "closedOnly") + 1, 0, pc); }
+      await db.appSetting.update({ where: { key: "sales.dashboard" }, data: { value: cards } });
+    }
+  }
   return cards;
 }
 export async function saveDashboard(user: SalesUser, cards: unknown) {

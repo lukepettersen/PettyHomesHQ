@@ -83,6 +83,8 @@ export function dashboard(rows: StatSale[], p: { kind: Period; month: number; qu
   return {
     pending: { deals: pending.length, volume: sum(pending.map((r) => r.price)), gross: sum(pending.map((r) => r.gross)), net: sum(pending.map((r) => r.net)) },
     closed: totals(now), pendingInPeriod,
+    // The period split (owner request 2026-11-25: Sales, Closed sales and Pending sales tiles).
+    closedOnly: totals(now.filter((r) => r.status === "closed")), pendingNow: totals(now.filter((r) => r.status === "pending")),
     outstanding: { deals: owed.length, gross: sum(owed.map((r) => r.gross)), net: sum(owed.map((r) => r.net)) },
     notPaid: money(unpaid), paid: money(paid),
   };
@@ -217,8 +219,9 @@ export function cleanSaleColumns(v: unknown): SaleColumn[] {
 
 // ---------- Dashboard cards: which show, in what order and size (owner request 2026-11-22) ----------
 export const DASH_CARDS = {
-  pending: { label: "Pending sales", about: "Under contract now: count, volume and GCI", size: "small" },
-  closed: { label: "Closed sales", about: "Closed in the period, vs last year", size: "small" },
+  pending: { label: "Pending sales", about: "Pending sales closing in the period: count, volume and GCI", size: "small" },
+  closed: { label: "Sales", about: "Every sale in the period, closed or pending, vs last year", size: "small" },
+  closedOnly: { label: "Closed sales", about: "Sales closed in the period, vs last year", size: "small" },
   volume: { label: "Volume", about: "Sale volume closed in the period, vs last year", size: "small" },
   gross: { label: "Gross commission", about: "GCI closed in the period and % of volume", size: "small" },
   net: { label: "Net income", about: "Your commission after split and fees", size: "small" },
@@ -252,6 +255,7 @@ export type TileSub = keyof typeof TILE_SUBS;
 export const SUBS_FOR: Partial<Record<DashCardKind, TileSub[]>> = {
   pending: ["usual", "gci", "deals", "none"],
   closed: ["usual", "vsLast", "diffLast", "lastYear", "none"],
+  closedOnly: ["usual", "vsLast", "diffLast", "lastYear", "deals", "none"],
   volume: ["usual", "vsLast", "diffLast", "lastYear", "perSale", "deals", "gci", "none"],
   gross: ["usual", "pctVolume", "vsLast", "diffLast", "lastYear", "perSale", "deals", "none"],
   net: ["usual", "split", "pctVolume", "vsLast", "diffLast", "lastYear", "perSale", "deals", "none"],
@@ -261,7 +265,7 @@ export const SUBS_FOR: Partial<Record<DashCardKind, TileSub[]>> = {
   sides: ["usual", "none"],
   saleToList: ["usual", "vsLast", "lastYear", "none"],
 };
-export const DEFAULT_DASHBOARD: DashCard[] = (["pending", "closed", "volume", "gross", "net", "owed", "paid", "everyYear", "bySource", "byReferral"] as DashCardKind[])
+export const DEFAULT_DASHBOARD: DashCard[] = (["closed", "closedOnly", "pending", "volume", "gross", "net", "owed", "paid", "everyYear", "bySource", "byReferral"] as DashCardKind[])
   .map((kind) => ({ id: kind, kind, size: DASH_CARDS[kind].size }));
 /** A saved dashboard → known cards and sizes (max 40); nothing usable saved → the default layout. */
 export function cleanDashboard(v: unknown): DashCard[] {

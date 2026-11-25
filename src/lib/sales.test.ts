@@ -153,3 +153,12 @@ describe("commission not paid / paid (owner request 2026-11-25)", () => {
     expect(d.paid).toMatchObject({ deals: 1, net: 7000 });
   });
 });
+
+describe("sales, closed and pending tiles (owner request 2026-11-25)", () => {
+  it("splits the period into closed and pending", () => {
+    const rows = [s("2027-02-01", { status: "pending", price: 457500 }), s("2027-03-01", { price: 300000 }), s(null, { status: "pending" })];
+    const d = dashboard(rows, periodOf("year", "2027-06-01"));
+    expect([d.closed.deals, d.closedOnly.deals, d.pendingNow.deals, d.pending.deals]).toEqual([2, 1, 1, 2]);
+    expect(d.closedOnly.volume).toBe(300000);
+  });
+});

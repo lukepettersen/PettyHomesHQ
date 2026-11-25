@@ -736,6 +736,8 @@ in search, exports, the API, the text assistant or the Claude connector. Money l
   closed yet; the Dashboard's first tile is **Sales** ("N still pending"). The commission tiles are **Commission not paid**
   (sales in the period not marked paid, pending ones included) and **Commission paid** (closed and marked paid); the
   list card is "Commission not paid" too. The Paid tile was added once next to Not paid on the saved dashboard.
+  The first three tiles are **Sales** (closed + pending), **Closed sales** and **Pending sales**, all for the period:
+  a pending sale counts only in the year (month, quarter) it's set to close (added once to the saved dashboard).
 - **New years appear automatically** *(owner request 2026-11-25)*: every year that has a sale dated in it, closed or
   pending, shows everywhere (Summary rows, the Years and Year pickers, Every year, All sales' year filter). Summary
   and Every year have a **Pending** column (count · volume), so a year with only pending sales still shows.

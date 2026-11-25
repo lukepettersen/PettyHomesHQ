@@ -134,7 +134,15 @@ function CardBody({ card, ctx }: { card: DashCard; ctx: Ctx }) {
   });
   const periodTitle = kind === "year" ? "every year" : `${p.label} in every year`;
   switch (card.kind) {
-    case "pending": return <Tile label="Pending sales" value={String(d.pending.deals)} sub={pick({ usual: `${$(d.pending.volume)} · GCI ${$(d.pending.gross)}`, gci: `GCI ${$(d.pending.gross)}`, deals: `${$(d.pending.volume)} volume` })} tone="text-[#24507a]" />;
+    case "pending": {
+      // Only pending sales closing in the period's year (owner 2026-11-25: a 2027 sale isn't pending in 2026).
+      const pn = d.pendingNow;
+      return <Tile label={`Pending sales · ${label}`} value={String(pn.deals)} sub={pick({ usual: `${$(pn.volume)} · GCI ${$(pn.gross)}`, gci: `GCI ${$(pn.gross)}`, deals: `${$(pn.volume)} volume` })} tone="text-[#24507a]" />;
+    }
+    case "closedOnly": {
+      // Compared with last year's sales (past years are almost all closed).
+      return <Tile label={`Closed sales · ${label}`} value={String(d.closedOnly.deals)} sub={pick({ usual: `${$(d.closedOnly.volume)} volume`, ...cmpLines(d.closedOnly.deals, prev?.deals, (n) => `${n} sales`), deals: `${$(d.closedOnly.volume)} volume` })} />;
+    }
     case "closed": return <Tile label={`Sales · ${label}`} value={String(d.closed.deals)} sub={pick({ usual: [d.pendingInPeriod ? `${d.pendingInPeriod} still pending` : "", vsLine(d.closed.deals, prev?.deals, String)].filter(Boolean).join(" · "), ...cmpLines(d.closed.deals, prev?.deals, (n) => `${n} sales`) })} />;
     case "volume": return <Tile label={`Volume · ${label}`} value={$(d.closed.volume)} sub={pick({ usual: vsLine(d.closed.volume, prev?.volume, $), ...cmpLines(d.closed.volume, prev?.volume, $), perSale: `${$(d.closed.avgPrice)} per sale`, deals: `${d.closed.deals} sales`, gci: `GCI ${$(d.closed.gross)}` })} />;
     case "gross": return <Tile label={`Gross commission · ${label}`} value={$(d.closed.gross)} sub={pick({ usual: `${pct(d.closed.grossPct)} of volume`, pctVolume: `${pct(d.closed.grossPct)} of volume`, ...cmpLines(d.closed.gross, prev?.gross, $), perSale: `${$(per(d.closed.gross))} per sale`, deals: `${d.closed.deals} sales` })} />;
