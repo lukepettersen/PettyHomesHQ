@@ -279,7 +279,17 @@ export async function saveSaleColumns(user: SalesUser, cols: string[]) {
 export async function loadDashboard(user: SalesUser) {
   ownerOnly(user);
   const row = await db.appSetting.findUnique({ where: { key: "sales.dashboard" } });
-  return cleanDashboard(row?.value ?? null);
+  const cards = cleanDashboard(row?.value ?? null);
+  // Once (owner request 2026-11-25): a saved dashboard gets the new "Commission paid" tile next to "not paid".
+  if (row && !(await db.appSetting.findUnique({ where: { key: "sales.dashboard.paidAdded" } }))) {
+    await db.appSetting.create({ data: { key: "sales.dashboard.paidAdded", value: true } }).catch(() => null);
+    const at = cards.findIndex((c) => c.kind === "owed");
+    if (at >= 0 && !cards.some((c) => c.kind === "paid")) {
+      cards.splice(at + 1, 0, { id: "paid", kind: "paid", size: cards[at].size });
+      await db.appSetting.update({ where: { key: "sales.dashboard" }, data: { value: cards } });
+    }
+  }
+  return cards;
 }
 export async function saveDashboard(user: SalesUser, cards: unknown) {
   ownerOnly(user);

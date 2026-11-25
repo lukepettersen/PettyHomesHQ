@@ -139,7 +139,8 @@ function CardBody({ card, ctx }: { card: DashCard; ctx: Ctx }) {
     case "volume": return <Tile label={`Volume · ${label}`} value={$(d.closed.volume)} sub={pick({ usual: vsLine(d.closed.volume, prev?.volume, $), ...cmpLines(d.closed.volume, prev?.volume, $), perSale: `${$(d.closed.avgPrice)} per sale`, deals: `${d.closed.deals} sales`, gci: `GCI ${$(d.closed.gross)}` })} />;
     case "gross": return <Tile label={`Gross commission · ${label}`} value={$(d.closed.gross)} sub={pick({ usual: `${pct(d.closed.grossPct)} of volume`, pctVolume: `${pct(d.closed.grossPct)} of volume`, ...cmpLines(d.closed.gross, prev?.gross, $), perSale: `${$(per(d.closed.gross))} per sale`, deals: `${d.closed.deals} sales` })} />;
     case "net": return <Tile label={`Net income · ${label}`} value={$(d.closed.net)} sub={pick({ usual: `${pct(d.closed.splitPct)} split${prev ? ` · ${vsLine(d.closed.net, prev.net, $)}` : ""}`, split: `${pct(d.closed.splitPct)} split`, pctVolume: `${pct(d.closed.volume ? (d.closed.net / d.closed.volume) * 100 : 0)} of volume`, ...cmpLines(d.closed.net, prev?.net, $), perSale: `${$(per(d.closed.net))} per sale`, deals: `${d.closed.deals} sales` })} tone="text-accent" />;
-    case "owed": return <Tile label="Commission owed to you" value={$(d.outstanding.net)} sub={pick({ usual: `${d.outstanding.deals} closed, not marked paid` })} tone={d.outstanding.deals ? "text-[#9a6400]" : ""} />;
+    case "owed": return <Tile label={`Commission not paid · ${label}`} value={$(d.notPaid.net)} sub={pick({ usual: `${d.notPaid.deals} sale${d.notPaid.deals === 1 ? "" : "s"}${d.notPaid.pending ? ` (${d.notPaid.pending} pending)` : ""}`, gci: `GCI ${$(d.notPaid.gross)}` })} tone={d.notPaid.deals ? "text-[#9a6400]" : ""} />;
+    case "paid": return <Tile label={`Commission paid · ${label}`} value={$(d.paid.net)} sub={pick({ usual: `${d.paid.deals} closed sale${d.paid.deals === 1 ? "" : "s"} marked paid`, gci: `GCI ${$(d.paid.gross)}` })} tone="text-accent" />;
     case "avgPrice": return <Tile label={`Average sale price · ${label}`} value={$(d.closed.avgPrice)} sub={pick({ usual: vsLine(d.closed.avgPrice, prev?.avgPrice, $), ...cmpLines(d.closed.avgPrice, prev?.avgPrice, $), deals: `${d.closed.deals} sales` })} />;
     case "saleToList": return <Tile label={`Sale-to-list · ${label}`} value={d.closed.listVolume ? pct(d.closed.netPct) : "—"} sub={pick({ usual: "sale price ÷ list price", vsLast: vsLine(d.closed.netPct, prev?.listVolume ? prev.netPct : undefined, pct), lastYear: prev?.listVolume ? `${year - 1}: ${pct(prev.netPct)}` : `${year - 1}: none` })} />;
     case "sides": {
@@ -189,10 +190,10 @@ function CardBody({ card, ctx }: { card: DashCard; ctx: Ctx }) {
       );
     }
     case "owedList": {
-      const list = rows.filter((r) => r.status === "closed" && !r.commissionPaid).sort((a, b) => (b.closeDate ?? "").localeCompare(a.closeDate ?? ""));
+      const list = rows.filter((r) => r.status === "pending" || (r.status === "closed" && !r.commissionPaid)).sort((a, b) => (b.closeDate ?? "").localeCompare(a.closeDate ?? ""));
       return (
-        <Panel title={`Owed commissions · ${list.length}`}>
-          {!list.length ? <p className="px-3 py-2 text-sm muted">Every closed sale is marked paid.</p> : <SaleRows rows={list} net />}
+        <Panel title={`Commission not paid · ${list.length}`}>
+          {!list.length ? <p className="px-3 py-2 text-sm muted">Every sale is marked paid.</p> : <SaleRows rows={list} net />}
         </Panel>
       );
     }

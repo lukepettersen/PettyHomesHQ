@@ -76,11 +76,15 @@ export function dashboard(rows: StatSale[], p: { kind: Period; month: number; qu
   const pending = rows.filter((r) => r.status === "pending");
   const now = counted(rows).filter((r) => yearOf(r.closeDate) === p.year && inPeriod(r.closeDate, p));
   const owed = closed(rows).filter((r) => !r.commissionPaid);
+  // Commission not paid / paid for the period (owner request 2026-11-25): not paid includes pending sales.
+  const unpaid = now.filter((r) => r.status === "pending" || !r.commissionPaid), paid = now.filter((r) => r.status === "closed" && r.commissionPaid);
+  const money = (xs: StatSale[]) => ({ deals: xs.length, pending: xs.filter((r) => r.status === "pending").length, gross: sum(xs.map((r) => r.gross)), net: sum(xs.map((r) => r.net)) });
   const pendingInPeriod = now.filter((r) => r.status === "pending").length;
   return {
     pending: { deals: pending.length, volume: sum(pending.map((r) => r.price)), gross: sum(pending.map((r) => r.gross)), net: sum(pending.map((r) => r.net)) },
     closed: totals(now), pendingInPeriod,
     outstanding: { deals: owed.length, gross: sum(owed.map((r) => r.gross)), net: sum(owed.map((r) => r.net)) },
+    notPaid: money(unpaid), paid: money(paid),
   };
 }
 
@@ -218,7 +222,8 @@ export const DASH_CARDS = {
   volume: { label: "Volume", about: "Sale volume closed in the period, vs last year", size: "small" },
   gross: { label: "Gross commission", about: "GCI closed in the period and % of volume", size: "small" },
   net: { label: "Net income", about: "Your commission after split and fees", size: "small" },
-  owed: { label: "Commission owed to you", about: "Closed sales not marked paid", size: "small" },
+  owed: { label: "Commission not paid", about: "Sales in the period not marked paid, pending ones included", size: "small" },
+  paid: { label: "Commission paid", about: "Closed sales in the period marked paid", size: "small" },
   avgPrice: { label: "Average sale price", about: "Average price of sales closed in the period", size: "small" },
   sides: { label: "Buyers vs sellers", about: "How many buyer and seller sales closed", size: "small" },
   saleToList: { label: "Sale-to-list", about: "Sale price as % of list price", size: "small" },
@@ -231,7 +236,7 @@ export const DASH_CARDS = {
   sourceChart: { label: "By lead source (chart)", about: "Bar chart of volume by lead source", size: "half" },
   byReferral: { label: "By referral (table)", about: "Closed sales by who referred them", size: "full" },
   pendingList: { label: "Pending deals (list)", about: "Every sale under contract, with close date and price", size: "half" },
-  owedList: { label: "Owed commissions (list)", about: "Closed sales not marked paid", size: "half" },
+  owedList: { label: "Commission not paid (list)", about: "Pending sales and closed sales not marked paid", size: "half" },
 } as const;
 export type DashCardKind = keyof typeof DASH_CARDS;
 export const DASH_SIZES = { small: "Small", medium: "Medium", half: "Half width", full: "Full width" } as const;
@@ -250,12 +255,13 @@ export const SUBS_FOR: Partial<Record<DashCardKind, TileSub[]>> = {
   volume: ["usual", "vsLast", "diffLast", "lastYear", "perSale", "deals", "gci", "none"],
   gross: ["usual", "pctVolume", "vsLast", "diffLast", "lastYear", "perSale", "deals", "none"],
   net: ["usual", "split", "pctVolume", "vsLast", "diffLast", "lastYear", "perSale", "deals", "none"],
-  owed: ["usual", "none"],
+  owed: ["usual", "gci", "none"],
+  paid: ["usual", "gci", "none"],
   avgPrice: ["usual", "vsLast", "diffLast", "lastYear", "deals", "none"],
   sides: ["usual", "none"],
   saleToList: ["usual", "vsLast", "lastYear", "none"],
 };
-export const DEFAULT_DASHBOARD: DashCard[] = (["pending", "closed", "volume", "gross", "net", "owed", "everyYear", "bySource", "byReferral"] as DashCardKind[])
+export const DEFAULT_DASHBOARD: DashCard[] = (["pending", "closed", "volume", "gross", "net", "owed", "paid", "everyYear", "bySource", "byReferral"] as DashCardKind[])
   .map((kind) => ({ id: kind, kind, size: DASH_CARDS[kind].size }));
 /** A saved dashboard → known cards and sizes (max 40); nothing usable saved → the default layout. */
 export function cleanDashboard(v: unknown): DashCard[] {

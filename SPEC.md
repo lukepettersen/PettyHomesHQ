@@ -733,7 +733,9 @@ in search, exports, the API, the text assistant or the Claude connector. Money l
 - **Pending sales count** *(owner request 2026-11-25: "volume should just add all the sale prices together")*: every
   number (deals, volume, gross, net, averages, by source / referral, month by month) counts each sale dated in the
   period, closed or pending; fell-through sales never count. The **Pending** column says how many of those haven't
-  closed yet; the Dashboard's first tile is **Sales** ("N still pending"). Commission owed stays closed-and-unpaid only.
+  closed yet; the Dashboard's first tile is **Sales** ("N still pending"). The commission tiles are **Commission not paid**
+  (sales in the period not marked paid, pending ones included) and **Commission paid** (closed and marked paid); the
+  list card is "Commission not paid" too. The Paid tile was added once next to Not paid on the saved dashboard.
 - **New years appear automatically** *(owner request 2026-11-25)*: every year that has a sale dated in it, closed or
   pending, shows everywhere (Summary rows, the Years and Year pickers, Every year, All sales' year filter). Summary
   and Every year have a **Pending** column (count · volume), so a year with only pending sales still shows.

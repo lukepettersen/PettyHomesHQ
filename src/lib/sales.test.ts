@@ -144,3 +144,12 @@ describe("a new year shows as soon as a sale is dated in it (owner request 2026-
     expect(compareYears(rows, periodOf("year", "2026-11-25")).map((r) => [r.year, r.deals, r.pending])).toEqual([[2027, 1, 1], [2026, 1, 0]]);
   });
 });
+
+describe("commission not paid / paid (owner request 2026-11-25)", () => {
+  it("counts pending sales as not paid, for the period", () => {
+    const rows = [s("2027-02-01", { status: "pending", net: 10751, gross: 11438 }), s("2027-03-01", { commissionPaid: false, net: 5000, gross: 6000 }), s("2027-04-01", { net: 7000, gross: 8000 }), s("2026-05-01", { commissionPaid: false })];
+    const d = dashboard(rows, periodOf("year", "2027-06-01"));
+    expect(d.notPaid).toMatchObject({ deals: 2, pending: 1, net: 15751, gross: 17438 });
+    expect(d.paid).toMatchObject({ deals: 1, net: 7000 });
+  });
+});
