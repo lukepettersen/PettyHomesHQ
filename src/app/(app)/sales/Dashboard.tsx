@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import type { SaleView } from "@/server/sales";
-import { breakdown, byMonth, compareYears, dashboard, DASH_CARDS, DASH_SIZES, DEFAULT_DASHBOARD, MONTHS, periodOf, STATUS_LABEL, SUBS_FOR, TILE_SUBS, totals,
+import { breakdown, byMonth, compareYears, dashboard, DASH_CARDS, DASH_SIZES, DEFAULT_DASHBOARD, MONTHS, periodOf, saleYears, STATUS_LABEL, SUBS_FOR, TILE_SUBS, totals,
   type DashCard, type DashCardKind, type DashSize, type TileSub, type Period, type StatSale, type Totals } from "@/lib/sales";
 import { saveDashboardAction } from "./actions";
 
@@ -26,7 +26,7 @@ export function Dashboard({ rows, today, cards }: { rows: SaleView[]; today: str
   const router = useRouter();
   const [kind, setKind] = useState<Period>("year");
   const all = useMemo(() => stat(rows), [rows]);
-  const years = useMemo(() => [...new Set(all.filter((r) => r.closeDate).map((r) => Number(r.closeDate!.slice(0, 4))))].sort((a, b) => b - a), [all]);
+  const years = useMemo(() => saleYears(all, today), [all, today]); // a new year shows as soon as a sale is dated in it
   const [year, setYear] = useState(Number(today.slice(0, 4)));
   const [editing, setEditing] = useState<DashCard[] | null>(null);
   const [adding, setAdding] = useState<DashCardKind | "">("");
@@ -150,9 +150,9 @@ function CardBody({ card, ctx }: { card: DashCard; ctx: Ctx }) {
     case "everyYear": return (
       <Panel title={kind === "year" ? "Every year" : `${p.label} in every year`}>
         <table className="w-full text-sm">
-          <thead><tr className="text-left text-xs muted"><th className="px-3 py-1">Year</th><th>Sales</th><th>Volume</th><th>Gross comm.</th><th className="pr-3">Net income</th></tr></thead>
+          <thead><tr className="text-left text-xs muted"><th className="px-3 py-1">Year</th><th>Sales</th><th>Pending</th><th>Volume</th><th>Gross comm.</th><th className="pr-3">Net income</th></tr></thead>
           <tbody>{cmp.map((c) => (
-            <tr key={c.year} className={`border-t border-misty/60 ${c.year === year ? "bg-accent-soft font-semibold" : ""}`}><td className="px-3 py-1">{c.year}</td><td>{c.deals}</td><td>{$(c.volume)}</td><td>{$(c.gross)}</td><td className="pr-3">{$(c.net)}</td></tr>
+            <tr key={c.year} className={`border-t border-misty/60 ${c.year === year ? "bg-accent-soft font-semibold" : ""}`}><td className="px-3 py-1">{c.year}</td><td>{c.deals}</td><td className="muted">{c.pending ? `${c.pending} · ${short$(c.pendingVolume)}` : "—"}</td><td>{$(c.volume)}</td><td>{$(c.gross)}</td><td className="pr-3">{$(c.net)}</td></tr>
           ))}</tbody>
         </table>
       </Panel>

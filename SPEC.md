@@ -730,6 +730,9 @@ in search, exports, the API, the text assistant or the Claude connector. Money l
   By referral. Charts show the numbers on hover. Each number tile also has **Below:** — what shows under the number:
   the usual line, % change vs last year, difference vs last year, last year's number, average per sale, % of volume,
   split %, number of sales, gross commission or nothing (only the choices that fit that tile).
+- **New years appear automatically** *(owner request 2026-11-25)*: every year that has a sale dated in it, closed or
+  pending, shows everywhere (Summary rows, the Years and Year pickers, Every year, All sales' year filter). Summary
+  and Every year have a **Pending** column (count · volume), so a year with only pending sales still shows.
 - **Summary**: per year, Total / Buyer / Seller (deals, volume, average price, gross, gross %, net, split) plus Career,
   like the master file's SUMMARY tab. Closed sales only. **Show by** Year / Quarter / Month, and **Years**: every
   year or one year (Quarter and Month start on this year; the total row reads "2026 TOTAL", or CAREER for every year).

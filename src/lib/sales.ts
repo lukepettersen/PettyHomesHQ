@@ -27,6 +27,12 @@ export function totals(rows: StatSale[]): Totals {
 }
 
 const closed = (rows: StatSale[]) => rows.filter((r) => r.status === "closed" && r.closeDate);
+const pendingOf = (rows: StatSale[]) => rows.filter((r) => r.status === "pending" && r.closeDate);
+/** Every year that has a sale dated in it (closed or pending), so a new year shows everywhere as soon as one sale is
+ *  in it (owner request 2026-11-25: "I added a sale for 2027, that year should get added everywhere"). */
+export function saleYears(rows: StatSale[], today?: string): number[] {
+  return [...new Set([...rows.filter((r) => r.status !== "fell_through" && r.closeDate).map((r) => yearOf(r.closeDate)), ...(today ? [yearOf(today)] : [])])].filter(Boolean).sort((a, b) => b - a);
+}
 
 /** SUMMARY: one row per year (oldest first) for all, buyer and seller closed sales, plus CAREER. */
 export function yearSummary(rows: StatSale[], side?: "buyer" | "seller") {
@@ -50,8 +56,9 @@ export const inPeriod = (iso: string | null, p: { kind: Period; month: number; q
 /** SALES COMPARE: the same month / quarter / year in every year with sales, newest first. */
 export function compareYears(rows: StatSale[], p: { kind: Period; month: number; quarter: number; year: number }) {
   const list = closed(rows).filter((r) => inPeriod(r.closeDate, p));
-  const years = [...new Set([...closed(rows).map((r) => yearOf(r.closeDate)), p.year])].sort((a, b) => b - a);
-  return years.map((y) => ({ year: y, ...totals(list.filter((r) => yearOf(r.closeDate) === y)) }));
+  const pend = pendingOf(rows).filter((r) => inPeriod(r.closeDate, p));
+  const years = [...new Set([...saleYears(rows), p.year])].sort((a, b) => b - a);
+  return years.map((y) => { const pe = pend.filter((r) => yearOf(r.closeDate) === y); return { year: y, ...totals(list.filter((r) => yearOf(r.closeDate) === y)), pending: pe.length, pendingVolume: sum(pe.map((r) => r.price)) }; });
 }
 
 /** Closed sales in the period of one year, broken down by a field (SOURCE, Referred From), biggest volume first. */
@@ -276,8 +283,11 @@ export function byMonth(rows: StatSale[], year: number) {
 export type SummaryBy = "year" | "quarter" | "month";
 export function summaryBy(rows: StatSale[], by: SummaryBy, side?: "buyer" | "seller", onlyYear?: number) {
   const list = closed(rows).filter((r) => (!side || r.side === side) && (!onlyYear || yearOf(r.closeDate) === onlyYear));
+  const pend = pendingOf(rows).filter((r) => (!side || r.side === side) && (!onlyYear || yearOf(r.closeDate) === onlyYear));
   const keyOf = (iso: string) => by === "year" ? iso.slice(0, 4) : by === "quarter" ? `${iso.slice(0, 4)}-Q${Math.ceil(monthOf(iso) / 3)}` : iso.slice(0, 7);
   const labelOf = (k: string) => by === "year" ? k : by === "quarter" ? `${k.slice(5)} ${k.slice(0, 4)}` : `${MONTHS[Number(k.slice(5, 7)) - 1].slice(0, 3)} ${k.slice(0, 4)}`;
-  const keys = [...new Set(list.map((r) => keyOf(r.closeDate!)))].sort();
-  return { rows: keys.map((k) => ({ key: k, label: labelOf(k), ...totals(list.filter((r) => keyOf(r.closeDate!) === k)) })), total: totals(list) };
+  // A year, quarter or month with only pending sales still gets a row (0 closed), with its pending count.
+  const keys = [...new Set([...list, ...pend].map((r) => keyOf(r.closeDate!)))].sort();
+  const pendingIn = (k: string) => { const pe = pend.filter((r) => keyOf(r.closeDate!) === k); return { pending: pe.length, pendingVolume: sum(pe.map((r) => r.price)) }; };
+  return { rows: keys.map((k) => ({ key: k, label: labelOf(k), ...totals(list.filter((r) => keyOf(r.closeDate!) === k)), ...pendingIn(k) })), total: { ...totals(list), pending: pend.length, pendingVolume: sum(pend.map((r) => r.price)) } };
 }

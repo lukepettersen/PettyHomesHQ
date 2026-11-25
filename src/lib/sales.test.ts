@@ -131,3 +131,15 @@ describe("tile lines", () => {
       .toEqual([{ id: "g", kind: "gross", size: "small", sub: "perSale" }, { id: "o", kind: "owed", size: "small" }, { id: "n", kind: "net", size: "small" }]);
   });
 });
+
+describe("a new year shows as soon as a sale is dated in it (owner request 2026-11-25)", () => {
+  it("lists 2027 with its pending sale everywhere", async () => {
+    const { saleYears, summaryBy, compareYears, periodOf } = await import("./sales");
+    const rows = [s("2026-03-01"), s("2027-02-10", { status: "pending", price: 500000 }), s("2028-01-01", { status: "fell_through" })];
+    expect(saleYears(rows, "2026-11-25")).toEqual([2027, 2026]);
+    const y = summaryBy(rows, "year");
+    expect(y.rows.map((r) => [r.key, r.deals, r.pending])).toEqual([["2026", 1, 0], ["2027", 0, 1]]);
+    expect(y.total).toMatchObject({ deals: 1, pending: 1, pendingVolume: 500000 });
+    expect(compareYears(rows, periodOf("year", "2026-11-25")).map((r) => [r.year, r.deals, r.pending])).toEqual([[2027, 0, 1], [2026, 1, 0]]);
+  });
+});

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { SaleView } from "@/server/sales";
-import { breakdown, compareYears, dashboard, DEFAULT_SALE_COLUMNS, MONTHS, periodOf, SALE_COLUMNS, SOURCES, STATUS_LABEL, summaryBy, yearSummary, type DashCard, type SaleColumn, type SummaryBy, type StatSale, type Totals } from "@/lib/sales";
+import { breakdown, compareYears, dashboard, DEFAULT_SALE_COLUMNS, MONTHS, periodOf, SALE_COLUMNS, SOURCES, STATUS_LABEL, saleYears, summaryBy, type DashCard, type SaleColumn, type SummaryBy, type StatSale, type Totals } from "@/lib/sales";
 import { Dashboard } from "./Dashboard";
 import { applyImportAction, deleteSaleAction, findPeopleAction, previewImportAction, resolveReviewAction, saveColumnsAction, saveSaleAction } from "./actions";
 
@@ -45,21 +45,22 @@ export function SalesApp({ rows, today, columns, cards }: { rows: SaleView[]; to
   );
 }
 
-type SumKey = "key" | "deals" | "volume" | "avgPrice" | "listVolume" | "netPct" | "gross" | "grossPct" | "net" | "splitPct";
-const SUM_COLS: [SumKey, string, boolean][] = [["key", "", false], ["deals", "Deals", false], ["volume", "Volume", false], ["avgPrice", "Avg sale price", false], ["listVolume", "List price", true],
+type SumKey = "key" | "deals" | "pending" | "volume" | "avgPrice" | "listVolume" | "netPct" | "gross" | "grossPct" | "net" | "splitPct";
+type SumRow = Totals & { pending: number; pendingVolume: number };
+const SUM_COLS: [SumKey, string, boolean][] = [["key", "", false], ["deals", "Deals", false], ["pending", "Pending", false], ["volume", "Volume", false], ["avgPrice", "Avg sale price", false], ["listVolume", "List price", true],
   ["netPct", "Sale/list", true], ["gross", "Gross commission", false], ["grossPct", "Gross %", false], ["net", "Commission", false], ["splitPct", "Split %", false]];
 const BY_LABEL: Record<SummaryBy, string> = { year: "Year", quarter: "Quarter", month: "Month" };
 
 /** The master file's SUMMARY tab, by year, quarter or month; click a heading to sort (the total row stays last). */
 function Summary({ rows, today }: { rows: SaleView[]; today: string }) {
   const all = useMemo(() => stat(rows), [rows]);
-  const years = useMemo(() => [...new Set(all.filter((r) => r.status === "closed" && r.closeDate).map((r) => Number(r.closeDate!.slice(0, 4))))].sort((a, b) => b - a), [all]);
+  const years = useMemo(() => saleYears(all, today), [all, today]); // every year with a sale, pending included
   const [by, setBy] = useState<SummaryBy>("year");
   const [onlyYear, setOnlyYear] = useState(0); // 0 = every year
   const [sort, setSort] = useState<{ key: SumKey; desc: boolean }>({ key: "key", desc: false });
   const sortBy = (key: SumKey) => setSort((s) => s.key === key ? { key, desc: !s.desc } : { key, desc: key !== "key" });
   const pickBy = (b: SummaryBy) => { setBy(b); if (b !== "year" && !onlyYear) setOnlyYear(Number(today.slice(0, 4))); if (b === "year") setOnlyYear(0); };
-  const show = (k: SumKey, y: Totals) => k === "deals" ? y.deals : k === "netPct" || k === "grossPct" ? pct(y[k]) : k === "splitPct" ? `${Math.round(y.splitPct)}%` : k === "key" ? "" : $(y[k]);
+  const show = (k: SumKey, y: SumRow) => k === "pending" ? (y.pending ? `${y.pending} · ${$(y.pendingVolume)}` : "—") : k === "deals" ? y.deals : k === "netPct" || k === "grossPct" ? pct(y[k]) : k === "splitPct" ? `${Math.round(y.splitPct)}%` : k === "key" ? "" : $(y[k]);
   const table = (title: string, side?: "buyer" | "seller") => {
     const s = summaryBy(all, by, side, onlyYear || undefined);
     const cols = SUM_COLS.filter(([, , sideOnly]) => !sideOnly || side);
