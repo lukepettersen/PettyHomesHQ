@@ -78,7 +78,7 @@ function Editor({ t: initial, pending, error, onSave, onCancel }: { t: PostTempl
   const set = (p: Partial<PostTemplate>) => setT({ ...t, ...p });
   const setBox = (id: string, p: Partial<TextBox>) => set({ boxes: t.boxes.map((b) => (b.id === id ? { ...b, ...p } : b)) });
   const addBox = (field: PostField) => {
-    const b: TextBox = { id: rid(), field, text: field === "title" ? "Under Contract" : field === "custom" ? "Your text" : "", x: Math.round(t.width * 0.1), y: Math.round(t.height * (0.08 + ((t.boxes.length * 0.11) % 0.8))), // each new box a step lower, so they don't stack w: Math.round(t.width * 0.5), h: Math.round(t.height * (field === "review" ? 0.3 : 0.08)),
+    const b: TextBox = { id: rid(), field, text: field === "title" ? "Under Contract" : field === "custom" ? "Your text" : "", x: Math.round(t.width * 0.1), y: Math.round(t.height * (0.08 + ((t.boxes.length * 0.11) % 0.8))) /* each new box a step lower, so they don't stack */, w: Math.round(t.width * 0.5), h: Math.round(t.height * (field === "review" ? 0.3 : 0.08)),
       size: Math.round(t.width * (field === "title" ? 0.08 : field === "review" ? 0.03 : 0.04)), color: field === "stars" ? "#f5c518" : "#ffffff", align: "left", font: POST_FONTS[0], bold: field === "title" };
     set({ boxes: [...t.boxes, b] }); setSel(b.id);
   };
