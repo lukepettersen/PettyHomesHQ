@@ -1562,3 +1562,13 @@ None right now. New ones get added here.
 - **Attach from their files** *(owner request 2026-11-25)*: the contact's Email tab and the Draft email pop-up have
   📎 Attach file (upload) and **📁 From their files** (pick from the contact's Files card; a copy is attached, the file
   stays on the card). Draft email can now attach files too.
+
+- **Instagram posts from Canva templates** *(owner request 2026-11-26)*: Admin → Features → **Post templates**: upload a
+  Canva design downloaded as a PNG with a transparent background, with the house photo and the changing words deleted
+  (stored with HQ's email images). On it, drag the **house photo** box (the photo goes behind the design, filling the
+  box) and **text boxes** (Title / your own words fixed in the template; Beds, Baths, Garage stalls, City, Street
+  address, Price, Review text, Reviewer name, Stars filled in on the deal), each with size, color, font (Mukta Mahee,
+  Montserrat, Lato, Playfair Display, Arial), line-up and bold; long text wraps and shrinks to fit its box; a live
+  preview (Try a photo). Save / Cancel; Remove is two-step. AppSetting `posts.templates`. On a deal, **Make post**:
+  pick the template and the photo (from their Files card, or upload), check the filled-in words (beds/baths/garage from
+  the deal's answers by name, city and street from the address, price, first name), see it, **Download post** (PNG).

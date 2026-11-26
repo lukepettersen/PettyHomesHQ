@@ -1,6 +1,7 @@
 import { pendingKeys } from "@/lib/pa";
 import { loadScheduledFor } from "@/server/scheduledTexts";
 import Link from "next/link";
+import { loadPostTemplates } from "@/server/postTemplates";
 import { notFound } from "next/navigation";
 import { db } from "@/server/db";
 import { requireUser } from "@/server/auth";
@@ -94,6 +95,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
   const canSeeCommission = hasPermission(user.permissions, "seeCommissions");
   const fileStatuses = { buyer: statuses.buyer, listing: statuses.listing };
   if (!p) notFound();
+  const postTemplates = await loadPostTemplates();
   const [appts, buyerFileForm, listingFileForm, taskLists, emailTemplates, gmail] = await Promise.all([loadPersonAppointments(id, p.name), loadFileForm("buyer"), loadFileForm("listing"),
     db.taskList.findMany({ where: { builtin: null }, orderBy: { position: "asc" } }),
     db.messageTemplate.findMany({ where: { kind: "email" }, orderBy: [{ folder: "asc" }, { name: "asc" }], select: { id: true, name: true, folder: true } }), emailConnection(user.id)]);
@@ -161,7 +163,7 @@ export default async function ContactPage({ params, searchParams }: { params: Pr
         </StickySide>
 
         <section className="order-3 min-w-0 lg:order-2">
-          <FileTabs legalNames={p.legalNames ?? ""} scheduled={scheduled} offers={offers} email={emailProps} text={textProps} fileForms={fileForms} personId={p.id} personName={p.name} files={files} statuses={fileStatuses} canSeeCommission={canSeeCommission}
+          <FileTabs postTemplates={postTemplates} legalNames={p.legalNames ?? ""} scheduled={scheduled} offers={offers} email={emailProps} text={textProps} fileForms={fileForms} personId={p.id} personName={p.name} files={files} statuses={fileStatuses} canSeeCommission={canSeeCommission}
             canDelete={hasPermission(user.permissions, "deleteRecords")} contracts={contracts} forms={{ buyer: buyerForm, seller: sellerForm }} pendingAt={pendingAt} ucColumns={ucColumns} today={tasks.today} checklists={checklists} team={tasks.team} timeline={<Timeline personId={p.id} personName={p.name} startOpen={!files.some((f) => !f.closedAt)} team={tasks.team.map((m) => ({ id: m.id, name: m.name }))} entries={p.timeline.map((e) => ({ id: e.id, kind: e.kind, body: e.body, outcome: e.outcome, author: e.author?.name ?? null, at: e.createdAt.toISOString(), opened: opens.get(e.id), audio: recordings.get(e.id), editable: canEditEntry(e) && (e.authorId === user.id || hasPermission(user.permissions, "deleteRecords")) }))}
             email={emailProps} text={textProps} />} />
         </section>

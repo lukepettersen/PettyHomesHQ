@@ -15,6 +15,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     { label: "Weekly emails", href: "/admin/weekly-emails", desc: "Contingency deadlines, closings and listings reports, emailed every week", also: ["/admin/deadline-email"] },
     { label: "Mass emails", href: "/people/emails", desc: "Each mass email: who got it, who didn't and why, and how many opened" },
     { label: "Mass texts", href: "/people/texts", desc: "Each mass text and how it went" },
+    { label: "Post templates", href: "/admin/post-templates", desc: "Instagram posts from your Canva designs: Make post on a deal fills in the photo and details" },
     { label: "Showing emails", href: "/admin/showings", desc: "ShowingTime emails: is HQ reading Gmail, and what it did with each one" },
     { label: "Checklists", href: "/admin/templates", desc: "Task templates that fill in each deal, with automatic texts and emails", need: "templates" },
     { label: "Paperwork steps", href: "/admin/paperwork", desc: "Step-by-step instructions for each Request paperwork form, and your own forms", need: "templates" },
