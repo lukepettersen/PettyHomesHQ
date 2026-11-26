@@ -6,7 +6,7 @@ import { db } from "@/server/db";
 import { guarded, UserError } from "@/server/safe";
 import { logActivity } from "@/server/activity";
 import { mergeFor } from "@/server/merge";
-import { answeredBody, sendTextAs } from "@/server/texting";
+import { answeredBody, lineFor, sendTextAs } from "@/server/texting";
 import { fill } from "@/lib/merge";
 import { formatPhone, normalizePhone } from "@/lib/normalize";
 import { MAX_TEXT } from "@/lib/texting";
@@ -209,7 +209,7 @@ export async function sendTextGroup(input: { numbers: string[]; body: string; pe
 const scheduleSchema = z.object({
   numbers: z.array(digits).min(1, "Pick at least one number.").max(MAX_GROUP - 1), body: z.string().trim().min(1, "Write a message.").max(MAX_TEXT),
   personId: id.nullable().optional(), taskId: z.string().trim().max(200).nullable().optional(), media: photos,
-  date: z.string().trim().max(10), time: z.string().trim().max(5),
+  date: z.string().trim().max(10), time: z.string().trim().max(5), line: id.nullable().optional(),
 });
 
 /** Schedule a text to go out later from your own number (one group text when it has two or more numbers). */
@@ -218,10 +218,11 @@ export async function scheduleText(input: z.input<typeof scheduleSchema>) {
     const v = scheduleSchema.parse(input);
     const problem = scheduleProblem(v.date, v.time);
     if (problem) throw new UserError(problem);
-    const me = await db.user.findUnique({ where: { id: user.id }, select: { textNumber: true } });
-    if (!me?.textNumber) throw new UserError("You don't have a texting number yet. An Admin can add it in Admin → Integrations.");
+    // From a teammate's number too (owner request 2026-11-26): lineFor checks only the owner can.
+    const from = await lineFor(user, v.line ?? null);
+    if (!from.number) throw new UserError("You don't have a texting number yet. An Admin can add it in Admin → Integrations.");
     const sendAt = centralToUtc(v.date, v.time);
-    const s = await db.scheduledText.create({ data: { personId: v.personId ?? null, numbers: [...new Set(v.numbers)], body: v.body, media: v.media ?? [], sendAt, taskId: v.taskId?.startsWith("date:") ? null : v.taskId ?? null, createdById: user.id } });
+    const s = await db.scheduledText.create({ data: { personId: v.personId ?? null, numbers: [...new Set(v.numbers)], body: v.body, media: v.media ?? [], sendAt, taskId: v.taskId?.startsWith("date:") ? null : v.taskId ?? null, createdById: user.id, line: from.userId !== user.id ? from.userId : null } });
     await logActivity(user.id, "create", "scheduledText", v.personId ?? null, `Scheduled a text to ${s.numbers.map(formatPhone).join(", ")} for ${scheduleLabel(sendAt)}`);
     if (v.personId) revalidatePath(`/people/${v.personId}`);
     return { when: scheduleLabel(sendAt) };

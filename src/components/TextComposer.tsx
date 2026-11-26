@@ -117,7 +117,7 @@ export function TextComposer({ personId, phones, phoneLabels = {}, templates, fr
       <EmojiButton box={box} value={body} onChange={setBody} />
       {body && <button type="button" className="btn" disabled={pending} onClick={() => { setBody(""); setTemplateId(""); setMissing([]); }}>Clear</button>}
       {/* Scheduled texts go from your own number, so Schedule is only offered there. */}
-      {ownLine && <ScheduleText numbers={[...chosen, ...extras.map((x) => x.value)]} body={body} media={photos} personId={personId} taskId={taskId} disabled={pending || !to || !body.trim()}
+      {<ScheduleText line={sendLine ?? null} numbers={[...chosen, ...extras.map((x) => x.value)]} body={body} media={photos} personId={personId} taskId={taskId} disabled={pending || !to || !body.trim()}
         onScheduled={(when) => { setNotice(`Scheduled for ${when}.`); setBody(""); setPhotos([]); setTemplateId(""); setMissing([]); router.refresh(); }} />}
       <button type="button" className="btn btn-primary" disabled={pending || (!body.trim() && !photos.length) || !to} onClick={send}>{pending ? "Sending…" : compact ? "Send" : "Send text"}</button>
     </span>

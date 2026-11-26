@@ -43,11 +43,11 @@ function SchedulePicker({ what, ready, disabled, save, onScheduled }: {
  * Schedule (owner request 2026-10-28): next to every Send text. The text goes out from your number at the time
  * picked, even if HQ is closed.
  */
-export function ScheduleText({ numbers, body, media, personId, taskId, disabled, onScheduled }: {
-  numbers: string[]; body: string; media?: string[]; personId?: string | null; taskId?: string | null; disabled?: boolean; onScheduled: (when: string) => void;
+export function ScheduleText({ numbers, body, media, personId, taskId, disabled, onScheduled, line }: {
+  numbers: string[]; body: string; media?: string[]; personId?: string | null; taskId?: string | null; disabled?: boolean; onScheduled: (when: string) => void; line?: string | null;
 }) {
   return <SchedulePicker what="text" ready={!!numbers.length && !!body.trim()} disabled={disabled} onScheduled={onScheduled}
-    save={(date, time) => scheduleText({ numbers, body, media, personId: personId ?? null, taskId: taskId ?? null, date, time })} />;
+    save={(date, time) => scheduleText({ numbers, body, media, personId: personId ?? null, taskId: taskId ?? null, date, time, line: line ?? null })} />;
 }
 
 /** Schedule next to Send email (owner request 2026-10-29): it goes out from your Gmail at the time picked. */

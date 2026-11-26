@@ -1581,3 +1581,11 @@ None right now. New ones get added here.
   owner, whatever a role says, so commission % and BAC never show or export for anyone else.
 - **Referred by from sales** *(owner request 2026-11-26)*: a sale's "Referred from" fills its contacts' **Referred by**
   when theirs is empty (or still matches what the sale said before); done once for past sales too.
+
+- **Schedule texts from any number** *(owner request 2026-11-26)*: Schedule sits next to Send text wherever you can
+  text (contact page, Messages, group texts, Draft text), including when the owner sends from a teammate's number
+  (From picker / line switch): it goes from that number at the time picked (`ScheduledText.line`).
+- **Offers under contract** *(owner question 2026-11-26)*: once a deal has an active purchase agreement, its "Offers
+  submitted" list folds into one line, **Earlier offers (N)**, that opens to show them.
+- **Edit contract** is its own button next to Request paperwork on a deal under contract (owner request 2026-11-26), no
+  longer under More.

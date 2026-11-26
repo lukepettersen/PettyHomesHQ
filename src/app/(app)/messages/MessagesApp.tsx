@@ -276,7 +276,7 @@ function NewMessage({ onPick, groupsOn, blocked, templates, lineId }: { onPick: 
           {tpl.note}
           <span className="flex flex-wrap items-center justify-between gap-2 text-xs muted">Everyone gets it from your number; replies show here for the whole group.
             <button type="button" className="btn btn-primary" disabled={pending || !body.trim()} onClick={send}>{pending ? "Sending…" : `Send to ${picked.length} people`}</button>
-            <ScheduleText numbers={picked.map((p) => p.number)} body={body} disabled={pending || !body.trim()} onScheduled={(when) => { setError(""); setBody(""); setPicked([]); setNote(`Group text scheduled for ${when}.`); }} />
+            <ScheduleText line={lineId} numbers={picked.map((p) => p.number)} body={body} disabled={pending || !body.trim()} onScheduled={(when) => { setError(""); setBody(""); setPicked([]); setNote(`Group text scheduled for ${when}.`); }} />
           </span>
           {error && <p role="alert" className="text-sm text-bad">{error}</p>}
         </div>
@@ -348,7 +348,7 @@ function GroupComposer({ sid, members, blocked, from, onSent, templates, lineId 
         <span className="flex flex-wrap items-center justify-end gap-2">
           {tpl.smallPicker}
           <TextPhotoButton photos={photos} onChange={setPhotos} disabled={pending} /><EmojiButton box={box} value={body} onChange={setBody} />
-          <ScheduleText numbers={members} body={body} media={photos} disabled={pending || !body.trim() || members.length < 2} onScheduled={(when) => { setNotice(`Scheduled for ${when}.`); setBody(""); setPhotos([]); onSent(); }} />
+          <ScheduleText line={lineId} numbers={members} body={body} media={photos} disabled={pending || !body.trim() || members.length < 2} onScheduled={(when) => { setNotice(`Scheduled for ${when}.`); setBody(""); setPhotos([]); onSent(); }} />
           <button type="button" className="btn btn-primary" disabled={pending || (!body.trim() && !photos.length)} onClick={send}>{pending ? "Sending…" : "Send"}</button>
         </span>
       </div>

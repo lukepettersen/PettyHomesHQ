@@ -31,8 +31,8 @@ export async function sendDueTexts(now = new Date()): Promise<number> {
     const media = (Array.isArray(s.media) ? s.media : []).filter((x): x is string => typeof x === "string");
     try {
       if (!user || user.status === "DISABLED") throw new Error("The person who scheduled it no longer has access.");
-      if (s.numbers.length > 1 && (await groupReady())) await textNumbersAsGroup(user, { numbers: s.numbers, body: s.body, media });
-      else for (const n of s.numbers) await sendTextAs(user, { personId: s.personId, to: n, body: s.body, media, typed: true });
+      if (s.numbers.length > 1 && (await groupReady())) await textNumbersAsGroup(user, { numbers: s.numbers, body: s.body, media, line: s.line });
+      else for (const n of s.numbers) await sendTextAs(user, { personId: s.personId, to: n, body: s.body, media, typed: true, line: s.line });
       await db.scheduledText.update({ where: { id: s.id }, data: { status: "sent", sentAt: new Date() } });
       if (s.taskId && (await db.task.updateMany({ where: { id: s.taskId, completedAt: null }, data: { completedAt: new Date(), completedById: s.createdById } })).count) await advanceAfterDone(s.taskId, s.createdById);
       sent++;

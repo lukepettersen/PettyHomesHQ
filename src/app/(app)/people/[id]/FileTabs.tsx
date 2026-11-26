@@ -106,6 +106,7 @@ function FilePane({ postTemplates = [], offers, email, text, fileForms, file, pe
   const [posting, setPosting] = useState(false); // Make post (owner request 2026-11-26)
   const [viewOffer, setViewOffer] = useState<string | null>(null);
   const myOffers = offers.filter((o) => o.fileId === file.id);
+  const [showOffers, setShowOffers] = useState(false);
   const mine = contracts.filter((c) => c.fileId === file.id);
   const activePa = mine.find((c) => c.state === "active");
   const earlier = mine.filter((c) => c.state !== "active");
@@ -160,12 +161,13 @@ function FilePane({ postTemplates = [], offers, email, text, fileForms, file, pe
           {activePa && <PaButtons pa={activePa} personName={personName} pendingAt={pendingAt} today={today} onMsg={setMsg} onError={setError} />}
           {file.kind === "buyer" && !activePa && <button type="button" className="btn btn-primary" onClick={() => setOffering(true)}>Submit offer</button>}
           <button type="button" className="btn" onClick={() => setPapering(true)}>Request paperwork</button>
+          {/* Edit contract shows on its own (owner request 2026-11-26), not under More. */}
+          {activePa && <button type="button" className="btn" onClick={() => setEditingPa(true)}>Edit contract</button>}
           <button type="button" className="btn" onClick={() => setPosting(true)}>Make post</button>
           <span ref={moreRef} className="relative">
             <button type="button" className="btn border-transparent muted" aria-expanded={moreOpen} onClick={() => setMoreOpen(!moreOpen)}>More ▾</button>
             {moreOpen && (
               <span role="menu" className="absolute right-0 top-full z-20 mt-1 flex w-48 flex-col rounded-lg border border-misty bg-white p-1 shadow-xl">
-                {activePa && <button type="button" role="menuitem" className="rounded px-2.5 py-1.5 text-left text-sm hover:bg-sunken" onClick={() => { setMoreOpen(false); setEditingPa(true); }}>Edit contract</button>}
                 <button type="button" role="menuitem" className="rounded px-2.5 py-1.5 text-left text-sm hover:bg-sunken" onClick={() => { setMoreOpen(false); setEditing(true); }}>Edit {file.kind === "buyer" ? "buyer" : "seller"} file</button>
                 {canDelete && <button type="button" role="menuitem" className="rounded px-2.5 py-1.5 text-left text-sm text-bad hover:bg-sunken" disabled={pending} onBlur={() => setConfirm(false)}
                   onClick={() => confirm ? run(() => deleteFile(file.id), onDeleted) : setConfirm(true)}>{confirm ? "Click again to delete" : "Delete"}</button>}
@@ -189,9 +191,15 @@ function FilePane({ postTemplates = [], offers, email, text, fileForms, file, pe
           </section>
         )}
       </div>
-      {myOffers.length > 0 && (
+      {myOffers.length > 0 && activePa && (
+        // Under contract: the offers are history, folded into one line (owner question 2026-11-26).
+        <button type="button" className="mt-3 text-xs font-semibold uppercase tracking-wider muted hover:underline" aria-expanded={showOffers} onClick={() => setShowOffers(!showOffers)}>
+          {showOffers ? "▾" : "▸"} Earlier offers ({myOffers.length})
+        </button>
+      )}
+      {myOffers.length > 0 && (!activePa || showOffers) && (
         <div className="mt-3">
-          <h4 className="text-xs font-semibold uppercase tracking-wider muted">Offers submitted</h4>
+          {!activePa && <h4 className="text-xs font-semibold uppercase tracking-wider muted">Offers submitted</h4>}
           {myOffers.map((o) => (
             <div key={o.id} className="border-t border-misty/60 py-1.5 text-sm first:border-0">
               <button type="button" className="flex w-full justify-between gap-2 text-left hover:underline" aria-expanded={viewOffer === o.id} onClick={() => setViewOffer(viewOffer === o.id ? null : o.id)}>

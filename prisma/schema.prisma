@@ -670,6 +670,7 @@ model ScheduledText {
   sendAt      DateTime
   taskId      String? // a checklist step checked off when it sends
   eventKey    String? // an Events reminder: "<reminderId>:<attendeeId>" (kept in step by syncEventReminders)
+  line        String? // whose HQ number it goes from when the owner schedules from a teammate's line (owner request 2026-11-26)
   createdById String
   status      String    @default("pending") // pending | sending | sent | failed | canceled
   error       String?
