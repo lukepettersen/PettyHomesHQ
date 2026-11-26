@@ -20,6 +20,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const alerts = await loadAlertPrefs(user.id);
   return (
     <>
+      {user.viewAsBy && (
+        // "View as" banner (owner request 2026-11-26): always visible, one click back.
+        <div className="sticky top-0 z-50 flex flex-wrap items-center justify-center gap-3 bg-[#24507a] px-4 py-1.5 text-sm text-white">
+          <span>You&apos;re seeing HQ as <b>{user.name}</b>. Look only: nothing can be changed or sent.</span>
+          <a href="/api/view-as?stop=1" className="rounded-full bg-white px-3 py-0.5 font-semibold text-[#24507a] hover:bg-sunken">Back to my view</a>
+        </div>
+      )}
       <TopBar name={user.name} tools={tools.map((t) => ({ name: t.name, url: t.url }))} canEditTools={hasPermission(user.permissions, "manageUsers")} bell={bell} texts={texts} claude={isConnected("claude")} owner={user.isOwner} order={navOrder(nav?.value)} />
       {children}
       <AlarmCenter />

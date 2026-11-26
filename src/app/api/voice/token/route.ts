@@ -12,6 +12,8 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   const id = session?.user?.id;
   if (!id) return Response.json({ error: "Sign in first" }, { status: 401 });
+  // View as: this browser must never take the teammate's calls (owner request 2026-11-26).
+  if ((session?.user as { viewAsBy?: string | null } | undefined)?.viewAsBy) return Response.json({ off: true });
   const user = await db.user.findFirst({ where: { id, status: { not: "DISABLED" } }, select: { textNumber: true } });
   if (!user?.textNumber || !(await textingEnabled())) return Response.json({ off: true });
   try { return Response.json({ token: await voiceTokenFor(id), number: user.textNumber }); }

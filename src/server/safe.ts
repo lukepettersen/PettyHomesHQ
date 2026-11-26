@@ -10,6 +10,8 @@ export type ActionResult<T = undefined> = { ok: true; data?: T } | { ok: false; 
  */
 export async function guarded<T>(perm: Permission | null, fn: (user: SessionUser) => Promise<T>): Promise<ActionResult<T>> {
   const user = await requireUser();
+  // "View as" is look-only: nothing saves or sends as the teammate (owner request 2026-11-26).
+  if (user.viewAsBy) return { ok: false, error: `You're seeing HQ as ${user.name.split(" ")[0]}, so nothing can be changed. Click "Back to my view" at the top first.` };
   if (perm && !hasPermission(user.permissions, perm)) return { ok: false, error: "You don't have permission to do that." };
   try {
     const data = await fn(user);

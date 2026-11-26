@@ -45,25 +45,39 @@ export const authOptions: NextAuthOptions = {
       if (!token.email) return token;
       const user = await db.user.findUnique({ where: { email: token.email.toLowerCase() }, include: { role: true } });
       if (!user || user.status === "DISABLED") return { ...token, uid: undefined, perms: [], role: undefined };
-      return { ...token, uid: user.id, name: user.name, role: user.role.name, perms: user.role.permissions, owner: user.isOwner };
+      // Commission data is the owner's only (owner rule 2026-11-22/26): "See commissions" never reaches anyone else, whatever their role says.
+      const permsOf = (u: { isOwner: boolean; role: { permissions: string[] } }) => (u.isOwner ? u.role.permissions : u.role.permissions.filter((x) => x !== "seeCommissions"));
+      const me = { ...token, uid: user.id, name: user.name, role: user.role.name, perms: permsOf(user), owner: user.isOwner, viewAsBy: undefined, viewAsOwner: undefined };
+      // "View as" (owner request 2026-11-26): the owner sees HQ exactly as a teammate does, read-only, until "Back to my view".
+      if (user.isOwner) {
+        let as: string | undefined;
+        try { as = (await cookies()).get(VIEW_AS_COOKIE)?.value; } catch { /* no request cookies */ }
+        if (as && as !== user.id) {
+          const t = await db.user.findFirst({ where: { id: as, status: { not: "DISABLED" } }, include: { role: true } });
+          if (t) return { ...me, uid: t.id, name: t.name, role: t.role.name, perms: permsOf(t), owner: t.isOwner, viewAsBy: user.id, viewAsOwner: user.name };
+        }
+      }
+      return me;
     },
     async session({ session, token }) {
       return {
         ...session,
-        user: { ...session.user, id: token.uid, name: token.name, role: token.role, permissions: token.perms ?? [], isOwner: !!token.owner },
+        user: { ...session.user, id: token.uid, name: token.name, role: token.role, permissions: token.perms ?? [], isOwner: !!token.owner, viewAsBy: token.viewAsBy ?? null, viewAsOwner: token.viewAsOwner ?? null },
       };
     },
   },
 };
 
-export type SessionUser = { id: string; name: string; email: string; role: string; permissions: string[]; isOwner: boolean };
+export type SessionUser = { id: string; name: string; email: string; role: string; permissions: string[]; isOwner: boolean; viewAsBy?: string | null; viewAsOwner?: string | null };
+/** Set by the owner's "View as" (holds the teammate's id); cleared by "Back to my view". */
+export const VIEW_AS_COOKIE = "hq_view_as";
 
 /** Use at the top of every server page/action. Sends signed-out or removed users to /login. */
 export async function requireUser(): Promise<SessionUser> {
   const session = await getServerSession(authOptions);
   const u = session?.user as Partial<SessionUser> | undefined;
   if (!u?.id || !u.email) redirect("/login");
-  return { id: u.id, name: u.name ?? "", email: u.email, role: u.role ?? "", permissions: u.permissions ?? [], isOwner: !!u.isOwner };
+  return { id: u.id, name: u.name ?? "", email: u.email, role: u.role ?? "", permissions: u.permissions ?? [], isOwner: !!u.isOwner, viewAsBy: u.viewAsBy ?? null, viewAsOwner: u.viewAsOwner ?? null };
 }
 
 /** Throws unless the signed-in user has the permission. */

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireUser } from "@/server/auth";
-import { backfillSales, loadDashboard, loadSaleColumns, loadSales, todayIso } from "@/server/sales";
+import { backfillSales, copyReferralsOnce, loadDashboard, loadSaleColumns, loadSales, todayIso } from "@/server/sales";
 import { SalesApp } from "./SalesApp";
 
 export const dynamic = "force-dynamic";
@@ -10,5 +10,6 @@ export default async function Page() {
   const user = await requireUser();
   if (!user.isOwner) notFound();
   await backfillSales(user);
+  await copyReferralsOnce(user);
   return <SalesApp rows={await loadSales(user)} today={todayIso()} columns={await loadSaleColumns(user)} cards={await loadDashboard(user)} />;
 }

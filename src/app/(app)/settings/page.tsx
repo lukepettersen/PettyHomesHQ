@@ -22,6 +22,15 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ f
       <h1 className="text-2xl font-extrabold">{other ? `${other}'s settings` : "My settings"}</h1>
       <p className="mb-4 mt-1 text-sm muted">{other ? `You're changing ${other}'s sounds and alerts. Saving changes them on ${other}'s HQ.` : `Just for you, ${user.name.split(" ")[0]}. Nobody else's HQ changes.`}</p>
       {team.length > 1 && <WhoseSettings team={team} me={user.id} current={forId} />}
+      {user.isOwner && team.length > 1 && (
+        <section className="card mb-4 p-4" aria-labelledby="viewas">
+          <h2 id="viewas" className="font-bold">See HQ as a teammate</h2>
+          <p className="mt-1 text-sm muted">Look around HQ exactly as they see it: their tasks, their Messages, what they can and can&apos;t open (no commissions, no Sales). Look only: nothing can be changed or sent while you&apos;re in it. Click <b>Back to my view</b> at the top to return.</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {team.filter((t) => t.id !== user.id).map((t) => <a key={t.id} href={`/api/view-as?user=${t.id}`} className="btn">View as {t.name.split(" ")[0]}</a>)}
+          </div>
+        </section>
+      )}
       <SoundsClient key={`s${forId}`} initial={prefs} forId={target?.id} />
       <AlertsClient key={`a${forId}`} initial={alerts} forId={target?.id} who={other} />
     </div>

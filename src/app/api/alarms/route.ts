@@ -12,6 +12,7 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   const id = session?.user?.id;
   if (!id) return Response.json({ error: "Sign in first" }, { status: 401 });
+  if ((session?.user as { viewAsBy?: string | null } | undefined)?.viewAsBy) return Response.json({ date: "", alarms: [] }, { headers: { "Cache-Control": "no-store" } }); // View as: no pop-ups
   const today = todayCentral();
   const tasks = await db.task.findMany({
     // A step that texts you instead ("ask by text", still waiting or asked) doesn't also ring here (owner report 2026-11-02).

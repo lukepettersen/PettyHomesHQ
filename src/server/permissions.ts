@@ -1,6 +1,6 @@
 // Permission keys. Roles (editable in Admin) hold a list of these. See SPEC.md §2.
 export const PERMISSIONS = {
-  seeCommissions: "See commissions",
+  seeCommissions: "See commissions (owner only)",
   deleteRecords: "Delete people and deals",
   manageUsers: "Manage users and roles",
   editTaskTemplates: "Edit checklists",
@@ -12,7 +12,7 @@ export const PERMISSIONS = {
 
 /** One line under each permission on Admin → Users & permissions (owner-approved redesign 2026-10-29). */
 export const PERMISSION_HELP: Record<keyof typeof PERMISSIONS, string> = {
-  seeCommissions: "Commission % and BAC on deals and in exports",
+  seeCommissions: "Commission % and BAC on deals and in exports. Only the owner ever sees them, whatever the role says (owner rule)",
   deleteRecords: "Move people, deals and tasks to Trash, and restore them",
   manageUsers: "This page, plus most Admin settings",
   editTaskTemplates: "Admin → Checklists (task templates and automatic texts/emails)",

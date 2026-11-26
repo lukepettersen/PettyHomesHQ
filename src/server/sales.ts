@@ -67,13 +67,21 @@ export async function saveSale(user: SalesUser, id: string | null, v: SaleInput)
   ownerOnly(user);
   if (!v.address.trim()) throw new UserError("Add the property address.");
   if (v.status === "closed" && !v.closeDate) throw new UserError("A closed sale needs its close date.");
-  const people = await db.person.findMany({ where: { id: { in: v.personIds }, deletedAt: null }, select: { id: true } });
+  const people = await db.person.findMany({ where: { id: { in: v.personIds }, deletedAt: null }, select: { id: true, referredBy: true } });
+  const before = id ? (await db.sale.findUnique({ where: { id }, select: { referredFrom: true } }))?.referredFrom ?? "" : "";
   const saved = await db.$transaction(async (tx) => {
     // Picking contacts in the editor settles a review.
     const s = id ? await tx.sale.update({ where: { id, deletedAt: null }, data: { ...saleData(v), ...(people.length ? { review: Prisma.DbNull } : {}) } }) : await tx.sale.create({ data: saleData(v) });
     await tx.saleMoney.upsert({ where: { saleId: s.id }, update: moneyData(v), create: { saleId: s.id, ...moneyData(v) } });
     await tx.salePerson.deleteMany({ where: { saleId: s.id } });
     for (const p of people) await tx.salePerson.create({ data: { saleId: s.id, personId: p.id } });
+    // "Referred from" on the sale fills the contact's Referred by (owner request 2026-11-26): when theirs is empty, or
+    // still says what this sale said before. Someone typed by hand on the contact is left alone.
+    const ref = v.referredFrom.trim();
+    if (ref && !/^none$/i.test(ref)) for (const p of people) {
+      const cur = (p.referredBy ?? "").trim();
+      if (!cur || (before && cur === before.trim() && cur !== ref)) await tx.person.update({ where: { id: p.id }, data: { referredBy: ref.slice(0, 120) } });
+    }
     return s;
   });
   await logActivity(user.id, id ? "update" : "create", "sale", saved.id, `${id ? "Edited" : "Added"} sale ${saved.address} (${saved.side}, ${saved.status})`);
@@ -306,4 +314,23 @@ export async function saveDashboard(user: SalesUser, cards: unknown) {
   ownerOnly(user);
   const value = cleanDashboard(cards);
   await db.appSetting.upsert({ where: { key: "sales.dashboard" }, update: { value }, create: { key: "sales.dashboard", value } });
+}
+
+/** Once (owner request 2026-11-26): contacts with no "Referred by" get it from their newest sale's "Referred from". */
+export async function copyReferralsOnce(user: SalesUser): Promise<number> {
+  ownerOnly(user);
+  const flag = "sales.referralsCopied";
+  if (await db.appSetting.findUnique({ where: { key: flag } })) return 0;
+  if (!(await db.appSetting.create({ data: { key: flag, value: new Date().toISOString() } }).then(() => true, () => false))) return 0;
+  const links = await db.salePerson.findMany({ where: { sale: { deletedAt: null, referredFrom: { not: "" } }, person: { deletedAt: null, OR: [{ referredBy: null }, { referredBy: "" }] } },
+    select: { personId: true, sale: { select: { referredFrom: true, closeDate: true } } } });
+  const newest = new Map<string, { ref: string; at: number }>();
+  for (const l of links) {
+    const ref = l.sale.referredFrom.trim(), at = l.sale.closeDate?.getTime() ?? 0;
+    if (!ref || /^none$/i.test(ref)) continue;
+    if (!newest.has(l.personId) || newest.get(l.personId)!.at < at) newest.set(l.personId, { ref, at });
+  }
+  for (const [personId, { ref }] of newest) await db.person.update({ where: { id: personId }, data: { referredBy: ref.slice(0, 120) } });
+  if (newest.size) await logActivity(user.id, "update", "person", null, `Filled in "Referred by" on ${newest.size} contacts from their sales`);
+  return newest.size;
 }

@@ -1572,3 +1572,12 @@ None right now. New ones get added here.
   preview (Try a photo). Save / Cancel; Remove is two-step. AppSetting `posts.templates`. On a deal, **Make post**:
   pick the template and the photo (from their Files card, or upload), check the filled-in words (beds/baths/garage from
   the deal's answers by name, city and street from the address, price, first name), see it, **Download post** (PNG).
+
+- **See HQ as a teammate** *(owner request 2026-11-26)*: My settings (⚙) → **View as Alyssa**: HQ shows exactly what
+  she sees (her tasks, Messages, permissions; no Sales, Whiteboard or commissions) with a blue banner and **Back to my
+  view**. Look only: every action refuses while it's on, calling in the browser and task pop-ups stay off, and it
+  ends after 8 hours. Cookie `hq_view_as`, honored only for the owner.
+- **Commissions are the owner's only** *(owner rule, enforced 2026-11-26)*: "See commissions" only ever reaches the
+  owner, whatever a role says, so commission % and BAC never show or export for anyone else.
+- **Referred by from sales** *(owner request 2026-11-26)*: a sale's "Referred from" fills its contacts' **Referred by**
+  when theirs is empty (or still matches what the sale said before); done once for past sales too.
