@@ -1589,3 +1589,5 @@ None right now. New ones get added here.
   submitted" list folds into one line, **Earlier offers (N)**, that opens to show them.
 - **Edit contract** is its own button next to Request paperwork on a deal under contract (owner request 2026-11-26), no
   longer under More.
+- **Edit buyer / seller under contract** *(owner question 2026-11-26)*: the Status shows **Under contract** (set by the
+  purchase agreement); the stage the deal goes back to if it falls through is behind "If it falls through, back to…".

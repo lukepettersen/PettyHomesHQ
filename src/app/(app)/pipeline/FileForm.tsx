@@ -11,7 +11,8 @@ import type { StatusRow } from "@/server/files";
 import { startFile, updateFile } from "./actions";
 
 /** Start a buyer / Start a listing, or edit one. Questions change with the status (SPEC.md §7.1). */
-export function FileForm({ kind, personId, personName, fileId, statuses, statusId, answers, canSeeCommission, form, onClose, onSaved }: {
+export function FileForm({ kind, personId, personName, fileId, statuses, statusId, answers, canSeeCommission, form, onClose, onSaved, underContract = false }: {
+  underContract?: boolean;
   kind: FileKind; form: FileSection[]; personId: string; personName: string; fileId?: string; statuses: StatusRow[]; statusId?: string | null; answers?: Answers;
   canSeeCommission: boolean; onClose: () => void; onSaved: (message: string) => void;
 }) {
@@ -46,11 +47,24 @@ export function FileForm({ kind, personId, personName, fileId, statuses, statusI
       <form onSubmit={submit} autoComplete="off" className="flex flex-col gap-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="label">Client<span className="py-1.5 text-sm font-semibold text-charcoal">{personName}</span></div>
-          <label className="label">Status
-            <select className="input" value={status} onChange={(e) => setStatus(e.target.value)}>
-              {statuses.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </label>
+          {underContract ? (
+            // Under contract, the purchase agreement sets the status (owner question 2026-11-26); the stage here is only
+            // where the deal goes back to if the contract falls through.
+            <div className="label">Status
+              <span className="py-1.5 text-sm font-semibold text-charcoal">Under contract</span>
+              <details className="text-xs font-normal muted"><summary className="cursor-pointer">If it falls through, back to: {statuses.find((s) => s.id === status)?.name ?? "—"}</summary>
+                <select className="input mt-1" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Stage if the contract falls through">
+                  {statuses.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </details>
+            </div>
+          ) : (
+            <label className="label">Status
+              <select className="input" value={status} onChange={(e) => setStatus(e.target.value)}>
+                {statuses.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </label>
+          )}
         </div>
         {groups.map((g) => (
           <fieldset key={g.id} className="rounded-lg border border-misty px-3 pt-1 pb-3">

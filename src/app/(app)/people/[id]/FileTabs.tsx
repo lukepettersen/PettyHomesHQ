@@ -247,7 +247,7 @@ function FilePane({ postTemplates = [], offers, email, text, fileForms, file, pe
       {msg && <p role="status" className="mt-2 text-sm text-accent">{msg}</p>}
       {error && <p role="alert" className="mt-2 text-sm text-bad">{error}</p>}
       {editing && (
-        <FileForm form={fileForms[file.kind]} kind={file.kind} personId={personId} personName={personName} fileId={file.id} statuses={list} statusId={file.statusId} answers={answers}
+        <FileForm form={fileForms[file.kind]} kind={file.kind} personId={personId} personName={personName} fileId={file.id} statuses={list} statusId={file.statusId} answers={answers} underContract={!!activePa}
           canSeeCommission={canSeeCommission} onClose={() => setEditing(false)} onSaved={(m) => { setEditing(false); setMsg(m); router.refresh(); }} />
       )}
     </div>
