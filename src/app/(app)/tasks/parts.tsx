@@ -29,6 +29,9 @@ export function TaskLine({ task, today, team, selected, showPerson = true, compa
   task: TaskRow; today: string; team: TeamMember[]; selected?: boolean; showPerson?: boolean; compact?: boolean; onToggle: () => void; onOpen: () => void;
 }) {
   const late = !task.done && !!task.due && diffDays(task.due, today) < 0;
+  // "Overdue · 2 days" next to the date (owner request 2026-11-27), so a late task stands out at a glance.
+  const lateBy = late ? -diffDays(task.due!, today) : 0;
+  const lateTag = late ? <span className="ml-1.5 whitespace-nowrap rounded-full bg-[#fbe3df] px-1.5 py-px text-[11px] font-bold text-bad">Overdue · {lateBy} day{lateBy === 1 ? "" : "s"}</span> : null;
   const subs = task.subtasks.length;
   // Today's narrow columns: smaller type, due date and assignee on the second line, no source badges
   // (the column header already says where it's from). Owner request 2026-10-21.
@@ -39,7 +42,7 @@ export function TaskLine({ task, today, team, selected, showPerson = true, compa
         <button type="button" onClick={(e) => { e.stopPropagation(); onOpen(); }} className={`text-left text-sm font-medium leading-snug ${task.done ? "text-muted line-through" : ""}`}>{task.title}</button>
         <span className="flex flex-wrap items-center gap-x-2 text-xs muted">
           {showPerson && task.personName && task.personId && <PersonLink id={task.personId} name={task.personName} small />}
-          <span className={`whitespace-nowrap ${late ? "font-medium text-bad" : ""}`}>{dueLabel(task.due, task.time, today)}</span>
+          <span className={`whitespace-nowrap ${late ? "font-medium text-bad" : ""}`}>{dueLabel(task.due, task.time, today)}</span>{lateTag}
           {task.repeat && <span>↻</span>}
           {subs > 0 && <span>☐ {task.subtasks.filter((s) => s.done).length}/{subs}</span>}
         </span>
@@ -65,7 +68,7 @@ export function TaskLine({ task, today, team, selected, showPerson = true, compa
         {task.mailTo && <MailTo to={task.mailTo} />}
       </div>
       <span className="col-start-2 flex items-center gap-2 sm:col-start-3">
-        <span className={`whitespace-nowrap text-[12.5px] ${late ? "font-medium text-bad" : "muted"}`}>{dueLabel(task.due, task.time, today)}</span>
+        <span className={`whitespace-nowrap text-[12.5px] ${late ? "font-medium text-bad" : "muted"}`}>{dueLabel(task.due, task.time, today)}</span>{lateTag}
         <Avatar member={team.find((m) => m.id === task.assigneeId)} />
       </span>
     </div>

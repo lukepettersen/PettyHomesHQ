@@ -1591,3 +1591,5 @@ None right now. New ones get added here.
   longer under More.
 - **Edit buyer / seller under contract** *(owner question 2026-11-26)*: the Status shows **Under contract** (set by the
   purchase agreement); the stage the deal goes back to if it falls through is behind "If it falls through, back to…".
+- **Overdue tag on tasks** *(owner request 2026-11-27)*: a late task shows a red **Overdue · N days** tag next to its
+  date on the Tasks page (the contact's Tasks card already groups them under "Overdue").
