@@ -29,7 +29,8 @@ export function toHtml(text: string): string {
   const out: string[] = [];
   let list: string[] = [];
   const flush = () => { if (list.length) { out.push(`<ul style="margin:0;padding-left:24px">${list.map((l) => `<li>${l}</li>`).join("")}</ul>`); list = []; } };
-  for (const line of text.replace(/\r\n/g, "\n").split("\n")) {
+  // Three or more line breaks in a row become one blank line (owner report 2026-11-28: messages saved with doubled blank lines).
+  for (const line of text.replace(/\r\n/g, "\n").replace(/\n[ \t]*\n(?:[ \t]*\n)+/g, "\n\n").split("\n")) {
     const m = /^\s*[-•]\s+(.*)$/.exec(line);
     if (m) { list.push(inline(m[1])); continue; }
     flush();

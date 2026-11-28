@@ -112,3 +112,10 @@ describe("htmlToText decodes numbered characters (owner report 2026-11-23)", () 
     expect(htmlToText("<td>Buyer&#x27;s Agent Details</td><td>Tom&#39;s &amp; Co &rsquo;</td><p>&amp;#x27;</p>")).toBe("Buyer's Agent DetailsTom's & Co '&#x27;");
   });
 });
+
+describe("blank lines (owner report 2026-11-28)", () => {
+  it("never sends more than one blank line in a row", async () => {
+    const { toHtml } = await import("./email");
+    expect(toHtml("a\n\n\n\nb")).toBe(toHtml("a\n\nb"));
+  });
+});
