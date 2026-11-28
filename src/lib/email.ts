@@ -28,7 +28,7 @@ function inline(line: string): string {
 export function toHtml(text: string): string {
   const out: string[] = [];
   let list: string[] = [];
-  const flush = () => { if (list.length) { out.push(`<ul>${list.map((l) => `<li>${l}</li>`).join("")}</ul>`); list = []; } };
+  const flush = () => { if (list.length) { out.push(`<ul style="margin:0;padding-left:24px">${list.map((l) => `<li>${l}</li>`).join("")}</ul>`); list = []; } };
   for (const line of text.replace(/\r\n/g, "\n").split("\n")) {
     const m = /^\s*[-•]\s+(.*)$/.exec(line);
     if (m) { list.push(inline(m[1])); continue; }

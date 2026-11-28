@@ -14,7 +14,9 @@ export function domToMarkdown(root: RNode): string {
   const nl = () => { if (out && !out.endsWith("\n")) out += "\n"; };
   const inner = (n: RNode): string => { const save = out; out = ""; kids(n).forEach(walk); const r = out; out = save; return r; };
   function walk(n: RNode) {
-    if (n.nodeType === 3) { out += (n.data ?? "").replace(/ /g, " "); return; }
+    // Raw line breaks inside the box are just HTML spacing (the box uses <br> and blocks for real lines), so they're
+    // dropped; keeping them doubled every blank line each time a message was saved (owner report 2026-11-28).
+    if (n.nodeType === 3) { out += (n.data ?? "").replace(/[\r\n]+/g, "").replace(/\u00a0/g, " "); return; }
     if (n.nodeType !== 1) return;
     const tag = n.nodeName.toUpperCase();
     const attr = (a: string) => n.getAttribute?.(a) ?? "";
@@ -52,10 +54,10 @@ export function domToMarkdown(root: RNode): string {
     kids(n).forEach(walk); // span, font, i, u…: just their words
   }
   kids(root).forEach(walk);
-  return out.replace(/[ \t]+\n/g, "\n").replace(/\n+$/, "");
+  return out.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/\n+$/, "");
 }
 
 /** HQ's light formatting → HTML for the message box (the same as the email, without the outer wrapper). */
 export function editorHtml(markdown: string, toHtml: (s: string) => string): string {
-  return toHtml(markdown).replace(/^<div[^>]*>/, "").replace(/<\/div>$/, "").replace(/>\n</g, "><");
+  return toHtml(markdown).replace(/^<div[^>]*>/, "").replace(/<\/div>$/, "").replace(/\n/g, "");
 }

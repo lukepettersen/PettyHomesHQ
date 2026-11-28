@@ -18,3 +18,13 @@ describe("the message box back to HQ's formatting (owner request 2026-11-23)", (
     expect(domToMarkdown(root(el("A", ["bad"], { href: "javascript:alert(1)" })))).toBe("bad");
   });
 });
+
+describe("spacing stays the same after saving (owner report 2026-11-28)", () => {
+  it("ignores raw line breaks between lines and never adds blank lines", async () => {
+    const { domToMarkdown, editorHtml } = await import("./richText");
+    const { toHtml } = await import("./email");
+    expect(editorHtml("a\n\nb\n- x", toHtml)).not.toContain("\n");
+    expect(domToMarkdown(root("Hi,", el("BR"), "\n", el("BR"), "\nQuestions:", el("BR"), el("BR"), el("UL", [el("LI", ["one"])])))).toBe("Hi,\n\nQuestions:\n\n- one");
+    expect(domToMarkdown(root("a", el("BR"), el("BR"), el("BR"), el("BR"), "b"))).toBe("a\n\nb");
+  });
+});

@@ -1593,3 +1593,7 @@ None right now. New ones get added here.
   purchase agreement); the stage the deal goes back to if it falls through is behind "If it falls through, back to…".
 - **Overdue tag on tasks** *(owner request 2026-11-27)*: a late task shows a red **Overdue · N days** tag next to its
   date on the Tasks page (the contact's Tasks card already groups them under "Overdue").
+- **Email spacing** *(owner report 2026-11-28: sent emails had doubled blank lines and big gaps around lists)*: the
+  message box no longer adds a blank line each time it saves (raw line breaks inside it are ignored; three or more
+  line breaks in a row become one blank line), and bullet lists in the email have no extra space above or below, so
+  the email spaces exactly like the box.

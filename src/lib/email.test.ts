@@ -44,7 +44,7 @@ describe("formatting", () => {
     const h = toHtml("See [the listing](https://pettyhomes.com/a) or https://zillow.com\n- one\n- **two**\n<script>x</script>");
     expect(h).toContain('<a href="https://pettyhomes.com/a">the listing</a>');
     expect(h).toContain('<a href="https://zillow.com">https://zillow.com</a>');
-    expect(h).toContain("<ul><li>one</li><li><b>two</b></li></ul>");
+    expect(h).toContain(`<ul style="margin:0;padding-left:24px"><li>one</li><li><b>two</b></li></ul>`); // no extra space around lists (owner 2026-11-28)
     expect(h).toContain("&lt;script&gt;");
     expect(h).not.toContain("<script>");
     expect(toHtml('[x](javascript:alert(1))')).not.toContain("<a");
